@@ -1,6 +1,7 @@
 <script lang="ts" generics="T extends { id: string }">
   // Pointer-based drag-and-drop list. Supports reorder within a list and dropping from another list in the same group.
   import type { Snippet } from 'svelte';
+  import { onMount } from 'svelte';
   import { flip } from 'svelte/animate';
   import { fly } from 'svelte/transition';
   import { dnd } from '../lib/dnd.svelte';
@@ -17,22 +18,40 @@
   let { items, item, onreorder, ondropfrom, group = 'default', placeholder, disabled = false }: Props = $props();
 
   const listId = Math.random().toString(36).slice(2);
-  let overIndex = $state<number | null>(null);
   let el: HTMLDivElement | undefined = $state();
 
   const isSource = $derived(dnd.active?.listId === listId);
-  const showDrop = $derived(dnd.active && dnd.active.group === group && overIndex !== null);
+  const overIndex = $derived(dnd.active && dnd.active.group === group && dnd.hoverList === listId ? dnd.hoverIndex : null);
+  const showDrop = $derived(overIndex !== null);
+
+  onMount(() =>
+    dnd.register(listId, {
+      group,
+      drop(fromId, fromListId, index) {
+        if (fromListId === listId) {
+          const ids = items.map((i) => i.id);
+          const fromIdx = ids.indexOf(fromId);
+          if (fromIdx === -1) return;
+          ids.splice(fromIdx, 1);
+          let to = index;
+          if (to > fromIdx) to -= 1;
+          ids.splice(to, 0, fromId);
+          if (ids.some((id, i) => id !== items[i]?.id)) onreorder?.(ids);
+        } else {
+          ondropfrom?.(fromId, index);
+        }
+      },
+    }),
+  );
 
   function onPointerDown(e: PointerEvent, id: string) {
     if (disabled) return;
     const target = e.target as HTMLElement;
-    const handle = target.closest('.handle');
-    if (!handle) return;
+    if (!target.closest('.handle')) return;
     if (e.button !== 0) return;
     e.preventDefault();
-    const row = (e.currentTarget as HTMLElement);
+    const row = e.currentTarget as HTMLElement;
     dnd.start({ id, listId, group, x: e.clientX, y: e.clientY, width: row.offsetWidth, height: row.offsetHeight, label: row.innerText.split('\n')[0] ?? '' });
-    (e.currentTarget as HTMLElement).setPointerCapture?.(e.pointerId);
   }
 
   function indexAt(y: number): number {
@@ -46,48 +65,16 @@
   }
 
   function onPointerMove(e: PointerEvent) {
-    if (!dnd.active || dnd.active.group !== group) return;
-    dnd.move(e.clientX, e.clientY);
-    if (!el) return;
+    if (!dnd.active || dnd.active.group !== group || !el) return;
+    if (isSource) dnd.move(e.clientX, e.clientY);
     const r = el.getBoundingClientRect();
     const inside = e.clientX >= r.left - 8 && e.clientX <= r.right + 8 && e.clientY >= r.top - 12 && e.clientY <= r.bottom + 12;
-    if (inside) {
-      overIndex = indexAt(e.clientY);
-      dnd.hoverList = listId;
-    } else if (dnd.hoverList === listId) {
-      dnd.hoverList = null;
-      overIndex = null;
-    }
+    if (inside) dnd.hover(listId, indexAt(e.clientY));
+    else if (dnd.hoverList === listId) dnd.hover(null, null);
   }
-
-  function onPointerUp() {
-    if (!dnd.active || dnd.active.group !== group) return;
-    if (dnd.hoverList === listId && overIndex !== null) {
-      const from = dnd.active;
-      if (from.listId === listId) {
-        const ids = items.map((i) => i.id);
-        const fromIdx = ids.indexOf(from.id);
-        if (fromIdx !== -1) {
-          ids.splice(fromIdx, 1);
-          let to = overIndex;
-          if (to > fromIdx) to -= 1;
-          ids.splice(to, 0, from.id);
-          if (ids.some((id, i) => id !== items[i]?.id)) onreorder?.(ids);
-        }
-      } else {
-        ondropfrom?.(from.id, overIndex);
-      }
-    }
-    overIndex = null;
-    dnd.end();
-  }
-
-  $effect(() => {
-    if (!dnd.active) overIndex = null;
-  });
 </script>
 
-<svelte:window onpointermove={onPointerMove} onpointerup={onPointerUp} onpointercancel={onPointerUp} />
+<svelte:window onpointermove={onPointerMove} />
 
 <div class="sortable task-list" class:dragging={!!dnd.active && dnd.active.group === group} bind:this={el} role="list">
   {#each items as it, i (it.id)}

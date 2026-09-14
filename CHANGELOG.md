@@ -19,3 +19,11 @@
 - Three WebAudio sound packs (soft / click / arcade), muted by default with a one-time enable prompt
 - XP toast with Undo button and escalating combo visuals; level-up overlay; badge unlock card; full-screen confetti when the daily ring closes (once per day)
 - Undo stack with toasts for add / complete / delete / edit / snooze and `Ctrl+Z`
+
+## Phase 3 — Dates, snooze, Upcoming, recurrence
+
+- Upcoming view: next 14 days grouped by day, then by week; empty-day toggle; per-group workload and exam/quiz counts
+- Drag between days (and onto "No date") to reschedule; drag handle based pointer drag-and-drop with a single global drop handler
+- Snooze menu on every task: Tomorrow, This weekend, Next week, Pick date; increments `deferredCount`
+- Overdue section with "Roll all overdue to today"
+- Recurring tasks spawn the next instance on completion without touching history

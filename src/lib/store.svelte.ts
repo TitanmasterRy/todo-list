@@ -247,10 +247,10 @@ class Store {
     const prevCombo = this.combo ? { ...this.combo } : undefined;
 
     const done: Task = {
-      ...task,
+      ...structuredClone(prevTask),
       completedAt: completedAt.toISOString(),
       updatedAt: completedAt.toISOString(),
-      subtasks: task.subtasks.map((s) => ({ ...s, done: true })),
+      subtasks: prevTask.subtasks.map((s) => ({ ...s, done: true })),
     };
     const openRemaining = this.openTasks.filter((t) => t.id !== id).length;
     const result = applyCompletion(prevStats, done, completedAt, this.combo, openRemaining);
