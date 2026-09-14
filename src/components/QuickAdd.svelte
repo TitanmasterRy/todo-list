@@ -1,0 +1,226 @@
+<script lang="ts">
+  import { store, type NewTaskInput } from '../lib/store.svelte';
+  import { parseQuickAdd } from '../lib/parser';
+  import { ui } from '../lib/ui.svelte';
+  import { toasts } from '../lib/toast.svelte';
+  import { primeAudio } from '../lib/sounds';
+
+  interface Props {
+    defaultDueKey?: string;
+    defaultCourseId?: string;
+    placeholder?: string;
+    autofocus?: boolean;
+  }
+  let { defaultDueKey, defaultCourseId, placeholder = 'Add a task… try “Read ch 4 tomorrow 8pm #calc !high ~45m”', autofocus = false }: Props = $props();
+
+  let text = $state('');
+  let input: HTMLInputElement | undefined = $state();
+  let focused = $state(false);
+
+  const parsed = $derived(
+    parseQuickAdd(text, {
+      now: store.now,
+      courses: store.activeCourses.map((c) => ({ id: c.id, name: c.name })),
+      weekStart: store.settings.weekStart,
+    }),
+  );
+  const template = $derived(parsed.template ? store.findTemplate(parsed.template) : undefined);
+  const templateSuggestions = $derived.by(() => {
+    const m = /(?:^|\s)@([\w-]*)$/.exec(text);
+    if (!m) return [];
+    const q = m[1].toLowerCase();
+    return store.templates.filter((t) => t.name.startsWith(q)).slice(0, 5);
+  });
+  const courseSuggestions = $derived.by(() => {
+    const m = /(?:^|\s)#([\w-]*)$/.exec(text);
+    if (!m) return [];
+    const q = m[1].toLowerCase().replace(/[^a-z0-9]/g, '');
+    return store.activeCourses.filter((c) => c.name.toLowerCase().replace(/[^a-z0-9]/g, '').startsWith(q)).slice(0, 5);
+  });
+
+  $effect(() => {
+    if (ui.quickAddFocus > 0 && input) {
+      input.focus();
+    }
+  });
+  $effect(() => {
+    if (autofocus && input && window.innerWidth > 720) input.focus();
+  });
+
+  function submit(e?: Event) {
+    e?.preventDefault();
+    const p = parsed;
+    let title = p.title;
+    const base: NewTaskInput = { title: '' };
+    if (p.template) {
+      if (!template) {
+        toasts.push({ message: `No template named @${p.template}`, kind: 'warn' });
+        return;
+      }
+      Object.assign(base, {
+        title: template.task.title,
+        notes: template.task.notes,
+        courseId: template.task.courseId,
+        tags: [...template.task.tags],
+        priority: template.task.priority,
+        estimateMin: template.task.estimateMin,
+        type: template.task.type,
+        weight: template.task.weight,
+        subtasks: [...template.task.subtasks],
+        templateId: template.id,
+      });
+      if (title) base.title = title;
+    } else {
+      if (!title) return;
+      base.title = title;
+    }
+    if (p.courseId) base.courseId = p.courseId;
+    else if (!base.courseId && defaultCourseId) base.courseId = defaultCourseId;
+    if (p.tags.length) base.tags = Array.from(new Set([...(base.tags ?? []), ...p.tags]));
+    if (p.priority) base.priority = p.priority;
+    if (p.estimateMin) base.estimateMin = p.estimateMin;
+    if (p.type) base.type = p.type;
+    if (p.recurrence) base.recurrence = p.recurrence;
+    if (p.dueAt) base.dueAt = p.dueAt;
+    else if (defaultDueKey) base.dueAt = defaultDueKey;
+    primeAudio();
+    store.addTask(base);
+    text = '';
+  }
+
+  function applySuggestion(kind: '@' | '#', name: string) {
+    text = text.replace(new RegExp(`${kind === '@' ? '@' : '#'}[\\w-]*$`), `${kind}${name.replace(/\s+/g, '')} `);
+    input?.focus();
+  }
+
+  function onKey(e: KeyboardEvent) {
+    if (e.key === 'Escape') {
+      if (text) text = '';
+      else input?.blur();
+      e.stopPropagation();
+    }
+    if (e.key === 'Tab' && (templateSuggestions.length || courseSuggestions.length)) {
+      e.preventDefault();
+      if (templateSuggestions.length) applySuggestion('@', templateSuggestions[0].name);
+      else applySuggestion('#', courseSuggestions[0].name);
+    }
+  }
+</script>
+
+<form class="quick" class:focused onsubmit={submit} role="search" aria-label="Quick add">
+  <span class="plus" aria-hidden="true">+</span>
+  <input
+    bind:this={input}
+    bind:value={text}
+    {placeholder}
+    aria-label="Quick add task"
+    autocomplete="off"
+    enterkeyhint="done"
+    onfocus={() => (focused = true)}
+    onblur={() => (focused = false)}
+    onkeydown={onKey}
+    data-quick-add
+  />
+  {#if text}
+    <button class="btn primary sm go" type="submit">Add</button>
+  {:else}
+    <span class="hint" aria-hidden="true"><span class="kbd">n</span></span>
+  {/if}
+</form>
+{#if text.trim()}
+  <div class="preview" aria-live="polite">
+    <span class="title-preview">{parsed.template ? (template ? `${template.task.title}${parsed.title ? ' — ' + parsed.title : ''}` : `@${parsed.template}?`) : parsed.title || '…'}</span>
+    {#each parsed.chips as chip}
+      <span class="chip {chip.kind}">{chip.label}</span>
+    {/each}
+    {#if !parsed.dueAt && defaultDueKey}
+      <span class="chip faint">📅 Today</span>
+    {/if}
+    {#if !parsed.courseId && defaultCourseId && store.courseById(defaultCourseId)}
+      <span class="chip faint">{store.courseById(defaultCourseId)?.name}</span>
+    {/if}
+    {#if templateSuggestions.length}
+      <span class="sugg">
+        {#each templateSuggestions as t}
+          <button type="button" class="chip" onclick={() => applySuggestion('@', t.name)}>@{t.name}</button>
+        {/each}
+      </span>
+    {/if}
+    {#if courseSuggestions.length}
+      <span class="sugg">
+        {#each courseSuggestions as c}
+          <button type="button" class="chip" style="border-color:{c.color}" onclick={() => applySuggestion('#', c.name)}>{c.emoji ?? ''} {c.name}</button>
+        {/each}
+      </span>
+    {/if}
+  </div>
+{/if}
+
+<style>
+  .quick {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 10px 6px 14px;
+    border-radius: 12px;
+    background: var(--bg-elev);
+    border: 1px solid var(--border);
+    transition: border-color var(--dur), box-shadow var(--dur);
+  }
+  .quick.focused {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 22%, transparent);
+  }
+  .plus {
+    color: var(--accent);
+    font-size: 20px;
+    font-weight: 600;
+  }
+  input {
+    flex: 1;
+    min-width: 0;
+    background: transparent;
+    border: none;
+    padding: 8px 0;
+    font-size: 15px;
+  }
+  input:focus {
+    outline: none;
+  }
+  .hint {
+    opacity: 0.7;
+  }
+  .preview {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    align-items: center;
+    padding: 8px 4px 0;
+    font-size: 13px;
+    animation: pop-in 120ms var(--ease);
+  }
+  .title-preview {
+    color: var(--text-muted);
+    font-weight: 500;
+  }
+  .chip.due {
+    color: var(--accent);
+  }
+  .chip.course {
+    color: var(--text);
+    border-color: var(--accent);
+  }
+  .chip.priority {
+    color: var(--warn);
+  }
+  .chip.faint {
+    opacity: 0.6;
+  }
+  .sugg {
+    display: inline-flex;
+    gap: 4px;
+  }
+  .sugg .chip {
+    cursor: pointer;
+  }
+</style>
