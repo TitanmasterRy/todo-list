@@ -27,3 +27,11 @@
 - Snooze menu on every task: Tomorrow, This weekend, Next week, Pick date; increments `deferredCount`
 - Overdue section with "Roll all overdue to today"
 - Recurring tasks spawn the next instance on completion without touching history
+
+## Phase 4 — Courses, tags, subtasks, priorities, estimates, parser
+
+- Courses view: one column per course with workload (sum of estimates) and due-this-week count; per-course page with quick add scoped to the course and a completed list
+- Course editor (name, color, emoji, archive, delete with undo) and archived list
+- Inbox / All view with search and filters: status, course, tag, type, date range, sort
+- Quick-add parser wired to every list view with live preview chips (dates, times, `#course`/`#tag`, `!priority`, `~estimate`, recurrence, `@template`, `type:`)
+- Subtasks as an inline checklist on the task row; priorities, estimates, types and weights on the editor and as chips

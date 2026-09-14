@@ -228,7 +228,25 @@
     font-size: 15px;
     color: var(--text);
     line-height: 1.4;
-    overflow-wrap: anywhere;
+    overflow-wrap: break-word;
+    min-width: 0;
+    flex: 1;
+  }
+  .compact .title {
+    font-size: 14px;
+  }
+  .compact .actions {
+    display: none;
+  }
+  .compact:hover .actions,
+  .compact.selected .actions {
+    display: flex;
+    position: absolute;
+    right: 6px;
+    top: 4px;
+    background: var(--bg-elev);
+    border-radius: 8px;
+    box-shadow: var(--shadow);
   }
   .strike {
     background-image: linear-gradient(currentColor, currentColor);
