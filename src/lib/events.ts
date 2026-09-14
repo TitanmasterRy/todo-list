@@ -9,6 +9,9 @@ export interface AppEvents {
   ringClosed: { day: string };
   changed: { reason: string };
   pomodoroDone: { day: string; count: number };
+  graded: { task: Task; xp: number; label: string; tier: string; leveledUp: boolean; newLevel: number; newBadges: string[] };
+  studied: { reviewed: number; correct: number; xp: number; clearedAll: boolean; leveledUp: boolean; newLevel: number; newBadges: string[] };
+  synced: { created: number; updated: number };
   navigate: { view: string; courseId?: string; taskId?: string };
 }
 

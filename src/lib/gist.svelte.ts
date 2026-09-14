@@ -32,6 +32,8 @@ function localBundle(): ExportBundle {
     templates: $state.snapshot(store.templates),
     stats: $state.snapshot(store.stats),
     dayNotes: $state.snapshot(store.dayNotes),
+    decks: $state.snapshot(store.decks),
+    cards: $state.snapshot(store.cards),
   });
 }
 
@@ -92,8 +94,8 @@ export async function syncNow(opts: { pull?: boolean } = { pull: true }): Promis
         const remote = await fetchRemote(token, id);
         if (remote) {
           const { merged, conflicts } = mergeBundles(local, remote);
-          const changed = JSON.stringify({ t: merged.tasks, c: merged.courses, tp: merged.templates, n: merged.dayNotes, s: merged.stats }) !==
-            JSON.stringify({ t: local.tasks, c: local.courses, tp: local.templates, n: local.dayNotes, s: local.stats });
+          const changed = JSON.stringify({ t: merged.tasks, c: merged.courses, tp: merged.templates, n: merged.dayNotes, s: merged.stats, d: merged.decks, k: merged.cards }) !==
+            JSON.stringify({ t: local.tasks, c: local.courses, tp: local.templates, n: local.dayNotes, s: local.stats, d: local.decks, k: local.cards });
           if (changed) {
             await store.loadBundle(merged);
             local = localBundle();

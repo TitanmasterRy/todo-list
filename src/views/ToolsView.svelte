@@ -7,11 +7,26 @@
   import { buildICS } from '../lib/ics';
   import { downloadText } from '../lib/download';
 
-  type Tab = 'grades' | 'planner' | 'calendar' | 'reading';
-  let tab = $state<Tab>('planner');
+  import CalculatorTool from '../components/tools/CalculatorTool.svelte';
+  import GraphTool from '../components/tools/GraphTool.svelte';
+  import NotecardsTool from '../components/tools/NotecardsTool.svelte';
+  import TranscriptTool from '../components/tools/TranscriptTool.svelte';
+  import StudyHelpTool from '../components/tools/StudyHelpTool.svelte';
+  import { ui } from '../lib/ui.svelte';
+
+  type Tab = 'grades' | 'planner' | 'calendar' | 'reading' | 'calculator' | 'graph' | 'notecards' | 'study' | 'transcript';
+  let tab = $state<Tab>((ui.toolsTab as Tab) || 'planner');
+  $effect(() => {
+    ui.toolsTab = tab;
+  });
   const tabs: { id: Tab; label: string; icon: string }[] = [
     { id: 'planner', label: 'Plan my day', icon: '🗓️' },
     { id: 'grades', label: 'Grades', icon: '🎯' },
+    { id: 'transcript', label: 'Transcript', icon: '🎓' },
+    { id: 'notecards', label: 'Notecards', icon: '🃏' },
+    { id: 'study', label: 'Study help', icon: '💡' },
+    { id: 'calculator', label: 'Calculator', icon: '🧮' },
+    { id: 'graph', label: 'Graphing', icon: '📈' },
     { id: 'reading', label: 'Reading time', icon: '📖' },
     { id: 'calendar', label: 'Calendar export', icon: '📆' },
   ];
@@ -291,6 +306,16 @@
         </form>
       {/if}
     </section>
+  {:else if tab === 'calculator'}
+    <CalculatorTool />
+  {:else if tab === 'graph'}
+    <GraphTool />
+  {:else if tab === 'notecards'}
+    <NotecardsTool />
+  {:else if tab === 'study'}
+    <StudyHelpTool />
+  {:else if tab === 'transcript'}
+    <TranscriptTool />
   {:else if tab === 'reading'}
     <section class="card">
       <h2>Reading time</h2>

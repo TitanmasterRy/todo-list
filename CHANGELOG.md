@@ -86,3 +86,13 @@
 
 - Removed the demo courses and tasks seeded on first run; the app now starts empty. "Clear demo data" stays available for browsers that already have them.
 - Tools view (`7`, also in the mobile "More" tab): day planner with capacity bar and pull-forward, weighted grade calculator with target and exam countdown, reading-time calculator, calendar (.ics) export. Tasks gained an optional `score` field; the task editor has a Score % input.
+
+## Schoology, dopamine, tools
+
+- Schoology sync from the personal iCal feed (direct, via optional CORS proxy, or manual upload/paste), with a Schoology view split into Overdue / Due in 7 days / Later / Completed, course matching and auto-creation, and deleted-assignment memory
+- Grade XP when a score is entered (tiered, weighted; A+ confetti), tiered early bonus (up to ×1.5), 5% critical hits, level titles, accent colors that unlock by level, weekly XP goal setting, 7 new badges
+- Auto-descriptions: plan, steps, estimate and type inferred from the title and course (offline, deterministic); applied to quick add and synced assignments
+- Quick add: multi-line paste creates one task per line, voice dictation, PWA share target, mobile + button
+- Tools: notecards with Leitner spaced repetition and study XP, study help reference sheets (22 topics) with optional AI tutor, scientific calculator, graphing calculator, transcript with GPA and CSV/print
+- Optional AI helper (Anthropic API key, browser-only) for tutoring, notecard generation
+- Data: decks and cards stored in IndexedDB (schema v2), included in backups and Gist sync; `score`, `source`, `externalId`, `url` on tasks; `credits`, `term`, `finalGrade`, `schoologyName` on courses

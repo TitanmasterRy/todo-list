@@ -11,6 +11,9 @@ import {
   xpForLevel,
 } from './gamification';
 import { DEFAULT_STATS, type Stats, type Task } from './types';
+import { accentUnlockedAt, applyGrade, applyStudySession, gradeXp, levelTitle } from './gamification';
+
+const noCrit = () => 0.5;
 
 function task(over: Partial<Task> = {}): Task {
   return {
@@ -50,27 +53,27 @@ describe('levels', () => {
 describe('xp', () => {
   const at = new Date(2026, 8, 14, 10, 0);
   it('uses base by priority', () => {
-    expect(computeXp(task({ priority: 'low' }), at, 0).total).toBe(5);
-    expect(computeXp(task({ priority: 'normal' }), at, 0).total).toBe(10);
-    expect(computeXp(task({ priority: 'high' }), at, 0).total).toBe(20);
-    expect(computeXp(task({ priority: 'urgent' }), at, 0).total).toBe(30);
+    expect(computeXp(task({ priority: 'low' }), at, 0, noCrit).total).toBe(5);
+    expect(computeXp(task({ priority: 'normal' }), at, 0, noCrit).total).toBe(10);
+    expect(computeXp(task({ priority: 'high' }), at, 0, noCrit).total).toBe(20);
+    expect(computeXp(task({ priority: 'urgent' }), at, 0, noCrit).total).toBe(30);
   });
   it('adds subtask bonus', () => {
     const t = task({ subtasks: [{ id: 'a', title: 'a', done: true }, { id: 'b', title: 'b', done: true }] });
-    expect(computeXp(t, at, 0).total).toBe(20);
+    expect(computeXp(t, at, 0, noCrit).total).toBe(20);
   });
   it('applies early bonus', () => {
-    expect(computeXp(task({ dueAt: '2026-09-15' }), at, 0).total).toBe(13); // 10 * 1.25 = 12.5 -> 13
-    expect(computeXp(task({ dueAt: '2026-09-14' }), at, 0).early).toBe(true); // same day counts
-    expect(computeXp(task({ dueAt: '2026-09-13' }), at, 0).early).toBe(false);
+    expect(computeXp(task({ dueAt: '2026-09-15' }), at, 0, noCrit).total).toBe(13); // 10 * 1.25 = 12.5 -> 13
+    expect(computeXp(task({ dueAt: '2026-09-14' }), at, 0, noCrit).early).toBe(true); // same day counts
+    expect(computeXp(task({ dueAt: '2026-09-13' }), at, 0, noCrit).early).toBe(false);
   });
   it('applies long task multiplier', () => {
-    expect(computeXp(task({ estimateMin: 60 }), at, 0).total).toBe(15);
-    expect(computeXp(task({ estimateMin: 59 }), at, 0).total).toBe(10);
+    expect(computeXp(task({ estimateMin: 60 }), at, 0, noCrit).total).toBe(15);
+    expect(computeXp(task({ estimateMin: 59 }), at, 0, noCrit).total).toBe(10);
   });
   it('doubles the frog', () => {
-    expect(computeXp(task({ frog: true, frogDate: '2026-09-14' }), at, 0).total).toBe(20);
-    expect(computeXp(task({ frog: true, frogDate: '2026-09-13' }), at, 0).total).toBe(10);
+    expect(computeXp(task({ frog: true, frogDate: '2026-09-14' }), at, 0, noCrit).total).toBe(20);
+    expect(computeXp(task({ frog: true, frogDate: '2026-09-13' }), at, 0, noCrit).total).toBe(10);
   });
   it('combo multiplier climbs to 2', () => {
     expect(comboMultiplierFor(0)).toBe(1);
@@ -78,7 +81,7 @@ describe('xp', () => {
     expect(comboMultiplierFor(5)).toBe(1.5);
     expect(comboMultiplierFor(10)).toBe(2);
     expect(comboMultiplierFor(50)).toBe(2);
-    expect(computeXp(task(), at, 2).total).toBe(12);
+    expect(computeXp(task(), at, 2, noCrit).total).toBe(12);
   });
 });
 
@@ -130,18 +133,18 @@ describe('applyCompletion', () => {
     const at = new Date(2026, 8, 14, 10, 0);
     let stats: Stats = structuredClone(DEFAULT_STATS);
     let combo;
-    let r = applyCompletion(stats, task(), at, combo, 5);
+    let r = applyCompletion(stats, task(), at, combo, 5, noCrit);
     expect(r.xp.total).toBe(10);
     expect(r.stats.totalCompleted).toBe(1);
     expect(r.newBadges).toContain('first_task');
     expect(r.ringClosed).toBe(false);
     stats = r.stats;
     combo = r.combo;
-    r = applyCompletion(stats, task(), new Date(at.getTime() + 60_000), combo, 4);
+    r = applyCompletion(stats, task(), new Date(at.getTime() + 60_000), combo, 4, noCrit);
     expect(r.xp.comboMultiplier).toBe(1.1);
     stats = r.stats;
     combo = r.combo;
-    r = applyCompletion(stats, task(), new Date(at.getTime() + 120_000), combo, 0);
+    r = applyCompletion(stats, task(), new Date(at.getTime() + 120_000), combo, 0, noCrit);
     expect(r.ringClosed).toBe(true);
     expect(r.newBadges).toContain('inbox_zero');
     expect(r.stats.completionsByDay['2026-09-14']).toBe(3);
@@ -149,12 +152,12 @@ describe('applyCompletion', () => {
   });
   it('resets combo after the window', () => {
     const at = new Date(2026, 8, 14, 10, 0);
-    const r = applyCompletion(structuredClone(DEFAULT_STATS), task(), at, { count: 3, lastAt: at.getTime() - 4 * 60_000 }, 1);
+    const r = applyCompletion(structuredClone(DEFAULT_STATS), task(), at, { count: 3, lastAt: at.getTime() - 4 * 60_000 }, 1, noCrit);
     expect(r.combo.count).toBe(0);
   });
   it('levels up', () => {
     const stats: Stats = { ...structuredClone(DEFAULT_STATS), xp: 95 };
-    const r = applyCompletion(stats, task(), new Date(2026, 8, 14, 10), undefined, 1);
+    const r = applyCompletion(stats, task(), new Date(2026, 8, 14, 10), undefined, 1, noCrit);
     expect(r.leveledUp).toBe(true);
     expect(r.newLevel).toBe(2);
   });
@@ -175,5 +178,44 @@ describe('badges', () => {
     };
     expect(evaluateBadges(stats, { openTasksRemaining: 1, today: '2026-09-14' })).toContain('ring_5');
     expect(evaluateBadges({ ...stats, ringDays: stats.ringDays.slice(1) }, { openTasksRemaining: 1, today: '2026-09-14' })).not.toContain('ring_5');
+  });
+});
+
+describe('early tiers, crit, grades, study, unlocks', () => {
+  const at = new Date(2026, 8, 14, 10, 0);
+  it('scales the early bonus by days early', () => {
+    expect(computeXp(task({ dueAt: '2026-09-14' }), at, 0, noCrit).total).toBe(11); // same day ×1.1
+    expect(computeXp(task({ dueAt: '2026-09-15' }), at, 0, noCrit).total).toBe(13); // 1 day ×1.25
+    expect(computeXp(task({ dueAt: '2026-09-17' }), at, 0, noCrit).total).toBe(15); // 3 days ×1.5
+    expect(computeXp(task({ dueAt: '2026-09-17' }), at, 0, noCrit).earlyDays).toBe(3);
+  });
+  it('doubles on a critical hit and counts it', () => {
+    const r = applyCompletion(structuredClone(DEFAULT_STATS), task(), at, undefined, 1, () => 0.01);
+    expect(r.xp.crit).toBe(true);
+    expect(r.xp.total).toBe(20);
+    expect(r.stats.critCount).toBe(1);
+    expect(applyCompletion(structuredClone(DEFAULT_STATS), task({ dueAt: '2026-09-20' }), at, undefined, 1, noCrit).stats.early3Count).toBe(1);
+  });
+  it('pays grade xp by tier and weight', () => {
+    expect(gradeXp(97).xp).toBe(40);
+    expect(gradeXp(97, 50).xp).toBe(60);
+    expect(gradeXp(85).tier).toBe('good');
+    expect(gradeXp(40).xp).toBe(5);
+    const r = applyGrade({ ...structuredClone(DEFAULT_STATS), acedCount: 4 }, 96, 20, '2026-09-14', 1);
+    expect(r.stats.xp).toBe(48);
+    expect(r.stats.acedCount).toBe(5);
+    expect(r.newBadges).toContain('aced_5');
+  });
+  it('rewards study sessions', () => {
+    const r = applyStudySession({ ...structuredClone(DEFAULT_STATS), cardsReviewed: 95 }, 8, 6, true, '2026-09-14', 1);
+    expect(r.xp.xp).toBe(22);
+    expect(r.stats.cardsReviewed).toBe(103);
+    expect(r.newBadges).toContain('card_shark');
+  });
+  it('titles and unlocks follow level', () => {
+    expect(levelTitle(1)).toBe('Freshman');
+    expect(levelTitle(99)).toBe('Legend');
+    expect(accentUnlockedAt(1).length).toBe(4);
+    expect(accentUnlockedAt(4).length).toBe(6);
   });
 });

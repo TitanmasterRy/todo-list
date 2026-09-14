@@ -38,7 +38,7 @@
     list.push({ id: 'frog', label: 'Pick today’s frog (hardest task, double XP)', icon: '🐸', run: () => (ui.frogPrompt = true) });
     list.push({ id: 'roll', label: 'Roll all overdue to today', icon: '⏩', run: () => store.rollOverdueToToday() });
     list.push({ id: 'export', label: 'Export backup (JSON)', icon: '💾', run: () => {
-      downloadJSON(backupFilename(), buildBundle({ tasks: store.tasks, courses: store.courses, templates: store.templates, stats: store.stats, dayNotes: store.dayNotes }));
+      downloadJSON(backupFilename(), buildBundle({ tasks: store.tasks, courses: store.courses, templates: store.templates, stats: store.stats, dayNotes: store.dayNotes, decks: store.decks, cards: store.cards }));
       store.updateSettings({ lastExportAt: new Date().toISOString() });
       toasts.push({ message: 'Backup downloaded', kind: 'success' });
     } });

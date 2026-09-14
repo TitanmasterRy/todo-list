@@ -1,6 +1,8 @@
 import type { Priority, Stats, Task } from './types';
 import { addDaysKey, dateKey, diffDays, dueKey, endOfDay, isDateOnly, parseDue, todayKey } from './dates';
 
+export const CRIT_CHANCE = 0.05;
+
 export const BASE_XP: Record<Priority, number> = { low: 5, normal: 10, high: 20, urgent: 30 };
 export const COMBO_WINDOW_MS = 3 * 60 * 1000;
 export const MAX_FREEZES = 2;
@@ -37,27 +39,122 @@ export interface XpBreakdown {
   base: number;
   subtaskBonus: number;
   early: boolean;
+  earlyDays: number; // whole days before the due day (0 = same day but before due)
+  earlyMultiplier: number;
   longTask: boolean;
   frog: boolean;
+  crit: boolean; // random critical hit (x2)
   comboCount: number;
   comboMultiplier: number;
   total: number;
 }
 
-/** Compute XP for completing a task. comboCount = number of consecutive prior completions in the combo chain (0 = none). */
-export function computeXp(task: Task, completedAt: Date, comboCount: number): XpBreakdown {
+/** Whole days between completion day and due day (negative when late). */
+export function daysEarly(task: Pick<Task, 'dueAt'>, completedAt: Date): number | null {
+  if (!task.dueAt) return null;
+  return diffDays(dateKey(completedAt), dueKey(task.dueAt));
+}
+
+/** Tiered early bonus: 3+ days ×1.5, 1–2 days ×1.25, same day but before the deadline ×1.1. */
+export function earlyMultiplierFor(task: Pick<Task, 'dueAt'>, completedAt: Date): { early: boolean; earlyDays: number; multiplier: number } {
+  if (!completedEarly(task, completedAt)) return { early: false, earlyDays: 0, multiplier: 1 };
+  const d = Math.max(0, daysEarly(task, completedAt) ?? 0);
+  return { early: true, earlyDays: d, multiplier: d >= 3 ? 1.5 : d >= 1 ? 1.25 : 1.1 };
+}
+
+/** Compute XP for completing a task. comboCount = consecutive prior completions in the combo chain (0 = none). rng in [0,1) decides critical hits. */
+export function computeXp(task: Task, completedAt: Date, comboCount: number, rng: () => number = Math.random): XpBreakdown {
   const base = BASE_XP[task.priority] ?? 10;
   const subtaskBonus = 5 * (task.subtasks?.length ?? 0);
   let total = base + subtaskBonus;
-  const early = completedEarly(task, completedAt);
-  if (early) total *= 1.25;
+  const e = earlyMultiplierFor(task, completedAt);
+  const early = e.early;
+  total *= e.multiplier;
   const longTask = (task.estimateMin ?? 0) >= 60;
   if (longTask) total *= 1.5;
   const frog = !!task.frog && task.frogDate === dateKey(completedAt);
   if (frog) total *= 2;
   const comboMultiplier = comboMultiplierFor(comboCount);
   total *= comboMultiplier;
-  return { base, subtaskBonus, early, longTask, frog, comboCount, comboMultiplier, total: Math.round(total) };
+  const crit = rng() < CRIT_CHANCE;
+  if (crit) total *= 2;
+  return { base, subtaskBonus, early, earlyDays: e.earlyDays, earlyMultiplier: e.multiplier, longTask, frog, crit, comboCount, comboMultiplier, total: Math.round(total) };
+}
+
+// ---------- Grades ----------
+export interface GradeXp {
+  xp: number;
+  tier: 'aced' | 'great' | 'good' | 'ok' | 'done';
+  label: string;
+}
+
+/** XP for entering a score: better grades pay more, heavier items pay more. */
+export function gradeXp(score: number, weight = 0): GradeXp {
+  const tier: GradeXp['tier'] = score >= 95 ? 'aced' : score >= 90 ? 'great' : score >= 80 ? 'good' : score >= 70 ? 'ok' : 'done';
+  const base = { aced: 40, great: 30, good: 20, ok: 10, done: 5 }[tier];
+  const w = Math.max(0, Math.min(100, weight || 0));
+  const labels = { aced: 'Aced it!', great: 'Great grade', good: 'Solid grade', ok: 'Graded', done: 'Graded' };
+  return { xp: Math.round(base * (1 + w / 100)), tier, label: labels[tier] };
+}
+
+export interface GradeResult {
+  stats: Stats;
+  xp: GradeXp;
+  leveledUp: boolean;
+  newLevel: number;
+  newBadges: string[];
+}
+
+/** Pure: award XP for a score entered on a task (call once per task). */
+export function applyGrade(prev: Stats, score: number, weight: number | undefined, today: string, openTasksRemaining: number): GradeResult {
+  const stats: Stats = structuredClone(prev);
+  const xp = gradeXp(score, weight);
+  const prevLevel = levelForXp(stats.xp);
+  stats.xp += xp.xp;
+  stats.level = levelForXp(stats.xp);
+  if (score >= 95) stats.acedCount = (stats.acedCount ?? 0) + 1;
+  const newBadges = evaluateBadges(stats, { openTasksRemaining, today });
+  stats.badges = [...stats.badges, ...newBadges];
+  return { stats, xp, leveledUp: stats.level > prevLevel, newLevel: stats.level, newBadges };
+}
+
+/** Pure: XP for a notecard study session. +2 per correct answer, +10 bonus for clearing every due card. */
+export function applyStudySession(prev: Stats, reviewed: number, correct: number, clearedAll: boolean, today: string, openTasksRemaining: number): GradeResult {
+  const stats: Stats = structuredClone(prev);
+  const gained = correct * 2 + (clearedAll && reviewed > 0 ? 10 : 0);
+  const prevLevel = levelForXp(stats.xp);
+  stats.xp += gained;
+  stats.level = levelForXp(stats.xp);
+  stats.cardsReviewed = (stats.cardsReviewed ?? 0) + reviewed;
+  const newBadges = evaluateBadges(stats, { openTasksRemaining, today });
+  stats.badges = [...stats.badges, ...newBadges];
+  return { stats, xp: { xp: gained, tier: clearedAll ? 'great' : 'ok', label: clearedAll ? 'Deck cleared' : 'Study session' }, leveledUp: stats.level > prevLevel, newLevel: stats.level, newBadges };
+}
+
+// ---------- Levels: titles and unlocks ----------
+export const LEVEL_TITLES = ['Freshman', 'Note Taker', 'Deadline Dodger', 'Page Turner', 'Problem Solver', 'Study Machine', 'Honor Roll', 'Dean’s List', 'Scholar', 'Valedictorian', 'Legend'];
+
+export function levelTitle(level: number): string {
+  return LEVEL_TITLES[Math.min(LEVEL_TITLES.length - 1, Math.max(0, level - 1))];
+}
+
+/** Accent colors unlock as you level: the first four are free, then one more every two levels. */
+export const ACCENT_UNLOCKS: { color: string; name: string; level: number }[] = [
+  { color: '#6c5ce7', name: 'Violet', level: 1 },
+  { color: '#3b82f6', name: 'Blue', level: 1 },
+  { color: '#10b981', name: 'Green', level: 1 },
+  { color: '#f59e0b', name: 'Amber', level: 1 },
+  { color: '#0ea5e9', name: 'Sky', level: 2 },
+  { color: '#ec4899', name: 'Pink', level: 4 },
+  { color: '#f97316', name: 'Orange', level: 6 },
+  { color: '#ef4444', name: 'Red', level: 8 },
+  { color: '#14b8a6', name: 'Teal', level: 10 },
+  { color: '#a855f7', name: 'Purple', level: 12 },
+  { color: '#eab308', name: 'Gold', level: 15 },
+];
+
+export function accentUnlockedAt(level: number): typeof ACCENT_UNLOCKS {
+  return ACCENT_UNLOCKS.filter((a) => a.level <= level);
 }
 
 export function comboMultiplierFor(comboCount: number): number {
@@ -155,6 +252,13 @@ export const BADGES: BadgeDef[] = [
   { id: 'night_owl', name: 'Night Owl', emoji: '🦉', description: 'Complete a task between 11 pm and 4 am.' },
   { id: 'exam_slayer', name: 'Exam Slayer', emoji: '⚔️', description: 'Complete 10 exam tasks.' },
   { id: 'marathon', name: 'Marathon', emoji: '🏃', description: 'Finish 4 pomodoros in one day.' },
+  { id: 'aced_5', name: 'Aced It', emoji: '🅰️', description: 'Score 95% or better on 5 graded items.' },
+  { id: 'ahead_10', name: 'Ahead of the Curve', emoji: '🚀', description: 'Finish 10 tasks three or more days early.' },
+  { id: 'perfect_week', name: 'Perfect Week', emoji: '🏅', description: 'Close the daily ring seven days in a row.' },
+  { id: 'card_shark', name: 'Card Shark', emoji: '🃏', description: 'Review 100 notecards.' },
+  { id: 'lucky', name: 'Lucky', emoji: '🍀', description: 'Land 3 critical hits.' },
+  { id: 'synced', name: 'Plugged In', emoji: '🔌', description: 'Sync assignments from Schoology.' },
+  { id: 'level_10', name: 'Valedictorian', emoji: '🎓', description: 'Reach level 10.' },
 ];
 
 export function badgeById(id: string): BadgeDef | undefined {
@@ -195,6 +299,13 @@ export function evaluateBadges(stats: Stats, ctx: { openTasksRemaining: number; 
   }
   check('exam_slayer', stats.examCount >= 10);
   check('marathon', (stats.pomodorosByDay[ctx.today] ?? 0) >= 4);
+  check('aced_5', (stats.acedCount ?? 0) >= 5);
+  check('ahead_10', (stats.early3Count ?? 0) >= 10);
+  check('perfect_week', ringClosedConsecutive(stats.ringDays, ctx.today, 7));
+  check('card_shark', (stats.cardsReviewed ?? 0) >= 100);
+  check('lucky', (stats.critCount ?? 0) >= 3);
+  check('synced', (stats.syncedCount ?? 0) >= 1);
+  check('level_10', levelForXp(stats.xp) >= 10);
   return earned;
 }
 
@@ -216,11 +327,14 @@ export function applyCompletion(
   completedAt: Date,
   combo: ComboState | undefined,
   openTasksRemaining: number,
+  rng: () => number = Math.random,
 ): CompletionResult {
   const stats: Stats = structuredClone(prev);
   const day = dateKey(completedAt);
   const nextCombo = advanceCombo(combo, completedAt.getTime());
-  const xp = computeXp(task, completedAt, nextCombo.count);
+  const xp = computeXp(task, completedAt, nextCombo.count, rng);
+  if (xp.crit) stats.critCount = (stats.critCount ?? 0) + 1;
+  if (xp.early && xp.earlyDays >= 3) stats.early3Count = (stats.early3Count ?? 0) + 1;
   const prevLevel = levelForXp(stats.xp);
   stats.xp += xp.total;
   stats.level = levelForXp(stats.xp);

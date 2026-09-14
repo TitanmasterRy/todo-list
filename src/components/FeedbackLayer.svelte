@@ -43,6 +43,8 @@
         if (e.xp.early) parts.push('early +25%');
         if (e.xp.longTask) parts.push('long task ×1.5');
         if (e.xp.frog) parts.push('🐸 frog ×2');
+        if (e.xp.early && e.xp.earlyDays >= 3) parts[parts.indexOf('early +25%')] = `${e.xp.earlyDays} days early ×1.5`;
+        if (e.xp.crit) parts.unshift('💥 CRITICAL HIT ×2');
         if (e.xp.comboCount > 0) parts.push(`combo ×${e.xp.comboMultiplier.toFixed(1)}`);
         if (e.xp.subtaskBonus) parts.push(`+${e.xp.subtaskBonus} subtasks`);
         toasts.push({
@@ -50,7 +52,7 @@
           detail: g && parts.length ? parts.join(' · ') : undefined,
           kind: g ? 'xp' : 'success',
           combo: g ? e.xp.comboCount : 0,
-          emoji: g ? (e.xp.comboCount >= 5 ? '🔥' : e.xp.comboCount >= 2 ? '⚡' : '✨') : '✓',
+          emoji: g ? (e.xp.crit ? '💥' : e.xp.comboCount >= 5 ? '🔥' : e.xp.comboCount >= 2 ? '⚡' : '✨') : '✓',
           timeout: 5000,
           action: entry
             ? {
@@ -65,6 +67,33 @@
         if (g && e.freezeEarned) {
           toasts.push({ message: 'Streak freeze earned', detail: 'A missed day will not break your streak.', kind: 'info', emoji: '🧊' });
         }
+      }),
+      on('graded', (e) => {
+        if (!store.settings.gamification) return;
+        const aced = e.tier === 'aced';
+        toasts.push({
+          message: `+${e.xp} XP · ${e.label}`,
+          detail: `${e.task.score}% on “${e.task.title}”${e.task.weight ? ` · worth ${e.task.weight}%` : ''}`,
+          kind: 'xp',
+          combo: aced ? 6 : e.tier === 'great' ? 3 : 0,
+          emoji: aced ? '🅰️' : e.tier === 'great' ? '🌟' : e.tier === 'good' ? '👍' : '📝',
+          timeout: 6000,
+        });
+        if (aced) {
+          enqueue(() => {
+            confetti++;
+            playSound('ring');
+            done(1000);
+          });
+        }
+      }),
+      on('studied', (e) => {
+        if (!store.settings.gamification) return;
+        toasts.push({ message: `+${e.xp} XP · ${e.clearedAll ? 'Deck cleared!' : 'Study session'}`, detail: `${e.correct}/${e.reviewed} cards right`, kind: 'xp', combo: e.clearedAll ? 4 : 0, emoji: e.clearedAll ? '🃏' : '📚' });
+        if (e.clearedAll) playSound('badge');
+      }),
+      on('synced', (e) => {
+        if (e.created > 0) playSound('tick');
       }),
       on('levelup', ({ level }) => {
         if (!store.settings.gamification) return;

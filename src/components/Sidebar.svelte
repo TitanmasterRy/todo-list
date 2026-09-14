@@ -1,6 +1,6 @@
 <script lang="ts">
   import { store, VIEWS } from '../lib/store.svelte';
-  import { levelProgress } from '../lib/gamification';
+  import { levelProgress, levelTitle } from '../lib/gamification';
   import { ui } from '../lib/ui.svelte';
 
   const lp = $derived(levelProgress(store.stats.xp));
@@ -37,7 +37,7 @@
   <div class="grow"></div>
   {#if store.settings.gamification}
     <div class="level" title="{store.stats.xp} XP">
-      <div class="lvl-row"><span>Level {lp.level}</span><span class="muted">{lp.into}/{lp.needed}</span></div>
+      <div class="lvl-row"><span>Lv {lp.level} · {levelTitle(lp.level)}</span><span class="muted">{lp.into}/{lp.needed}</span></div>
       <div class="bar"><div class="fill" style="width:{lp.pct * 100}%"></div></div>
     </div>
   {/if}

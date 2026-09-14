@@ -13,6 +13,8 @@
   import StatsView from './views/StatsView.svelte';
   import SettingsView from './views/SettingsView.svelte';
   import ToolsView from './views/ToolsView.svelte';
+  import SchoologyView from './views/SchoologyView.svelte';
+  import { startSchoologySync } from './lib/schoologySync.svelte';
   import FeedbackLayer from './components/FeedbackLayer.svelte';
   import Keyboard from './components/Keyboard.svelte';
   import CommandPalette from './components/CommandPalette.svelte';
@@ -24,7 +26,10 @@
   import { startSync } from './lib/gist.svelte';
 
   onMount(() => {
-    void store.init().then(() => startSync());
+    void store.init().then(() => {
+      startSync();
+      startSchoologySync();
+    });
     const mq = window.matchMedia('(prefers-color-scheme: dark)');
     const apply = () => document.documentElement.classList.toggle('force-dark', mq.matches);
     apply();
@@ -44,6 +49,24 @@
   });
 
   const viewLabel = $derived(VIEWS.find((v) => v.id === store.view)?.label ?? '');
+  const listViews = ['today', 'upcoming', 'courses', 'inbox'];
+  function fab() {
+    if (!listViews.includes(store.view)) store.go('today');
+    setTimeout(() => {
+      const el = document.querySelector<HTMLInputElement>('[data-quick-add]');
+      el?.scrollIntoView({ block: 'center' });
+      el?.focus();
+    }, 50);
+  }
+  onMount(() => {
+    // PWA share target / deep link: ?title=… (&text=…&url=…) prefills quick add.
+    const params = new URLSearchParams(window.location.search);
+    const shared = [params.get('title'), params.get('text'), params.get('url')].filter(Boolean).join(' ').trim();
+    if (shared) {
+      ui.quickAddPrefill = shared;
+      window.history.replaceState({}, '', window.location.pathname);
+    }
+  });
 </script>
 
 <svelte:head>
@@ -75,12 +98,15 @@
         <StatsView />
       {:else if store.view === 'tools'}
         <ToolsView />
+      {:else if store.view === 'schoology'}
+        <SchoologyView />
       {:else if store.view === 'settings'}
         <SettingsView />
       {/if}
     </main>
     <TabBar />
   </div>
+  <button class="fab" onclick={fab} aria-label="Add task">+</button>
   <BulkBar />
   <Toasts />
   <FeedbackLayer />
@@ -130,6 +156,30 @@
   @media (min-width: 721px) {
     .main {
       margin-left: var(--sidebar-w);
+    }
+  }
+  .fab {
+    display: none;
+    position: fixed;
+    right: 16px;
+    bottom: calc(var(--tabbar-h) + 16px + env(safe-area-inset-bottom));
+    width: 54px;
+    height: 54px;
+    border-radius: 50%;
+    background: var(--accent);
+    color: #fff;
+    font-size: 30px;
+    line-height: 1;
+    box-shadow: 0 8px 24px color-mix(in srgb, var(--accent) 45%, transparent);
+    z-index: 30;
+  }
+  .fab:active {
+    transform: scale(0.94);
+  }
+  @media (max-width: 720px) {
+    .fab {
+      display: grid;
+      place-items: center;
     }
   }
 </style>

@@ -10,7 +10,28 @@
   import { sync, syncNow, checkToken, disconnect } from '../lib/gist.svelte';
   import { pwa, promptInstall } from '../lib/pwa.svelte';
   import { pomodoro } from '../lib/pomodoro.svelte';
-  import { MAX_FREEZES } from '../lib/gamification';
+  import { MAX_FREEZES, ACCENT_UNLOCKS, levelTitle } from '../lib/gamification';
+  import { testKey } from '../lib/ai';
+  import { schoology, syncNow as syncSchoology } from '../lib/schoologySync.svelte';
+  let aiKey = $state('');
+  let aiBusy = $state(false);
+  let schoologyUrl = $state(store.settings.schoologyFeedUrl);
+  let schoologyProxy = $state(store.settings.schoologyProxy);
+  async function connectAI() {
+    if (!aiKey.trim()) return;
+    aiBusy = true;
+    store.updateSettings({ aiApiKey: aiKey.trim() });
+    try {
+      await testKey();
+      toasts.push({ message: 'AI helper connected', kind: 'success', emoji: '✨' });
+      aiKey = '';
+    } catch (err) {
+      store.updateSettings({ aiApiKey: '' });
+      toasts.push({ message: 'Key check failed', detail: err instanceof Error ? err.message : String(err), kind: 'warn' });
+    } finally {
+      aiBusy = false;
+    }
+  }
 
   const s = $derived(store.settings);
   let token = $state('');
@@ -26,7 +47,7 @@
   }
 
   function exportNow() {
-    downloadJSON(backupFilename(), buildBundle({ tasks: store.tasks, courses: store.courses, templates: store.templates, stats: store.stats, dayNotes: store.dayNotes }));
+    downloadJSON(backupFilename(), buildBundle({ tasks: store.tasks, courses: store.courses, templates: store.templates, stats: store.stats, dayNotes: store.dayNotes, decks: store.decks, cards: store.cards }));
     set('lastExportAt', new Date().toISOString());
     toasts.push({ message: 'Backup downloaded', kind: 'success', emoji: '💾' });
   }
@@ -38,12 +59,12 @@
       const text = await file.text();
       const bundle = parseBundle(JSON.parse(text));
       if (importMode === 'replace') {
-        const before = buildBundle({ tasks: $state.snapshot(store.tasks), courses: $state.snapshot(store.courses), templates: $state.snapshot(store.templates), stats: $state.snapshot(store.stats), dayNotes: $state.snapshot(store.dayNotes) });
+        const before = buildBundle({ tasks: $state.snapshot(store.tasks), courses: $state.snapshot(store.courses), templates: $state.snapshot(store.templates), stats: $state.snapshot(store.stats), dayNotes: $state.snapshot(store.dayNotes), decks: $state.snapshot(store.decks), cards: $state.snapshot(store.cards) });
         await store.loadBundle(bundle);
         undo.push({ label: `Imported ${bundle.tasks.length} tasks (replaced data)`, undo: () => void store.loadBundle(before) }, { kind: 'warn', timeout: 10000 });
       } else {
         const { mergeBundles } = await import('../lib/backup');
-        const local = buildBundle({ tasks: $state.snapshot(store.tasks), courses: $state.snapshot(store.courses), templates: $state.snapshot(store.templates), stats: $state.snapshot(store.stats), dayNotes: $state.snapshot(store.dayNotes) });
+        const local = buildBundle({ tasks: $state.snapshot(store.tasks), courses: $state.snapshot(store.courses), templates: $state.snapshot(store.templates), stats: $state.snapshot(store.stats), dayNotes: $state.snapshot(store.dayNotes), decks: $state.snapshot(store.decks), cards: $state.snapshot(store.cards) });
         const { merged } = mergeBundles(local, bundle);
         await store.loadBundle(merged);
         undo.push({ label: `Merged ${bundle.tasks.length} tasks from file`, undo: () => void store.loadBundle(local) }, { timeout: 10000 });
@@ -108,8 +129,9 @@
     <div class="row">
       <span id="accent-l">Accent</span>
       <div class="swatches" role="radiogroup" aria-labelledby="accent-l">
-        {#each ACCENT_COLORS as c}
-          <button class="sw" class:on={s.accent === c} style="background:{c}" role="radio" aria-checked={s.accent === c} aria-label={c} onclick={() => set('accent', c)}></button>
+        {#each ACCENT_UNLOCKS as a}
+          {@const locked = s.gamification && store.stats.level < a.level}
+          <button class="sw" class:on={s.accent === a.color} class:locked style="background:{a.color}" role="radio" aria-checked={s.accent === a.color} aria-label="{a.name}{locked ? ` (unlocks at level ${a.level})` : ''}" title="{a.name}{locked ? ` · unlocks at level ${a.level}` : ''}" disabled={locked} onclick={() => set('accent', a.color)}>{locked ? '🔒' : ''}</button>
         {/each}
         <input type="color" value={s.accent} onchange={(e) => set('accent', (e.target as HTMLInputElement).value)} aria-label="Custom accent" class="custom" />
       </div>
@@ -176,10 +198,68 @@
       <label for="gam">XP, streaks, badges, confetti</label>
       <input id="gam" type="checkbox" class="switch" checked={s.gamification} onchange={(e) => set('gamification', (e.target as HTMLInputElement).checked)} />
     </div>
+    <div class="row">
+      <label for="wxp">Weekly XP goal</label>
+      <input id="wxp" class="input num" type="number" min="50" step="50" value={s.weeklyXpGoal} onchange={(e) => set('weeklyXpGoal', Math.max(50, Number((e.target as HTMLInputElement).value) || 500))} />
+    </div>
+    <p class="help">Level {store.stats.level}: <strong>{levelTitle(store.stats.level)}</strong>. New accent colors unlock as you level up. Critical hits (5% chance, double XP), tiered early bonuses (up to ×1.5 for 3+ days early), grade XP for scores you enter, and notecard study XP all count.</p>
     <p class="help">
       Streak freezes: you earn one per 7-day streak (max {MAX_FREEZES} banked). A missed day uses one automatically instead of breaking your streak.
       You have <strong>{store.stats.streak.freezes}</strong> banked. Current streak {store.streak}, best {store.stats.streak.best}.
     </p>
+  </section>
+
+  <section class="card">
+    <h2>Adding tasks</h2>
+    <div class="row">
+      <label for="autod">Auto-describe new tasks (plan, steps, estimate)</label>
+      <input id="autod" type="checkbox" class="switch" checked={s.autoDescribe} onchange={(e) => set('autoDescribe', (e.target as HTMLInputElement).checked)} />
+    </div>
+    <p class="help">Works offline from the task title and course. Toggle it per task with the “auto plan” chip under quick add. Paste several lines into quick add to create one task per line; tap 🎤 to dictate.</p>
+  </section>
+
+  <section class="card">
+    <h2>AI helper <span class="chip optional">optional</span></h2>
+    <p class="help">Powers “Ask the tutor” in Study help and “Generate from notes” in Notecards. Uses your own <a href="https://console.anthropic.com/settings/keys" target="_blank" rel="noopener noreferrer">Anthropic API key</a>, stored only in this browser and sent only to api.anthropic.com. You pay Anthropic directly for usage.</p>
+    {#if s.aiApiKey}
+      <div class="row"><span>Status</span><span class="status ok">Connected · {s.aiModel}</span></div>
+      <div class="row">
+        <label for="aimodel">Model</label>
+        <select id="aimodel" class="select" value={s.aiModel} onchange={(e) => set('aiModel', (e.target as HTMLSelectElement).value)}>
+          <option value="claude-opus-5">Claude Opus 5 (best)</option>
+          <option value="claude-sonnet-5">Claude Sonnet 5 (cheaper)</option>
+          <option value="claude-haiku-4-5">Claude Haiku 4.5 (fastest)</option>
+        </select>
+      </div>
+      <div class="btns"><button class="btn danger" onclick={() => set('aiApiKey', '')}>Remove key</button></div>
+    {:else}
+      <form class="btns" onsubmit={(e) => { e.preventDefault(); void connectAI(); }}>
+        <input class="input" type="password" bind:value={aiKey} placeholder="sk-ant-…" aria-label="Anthropic API key" autocomplete="off" />
+        <button class="btn primary" type="submit" disabled={aiBusy || !aiKey.trim()}>{aiBusy ? 'Checking…' : 'Connect'}</button>
+      </form>
+    {/if}
+  </section>
+
+  <section class="card">
+    <h2>Schoology sync <span class="chip optional">optional</span></h2>
+    <p class="help">Pulls assignments from your Schoology calendar feed into the app (sync on load and every 30 minutes). Full setup and manual import live in the <button class="link" onclick={() => store.go('schoology')}>Schoology view</button>.</p>
+    <form class="btns" onsubmit={(e) => { e.preventDefault(); store.updateSettings({ schoologyFeedUrl: schoologyUrl.trim(), schoologyProxy: schoologyProxy.trim() }); if (schoologyUrl.trim()) void syncSchoology(); }}>
+      <input class="input" bind:value={schoologyUrl} placeholder="https://app.schoology.com/calendar/feed/ical/…/schoology.ics" aria-label="Schoology feed URL" />
+      <input class="input" bind:value={schoologyProxy} placeholder="CORS proxy prefix (optional)" aria-label="CORS proxy" />
+      <button class="btn primary" type="submit">Save</button>
+    </form>
+    {#if s.schoologyFeedUrl}
+      <div class="row"><span>Status</span><span class="status {schoology.status}">{schoology.status === 'error' ? `Error: ${schoology.lastError}` : schoology.status}{#if s.lastSchoologySync}<span class="muted"> · last {new Date(s.lastSchoologySync).toLocaleString()}</span>{/if}</span></div>
+      <div class="row">
+        <label for="sauto">Create courses for new class names</label>
+        <input id="sauto" type="checkbox" class="switch" checked={s.schoologyAutoCreateCourses} onchange={(e) => set('schoologyAutoCreateCourses', (e.target as HTMLInputElement).checked)} />
+      </div>
+      <div class="btns">
+        <button class="btn" onclick={() => void syncSchoology()}>Sync now</button>
+        <button class="btn danger" onclick={() => { set('schoologyFeedUrl', ''); schoologyUrl = ''; }}>Disconnect</button>
+        {#if s.schoologyIgnored.length}<button class="btn ghost sm" onclick={() => set('schoologyIgnored', [])}>Forget {s.schoologyIgnored.length} deleted assignment{s.schoologyIgnored.length > 1 ? 's' : ''}</button>{/if}
+      </div>
+    {/if}
   </section>
 
   <section class="card">
@@ -349,6 +429,15 @@
   .sw.on {
     border-color: var(--text);
     transform: scale(1.15);
+  }
+  .sw.locked {
+    opacity: 0.35;
+    font-size: 11px;
+    cursor: not-allowed;
+  }
+  .link {
+    color: var(--accent);
+    font-weight: 500;
   }
   .custom {
     width: 24px;

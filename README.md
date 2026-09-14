@@ -25,6 +25,10 @@ Requires Node 22+. The app starts empty; use **Semester setup** (Courses view or
 
 The app is a PWA: after the first visit it loads offline, and browsers offer **Install** (also available as a button in Settings). When a new version is deployed, an "Update available" toast offers a reload.
 
+## AI helper (optional)
+
+“Ask the tutor” and “Generate from notes” call the Anthropic API directly from your browser with a key you paste under **Settings → AI helper**. The key is stored only in localStorage and sent only to `api.anthropic.com`; you pay Anthropic for usage. Everything else in the app works without it.
+
 ## Setting up Gist sync (optional)
 
 Gist sync keeps your data in a **private GitHub Gist** so it follows you across devices. It is off until you add a token.
@@ -35,9 +39,36 @@ Gist sync keeps your data in a **private GitHub Gist** so it follows you across 
 
 How it syncs: on load and 2 seconds after any change (debounced). Merging is last-write-wins per task using `updatedAt`; courses, templates and day notes merge by id; stats keep the higher XP and the maximum completions per day. A conflict notice appears only if the same task was edited on two devices within the same second. The token is stored only in this browser's localStorage and is sent only to `api.github.com`. **Disconnect** removes it.
 
+## Schoology sync
+
+The **Schoology** view (`8`) pulls assignments from your Schoology calendar feed and files them under Overdue, Due in the next 7 days, Later, and Completed. Completing them here earns XP like any task; deadlines follow the feed; deleting one keeps it from coming back.
+
+1. In Schoology open **Calendar → ⚙/Export**, enable the iCal feed, and copy its URL.
+2. Paste it under **Schoology → Setup** (or Settings → Schoology sync) and save. The app syncs on load and every 30 minutes while open.
+3. Schoology does not send CORS headers, so a browser on another site cannot read the feed directly. Either deploy the 20-line Cloudflare Worker in `docs/cors-proxy-worker.js` (free) and paste its URL as the proxy prefix, or upload / paste the `.ics` file by hand whenever you want to refresh.
+
+Courses are matched by name (set **Name in Schoology** on a course to pin a match) or created automatically. Assignments with no description get an auto-generated plan and steps. The Schoology REST API is not used because it needs OAuth request signing and a server, which a static site cannot provide.
+
+## Adding tasks quickly
+
+- Quick add parses natural language (below). New tasks get an **auto plan**: a short description, 2–5 steps, an estimate and a type inferred from the title and course. Toggle it per task with the “auto plan” chip, or globally in Settings.
+- **Paste several lines** into quick add to create one task per line.
+- Tap **🎤** to dictate (browsers with speech recognition).
+- On a phone, the **+** button jumps to quick add; installed as a PWA the app also appears in the system **Share** sheet, so sharing text from any app prefills a task.
+
+## Dopamine
+
+XP for completing tasks scales with priority, subtasks, estimate, and how early you finish (same day ×1.1, 1–2 days ×1.25, 3+ days ×1.5), with a combo multiplier for back-to-back completions, a 5% **critical hit** for double XP, and double XP on the day's frog. Entering a **score** on a graded task pays grade XP (an A+ triggers confetti). Notecard study sessions pay XP too. Levels have titles (Freshman → Valedictorian) and unlock accent colors; 21 badges; streaks with freezes; daily ring confetti.
+
 ## Tools
 
-The **Tools** view (`7`) has four helpers:
+The **Tools** view (`7`) has nine helpers:
+
+- **Notecards:** decks per course, cards typed, pasted (`term :: definition`, `Q:/A:`), or generated from notes with the optional AI helper; study with Leitner spaced repetition (boxes 1–5) and earn XP.
+- **Study help:** 22 built-in reference sheets (algebra, trig, calculus, statistics, physics, chemistry, biology, essays, MLA/APA, study skills, units, programming, languages) plus an optional **Ask the tutor** box powered by your own Anthropic API key.
+- **Calculator:** scientific calculator with functions, factorials, percent, degrees/radians, history and `ans`.
+- **Graphing:** plot up to six `y = f(x)` functions, hover to trace, drag to pan, scroll to zoom.
+- **Transcript:** courses by term with credits, grade, letter and GPA points; term and cumulative GPA; CSV export and print-to-PDF.
 
 - **Plan my day:** set how many minutes of homework you can do per day, see today's committed time against it and the load for the next 7 days, and pull upcoming tasks into Today without moving their deadlines ("Auto-fill free time" does it for you).
 - **Grades:** weighted grade calculator per course. Give tasks a weight % and a score %, see your current average and letter, the possible final range, and what you need on the remaining work to hit a target. Upcoming exams and quizzes show a countdown.
@@ -54,7 +85,7 @@ Press `?` in the app for the sheet.
 | `/` | Search (Inbox) |
 | `Ctrl/⌘ K` | Command palette |
 | `Ctrl/⌘ Z` | Undo last action |
-| `1` – `7` | Today, Upcoming, Courses, Inbox, Focus, Stats, Tools |
+| `1` – `8` | Today, Upcoming, Courses, Inbox, Focus, Stats, Tools, Schoology |
 | `?` | Shortcut sheet |
 | `Esc` | Close dialog / clear selection |
 | `j` / `k` (or arrows) | Move selection down / up |

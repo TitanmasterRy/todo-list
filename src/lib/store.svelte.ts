@@ -1,16 +1,19 @@
 import * as db from './storage';
-import type { Course, DayNote, Priority, Settings, Stats, Subtask, Task, Template } from './types';
+import type { Card, Course, DayNote, Deck, Priority, Settings, Stats, Subtask, Task, Template } from './types';
 import { DEFAULT_STATS } from './types';
 import { uid } from './id';
 import { addDaysKey, dueKey, isDateOnly, isDueToday, isOverdue, isoNow, nextWeekKey, thisWeekendKey, todayKey, daysAgoKey } from './dates';
-import { applyCompletion, effectiveStreak, evaluateBadges, type ComboState } from './gamification';
+import { applyCompletion, applyGrade, applyStudySession, effectiveStreak, evaluateBadges, type ComboState } from './gamification';
+import { review as reviewCard } from './flashcards';
+import type { ExternalAssignment, SyncDiff } from './schoology';
+import { autoDescribe } from './autodescribe';
 import { spawnNextInstance } from './recurrence';
 import { undo } from './undo.svelte';
 import { emit } from './events';
 import { toasts } from './toast.svelte';
 import { configureSounds, playSound } from './sounds';
 
-export type View = 'today' | 'upcoming' | 'courses' | 'inbox' | 'focus' | 'stats' | 'tools' | 'settings';
+export type View = 'today' | 'upcoming' | 'courses' | 'inbox' | 'focus' | 'stats' | 'tools' | 'schoology' | 'settings';
 export const VIEWS: { id: View; label: string; icon: string; key: string }[] = [
   { id: 'today', label: 'Today', icon: '☀️', key: '1' },
   { id: 'upcoming', label: 'Upcoming', icon: '📅', key: '2' },
@@ -19,6 +22,7 @@ export const VIEWS: { id: View; label: string; icon: string; key: string }[] = [
   { id: 'focus', label: 'Focus', icon: '🎯', key: '5' },
   { id: 'stats', label: 'Stats', icon: '📈', key: '6' },
   { id: 'tools', label: 'Tools', icon: '🧰', key: '7' },
+  { id: 'schoology', label: 'Schoology', icon: '🔄', key: '8' },
   { id: 'settings', label: 'Settings', icon: '⚙️', key: '' },
 ];
 
@@ -34,6 +38,8 @@ class Store {
   tasks = $state<Task[]>([]);
   courses = $state<Course[]>([]);
   templates = $state<Template[]>([]);
+  decks = $state<Deck[]>([]);
+  cards = $state<Card[]>([]);
   dayNotes = $state<DayNote[]>([]);
   stats = $state<Stats>(structuredClone(DEFAULT_STATS));
   settings = $state<Settings>(db.loadSettings());
@@ -92,16 +98,20 @@ class Store {
   // ---------- init ----------
   async init(): Promise<void> {
     try {
-      const [tasks, courses, templates, stats, notes] = await Promise.all([
+      const [tasks, courses, templates, stats, notes, decks, cards] = await Promise.all([
         db.getAllTasks(),
         db.getAllCourses(),
         db.getAllTemplates(),
         db.getStats(),
         db.getAllDayNotes(),
+        db.getAllDecks(),
+        db.getAllCards(),
       ]);
       this.tasks = tasks;
       this.courses = courses;
       this.templates = templates;
+      this.decks = decks;
+      this.cards = cards;
       this.stats = { ...stats, dailyGoal: this.settings.dailyGoal };
       this.dayNotes = notes;
       this.applyTheme();
@@ -170,9 +180,16 @@ class Store {
     return this.tasks.reduce((m, t) => Math.max(m, t.order), 0) + 1;
   }
 
-  addTask(input: NewTaskInput, opts: { undoable?: boolean; silent?: boolean } = {}): Task {
+  addTask(input: NewTaskInput, opts: { undoable?: boolean; silent?: boolean; describe?: boolean } = {}): Task {
     const now = isoNow();
     const id = uid('t');
+    // Auto-describe: fill in a plan, steps and an estimate when the task arrives bare.
+    let described = false;
+    if ((opts.describe ?? this.settings.autoDescribe) && !input.notes && !(input.subtasks?.length) && !input.templateId && input.title.trim()) {
+      const d = autoDescribe(input.title, { courseName: this.courseById(input.courseId)?.name, type: input.type, estimateMin: input.estimateMin });
+      input = { ...input, notes: d.notes, subtasks: d.subtasks, estimateMin: input.estimateMin ?? d.estimateMin, type: input.type ?? d.type, tags: Array.from(new Set([...(input.tags ?? []), ...d.tags])) };
+      described = true;
+    }
     const subtasks: Subtask[] = (input.subtasks ?? []).map((s, i) =>
       typeof s === 'string' ? { id: `${id}_s${i}`, title: s, done: false } : s,
     );
@@ -195,16 +212,34 @@ class Store {
       deferredCount: 0,
       pinnedDay: input.pinnedDay,
       templateId: input.templateId,
+      autoDescribed: described || undefined,
     };
     this.tasks = [...this.tasks, task];
     this.persistTask(task);
     if (opts.undoable !== false) {
       undo.push(
         { label: `Added “${task.title}”`, undo: () => this.removeTaskInternal(task.id) },
-        { toast: !opts.silent, timeout: 3500 },
+        { toast: !opts.silent, timeout: 3500, detail: described ? `Planned: ${task.subtasks.length} steps · ~${task.estimateMin} min` : undefined },
       );
     }
     return task;
+  }
+
+  /** Add several tasks at once (one per line) with a single undo. */
+  addTasks(inputs: NewTaskInput[]): Task[] {
+    const created = inputs.filter((i) => i.title.trim()).map((i) => this.addTask(i, { undoable: false }));
+    if (created.length) {
+      undo.push({
+        label: `Added ${created.length} tasks`,
+        undo: () => {
+          const ids = new Set(created.map((t) => t.id));
+          this.tasks = this.tasks.filter((t) => !ids.has(t.id));
+          db.deleteTasks([...ids]).catch(() => {});
+          emit('changed', { reason: 'tasks' });
+        },
+      });
+    }
+    return created;
   }
 
   private removeTaskInternal(id: string): void {
@@ -227,8 +262,19 @@ class Store {
     if (!prev) return undefined;
     const snapshot = structuredClone($state.snapshot(prev)) as Task;
     const next: Task = { ...prev, ...patch, updatedAt: isoNow() };
+    // First score entered on a task pays grade XP (once per task).
+    const gradeNow = this.settings.gamification && typeof patch.score === 'number' && !prev.gradedXpAt && typeof prev.score !== 'number';
+    if (gradeNow) next.gradedXpAt = next.updatedAt;
     this.tasks = this.tasks.map((t) => (t.id === id ? next : t));
     this.persistTask(next);
+    if (gradeNow) {
+      const r = applyGrade($state.snapshot(this.stats) as Stats, patch.score!, next.weight, this.today, this.openTasks.length);
+      this.stats = r.stats;
+      this.persistStats();
+      emit('graded', { task: next, xp: r.xp.xp, label: r.xp.label, tier: r.xp.tier, leveledUp: r.leveledUp, newLevel: r.newLevel, newBadges: r.newBadges });
+      if (r.leveledUp) emit('levelup', { level: r.newLevel });
+      for (const b of r.newBadges) emit('badge', { id: b });
+    }
     if (opts.undoable) {
       undo.push({ label: opts.label ?? `Edited “${snapshot.title}”`, undo: () => this.restoreTaskInternal(snapshot) }, { timeout: 4000 });
     }
@@ -325,6 +371,9 @@ class Store {
     const task = this.tasks.find((t) => t.id === id);
     if (!task) return;
     const snapshot = structuredClone($state.snapshot(task)) as Task;
+    if (task.externalId && !this.settings.schoologyIgnored.includes(task.externalId)) {
+      this.updateSettings({ schoologyIgnored: [...this.settings.schoologyIgnored, task.externalId] });
+    }
     this.removeTaskInternal(id);
     if (this.selectedTaskId === id) this.selectedTaskId = null;
     if (this.focusTaskId === id) this.focusTaskId = null;
@@ -648,6 +697,157 @@ class Store {
     this.persistStats();
   }
 
+  // ---------- notecards ----------
+  private persistCards(cards: Card[]): void {
+    db.putCards(cards.map((c) => $state.snapshot(c) as Card)).catch((e) => console.error(e));
+    emit('changed', { reason: 'cards' });
+  }
+  addDeck(name: string, courseId?: string): Deck {
+    const now = isoNow();
+    const d: Deck = { id: uid('deck'), name: name.trim() || 'Untitled deck', courseId, createdAt: now, updatedAt: now };
+    this.decks = [...this.decks, d];
+    db.putDeck(d).catch((e) => console.error(e));
+    emit('changed', { reason: 'deck' });
+    return d;
+  }
+  updateDeck(id: string, patch: Partial<Deck>): void {
+    const prev = this.decks.find((d) => d.id === id);
+    if (!prev) return;
+    const next = { ...prev, ...patch, updatedAt: isoNow() };
+    this.decks = this.decks.map((d) => (d.id === id ? next : d));
+    db.putDeck(next).catch((e) => console.error(e));
+    emit('changed', { reason: 'deck' });
+  }
+  deleteDeck(id: string): void {
+    const deck = this.decks.find((d) => d.id === id);
+    if (!deck) return;
+    const cards = this.cards.filter((c) => c.deckId === id).map((c) => structuredClone($state.snapshot(c)) as Card);
+    this.decks = this.decks.filter((d) => d.id !== id);
+    this.cards = this.cards.filter((c) => c.deckId !== id);
+    db.deleteDeck(id).catch((e) => console.error(e));
+    emit('changed', { reason: 'deck' });
+    undo.push(
+      {
+        label: `Deleted deck “${deck.name}”`,
+        undo: () => {
+          this.decks = [...this.decks, deck];
+          this.cards = [...this.cards, ...cards];
+          db.putDeck(deck).catch(() => {});
+          this.persistCards(cards);
+        },
+      },
+      { kind: 'warn' },
+    );
+  }
+  addCards(deckId: string, items: { front: string; back: string }[]): Card[] {
+    const now = isoNow();
+    const cards: Card[] = items
+      .filter((i) => i.front.trim() && i.back.trim())
+      .map((i) => ({ id: uid('card'), deckId, front: i.front.trim(), back: i.back.trim(), box: 1, due: this.today, reps: 0, lapses: 0, createdAt: now, updatedAt: now }));
+    if (!cards.length) return [];
+    this.cards = [...this.cards, ...cards];
+    this.persistCards(cards);
+    this.updateDeck(deckId, {});
+    return cards;
+  }
+  updateCard(id: string, patch: Partial<Card>): void {
+    const prev = this.cards.find((c) => c.id === id);
+    if (!prev) return;
+    const next = { ...prev, ...patch, updatedAt: isoNow() };
+    this.cards = this.cards.map((c) => (c.id === id ? next : c));
+    this.persistCards([next]);
+  }
+  deleteCard(id: string): void {
+    const card = this.cards.find((c) => c.id === id);
+    if (!card) return;
+    const snap = structuredClone($state.snapshot(card)) as Card;
+    this.cards = this.cards.filter((c) => c.id !== id);
+    db.deleteCard(id).catch((e) => console.error(e));
+    undo.push({
+      label: 'Deleted card',
+      undo: () => {
+        this.cards = [...this.cards, snap];
+        this.persistCards([snap]);
+      },
+    });
+  }
+  /** Record one answer during a study session. */
+  answerCard(id: string, correct: boolean): void {
+    const card = this.cards.find((c) => c.id === id);
+    if (!card) return;
+    const next = reviewCard($state.snapshot(card) as Card, correct, this.today);
+    this.cards = this.cards.map((c) => (c.id === id ? next : c));
+    this.persistCards([next]);
+  }
+  /** Award XP at the end of a study session. */
+  finishStudySession(reviewed: number, correct: number, clearedAll: boolean): void {
+    if (!reviewed) return;
+    const r = applyStudySession($state.snapshot(this.stats) as Stats, reviewed, correct, clearedAll, this.today, this.openTasks.length);
+    this.stats = r.stats;
+    this.persistStats();
+    emit('studied', { reviewed, correct, xp: r.xp.xp, clearedAll, leveledUp: r.leveledUp, newLevel: r.newLevel, newBadges: r.newBadges });
+    if (r.leveledUp) emit('levelup', { level: r.newLevel });
+    for (const b of r.newBadges) emit('badge', { id: b });
+  }
+
+  // ---------- external sync (Schoology) ----------
+  syncedTasks = $derived(this.tasks.filter((t) => t.source === 'schoology'));
+
+  /** Apply a sync diff: create new assignment tasks, update changed ones. Returns counts. */
+  applySyncDiff(diff: SyncDiff, resolveCourse: (a: ExternalAssignment) => string | undefined, describe?: (a: ExternalAssignment) => Partial<Task>): { created: number; updated: number } {
+    const now = isoNow();
+    const created: Task[] = [];
+    let order = this.nextOrder();
+    for (const a of diff.create) {
+      const id = uid('t');
+      const extra = describe?.(a) ?? {};
+      const task: Task = {
+        id,
+        title: a.title,
+        notes: a.notes || extra.notes,
+        courseId: resolveCourse(a),
+        tags: extra.tags ?? [],
+        priority: a.type === 'exam' ? 'high' : 'normal',
+        dueAt: a.dueAt,
+        estimateMin: extra.estimateMin,
+        type: a.type,
+        subtasks: (extra.subtasks ?? []).map((s, i) => ({ id: `${id}_s${i}`, title: s.title, done: false })),
+        createdAt: now,
+        updatedAt: now,
+        order: order++,
+        deferredCount: 0,
+        source: 'schoology',
+        externalId: a.externalId,
+        url: a.url,
+        syncedAt: now,
+        autoDescribed: !!extra.notes,
+      };
+      created.push(task);
+    }
+    const byExt = new Map(this.tasks.filter((t) => t.externalId).map((t) => [t.externalId!, t]));
+    const updated: Task[] = [];
+    for (const u of diff.update) {
+      const t = byExt.get(u.externalId);
+      if (!t) continue;
+      updated.push({ ...t, ...u.patch, syncedAt: now, updatedAt: now });
+    }
+    const map = new Map(updated.map((t) => [t.id, t]));
+    this.tasks = [...this.tasks.map((t) => map.get(t.id) ?? t), ...created];
+    const all = [...created, ...updated];
+    if (all.length) this.persistTasks(all);
+    if (created.length || updated.length) {
+      const stats = structuredClone($state.snapshot(this.stats)) as Stats;
+      stats.syncedCount = (stats.syncedCount ?? 0) + created.length;
+      const newBadges = evaluateBadges(stats, { openTasksRemaining: this.openTasks.length, today: this.today });
+      stats.badges = [...stats.badges, ...newBadges];
+      this.stats = stats;
+      this.persistStats();
+      for (const b of newBadges) emit('badge', { id: b });
+    }
+    emit('synced', { created: created.length, updated: updated.length });
+    return { created: created.length, updated: updated.length };
+  }
+
   // ---------- pomodoro ----------
   recordPomodoro(): void {
     const stats = structuredClone($state.snapshot(this.stats)) as Stats;
@@ -694,6 +894,8 @@ class Store {
     this.tasks = [];
     this.courses = [];
     this.templates = [];
+    this.decks = [];
+    this.cards = [];
     this.dayNotes = [];
     this.stats = structuredClone(DEFAULT_STATS);
     this.settings = { ...db.loadSettings(), demoSeeded: true, onboarded: true };
@@ -703,10 +905,12 @@ class Store {
   }
 
   /** Load a full dataset (import / sync). */
-  async loadBundle(data: { tasks: Task[]; courses: Course[]; templates: Template[]; stats: Stats; dayNotes: DayNote[] }): Promise<void> {
+  async loadBundle(data: { tasks: Task[]; courses: Course[]; templates: Template[]; stats: Stats; dayNotes: DayNote[]; decks?: Deck[]; cards?: Card[] }): Promise<void> {
     this.tasks = data.tasks;
     this.courses = data.courses;
     this.templates = data.templates;
+    this.decks = data.decks ?? [];
+    this.cards = data.cards ?? [];
     this.stats = { ...structuredClone(DEFAULT_STATS), ...data.stats, dailyGoal: this.settings.dailyGoal };
     this.dayNotes = data.dayNotes;
     await db.replaceAll({
@@ -715,6 +919,8 @@ class Store {
       templates: data.templates,
       stats: $state.snapshot(this.stats) as Stats,
       dayNotes: data.dayNotes,
+      decks: data.decks ?? [],
+      cards: data.cards ?? [],
     });
   }
 

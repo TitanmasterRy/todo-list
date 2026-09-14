@@ -57,3 +57,19 @@ XP per task is not stored, so wins are ranked by a proxy: base XP for the priori
 ## No demo dataset
 
 The spec asked for a seeded demo dataset on first run. At the owner's request the seed was removed, so the app starts empty. The "Clear demo data" button remains in Settings and the command palette, shown only when `demo_`-prefixed records exist, so browsers that loaded the earlier build can still remove them.
+
+## Schoology integration
+
+The Schoology REST API requires OAuth 1.0a request signing with per-user consumer keys and does not send CORS headers, so a static GitHub Pages site cannot call it. The integration uses the personal iCal calendar feed instead, which every Schoology user can enable. Direct browser fetches of that feed are also blocked by CORS, so the app supports three paths: a user-deployed Cloudflare Worker proxy (source in `docs/cors-proxy-worker.js`, restricted to Schoology feeds), manual upload of the `.ics` file, or pasting its contents. Completion state is not part of the feed, so "complete" means completed in this app.
+
+## AI helper
+
+Optional and off by default. Calls go straight from the browser to the Anthropic API with the user's own key (`dangerouslyAllowBrowser` in the official SDK), the same trust model as the Gist token. Default model is Claude Opus 5. Auto-descriptions do not use the AI by default; a deterministic heuristic covers them offline.
+
+## Critical hits
+
+A 5% chance of double XP on completion is intentional variable reward. It is counted for the Lucky badge and can be turned off with the gamification switch.
+
+## Grade XP is awarded once per task
+
+Entering a score the first time pays XP (`gradedXpAt` marks it). Editing the score later does not pay again, so a student cannot farm XP by retyping grades.

@@ -67,6 +67,7 @@
       return;
     }
     if (isTyping(e) || mod || e.altKey) return;
+    if (ui.captureKeys) return;
     // Don't handle single-key shortcuts while a modal is open.
     if (ui.palette || store.editingTaskId || ui.courseEditor || ui.weeklyReview || ui.semesterSetup || ui.frogPrompt || ui.recap) return;
 
@@ -144,7 +145,7 @@
         }
         return;
     }
-    if (/^[1-7]$/.test(e.key)) {
+    if (/^[1-8]$/.test(e.key)) {
       const v = VIEWS.find((x) => x.key === e.key);
       if (v) {
         e.preventDefault();

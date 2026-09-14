@@ -9,6 +9,10 @@ export interface Course {
   color: string; // hex accent
   emoji?: string;
   archived: boolean;
+  credits?: number; // transcript
+  term?: string; // e.g. "Fall 2026"
+  finalGrade?: number; // override for the transcript, 0–100
+  schoologyName?: string; // course name as it appears in the Schoology feed
 }
 
 export interface Subtask {
@@ -48,6 +52,12 @@ export interface Task {
   frogDate?: string; // YYYY-MM-DD the frog pick applies to
   archived?: boolean; // archived completed tasks (kept for stats)
   templateId?: string;
+  source?: 'schoology'; // synced from an external feed
+  externalId?: string; // stable id in the external system
+  url?: string; // link back to the assignment
+  syncedAt?: string;
+  gradedXpAt?: string; // when grade XP was awarded (once per task)
+  autoDescribed?: boolean;
 }
 
 export interface Stats {
@@ -65,6 +75,11 @@ export interface Stats {
   ringCelebratedDate?: string; // last date the full-screen confetti fired
   pomodorosByDay: Record<string, number>;
   freezeCreditedAt?: number; // streak length when last freeze was credited
+  acedCount: number; // scores >= 95
+  early3Count: number; // completed 3+ days early
+  cardsReviewed: number;
+  critCount: number;
+  syncedCount: number;
 }
 
 export interface Template {
@@ -73,6 +88,27 @@ export interface Template {
   task: Pick<Task, 'title' | 'notes' | 'courseId' | 'tags' | 'priority' | 'estimateMin' | 'type' | 'weight'> & {
     subtasks: string[];
   };
+}
+
+export interface Deck {
+  id: string;
+  name: string;
+  courseId?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface Card {
+  id: string;
+  deckId: string;
+  front: string;
+  back: string;
+  box: number; // Leitner box 1–5
+  due: string; // YYYY-MM-DD
+  reps: number;
+  lapses: number;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface DayNote {
@@ -102,6 +138,17 @@ export interface Settings {
   lastExportAt?: string;
   lastSyncAt?: string;
   archiveAfterDays: number; // 0 disables
+  autoDescribe: boolean; // fill notes/subtasks/estimate for new tasks
+  schoologyFeedUrl: string;
+  schoologyProxy: string; // optional CORS proxy prefix, e.g. https://my-worker.example.workers.dev/?url=
+  schoologyAutoCreateCourses: boolean;
+  schoologyIgnored: string[]; // externalIds deleted by the user
+  lastSchoologySync?: string;
+  lastSchoologyError?: string;
+  aiApiKey: string; // optional Anthropic API key, stored only in localStorage
+  aiModel: string;
+  aiDescriptions: boolean; // use AI for auto-descriptions when a key is present
+  weeklyXpGoal: number;
   dailyCapacityMin: number; // planner: minutes of homework you can do per day
   targetGrade: number; // grade calculator default target %
   onboarded: boolean;
@@ -129,6 +176,15 @@ export const DEFAULT_SETTINGS: Settings = {
   gistToken: '',
   gistId: '',
   archiveAfterDays: 90,
+  autoDescribe: true,
+  schoologyFeedUrl: '',
+  schoologyProxy: '',
+  schoologyAutoCreateCourses: true,
+  schoologyIgnored: [],
+  aiApiKey: '',
+  aiModel: 'claude-opus-5',
+  aiDescriptions: false,
+  weeklyXpGoal: 500,
   dailyCapacityMin: 180,
   targetGrade: 90,
   onboarded: false,
@@ -147,6 +203,11 @@ export const DEFAULT_STATS: Stats = {
   totalCompleted: 0,
   ringDays: [],
   pomodorosByDay: {},
+  acedCount: 0,
+  early3Count: 0,
+  cardsReviewed: 0,
+  critCount: 0,
+  syncedCount: 0,
 };
 
 export interface ExportBundle {
@@ -157,6 +218,8 @@ export interface ExportBundle {
   templates: Template[];
   stats: Stats;
   dayNotes: DayNote[];
+  decks?: Deck[];
+  cards?: Card[];
   settings?: Partial<Settings>;
 }
 

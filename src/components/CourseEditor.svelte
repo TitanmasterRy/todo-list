@@ -14,6 +14,14 @@
   let emoji = $state(editing?.emoji ?? '');
   // svelte-ignore state_referenced_locally
   let archived = $state(editing?.archived ?? false);
+  // svelte-ignore state_referenced_locally
+  let credits = $state(editing?.credits ? String(editing.credits) : '');
+  // svelte-ignore state_referenced_locally
+  let term = $state(editing?.term ?? '');
+  // svelte-ignore state_referenced_locally
+  let finalGrade = $state(typeof editing?.finalGrade === 'number' ? String(editing.finalGrade) : '');
+  // svelte-ignore state_referenced_locally
+  let schoologyName = $state(editing?.schoologyName ?? '');
   let input: HTMLInputElement | undefined = $state();
   $effect(() => input?.focus());
 
@@ -23,9 +31,16 @@
   function save(e: Event) {
     e.preventDefault();
     if (!name.trim()) return;
-    if (editing) store.updateCourse(editing.id, { name: name.trim(), color, emoji: emoji || undefined, archived });
+    const extra = {
+      credits: credits ? parseFloat(credits) || undefined : undefined,
+      term: term.trim() || undefined,
+      finalGrade: finalGrade !== '' ? Math.max(0, Math.min(120, parseFloat(finalGrade))) || undefined : undefined,
+      schoologyName: schoologyName.trim() || undefined,
+    };
+    if (editing) store.updateCourse(editing.id, { name: name.trim(), color, emoji: emoji || undefined, archived, ...extra });
     else {
       const c = store.addCourse({ name: name.trim(), color, emoji: emoji || undefined });
+      store.updateCourse(c.id, extra);
       store.go('courses', { courseId: c.id });
     }
     close();
@@ -69,6 +84,24 @@
         {/each}
         <input id="c-emoji" class="input em-input" bind:value={emoji} placeholder="or type" maxlength="4" />
       </div>
+    </div>
+    <div class="row">
+      <div class="field">
+        <label for="c-term">Term</label>
+        <input id="c-term" class="input" bind:value={term} placeholder="Fall 2026" />
+      </div>
+      <div class="field">
+        <label for="c-credits">Credits</label>
+        <input id="c-credits" class="input" type="number" min="0" step="0.5" bind:value={credits} placeholder="1" />
+      </div>
+      <div class="field">
+        <label for="c-final">Final grade % (override)</label>
+        <input id="c-final" class="input" type="number" min="0" max="120" step="0.1" bind:value={finalGrade} placeholder="from calculator" />
+      </div>
+    </div>
+    <div class="field">
+      <label for="c-schoology">Name in Schoology (for sync matching)</label>
+      <input id="c-schoology" class="input" bind:value={schoologyName} placeholder="AP Calculus BC - Period 3" />
     </div>
     {#if editing}
       <label class="check"><input type="checkbox" bind:checked={archived} /> Archived (hidden from lists, tasks kept)</label>

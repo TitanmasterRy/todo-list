@@ -114,6 +114,12 @@
         {#if task.pinnedDay === store.today && task.dueAt && !today && !overdue}
           <span class="chip planned" title="Planned for today (deadline unchanged)">📌 today</span>
         {/if}
+        {#if task.source === 'schoology'}
+          {#if task.url}<a class="chip synced" href={task.url} target="_blank" rel="noopener noreferrer" title="Open in Schoology" onclick={(e) => e.stopPropagation()}>🔄 Schoology ↗</a>{:else}<span class="chip synced" title="Synced from Schoology">🔄</span>{/if}
+        {/if}
+        {#if typeof task.score === 'number'}
+          <span class="chip score" class:aced={task.score >= 95}>{task.score}%</span>
+        {/if}
         {#if task.recurrence}
           <span class="chip" title={describeRecurrence(task.recurrence)}>🔁</span>
         {/if}
@@ -293,6 +299,23 @@
   }
   .chip.planned {
     color: var(--accent);
+  }
+  .chip.synced {
+    text-decoration: none;
+    color: var(--text-muted);
+  }
+  a.chip.synced:hover {
+    color: var(--accent);
+    border-color: var(--accent);
+  }
+  .chip.score {
+    color: var(--success);
+    font-weight: 600;
+  }
+  .chip.score.aced {
+    background: linear-gradient(135deg, #f6b93b, #f9d976);
+    color: #4a3200;
+    border-color: transparent;
   }
   .subtasks {
     list-style: none;

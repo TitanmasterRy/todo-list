@@ -24,6 +24,7 @@ export default defineConfig({
         display: 'standalone',
         start_url: base,
         scope: base,
+        share_target: { action: base, method: 'GET', params: { title: 'title', text: 'text', url: 'url' } },
         icons: [
           { src: 'icons/icon.svg', sizes: 'any', type: 'image/svg+xml', purpose: 'any' },
           { src: 'icons/icon-maskable.svg', sizes: 'any', type: 'image/svg+xml', purpose: 'maskable' },

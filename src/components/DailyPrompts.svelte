@@ -47,7 +47,7 @@
             action: {
               label: 'Download',
               onClick: () => {
-                downloadJSON(backupFilename(), buildBundle({ tasks: store.tasks, courses: store.courses, templates: store.templates, stats: store.stats, dayNotes: store.dayNotes }));
+                downloadJSON(backupFilename(), buildBundle({ tasks: store.tasks, courses: store.courses, templates: store.templates, stats: store.stats, dayNotes: store.dayNotes, decks: store.decks, cards: store.cards }));
                 store.updateSettings({ lastExportAt: new Date().toISOString() });
               },
             },

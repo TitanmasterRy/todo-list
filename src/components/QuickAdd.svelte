@@ -16,6 +16,50 @@
   let text = $state('');
   let input: HTMLInputElement | undefined = $state();
   let focused = $state(false);
+  let listening = $state(false);
+  let describeNext = $state(true);
+  type SR = { start(): void; stop(): void; lang: string; interimResults: boolean; onresult: ((e: { results: ArrayLike<ArrayLike<{ transcript: string }>> }) => void) | null; onend: (() => void) | null; onerror: (() => void) | null };
+  const SRClass = typeof window !== 'undefined' ? ((window as unknown as { SpeechRecognition?: new () => SR }).SpeechRecognition ?? (window as unknown as { webkitSpeechRecognition?: new () => SR }).webkitSpeechRecognition) : undefined;
+  let rec: SR | null = null;
+  function toggleVoice() {
+    if (!SRClass) return;
+    if (listening) {
+      rec?.stop();
+      return;
+    }
+    rec = new SRClass();
+    rec.lang = navigator.language || 'en-US';
+    rec.interimResults = true;
+    rec.onresult = (e) => {
+      let t = '';
+      for (let i = 0; i < e.results.length; i++) t += e.results[i][0].transcript;
+      text = t;
+    };
+    rec.onend = () => {
+      listening = false;
+      input?.focus();
+    };
+    rec.onerror = () => (listening = false);
+    listening = true;
+    rec.start();
+  }
+  function onPaste(e: ClipboardEvent) {
+    const data = e.clipboardData?.getData('text') ?? '';
+    const lines = data.split(/\r?\n/).map((l) => l.replace(/^[-*•\d.)\s]+/, '').trim()).filter(Boolean);
+    if (lines.length < 2) return;
+    e.preventDefault();
+    const inputs = lines.map((line) => lineToInput(line));
+    const created = store.addTasks(inputs);
+    toasts.push({ message: `Added ${created.length} tasks from your paste`, kind: 'success', emoji: '📋' });
+    text = '';
+  }
+  $effect(() => {
+    if (ui.quickAddPrefill) {
+      text = ui.quickAddPrefill;
+      ui.quickAddPrefill = '';
+      input?.focus();
+    }
+  });
 
   const parsed = $derived(
     parseQuickAdd(text, {
@@ -46,6 +90,21 @@
   $effect(() => {
     if (autofocus && input && window.innerWidth > 720) input.focus();
   });
+
+  function lineToInput(line: string): NewTaskInput {
+    const p = parseQuickAdd(line, { now: store.now, courses: store.activeCourses.map((c) => ({ id: c.id, name: c.name })), weekStart: store.settings.weekStart });
+    const base: NewTaskInput = { title: p.title || line };
+    if (p.courseId) base.courseId = p.courseId;
+    else if (defaultCourseId) base.courseId = defaultCourseId;
+    if (p.tags.length) base.tags = p.tags;
+    if (p.priority) base.priority = p.priority;
+    if (p.estimateMin) base.estimateMin = p.estimateMin;
+    if (p.type) base.type = p.type;
+    if (p.recurrence) base.recurrence = p.recurrence;
+    if (p.dueAt) base.dueAt = p.dueAt;
+    else if (defaultDueKey) base.dueAt = defaultDueKey;
+    return base;
+  }
 
   function submit(e?: Event) {
     e?.preventDefault();
@@ -84,7 +143,7 @@
     if (p.dueAt) base.dueAt = p.dueAt;
     else if (defaultDueKey) base.dueAt = defaultDueKey;
     primeAudio();
-    store.addTask(base);
+    store.addTask(base, { describe: describeNext && store.settings.autoDescribe });
     text = '';
   }
 
@@ -119,8 +178,12 @@
     onfocus={() => (focused = true)}
     onblur={() => (focused = false)}
     onkeydown={onKey}
+    onpaste={onPaste}
     data-quick-add
   />
+  {#if SRClass}
+    <button type="button" class="btn ghost sm icon mic" class:on={listening} onclick={toggleVoice} aria-label={listening ? 'Stop listening' : 'Add by voice'} title="Add by voice">{listening ? '🔴' : '🎤'}</button>
+  {/if}
   {#if text}
     <button class="btn primary sm go" type="submit">Add</button>
   {:else}
@@ -135,6 +198,9 @@
     {/each}
     {#if !parsed.dueAt && defaultDueKey}
       <span class="chip faint">📅 Today</span>
+    {/if}
+    {#if store.settings.autoDescribe && !parsed.template}
+      <button type="button" class="chip auto" class:off={!describeNext} onclick={() => (describeNext = !describeNext)} title="Auto-fill a plan, steps and estimate">{describeNext ? '✨ auto plan' : 'no auto plan'}</button>
     {/if}
     {#if !parsed.courseId && defaultCourseId && store.courseById(defaultCourseId)}
       <span class="chip faint">{store.courseById(defaultCourseId)?.name}</span>
@@ -222,5 +288,21 @@
   }
   .sugg .chip {
     cursor: pointer;
+  }
+  .chip.auto {
+    cursor: pointer;
+    color: var(--accent);
+  }
+  .chip.auto.off {
+    color: var(--text-faint);
+    text-decoration: line-through;
+  }
+  .mic.on {
+    animation: pulse-mic 1s infinite;
+  }
+  @keyframes pulse-mic {
+    50% {
+      transform: scale(1.15);
+    }
   }
 </style>
