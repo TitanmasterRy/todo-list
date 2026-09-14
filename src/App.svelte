@@ -12,6 +12,7 @@
   import FocusView from './views/FocusView.svelte';
   import StatsView from './views/StatsView.svelte';
   import SettingsView from './views/SettingsView.svelte';
+  import ToolsView from './views/ToolsView.svelte';
   import FeedbackLayer from './components/FeedbackLayer.svelte';
   import Keyboard from './components/Keyboard.svelte';
   import CommandPalette from './components/CommandPalette.svelte';
@@ -72,6 +73,8 @@
         <FocusView />
       {:else if store.view === 'stats'}
         <StatsView />
+      {:else if store.view === 'tools'}
+        <ToolsView />
       {:else if store.view === 'settings'}
         <SettingsView />
       {/if}

@@ -59,6 +59,7 @@ export function normalizeTask(t: Partial<Task>): Task {
     estimateMin: t.estimateMin,
     type: t.type,
     weight: t.weight,
+    score: t.score,
     subtasks: Array.isArray(t.subtasks) ? t.subtasks.map((s, i) => ({ id: s.id ?? `${t.id}_s${i}`, title: String(s.title ?? ''), done: !!s.done })) : [],
     recurrence: t.recurrence,
     createdAt: t.createdAt ?? now,

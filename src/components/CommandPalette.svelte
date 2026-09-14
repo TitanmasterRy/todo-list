@@ -4,6 +4,8 @@
   import { ui } from '../lib/ui.svelte';
   import { toasts } from '../lib/toast.svelte';
   import { buildBundle, backupFilename, downloadJSON } from '../lib/backup';
+  import { buildICS } from '../lib/ics';
+  import { downloadText } from '../lib/download';
 
   interface Cmd {
     id: string;
@@ -39,6 +41,10 @@
       downloadJSON(backupFilename(), buildBundle({ tasks: store.tasks, courses: store.courses, templates: store.templates, stats: store.stats, dayNotes: store.dayNotes }));
       store.updateSettings({ lastExportAt: new Date().toISOString() });
       toasts.push({ message: 'Backup downloaded', kind: 'success' });
+    } });
+    list.push({ id: 'ics', label: 'Export calendar (.ics) of due dates', icon: '📆', keywords: 'calendar google apple outlook', run: () => {
+      downloadText('homework-todo.ics', buildICS(store.openTasks, store.courses), 'text/calendar');
+      toasts.push({ message: 'Calendar file downloaded', detail: 'Import homework-todo.ics into your calendar app.', kind: 'success' });
     } });
     list.push({ id: 'sounds', label: `Sounds: ${store.settings.soundsEnabled ? 'on → off' : 'off → on'}`, icon: '🔊', keywords: 'mute toggle', run: () => store.updateSettings({ soundsEnabled: !store.settings.soundsEnabled }) });
     list.push({ id: 'gamification', label: `Gamification: ${store.settings.gamification ? 'on → off' : 'off → on'}`, icon: '🎮', keywords: 'xp streak toggle', run: () => store.updateSettings({ gamification: !store.settings.gamification }) });

@@ -15,7 +15,11 @@
   const live = (t: Task) => !t.completedAt || store.lingering.has(t.id);
   const overdue = $derived(store.tasks.filter((t) => live(t) && isOverdue(t.dueAt, store.now) && !isDueToday(t.dueAt, store.now)).sort(byDueThenOrder));
   const dueToday = $derived(store.tasks.filter((t) => live(t) && isDueToday(t.dueAt, store.now)).sort(byFrogThenOrder));
-  const pinned = $derived(store.tasks.filter((t) => live(t) && !t.dueAt && t.pinnedDay === store.today).sort(byOrder));
+  const pinned = $derived(
+    store.tasks
+      .filter((t) => live(t) && t.pinnedDay === store.today && (!t.dueAt || (!isDueToday(t.dueAt, store.now) && !isOverdue(t.dueAt, store.now))))
+      .sort(byOrder),
+  );
   const allIds = $derived([...overdue, ...dueToday, ...pinned].map((t) => t.id));
   const d = $derived(fromKey(store.today));
   const dateLabel = $derived(`${DAY_NAMES[d.getDay()]}, ${MONTH_SHORT[d.getMonth()]} ${d.getDate()}`);
@@ -92,7 +96,7 @@
 
   {#if pinned.length || showNoDate}
     <div class="section-title">
-      <span>Also today</span><span class="count">{pinned.length}</span>
+      <span>Planned for today</span><span class="count">{pinned.length}</span><span class="spacer"></span><button class="link" onclick={() => store.go('tools')}>Plan my day</button>
     </div>
     <Sortable items={pinned} onreorder={(ids) => store.reorder(ids)} ondropfrom={(id) => onDrop(id, 'pinned')} group="today" placeholder="Drag a task without a date here">
       {#snippet item(task)}

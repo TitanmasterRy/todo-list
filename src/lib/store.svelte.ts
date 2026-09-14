@@ -10,7 +10,7 @@ import { emit } from './events';
 import { toasts } from './toast.svelte';
 import { configureSounds, playSound } from './sounds';
 
-export type View = 'today' | 'upcoming' | 'courses' | 'inbox' | 'focus' | 'stats' | 'settings';
+export type View = 'today' | 'upcoming' | 'courses' | 'inbox' | 'focus' | 'stats' | 'tools' | 'settings';
 export const VIEWS: { id: View; label: string; icon: string; key: string }[] = [
   { id: 'today', label: 'Today', icon: '☀️', key: '1' },
   { id: 'upcoming', label: 'Upcoming', icon: '📅', key: '2' },
@@ -18,6 +18,7 @@ export const VIEWS: { id: View; label: string; icon: string; key: string }[] = [
   { id: 'inbox', label: 'Inbox', icon: '📥', key: '4' },
   { id: 'focus', label: 'Focus', icon: '🎯', key: '5' },
   { id: 'stats', label: 'Stats', icon: '📈', key: '6' },
+  { id: 'tools', label: 'Tools', icon: '🧰', key: '7' },
   { id: 'settings', label: 'Settings', icon: '⚙️', key: '' },
 ];
 
@@ -63,7 +64,12 @@ class Store {
     this.openTasks.filter((t) => isOverdue(t.dueAt, this.now) && !isDueToday(t.dueAt, this.now)).sort(byDueThenOrder),
   );
   dueTodayTasks = $derived(this.openTasks.filter((t) => isDueToday(t.dueAt, this.now)).sort(byFrogThenOrder));
-  pinnedTodayTasks = $derived(this.openTasks.filter((t) => !t.dueAt && t.pinnedDay === this.today).sort(byOrder));
+  /** No-date tasks dragged into Today, plus dated tasks planned for today via the planner (deadline untouched). */
+  pinnedTodayTasks = $derived(
+    this.openTasks
+      .filter((t) => t.pinnedDay === this.today && (!t.dueAt || (!isDueToday(t.dueAt, this.now) && !isOverdue(t.dueAt, this.now))))
+      .sort(byOrder),
+  );
   todayTasks = $derived([...this.overdueTasks, ...this.dueTodayTasks, ...this.pinnedTodayTasks]);
   noDateTasks = $derived(this.openTasks.filter((t) => !t.dueAt && t.pinnedDay !== this.today).sort(byOrder));
   todayEstimateMin = $derived(this.todayTasks.reduce((a, t) => a + (t.estimateMin ?? 0), 0));
@@ -500,6 +506,12 @@ class Store {
     const task = this.tasks.find((t) => t.id === id);
     if (!task) return;
     this.updateTask(id, { pinnedDay: this.today }, { undoable: true, label: `Added “${task.title}” to Today` });
+  }
+
+  unpinToday(id: string): void {
+    const task = this.tasks.find((t) => t.id === id);
+    if (!task) return;
+    this.updateTask(id, { pinnedDay: undefined }, { undoable: true, label: `Removed “${task.title}” from Today` });
   }
 
   setFrog(id: string | null): void {

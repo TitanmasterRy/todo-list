@@ -35,6 +35,7 @@ export interface Task {
   estimateMin?: number;
   type?: TaskType;
   weight?: number; // grade weight %, optional
+  score?: number; // grade earned (0–100 %), optional
   subtasks: Subtask[];
   recurrence?: Recurrence;
   createdAt: string;
@@ -101,6 +102,8 @@ export interface Settings {
   lastExportAt?: string;
   lastSyncAt?: string;
   archiveAfterDays: number; // 0 disables
+  dailyCapacityMin: number; // planner: minutes of homework you can do per day
+  targetGrade: number; // grade calculator default target %
   onboarded: boolean;
   demoSeeded: boolean;
   lastFrogPromptDate?: string;
@@ -126,6 +129,8 @@ export const DEFAULT_SETTINGS: Settings = {
   gistToken: '',
   gistId: '',
   archiveAfterDays: 90,
+  dailyCapacityMin: 180,
+  targetGrade: 90,
   onboarded: false,
   demoSeeded: false,
 };

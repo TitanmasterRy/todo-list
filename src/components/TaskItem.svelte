@@ -111,6 +111,9 @@
         {#if task.estimateMin}
           <span class="chip">⏱ {formatMinutes(task.estimateMin)}</span>
         {/if}
+        {#if task.pinnedDay === store.today && task.dueAt && !today && !overdue}
+          <span class="chip planned" title="Planned for today (deadline unchanged)">📌 today</span>
+        {/if}
         {#if task.recurrence}
           <span class="chip" title={describeRecurrence(task.recurrence)}>🔁</span>
         {/if}
@@ -287,6 +290,9 @@
   }
   .chip.stale {
     color: var(--warn);
+  }
+  .chip.planned {
+    color: var(--accent);
   }
   .subtasks {
     list-style: none;

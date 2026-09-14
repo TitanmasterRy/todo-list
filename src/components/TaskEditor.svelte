@@ -28,6 +28,7 @@
   let estimate = $state(original?.estimateMin ? String(original.estimateMin) : '');
   let type = $state(original?.type ?? '');
   let weight = $state(original?.weight ? String(original.weight) : '');
+  let score = $state(typeof original?.score === 'number' ? String(original.score) : '');
   let subtasks = $state<Subtask[]>(original ? original.subtasks.map((s) => ({ ...s })) : []);
   let newSub = $state('');
   let recKind = $state<'' | Recurrence['kind']>(original?.recurrence?.kind ?? '');
@@ -80,6 +81,7 @@
       estimateMin: estimate ? Math.max(0, parseInt(estimate, 10) || 0) || undefined : undefined,
       type: (type || undefined) as Task['type'],
       weight: weight ? parseFloat(weight) || undefined : undefined,
+      score: score !== '' && !Number.isNaN(parseFloat(score)) ? Math.max(0, Math.min(200, parseFloat(score))) : undefined,
       subtasks: subtasks.filter((s) => s.title.trim()),
       recurrence,
     };
@@ -170,6 +172,10 @@
         <div class="field">
           <label for="ed-weight">Weight %</label>
           <input id="ed-weight" class="input" type="number" min="0" max="100" bind:value={weight} placeholder="10" />
+        </div>
+        <div class="field">
+          <label for="ed-score">Score %</label>
+          <input id="ed-score" class="input" type="number" min="0" max="200" step="0.5" bind:value={score} placeholder="—" title="Grade earned, for the grade calculator in Tools" />
         </div>
       </div>
       <div class="field">

@@ -9,7 +9,7 @@
         ['/', 'Search'],
         ['Ctrl K', 'Command palette'],
         ['Ctrl Z', 'Undo last action'],
-        ['1 – 6', 'Switch view (Today, Upcoming, Courses, Inbox, Focus, Stats)'],
+        ['1 – 7', 'Switch view (Today, Upcoming, Courses, Inbox, Focus, Stats, Tools)'],
         ['?', 'This sheet'],
         ['Esc', 'Close / clear selection'],
       ],

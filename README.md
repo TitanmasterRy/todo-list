@@ -35,6 +35,15 @@ Gist sync keeps your data in a **private GitHub Gist** so it follows you across 
 
 How it syncs: on load and 2 seconds after any change (debounced). Merging is last-write-wins per task using `updatedAt`; courses, templates and day notes merge by id; stats keep the higher XP and the maximum completions per day. A conflict notice appears only if the same task was edited on two devices within the same second. The token is stored only in this browser's localStorage and is sent only to `api.github.com`. **Disconnect** removes it.
 
+## Tools
+
+The **Tools** view (`7`) has four helpers:
+
+- **Plan my day:** set how many minutes of homework you can do per day, see today's committed time against it and the load for the next 7 days, and pull upcoming tasks into Today without moving their deadlines ("Auto-fill free time" does it for you).
+- **Grades:** weighted grade calculator per course. Give tasks a weight % and a score %, see your current average and letter, the possible final range, and what you need on the remaining work to hit a target. Upcoming exams and quizzes show a countdown.
+- **Reading time:** pages (or words) × pace → minutes and pomodoros, then create the reading task with the estimate filled in.
+- **Calendar export:** download an `.ics` of due dates for Google, Apple, or Outlook calendars; exams get a one-day-before reminder.
+
 ## Keyboard shortcuts
 
 Press `?` in the app for the sheet.
@@ -45,7 +54,7 @@ Press `?` in the app for the sheet.
 | `/` | Search (Inbox) |
 | `Ctrl/⌘ K` | Command palette |
 | `Ctrl/⌘ Z` | Undo last action |
-| `1` – `6` | Today, Upcoming, Courses, Inbox, Focus, Stats |
+| `1` – `7` | Today, Upcoming, Courses, Inbox, Focus, Stats, Tools |
 | `?` | Shortcut sheet |
 | `Esc` | Close dialog / clear selection |
 | `j` / `k` (or arrows) | Move selection down / up |

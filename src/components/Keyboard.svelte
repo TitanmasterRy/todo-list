@@ -144,7 +144,7 @@
         }
         return;
     }
-    if (/^[1-6]$/.test(e.key)) {
+    if (/^[1-7]$/.test(e.key)) {
       const v = VIEWS.find((x) => x.key === e.key);
       if (v) {
         e.preventDefault();

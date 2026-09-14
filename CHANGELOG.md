@@ -85,3 +85,4 @@
 ## Post-launch
 
 - Removed the demo courses and tasks seeded on first run; the app now starts empty. "Clear demo data" stays available for browsers that already have them.
+- Tools view (`7`, also in the mobile "More" tab): day planner with capacity bar and pull-forward, weighted grade calculator with target and exam countdown, reading-time calculator, calendar (.ics) export. Tasks gained an optional `score` field; the task editor has a Score % input.
