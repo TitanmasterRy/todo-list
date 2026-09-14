@@ -96,3 +96,17 @@
 - Tools: notecards with Leitner spaced repetition and study XP, study help reference sheets (22 topics) with optional AI tutor, scientific calculator, graphing calculator, transcript with GPA and CSV/print
 - Optional AI helper (Anthropic API key, browser-only) for tutoring, notecard generation
 - Data: decks and cards stored in IndexedDB (schema v2), included in backups and Gist sync; `score`, `source`, `externalId`, `url` on tasks; `credits`, `term`, `finalGrade`, `schoologyName` on courses
+
+## Integrations, themes, transcription, more tools
+
+- AI providers: Anthropic, OpenAI, Google Gemini (free tier), Groq (free tier), OpenRouter (free models), Ollama (local), custom OpenAI-compatible endpoint; per-provider keys and models
+- Scan paper: camera/upload/paste → AI transcription that keeps structure, or free on-device OCR; copy, answer key, study sheet, notecards, task
+- Schoology API sign-in (key/secret, OAuth 1.0a signed in the browser via the proxy): assignments + grades + final grades, configurable auto-sync interval; calendar-feed mode kept
+- Google: Gmail assignment scan, Classroom import, Calendar push, Drive app-folder sync (the optional account sync); GIS sign-in with your own client ID
+- Spotify Connect (PKCE): now playing, controls, device picker, playlist search; embedded players for Spotify/Apple Music/YouTube/SoundCloud links
+- Theme packs (Classic, Sleek, Cute, Arcade, Nature, Space, Paper) that swap colors, corners, sound pack, checkbox particles and confetti; four new sound packs
+- Timer presets, custom-minutes timer, stopwatch with time logging; music panel in Focus
+- Dopamine: power hour (×1.5, one hour a day), streak milestone celebrations, mystery collectible rewards for closing the ring, weekly XP tracking
+- Quality of life: due-soon and morning-digest notifications, task duplicate (`d`), course filter chips in Today, “done by” finish-time estimate
+- Offline: single-file downloadable build, persistent-storage request, auto-backup to a local folder (File System Access API)
+- Tools: quiz maker (Quizlet/Blooket/Gimkit/Kahoot/worksheet/QTI for Schoology), PDF book reader with library, highlights and notecards, code editor with JS/Python/HTML runners, PowerSchool grades import, textbook-level study help with OpenStax links

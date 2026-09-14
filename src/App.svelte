@@ -15,6 +15,9 @@
   import ToolsView from './views/ToolsView.svelte';
   import SchoologyView from './views/SchoologyView.svelte';
   import { startSchoologySync } from './lib/schoologySync.svelte';
+  import { startReminders } from './lib/reminders';
+  import { startLocalBackup } from './lib/localBackup.svelte';
+  import { init as initSpotify } from './lib/spotify.svelte';
   import FeedbackLayer from './components/FeedbackLayer.svelte';
   import Keyboard from './components/Keyboard.svelte';
   import CommandPalette from './components/CommandPalette.svelte';
@@ -29,9 +32,15 @@
     void store.init().then(() => {
       startSync();
       startSchoologySync();
+      startReminders();
+      void startLocalBackup();
+      void initSpotify();
     });
     const mq = window.matchMedia('(prefers-color-scheme: dark)');
-    const apply = () => document.documentElement.classList.toggle('force-dark', mq.matches);
+    const apply = () => {
+      document.documentElement.classList.toggle('force-dark', mq.matches);
+      if (store.ready) store.applyTheme();
+    };
     apply();
     mq.addEventListener('change', apply);
     const onVis = () => {

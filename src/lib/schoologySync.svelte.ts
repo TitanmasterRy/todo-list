@@ -5,7 +5,9 @@ import { parseICS } from './ics-parse';
 import { diffAssignments, eventsToAssignments, matchCourseName, type ExternalAssignment } from './schoology';
 import { autoDescribe } from './autodescribe';
 import { COURSE_COLORS, COURSE_EMOJIS } from './colors';
+import { pullAll, getMe } from './schoologyApi';
 
+const intervalMs = () => Math.max(5, store.settings.schoologyIntervalMin || 30) * 60 * 1000;
 const INTERVAL_MS = 30 * 60 * 1000;
 
 class SchoologyState {
@@ -73,7 +75,11 @@ export function shortenCourseName(name: string): string {
 /** Sync from raw iCalendar text (feed, upload, or paste). */
 export async function syncFromText(text: string): Promise<{ created: number; updated: number; total: number }> {
   const events = parseICS(text);
-  const assignments = eventsToAssignments(events);
+  return applyAssignments(eventsToAssignments(events));
+}
+
+/** Apply a list of external assignments (from the feed or the API): match courses, diff, create/update. */
+export function applyAssignments(assignments: ExternalAssignment[]): { created: number; updated: number; total: number } {
   const settings = store.settings;
   const createdCourses = new Map<string, string>();
   const unmatched = new Set<string>();
@@ -100,11 +106,48 @@ export async function syncFromText(text: string): Promise<{ created: number; upd
   return out;
 }
 
+/** API mode: pull sections, assignments and grades with the user's key/secret (through the proxy). */
+export async function syncFromApi(): Promise<{ created: number; updated: number; total: number; graded: number }> {
+  const s = store.settings;
+  if (!s.schoologyKey || !s.schoologySecret) throw new Error('Add your Schoology API key and secret first.');
+  if (!s.schoologyProxy) throw new Error('The Schoology API needs the CORS proxy (see Setup).');
+  const creds = { key: s.schoologyKey, secret: s.schoologySecret, proxy: s.schoologyProxy };
+  const data = await pullAll(creds, s.schoologyDomain, s.schoologyImportGrades);
+  const out = applyAssignments(data.assignments);
+  // grades → scores on the matching tasks (pays grade XP the first time)
+  let graded = 0;
+  if (s.schoologyImportGrades) {
+    const byExt = new Map(store.tasks.filter((t) => t.externalId).map((t) => [t.externalId!, t]));
+    for (const [ext, g] of data.grades) {
+      const t = byExt.get(ext);
+      if (!t || typeof t.score === 'number') continue;
+      store.updateTask(t.id, { score: g.score, completedAt: t.completedAt ?? new Date().toISOString() });
+      graded++;
+    }
+    for (const [name, pct] of data.finalGrades) {
+      const c = store.courses.find((x) => x.schoologyName === name || x.name.toLowerCase() === name.toLowerCase());
+      if (c && c.finalGrade !== pct) store.updateCourse(c.id, { finalGrade: pct });
+    }
+  }
+  return { ...out, graded };
+}
+
+/** Verify key/secret: returns the display name on success. */
+export async function testApiCredentials(key: string, secret: string, proxy: string): Promise<string> {
+  const me = await getMe({ key, secret, proxy });
+  return me.name_display;
+}
+
 let inFlight: Promise<void> | null = null;
 
+export function schoologyConfigured(): boolean {
+  const s = store.settings;
+  return s.schoologyMode === 'api' ? !!(s.schoologyKey && s.schoologySecret) : !!s.schoologyFeedUrl;
+}
+
 export async function syncNow(opts: { quiet?: boolean } = {}): Promise<void> {
-  const { schoologyFeedUrl: url, schoologyProxy: proxy } = store.settings;
-  if (!url) {
+  const { schoologyFeedUrl: url, schoologyProxy: proxy, schoologyMode: mode } = store.settings;
+  if (!schoologyConfigured()) {
     schoology.status = 'off';
     return;
   }
@@ -113,14 +156,15 @@ export async function syncNow(opts: { quiet?: boolean } = {}): Promise<void> {
     schoology.status = 'syncing';
     schoology.lastError = null;
     try {
-      const text = await fetchFeed(url, proxy);
-      const r = await syncFromText(text);
+      let r: { created: number; updated: number; total: number; graded?: number };
+      if (mode === 'api') r = await syncFromApi();
+      else r = await syncFromText(await fetchFeed(url, proxy));
       schoology.status = 'ok';
-      if (!opts.quiet || r.created > 0) {
+      if (!opts.quiet || r.created > 0 || (r.graded ?? 0) > 0) {
         toasts.push({
           message: r.created ? `${r.created} new assignment${r.created > 1 ? 's' : ''} from Schoology` : 'Schoology is up to date',
-          detail: r.updated ? `${r.updated} updated · ${r.total} in feed` : `${r.total} in feed`,
-          kind: r.created ? 'success' : 'info',
+          detail: [r.updated ? `${r.updated} updated` : '', r.graded ? `${r.graded} new grade${r.graded > 1 ? 's' : ''}` : '', `${r.total} in ${mode === 'api' ? 'Schoology' : 'feed'}`].filter(Boolean).join(' · '),
+          kind: r.created || r.graded ? 'success' : 'info',
           emoji: '🔄',
         });
       }
@@ -139,18 +183,19 @@ export async function syncNow(opts: { quiet?: boolean } = {}): Promise<void> {
 export function startSchoologySync(): void {
   if (started) return;
   started = true;
-  if (store.settings.schoologyFeedUrl) {
+  if (schoologyConfigured()) {
     schoology.status = 'idle';
     void syncNow({ quiet: true });
   }
-  timer = setInterval(() => {
-    if (document.visibilityState === 'visible' && store.settings.schoologyFeedUrl) void syncNow({ quiet: true });
-  }, INTERVAL_MS);
-  document.addEventListener('visibilitychange', () => {
-    if (document.visibilityState !== 'visible' || !store.settings.schoologyFeedUrl) return;
+  const tick = () => {
+    if (document.visibilityState !== 'visible' || !schoologyConfigured()) return;
     const last = store.settings.lastSchoologySync ? new Date(store.settings.lastSchoologySync).getTime() : 0;
-    if (Date.now() - last > INTERVAL_MS) void syncNow({ quiet: true });
-  });
+    if (Date.now() - last > intervalMs() - 5000) void syncNow({ quiet: true });
+  };
+  timer = setInterval(tick, 60 * 1000);
+  document.addEventListener('visibilitychange', tick);
+  window.addEventListener('online', tick);
+  void INTERVAL_MS;
 }
 
 export function stopSchoologySync(): void {

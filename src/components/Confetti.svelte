@@ -2,6 +2,7 @@
   // Full-screen canvas confetti. Call fire() via bind:this or the exported trigger prop.
   import { onMount } from 'svelte';
   import { store } from '../lib/store.svelte';
+  import { themeById } from '../lib/themes';
 
   interface Props {
     trigger: number; // bump to fire
@@ -24,14 +25,18 @@
     color: string;
     life: number;
     shape: number;
+    emoji: string;
   }
   let parts: P[] = [];
-  const colors = ['#6c5ce7', '#00cec9', '#fdcb6e', '#e17055', '#55efc4', '#fd79a8', '#74b9ff', '#ffeaa7'];
+
 
   function fire() {
     if (!canvas || store.settings.reducedMotion || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
     const W = (canvas.width = window.innerWidth);
     const H = (canvas.height = window.innerHeight);
+    const theme = themeById(store.settings.themePack);
+    const colors = theme.confetti;
+    const emojiShapes = theme.particles.shapes.filter((s) => !['dot', 'line', 'pixel', 'star'].includes(s));
     parts = [];
     for (let i = 0; i < intensity; i++) {
       const side = i % 2 === 0 ? -1 : 1;
@@ -45,7 +50,8 @@
         vr: (Math.random() - 0.5) * 0.3,
         color: colors[i % colors.length],
         life: 1,
-        shape: i % 3,
+        shape: theme.flourish === 'pixels' ? 0 : theme.flourish === 'stars' ? 3 : theme.flourish === 'hearts' || theme.flourish === 'leaves' ? (i % 2 ? 4 : 1) : i % 3,
+        emoji: emojiShapes.length ? emojiShapes[i % emojiShapes.length] : '',
       });
     }
     active = true;
@@ -69,7 +75,17 @@
         ctx.translate(p.x, p.y);
         ctx.rotate(p.rot);
         ctx.fillStyle = p.color;
-        if (p.shape === 0) ctx.fillRect(-p.r / 2, -p.r, p.r, p.r * 2);
+        if (p.shape === 4 && p.emoji) {
+          ctx.font = `${p.r * 2.4}px system-ui`;
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          ctx.fillText(p.emoji, 0, 0);
+        } else if (p.shape === 3) {
+          ctx.font = `${p.r * 2.2}px system-ui`;
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          ctx.fillText('✦', 0, 0);
+        } else if (p.shape === 0) ctx.fillRect(-p.r / 2, -p.r, p.r, p.r * 2);
         else if (p.shape === 1) {
           ctx.beginPath();
           ctx.arc(0, 0, p.r / 1.6, 0, Math.PI * 2);

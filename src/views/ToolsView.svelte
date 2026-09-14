@@ -14,22 +14,43 @@
   import StudyHelpTool from '../components/tools/StudyHelpTool.svelte';
   import { ui } from '../lib/ui.svelte';
 
-  type Tab = 'grades' | 'planner' | 'calendar' | 'reading' | 'calculator' | 'graph' | 'notecards' | 'study' | 'transcript';
+  import ScanTool from '../components/tools/ScanTool.svelte';
+
+  type Tab = 'grades' | 'planner' | 'calendar' | 'reading' | 'calculator' | 'graph' | 'notecards' | 'study' | 'transcript' | 'scan' | 'reader' | 'code' | 'google' | 'quiz' | 'powerschool';
+  type Group = 'plan' | 'grades' | 'study' | 'compute' | 'connect';
   let tab = $state<Tab>((ui.toolsTab as Tab) || 'planner');
   $effect(() => {
     ui.toolsTab = tab;
   });
-  const tabs: { id: Tab; label: string; icon: string }[] = [
-    { id: 'planner', label: 'Plan my day', icon: '🗓️' },
-    { id: 'grades', label: 'Grades', icon: '🎯' },
-    { id: 'transcript', label: 'Transcript', icon: '🎓' },
-    { id: 'notecards', label: 'Notecards', icon: '🃏' },
-    { id: 'study', label: 'Study help', icon: '💡' },
-    { id: 'calculator', label: 'Calculator', icon: '🧮' },
-    { id: 'graph', label: 'Graphing', icon: '📈' },
-    { id: 'reading', label: 'Reading time', icon: '📖' },
-    { id: 'calendar', label: 'Calendar export', icon: '📆' },
+  const tabs: { id: Tab; label: string; icon: string; group: Group }[] = [
+    { id: 'planner', label: 'Plan my day', icon: '🗓️', group: 'plan' },
+    { id: 'reading', label: 'Reading time', icon: '📖', group: 'plan' },
+    { id: 'calendar', label: 'Calendar export', icon: '📆', group: 'plan' },
+    { id: 'grades', label: 'Grade calculator', icon: '🎯', group: 'grades' },
+    { id: 'transcript', label: 'Transcript', icon: '🎓', group: 'grades' },
+    { id: 'powerschool', label: 'PowerSchool import', icon: '🏫', group: 'grades' },
+    { id: 'notecards', label: 'Notecards', icon: '🃏', group: 'study' },
+    { id: 'quiz', label: 'Quiz maker', icon: '🎮', group: 'study' },
+    { id: 'scan', label: 'Scan paper', icon: '📷', group: 'study' },
+    { id: 'reader', label: 'Book reader', icon: '📚', group: 'study' },
+    { id: 'study', label: 'Study help', icon: '💡', group: 'study' },
+    { id: 'calculator', label: 'Calculator', icon: '🧮', group: 'compute' },
+    { id: 'graph', label: 'Graphing', icon: '📈', group: 'compute' },
+    { id: 'code', label: 'Code editor', icon: '💻', group: 'compute' },
+    { id: 'google', label: 'Google (Gmail, Classroom, Calendar, Drive)', icon: '🟢', group: 'connect' },
   ];
+  const groups: { id: Group; label: string }[] = [
+    { id: 'plan', label: 'Plan' },
+    { id: 'grades', label: 'Grades' },
+    { id: 'study', label: 'Study' },
+    { id: 'compute', label: 'Compute' },
+    { id: 'connect', label: 'Connect' },
+  ];
+  const currentGroup = $derived(tabs.find((t) => t.id === tab)?.group ?? 'plan');
+  let group = $state<Group>('plan');
+  $effect(() => {
+    group = currentGroup;
+  });
 
   // ---------- Planner ----------
   const capacity = $derived(store.settings.dailyCapacityMin || 180);
@@ -167,8 +188,13 @@
     </div>
   </header>
 
-  <div class="tabs" role="tablist">
-    {#each tabs as t (t.id)}
+  <div class="groups" role="tablist" aria-label="Tool groups">
+    {#each groups as g (g.id)}
+      <button role="tab" aria-selected={group === g.id} class:on={group === g.id} onclick={() => { group = g.id; const first = tabs.find((t) => t.group === g.id); if (first && tabs.find((t) => t.id === tab)?.group !== g.id) tab = first.id; }}>{g.label}</button>
+    {/each}
+  </div>
+  <div class="tabs" role="tablist" aria-label="Tools">
+    {#each tabs.filter((t) => t.group === group) as t (t.id)}
       <button role="tab" aria-selected={tab === t.id} class:on={tab === t.id} onclick={() => (tab = t.id)}><span aria-hidden="true">{t.icon}</span> {t.label}</button>
     {/each}
   </div>
@@ -316,6 +342,38 @@
     <StudyHelpTool />
   {:else if tab === 'transcript'}
     <TranscriptTool />
+  {:else if tab === 'scan'}
+    <ScanTool />
+  {:else if tab === 'reader'}
+    {#await import('../components/tools/ReaderTool.svelte')}
+      <div class="card muted">Loading reader…</div>
+    {:then m}
+      <m.default />
+    {/await}
+  {:else if tab === 'code'}
+    {#await import('../components/tools/CodeTool.svelte')}
+      <div class="card muted">Loading editor…</div>
+    {:then m}
+      <m.default />
+    {/await}
+  {:else if tab === 'google'}
+    {#await import('../components/GoogleTools.svelte')}
+      <div class="card muted">Loading…</div>
+    {:then m}
+      <m.default />
+    {/await}
+  {:else if tab === 'quiz'}
+    {#await import('../components/tools/QuizMakerTool.svelte')}
+      <div class="card muted">Loading…</div>
+    {:then m}
+      <m.default />
+    {/await}
+  {:else if tab === 'powerschool'}
+    {#await import('../components/tools/PowerSchoolTool.svelte')}
+      <div class="card muted">Loading…</div>
+    {:then m}
+      <m.default />
+    {/await}
   {:else if tab === 'reading'}
     <section class="card">
       <h2>Reading time</h2>
@@ -396,6 +454,30 @@
 </div>
 
 <style>
+  .groups {
+    display: flex;
+    gap: 2px;
+    background: var(--bg-elev-2);
+    border-radius: 999px;
+    padding: 3px;
+    width: fit-content;
+    max-width: 100%;
+    overflow-x: auto;
+    margin: 4px 0 8px;
+  }
+  .groups button {
+    padding: 5px 14px;
+    border-radius: 999px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-muted);
+    white-space: nowrap;
+  }
+  .groups button.on {
+    background: var(--bg-elev);
+    color: var(--text);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+  }
   .tabs {
     display: flex;
     gap: 4px;

@@ -63,6 +63,30 @@
               <h4>{s.heading}</h4>
               <ul>{#each s.items as item}<li>{@html inlineMd(item)}</li>{/each}</ul>
             {/each}
+            {#if t.deeper?.length}
+              <h4>Understanding it (textbook level)</h4>
+              {#each t.deeper as d}
+                <details class="deep"><summary>{d.heading}</summary><p>{@html inlineMd(d.text)}</p></details>
+              {/each}
+            {/if}
+            {#if t.examples?.length}
+              <h4>Worked examples</h4>
+              {#each t.examples as ex, i}
+                <details class="ex"><summary><strong>Example {i + 1}.</strong> {@html inlineMd(ex.problem)}</summary>
+                  <ol>{#each ex.steps as st}<li>{@html inlineMd(st)}</li>{/each}</ol>
+                  <p class="ans">Answer: {@html inlineMd(ex.answer)}</p>
+                </details>
+              {/each}
+            {/if}
+            {#if t.textbook?.length}
+              <h4>Free textbook</h4>
+              <ul class="books">
+                {#each t.textbook as b}
+                  <li>📘 <a href={b.url} target="_blank" rel="noopener noreferrer">{b.title}</a>{#if b.chapter} <span class="muted">· {b.chapter}</span>{/if}</li>
+                {/each}
+              </ul>
+              <p class="muted">OpenStax books are free and peer-reviewed. Download the PDF from the book page and open it in Tools → Book reader to read, highlight and make notecards.</p>
+            {/if}
           </div>
         {/if}
       </article>
@@ -105,6 +129,12 @@
   .body h4 { margin: 10px 0 4px; font-size: 12px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-muted); }
   .body ul { margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 3px; }
   .body :global(code) { font-family: var(--mono); font-size: 12px; background: var(--bg-elev-2); padding: 1px 4px; border-radius: 4px; }
+  .deep, .ex { margin: 4px 0; padding: 6px 10px; border-radius: 8px; background: var(--bg-elev-2); font-size: 13px; }
+  .deep summary, .ex summary { cursor: pointer; }
+  .deep p { margin: 6px 0 0; line-height: 1.5; }
+  .ex ol { margin: 6px 0; padding-left: 20px; display: flex; flex-direction: column; gap: 3px; }
+  .ans { margin: 4px 0 0; font-weight: 600; color: var(--success); }
+  .books { list-style: none; padding: 0; margin: 0 0 6px; }
   .ask .textarea { min-height: 70px; }
   .btns { display: flex; gap: 10px; align-items: center; margin-top: 6px; }
   .answer { margin-top: 12px; padding: 12px; background: var(--bg-elev-2); border-radius: 10px; font-size: 14px; }

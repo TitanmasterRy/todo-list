@@ -430,3 +430,52 @@ a {
     opacity: 1;
   }
 }
+
+/* ---------- theme packs ---------- */
+:root[data-pack='arcade'] .page-head h1,
+:root[data-pack='arcade'] .brand {
+  font-family: var(--mono);
+  font-size: 15px;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+:root[data-pack='arcade'] .btn.primary,
+:root[data-pack='arcade'] .task.selected {
+  box-shadow: 0 0 12px color-mix(in srgb, var(--accent) 60%, transparent);
+}
+:root[data-pack='arcade'] .task {
+  border-width: 2px;
+}
+:root[data-pack='cute'] .task,
+:root[data-pack='cute'] .card,
+:root[data-pack='cute'] .btn {
+  border-radius: var(--radius);
+}
+:root[data-pack='cute'] .btn.primary {
+  background: linear-gradient(135deg, #ff8fab, #ff6f9c);
+}
+:root[data-pack='sleek'] .task,
+:root[data-pack='sleek'] .card {
+  border-color: var(--border);
+  box-shadow: none;
+}
+:root[data-pack='sleek'] .btn.primary {
+  color: var(--bg);
+}
+:root[data-pack='paper'] body,
+:root[data-pack='paper'] .page-head h1,
+:root[data-pack='paper'] .card h2,
+:root[data-pack='paper'] .task .title {
+  font-family: var(--font);
+}
+:root[data-pack='paper'] .task {
+  background-image: repeating-linear-gradient(transparent, transparent 27px, color-mix(in srgb, var(--border) 60%, transparent) 28px);
+  background-size: 100% 28px;
+}
+:root[data-pack='space'] body {
+  background-image: radial-gradient(circle at 20% 10%, rgba(127, 90, 240, 0.12), transparent 40%), radial-gradient(circle at 80% 90%, rgba(44, 182, 125, 0.08), transparent 40%);
+}
+:root[data-pack='nature'] .card,
+:root[data-pack='nature'] .task {
+  box-shadow: 0 1px 0 color-mix(in srgb, var(--border-strong) 40%, transparent);
+}

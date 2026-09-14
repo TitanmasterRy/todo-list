@@ -138,6 +138,13 @@
           store.deleteTask(store.selectedTaskId);
         }
         return;
+      case 'd':
+        if (store.selectedTaskId) {
+          e.preventDefault();
+          const t = store.duplicateTask(store.selectedTaskId);
+          if (t) store.selectedTaskId = t.id;
+        }
+        return;
       case 'f':
         if (store.selectedTaskId) {
           e.preventDefault();

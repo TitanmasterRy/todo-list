@@ -44,6 +44,7 @@ export interface XpBreakdown {
   longTask: boolean;
   frog: boolean;
   crit: boolean; // random critical hit (x2)
+  powerHour: boolean; // x1.5 during the day's power hour
   comboCount: number;
   comboMultiplier: number;
   total: number;
@@ -63,7 +64,7 @@ export function earlyMultiplierFor(task: Pick<Task, 'dueAt'>, completedAt: Date)
 }
 
 /** Compute XP for completing a task. comboCount = consecutive prior completions in the combo chain (0 = none). rng in [0,1) decides critical hits. */
-export function computeXp(task: Task, completedAt: Date, comboCount: number, rng: () => number = Math.random): XpBreakdown {
+export function computeXp(task: Task, completedAt: Date, comboCount: number, rng: () => number = Math.random, powerHour = false): XpBreakdown {
   const base = BASE_XP[task.priority] ?? 10;
   const subtaskBonus = 5 * (task.subtasks?.length ?? 0);
   let total = base + subtaskBonus;
@@ -78,7 +79,8 @@ export function computeXp(task: Task, completedAt: Date, comboCount: number, rng
   total *= comboMultiplier;
   const crit = rng() < CRIT_CHANCE;
   if (crit) total *= 2;
-  return { base, subtaskBonus, early, earlyDays: e.earlyDays, earlyMultiplier: e.multiplier, longTask, frog, crit, comboCount, comboMultiplier, total: Math.round(total) };
+  if (powerHour) total *= 1.5;
+  return { base, subtaskBonus, early, earlyDays: e.earlyDays, earlyMultiplier: e.multiplier, longTask, frog, crit, powerHour, comboCount, comboMultiplier, total: Math.round(total) };
 }
 
 // ---------- Grades ----------
@@ -111,6 +113,7 @@ export function applyGrade(prev: Stats, score: number, weight: number | undefine
   const xp = gradeXp(score, weight);
   const prevLevel = levelForXp(stats.xp);
   stats.xp += xp.xp;
+  stats.xpByDay = { ...(stats.xpByDay ?? {}), [today]: ((stats.xpByDay ?? {})[today] ?? 0) + xp.xp };
   stats.level = levelForXp(stats.xp);
   if (score >= 95) stats.acedCount = (stats.acedCount ?? 0) + 1;
   const newBadges = evaluateBadges(stats, { openTasksRemaining, today });
@@ -124,11 +127,50 @@ export function applyStudySession(prev: Stats, reviewed: number, correct: number
   const gained = correct * 2 + (clearedAll && reviewed > 0 ? 10 : 0);
   const prevLevel = levelForXp(stats.xp);
   stats.xp += gained;
+  stats.xpByDay = { ...(stats.xpByDay ?? {}), [today]: ((stats.xpByDay ?? {})[today] ?? 0) + gained };
   stats.level = levelForXp(stats.xp);
   stats.cardsReviewed = (stats.cardsReviewed ?? 0) + reviewed;
   const newBadges = evaluateBadges(stats, { openTasksRemaining, today });
   stats.badges = [...stats.badges, ...newBadges];
   return { stats, xp: { xp: gained, tier: clearedAll ? 'great' : 'ok', label: clearedAll ? 'Deck cleared' : 'Study session' }, leveledUp: stats.level > prevLevel, newLevel: stats.level, newBadges };
+}
+
+// ---------- Power hour ----------
+/** Deterministic "power hour" for a day: one random hour between 15:00 and 21:00 (x1.5 XP). */
+export function powerHourFor(day: string): number {
+  let h = 0;
+  for (const ch of day) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
+  return 15 + (h % 7);
+}
+export function isPowerHour(now: Date, day: string): boolean {
+  return now.getHours() === powerHourFor(day);
+}
+export const STREAK_MILESTONES = [3, 7, 14, 30, 50, 100, 365];
+
+// ---------- Mystery rewards (cosmetic collection) ----------
+export const COLLECTIBLES: { id: string; name: string; emoji: string; kind: 'sticker' | 'title' }[] = [
+  { id: 'c_rocket', name: 'Rocket', emoji: '🚀', kind: 'sticker' },
+  { id: 'c_crown', name: 'Crown', emoji: '👑', kind: 'sticker' },
+  { id: 'c_gem', name: 'Gem', emoji: '💎', kind: 'sticker' },
+  { id: 'c_fire', name: 'Inferno', emoji: '🔥', kind: 'sticker' },
+  { id: 'c_unicorn', name: 'Unicorn', emoji: '🦄', kind: 'sticker' },
+  { id: 'c_bolt', name: 'Bolt', emoji: '⚡', kind: 'sticker' },
+  { id: 'c_cat', name: 'Study Cat', emoji: '🐱', kind: 'sticker' },
+  { id: 'c_owl', name: 'Wise Owl', emoji: '🦉', kind: 'sticker' },
+  { id: 'c_dragon', name: 'Dragon', emoji: '🐉', kind: 'sticker' },
+  { id: 'c_trophy', name: 'Trophy', emoji: '🏆', kind: 'sticker' },
+  { id: 'c_alien', name: 'Alien', emoji: '👽', kind: 'sticker' },
+  { id: 'c_ghost', name: 'Ghost', emoji: '👻', kind: 'sticker' },
+  { id: 't_nightowl', name: 'Night Owl', emoji: '🌙', kind: 'title' },
+  { id: 't_earlybird', name: 'Early Bird', emoji: '🐦', kind: 'title' },
+  { id: 't_grinder', name: 'The Grinder', emoji: '⚙️', kind: 'title' },
+  { id: 't_ace', name: 'Ace', emoji: '🅰️', kind: 'title' },
+];
+/** Pick a collectible not yet owned (deterministic by seed). Returns undefined when everything is collected. */
+export function rollCollectible(owned: string[], seed: number): (typeof COLLECTIBLES)[number] | undefined {
+  const pool = COLLECTIBLES.filter((c) => !owned.includes(c.id));
+  if (!pool.length) return undefined;
+  return pool[Math.abs(seed) % pool.length];
 }
 
 // ---------- Levels: titles and unlocks ----------
@@ -328,15 +370,17 @@ export function applyCompletion(
   combo: ComboState | undefined,
   openTasksRemaining: number,
   rng: () => number = Math.random,
+  powerHour = false,
 ): CompletionResult {
   const stats: Stats = structuredClone(prev);
   const day = dateKey(completedAt);
   const nextCombo = advanceCombo(combo, completedAt.getTime());
-  const xp = computeXp(task, completedAt, nextCombo.count, rng);
+  const xp = computeXp(task, completedAt, nextCombo.count, rng, powerHour);
   if (xp.crit) stats.critCount = (stats.critCount ?? 0) + 1;
   if (xp.early && xp.earlyDays >= 3) stats.early3Count = (stats.early3Count ?? 0) + 1;
   const prevLevel = levelForXp(stats.xp);
   stats.xp += xp.total;
+  stats.xpByDay = { ...(stats.xpByDay ?? {}), [day]: ((stats.xpByDay ?? {})[day] ?? 0) + xp.total };
   stats.level = levelForXp(stats.xp);
   stats.totalCompleted += 1;
   stats.completionsByDay[day] = (stats.completionsByDay[day] ?? 0) + 1;

@@ -2,8 +2,9 @@ import * as db from './storage';
 import type { Card, Course, DayNote, Deck, Priority, Settings, Stats, Subtask, Task, Template } from './types';
 import { DEFAULT_STATS } from './types';
 import { uid } from './id';
-import { addDaysKey, dueKey, isDateOnly, isDueToday, isOverdue, isoNow, nextWeekKey, thisWeekendKey, todayKey, daysAgoKey } from './dates';
-import { applyCompletion, applyGrade, applyStudySession, effectiveStreak, evaluateBadges, type ComboState } from './gamification';
+import { addDaysKey, dueKey, isDateOnly, isDueToday, isOverdue, isoNow, nextWeekKey, thisWeekendKey, todayKey, daysAgoKey, startOfWeekKey as startOfWeekKeyFn } from './dates';
+import { applyCompletion, applyGrade, applyStudySession, effectiveStreak, evaluateBadges, isPowerHour, rollCollectible, STREAK_MILESTONES, type ComboState } from './gamification';
+import { applyThemePack } from './themes';
 import { review as reviewCard } from './flashcards';
 import type { ExternalAssignment, SyncDiff } from './schoology';
 import { autoDescribe } from './autodescribe';
@@ -144,7 +145,7 @@ class Store {
       this.stats = { ...this.stats, dailyGoal: this.settings.dailyGoal };
       void db.putStats($state.snapshot(this.stats));
     }
-    if ('theme' in patch || 'accent' in patch || 'reducedMotion' in patch) this.applyTheme();
+    if ('theme' in patch || 'accent' in patch || 'reducedMotion' in patch || 'themePack' in patch) this.applyTheme();
     if ('soundsEnabled' in patch || 'soundPack' in patch) {
       configureSounds({ enabled: this.settings.soundsEnabled, pack: this.settings.soundPack });
     }
@@ -153,9 +154,10 @@ class Store {
   applyTheme(): void {
     if (typeof document === 'undefined') return;
     const root = document.documentElement;
-    const { theme, accent, reducedMotion } = this.settings;
+    const { theme, accent, reducedMotion, themePack } = this.settings;
     root.dataset.theme = theme;
-    root.style.setProperty('--accent', accent);
+    const dark = theme === 'dark' || (theme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+    applyThemePack(themePack, dark, accent);
     root.classList.toggle('reduced-motion', reducedMotion);
     const meta = document.querySelector('meta[name="theme-color"]');
     if (meta) meta.setAttribute('content', accent);
@@ -297,7 +299,10 @@ class Store {
       subtasks: prevTask.subtasks.map((s) => ({ ...s, done: true })),
     };
     const openRemaining = this.openTasks.filter((t) => t.id !== id).length;
-    const result = applyCompletion(prevStats, done, completedAt, this.combo, openRemaining);
+    const powerHour = this.settings.gamification && this.settings.powerHourEnabled && isPowerHour(completedAt, todayKey(completedAt));
+    const result = applyCompletion(prevStats, done, completedAt, this.combo, openRemaining, Math.random, powerHour);
+    const prevStreak = prevStats.streak.current;
+    const milestone = STREAK_MILESTONES.includes(result.stats.streak.current) && result.stats.streak.current !== prevStreak ? result.stats.streak.current : 0;
 
     // recurrence: spawn next instance (history untouched)
     const spawned = spawnNextInstance(done, completedAt, uid('t'));
@@ -347,8 +352,48 @@ class Store {
     });
     if (result.leveledUp) emit('levelup', { level: result.newLevel });
     for (const b of result.newBadges) emit('badge', { id: b });
-    if (result.ringClosed) emit('ringClosed', { day: todayKey(completedAt) });
+    if (result.ringClosed) {
+      emit('ringClosed', { day: todayKey(completedAt) });
+      // mystery reward: a collectible for closing the ring
+      const c = rollCollectible(this.settings.collection, completedAt.getTime());
+      if (c && this.settings.gamification) {
+        this.updateSettings({ collection: [...this.settings.collection, c.id] });
+        emit('collectible', { id: c.id, name: c.name, emoji: c.emoji, kind: c.kind });
+      }
+    }
+    if (milestone) emit('streakMilestone', { days: milestone });
   }
+
+  /** Duplicate a task (same fields, not completed, placed right after the original). */
+  duplicateTask(id: string): Task | undefined {
+    const t = this.tasks.find((x) => x.id === id);
+    if (!t) return undefined;
+    const snap = structuredClone($state.snapshot(t)) as Task;
+    return this.addTask(
+      {
+        title: snap.title,
+        notes: snap.notes,
+        courseId: snap.courseId,
+        tags: [...snap.tags],
+        priority: snap.priority,
+        dueAt: snap.dueAt,
+        estimateMin: snap.estimateMin,
+        type: snap.type,
+        weight: snap.weight,
+        subtasks: snap.subtasks.map((s) => s.title),
+        recurrence: snap.recurrence,
+      },
+      { describe: false },
+    );
+  }
+
+  /** XP earned since the start of the current week (from completion days × approximate). Tracked exactly via xpByDay. */
+  weeklyXp = $derived.by(() => {
+    const start = startOfWeekKeyFn(this.today, this.settings.weekStart);
+    let sum = 0;
+    for (const [k, v] of Object.entries(this.stats.xpByDay ?? {})) if (k >= start) sum += v;
+    return sum;
+  });
 
   /** Re-open a completed task (from a completed list). Does not refund XP; stats stay honest via completion counts. */
   uncompleteTask(id: string): void {

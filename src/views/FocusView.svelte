@@ -4,15 +4,22 @@
   import { pomodoro } from '../lib/pomodoro.svelte';
   import { renderMarkdown } from '../lib/markdown';
   import { formatDue, formatMinutes } from '../lib/dates';
+  import { toasts } from '../lib/toast.svelte';
   import Checkbox from '../components/Checkbox.svelte';
   import SnoozeMenu from '../components/SnoozeMenu.svelte';
+  import MusicPanel from '../components/MusicPanel.svelte';
+  let customInput = $state(String(pomodoro.customMin));
+  let showMusic = $state(false);
+  const stop = $derived(pomodoro.mode === 'stopwatch');
+  const elapsedMM = $derived(String(Math.floor(pomodoro.elapsed / 60)).padStart(2, '0'));
+  const elapsedSS = $derived(String(pomodoro.elapsed % 60).padStart(2, '0'));
 
   const task = $derived(store.taskById(store.focusTaskId));
   const course = $derived(store.courseById(task?.courseId));
   const candidates = $derived([...store.todayTasks].sort(byFrogThenOrder));
   const mm = $derived(String(Math.floor(pomodoro.remaining / 60)).padStart(2, '0'));
   const ss = $derived(String(pomodoro.remaining % 60).padStart(2, '0'));
-  const pct = $derived(pomodoro.total ? 1 - pomodoro.remaining / pomodoro.total : 0);
+  const pct = $derived(pomodoro.mode === 'stopwatch' ? (pomodoro.elapsed % 3600) / 3600 : pomodoro.total ? 1 - pomodoro.remaining / pomodoro.total : 0);
   const R = 88;
   const C = 2 * Math.PI * R;
   let newSub = $state('');
@@ -62,21 +69,41 @@
       <button role="tab" aria-selected={pomodoro.mode === 'work'} class:on={pomodoro.mode === 'work'} onclick={() => pomodoro.setMode('work')}>Focus {store.settings.pomodoroWorkMin}</button>
       <button role="tab" aria-selected={pomodoro.mode === 'break'} class:on={pomodoro.mode === 'break'} onclick={() => pomodoro.setMode('break')}>Break {store.settings.pomodoroBreakMin}</button>
       <button role="tab" aria-selected={pomodoro.mode === 'long'} class:on={pomodoro.mode === 'long'} onclick={() => pomodoro.setMode('long')}>Long {store.settings.pomodoroLongBreakMin}</button>
+      <button role="tab" aria-selected={pomodoro.mode === 'custom'} class:on={pomodoro.mode === 'custom'} onclick={() => pomodoro.setMode('custom')}>Custom {pomodoro.customMin}</button>
+      <button role="tab" aria-selected={stop} class:on={stop} onclick={() => pomodoro.setMode('stopwatch')}>Stopwatch</button>
+    </div>
+    <div class="presets">
+      {#each store.settings.timerPresets as p (p.label)}
+        <button class="chip" class:on={store.settings.pomodoroWorkMin === p.work && store.settings.pomodoroBreakMin === p.brk} onclick={() => pomodoro.applyPreset(p.work, p.brk)}>{p.label}</button>
+      {/each}
+      <form class="custom" onsubmit={(e) => { e.preventDefault(); pomodoro.setCustom(Number(customInput) || 30); }}>
+        <input class="input num" type="number" min="1" max="600" bind:value={customInput} aria-label="Custom minutes" />
+        <button class="btn sm" type="submit">min timer</button>
+      </form>
     </div>
     <div class="dial">
       <svg viewBox="0 0 200 200" width="200" height="200" aria-hidden="true">
         <circle cx="100" cy="100" r={R} fill="none" stroke="var(--border)" stroke-width="8" />
         <circle cx="100" cy="100" r={R} fill="none" stroke="var(--accent)" stroke-width="8" stroke-linecap="round" stroke-dasharray={C} stroke-dashoffset={C * (1 - pct)} transform="rotate(-90 100 100)" class="prog" />
       </svg>
-      <div class="time" aria-live="off"><span class="digits">{mm}:{ss}</span><span class="mode">{pomodoro.mode === 'work' ? 'focus' : pomodoro.mode === 'break' ? 'short break' : 'long break'}</span></div>
+      <div class="time" aria-live="off"><span class="digits">{stop ? `${elapsedMM}:${elapsedSS}` : `${mm}:${ss}`}</span><span class="mode">{stop ? 'stopwatch' : pomodoro.mode === 'work' ? 'focus' : pomodoro.mode === 'break' ? 'short break' : pomodoro.mode === 'long' ? 'long break' : 'custom timer'}</span></div>
     </div>
     <div class="controls">
       <button class="btn primary" onclick={() => { requestNotify(); pomodoro.toggle(); }}>{pomodoro.running ? 'Pause' : pomodoro.remaining < pomodoro.total ? 'Resume' : 'Start'}</button>
       <button class="btn" onclick={() => pomodoro.reset()}>Reset</button>
-      <button class="btn ghost" onclick={() => pomodoro.skip()}>Skip</button>
+      {#if stop}
+        <button class="btn ghost" onclick={() => { const m = pomodoro.logStopwatch(); toasts.push({ message: `Logged ${m} min of work`, kind: 'success' }); }} disabled={pomodoro.elapsed < 60}>Log time</button>
+      {:else}
+        <button class="btn ghost" onclick={() => pomodoro.skip()}>Skip</button>
+      {/if}
+      <button class="btn ghost" onclick={() => (showMusic = !showMusic)} aria-expanded={showMusic}>🎵 Music</button>
       <span class="sessions">{pomodoro.sessions} session{pomodoro.sessions === 1 ? '' : 's'} this sitting</span>
     </div>
   </div>
+
+  {#if showMusic}
+    <MusicPanel />
+  {/if}
 
   {#if task}
     <div class="card task-card" style="--course:{course?.color ?? 'var(--accent)'}">
@@ -179,6 +206,29 @@
     background: var(--bg-elev);
     color: var(--text);
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+  }
+  .presets {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+    justify-content: center;
+    align-items: center;
+  }
+  .presets .chip {
+    cursor: pointer;
+  }
+  .presets .chip.on {
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+  .custom {
+    display: flex;
+    gap: 4px;
+    align-items: center;
+  }
+  .custom .num {
+    width: 70px;
+    padding: 4px 8px;
   }
   .dial {
     position: relative;

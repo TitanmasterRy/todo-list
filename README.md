@@ -41,6 +41,15 @@ How it syncs: on load and 2 seconds after any change (debounced). Merging is las
 
 ## Schoology sync
 
+Two ways to connect, both in the **Schoology** view (`8`):
+
+- **Sign in with API key (assignments + grades).** Schoology has no “Sign in with Schoology” for outside apps, but every user has a personal API key and secret at `app.schoology.com/api`. Paste them once; the app signs each request itself (OAuth 1.0a, in the browser) and syncs every course, assignment, due date and grade on load and every N minutes. Grades fill in scores (and pay grade XP) and course final grades.
+- **Calendar feed (assignments only).** Enable the iCal feed in Schoology's calendar and paste its URL.
+
+Schoology blocks browsers on other sites from reading either, so both need a tiny relay you own: `docs/cors-proxy-worker.js` deploys as a free Cloudflare Worker in about two minutes and only forwards to schoology.com. Without it, the feed can still be uploaded or pasted by hand.
+
+### Old feed instructions
+
 The **Schoology** view (`8`) pulls assignments from your Schoology calendar feed and files them under Overdue, Due in the next 7 days, Later, and Completed. Completing them here earns XP like any task; deadlines follow the feed; deleting one keeps it from coming back.
 
 1. In Schoology open **Calendar → ⚙/Export**, enable the iCal feed, and copy its URL.
@@ -48,6 +57,30 @@ The **Schoology** view (`8`) pulls assignments from your Schoology calendar feed
 3. Schoology does not send CORS headers, so a browser on another site cannot read the feed directly. Either deploy the 20-line Cloudflare Worker in `docs/cors-proxy-worker.js` (free) and paste its URL as the proxy prefix, or upload / paste the `.ics` file by hand whenever you want to refresh.
 
 Courses are matched by name (set **Name in Schoology** on a course to pin a match) or created automatically. Assignments with no description get an auto-generated plan and steps. The Schoology REST API is not used because it needs OAuth request signing and a server, which a static site cannot provide.
+
+## Google: Gmail, Classroom, Calendar, Drive sync
+
+Tools → Google. Create a free Google Cloud OAuth client ID (the panel walks through it), paste it in Settings, and sign in. Then: scan Gmail for assignment emails and add them as tasks with due dates; import Google Classroom coursework (done items arrive completed); push due dates to Google Calendar; and turn on **Drive sync**, which stores your data in Google Drive's app folder so signing in on another device pulls it in. This is the optional account system.
+
+## Other integrations
+
+- **Spotify:** Focus → Music. With a free Spotify app client ID (Settings), connect once and control playback, pick the **device** (phone, laptop, speaker), search focus playlists. Playback control needs Premium. Any Spotify, Apple Music, YouTube or SoundCloud link also plays in an embedded player, no login.
+- **PowerSchool:** Tools → Grades → PowerSchool import. Students get no API, so upload or paste your saved Grades and Attendance page; grades flow into the transcript.
+- **Scan paper:** Tools → Study → Scan paper. Photograph or upload worksheets and notes. AI transcription keeps headings, numbering, tables and math; free on-device OCR (Tesseract) gives plain text. Copy it, make an answer key, a study sheet, or notecards.
+
+## AI providers
+
+Settings → AI helper. Pick a provider and paste its key (stored only in your browser):
+
+| Provider | Cost | Reads photos |
+| --- | --- | --- |
+| Google Gemini | free tier | yes |
+| Groq | free tier | yes (Llama 4 Scout) |
+| OpenRouter | free models available | yes |
+| Ollama | free, runs on your computer | yes (vision models) |
+| Anthropic Claude | paid | yes |
+| OpenAI | paid | yes |
+| Custom OpenAI-compatible endpoint | depends | depends |
 
 ## Adding tasks quickly
 
@@ -60,15 +93,32 @@ Courses are matched by name (set **Name in Schoology** on a course to pin a matc
 
 XP for completing tasks scales with priority, subtasks, estimate, and how early you finish (same day ×1.1, 1–2 days ×1.25, 3+ days ×1.5), with a combo multiplier for back-to-back completions, a 5% **critical hit** for double XP, and double XP on the day's frog. Entering a **score** on a graded task pays grade XP (an A+ triggers confetti). Notecard study sessions pay XP too. Levels have titles (Freshman → Valedictorian) and unlock accent colors; 21 badges; streaks with freezes; daily ring confetti.
 
+## Themes
+
+Settings → Theme pack: Classic, Sleek, Cute, Arcade, Nature, Space, Paper. Each pack changes colors and corners, the completion sound pack, the particles that burst from the checkbox (hearts and stars, pixels, leaves, starfield…) and the confetti.
+
+## Offline and never losing data
+
+- The site is a PWA and works offline after the first visit.
+- **Download offline version** (Settings → Data) saves a single HTML file that runs from a double-click with no internet: tasks, courses, notecards, calculators, timers and stats work; sync, AI and Schoology need the online app.
+- **Persistent storage** asks the browser never to evict the app's data.
+- **Auto-backup to a folder** (Chrome/Edge) writes a JSON copy a few seconds after every change into a folder you choose, plus one dated file per day.
+- Gist sync and Google Drive sync keep copies off-device.
+
 ## Tools
 
-The **Tools** view (`7`) has nine helpers:
+The **Tools** view (`7`) is grouped into Plan, Grades, Study, Compute and Connect:
 
 - **Notecards:** decks per course, cards typed, pasted (`term :: definition`, `Q:/A:`), or generated from notes with the optional AI helper; study with Leitner spaced repetition (boxes 1–5) and earn XP.
 - **Study help:** 22 built-in reference sheets (algebra, trig, calculus, statistics, physics, chemistry, biology, essays, MLA/APA, study skills, units, programming, languages) plus an optional **Ask the tutor** box powered by your own Anthropic API key.
 - **Calculator:** scientific calculator with functions, factorials, percent, degrees/radians, history and `ans`.
 - **Graphing:** plot up to six `y = f(x)` functions, hover to trace, drag to pan, scroll to zoom.
 - **Transcript:** courses by term with credits, grade, letter and GPA points; term and cumulative GPA; CSV export and print-to-PDF.
+- **Quiz maker:** build question sets by hand, from an AI prompt (subject, topic, count, difficulty, question types, student or teacher mode), from pasted text, from your notes, or from a notecard deck. Export to Quizlet (paste), Blooket, Gimkit and Kahoot (CSV), a printable worksheet with answer key, notecards, or a **QTI zip that imports into Schoology tests and quizzes** (also Canvas, Moodle, Blackboard).
+- **Book reader:** add PDFs (textbooks, readings) to a local library, read with page memory, bookmarks and highlights; select text to copy, make a notecard, or ask the AI to explain. Free OpenStax textbooks are linked from Study help.
+- **Code editor:** CodeMirror with JavaScript, Python (runs in the browser via Pyodide), HTML/CSS live preview, Java and C++ editing; snippets saved locally.
+- **Study help** now includes worked examples, textbook-style explanations and links to the matching free OpenStax textbook for every topic.
+- **Timer:** presets (25/5, 50/10, 90/20, 15/3), a custom-minutes timer and a stopwatch that logs work time.
 
 - **Plan my day:** set how many minutes of homework you can do per day, see today's committed time against it and the load for the next 7 days, and pull upcoming tasks into Today without moving their deadlines ("Auto-fill free time" does it for you).
 - **Grades:** weighted grade calculator per course. Give tasks a weight % and a score %, see your current average and letter, the possible final range, and what you need on the remaining work to hit a target. Upcoming exams and quizzes show a countdown.

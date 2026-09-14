@@ -10,11 +10,23 @@
   import type { Task } from '../lib/types';
   import { isOverdue, isDueToday } from '../lib/dates';
   import { byDueThenOrder, byFrogThenOrder, byOrder } from '../lib/store.svelte';
+  import { isPowerHour, powerHourFor } from '../lib/gamification';
+  let courseChip = $state<string | null>(null);
+  const byCourse = (t: Task) => !courseChip || t.courseId === courseChip;
+  const powerNow = $derived(store.settings.gamification && store.settings.powerHourEnabled && isPowerHour(store.now, store.today));
+  const powerHour = $derived(powerHourFor(store.today));
+  const finishAt = $derived.by(() => {
+    const min = store.todayEstimateMin;
+    if (!min) return '';
+    const d = new Date(store.now.getTime() + min * 60000);
+    return d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+  });
+  const chipCourses = $derived(store.activeCourses.filter((c) => store.todayTasks.some((t) => t.courseId === c.id)));
 
   // Sections keep recently completed tasks (store.lingering) in place until their exit animation runs.
   const live = (t: Task) => !t.completedAt || store.lingering.has(t.id);
-  const overdue = $derived(store.tasks.filter((t) => live(t) && isOverdue(t.dueAt, store.now) && !isDueToday(t.dueAt, store.now)).sort(byDueThenOrder));
-  const dueToday = $derived(store.tasks.filter((t) => live(t) && isDueToday(t.dueAt, store.now)).sort(byFrogThenOrder));
+  const overdue = $derived(store.tasks.filter((t) => live(t) && byCourse(t) && isOverdue(t.dueAt, store.now) && !isDueToday(t.dueAt, store.now)).sort(byDueThenOrder));
+  const dueToday = $derived(store.tasks.filter((t) => live(t) && byCourse(t) && isDueToday(t.dueAt, store.now)).sort(byFrogThenOrder));
   const pinned = $derived(
     store.tasks
       .filter((t) => live(t) && t.pinnedDay === store.today && (!t.dueAt || (!isDueToday(t.dueAt, store.now) && !isOverdue(t.dueAt, store.now))))
@@ -61,6 +73,10 @@
     <span><strong>{formatMinutes(store.weekEstimateMin)}</strong> this week</span>
     <span class="sep">·</span>
     <span><strong>{store.todayTasks.length}</strong> task{store.todayTasks.length === 1 ? '' : 's'}</span>
+    {#if finishAt}
+      <span class="sep">·</span>
+      <span title="If you start now and work straight through">done by <strong>{finishAt}</strong></span>
+    {/if}
     {#if frog}
       <span class="sep">·</span>
       <span>🐸 <strong>{frog.title}</strong></span>
@@ -70,7 +86,22 @@
     {/if}
   </div>
 
+  {#if powerNow}
+    <div class="power">⚡ <strong>Power hour</strong> until {(powerHour + 1) % 12 || 12}{powerHour + 1 >= 12 ? 'pm' : 'am'}: every task pays ×1.5 XP</div>
+  {:else if store.settings.gamification && store.settings.powerHourEnabled && store.now.getHours() < powerHour}
+    <div class="power soon">⚡ Power hour today at {powerHour % 12 || 12}{powerHour >= 12 ? 'pm' : 'am'} · ×1.5 XP</div>
+  {/if}
+
   <QuickAdd defaultDueKey={store.today} autofocus />
+
+  {#if chipCourses.length > 1}
+    <div class="course-chips">
+      <button class="chip" class:on={courseChip === null} onclick={() => (courseChip = null)}>All</button>
+      {#each chipCourses as c (c.id)}
+        <button class="chip" class:on={courseChip === c.id} style="--cc:{c.color}" onclick={() => (courseChip = courseChip === c.id ? null : c.id)}><span class="dot"></span>{c.emoji ?? ''} {c.name}</button>
+      {/each}
+    </div>
+  {/if}
 
   {#if overdue.length}
     <div class="section-title overdue">
@@ -169,6 +200,39 @@
     50% {
       transform: scale(1.12) rotate(-3deg);
     }
+  }
+  .power {
+    margin: 0 0 10px;
+    padding: 8px 12px;
+    border-radius: 10px;
+    background: linear-gradient(90deg, color-mix(in srgb, var(--warn) 25%, var(--bg-elev)), var(--bg-elev));
+    border: 1px solid color-mix(in srgb, var(--warn) 50%, var(--border));
+    font-size: 13px;
+    animation: pop-in 200ms var(--ease);
+  }
+  .power.soon {
+    background: var(--bg-elev);
+    border-color: var(--border);
+    color: var(--text-muted);
+  }
+  .course-chips {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+    margin: 10px 0 0;
+  }
+  .course-chips .chip {
+    cursor: pointer;
+  }
+  .course-chips .chip.on {
+    border-color: var(--cc, var(--accent));
+    color: var(--text);
+  }
+  .course-chips .dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--cc);
   }
   .workload {
     display: flex;

@@ -4,14 +4,40 @@
   import { toasts } from '../lib/toast.svelte';
   import type { Task } from '../lib/types';
   import { addDaysKey, dueKey, isOverdue, isDueToday } from '../lib/dates';
-  import { schoology, syncNow, syncFromText } from '../lib/schoologySync.svelte';
+  import { schoology, syncNow, syncFromText, testApiCredentials, schoologyConfigured } from '../lib/schoologySync.svelte';
   import { isSchoologyFeedUrl } from '../lib/schoology';
+  let mode = $state<'api' | 'ics'>(store.settings.schoologyMode);
+  let apiKey = $state(store.settings.schoologyKey);
+  let apiSecret = $state(store.settings.schoologySecret);
+  let domain = $state(store.settings.schoologyDomain);
+  let interval = $state(store.settings.schoologyIntervalMin);
+  let signingIn = $state(false);
+  let signedInAs = $state('');
+  async function signIn() {
+    if (!apiKey.trim() || !apiSecret.trim()) return;
+    if (!proxy.trim()) {
+      toasts.push({ message: 'The proxy is required for the API', detail: 'Deploy docs/cors-proxy-worker.js (2 minutes, free) and paste its URL.', kind: 'warn', timeout: 9000 });
+      return;
+    }
+    signingIn = true;
+    try {
+      signedInAs = await testApiCredentials(apiKey.trim(), apiSecret.trim(), proxy.trim());
+      store.updateSettings({ schoologyMode: 'api', schoologyKey: apiKey.trim(), schoologySecret: apiSecret.trim(), schoologyProxy: proxy.trim(), schoologyDomain: domain.trim(), schoologyIntervalMin: interval });
+      toasts.push({ message: `Signed in as ${signedInAs}`, detail: 'Assignments and grades will sync automatically.', kind: 'success', emoji: '🔄' });
+      showSetup = false;
+      void syncNow();
+    } catch (e) {
+      toasts.push({ message: 'Sign-in failed', detail: e instanceof Error ? e.message : String(e), kind: 'warn', timeout: 10000 });
+    } finally {
+      signingIn = false;
+    }
+  }
   import TaskItem from '../components/TaskItem.svelte';
 
   let url = $state(store.settings.schoologyFeedUrl);
   let proxy = $state(store.settings.schoologyProxy);
   let pasted = $state('');
-  let showSetup = $state(!store.settings.schoologyFeedUrl);
+  let showSetup = $state(!schoologyConfigured());
   let showDone = $state(false);
   let fileInput: HTMLInputElement | undefined = $state();
   let busy = $state(false);
@@ -28,7 +54,7 @@
 
   function saveSetup() {
     const clean = url.trim().replace(/^webcal:\/\//i, 'https://');
-    store.updateSettings({ schoologyFeedUrl: clean, schoologyProxy: proxy.trim() });
+    store.updateSettings({ schoologyMode: 'ics', schoologyFeedUrl: clean, schoologyProxy: proxy.trim(), schoologyIntervalMin: interval });
     url = clean;
     if (clean) {
       showSetup = false;
@@ -68,8 +94,10 @@
     toasts.push({ message: `Mapped “${name}”`, detail: 'Sync again to attach existing assignments.', kind: 'success' });
   }
   function disconnect() {
-    store.updateSettings({ schoologyFeedUrl: '', lastSchoologyError: undefined });
+    store.updateSettings({ schoologyFeedUrl: '', schoologyKey: '', schoologySecret: '', lastSchoologyError: undefined });
     url = '';
+    apiKey = '';
+    apiSecret = '';
     schoology.status = 'off';
     showSetup = true;
   }
@@ -82,7 +110,7 @@
       <div class="sub">Assignments synced from your Schoology calendar. Complete them here to earn XP; deadlines stay in step with the feed.</div>
     </div>
     <div class="grow"></div>
-    {#if store.settings.schoologyFeedUrl}
+    {#if schoologyConfigured()}
       <span class="status {schoology.status}">
         {schoology.status === 'syncing' ? 'Syncing…' : schoology.status === 'error' ? 'Sync error' : schoology.status === 'ok' ? 'Synced' : 'Connected'}
         {#if store.settings.lastSchoologySync}<span class="muted"> · {new Date(store.settings.lastSchoologySync).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}</span>{/if}
@@ -98,32 +126,57 @@
 
   {#if showSetup}
     <section class="card setup">
-      <h2>Connect your Schoology calendar</h2>
-      <ol class="steps">
-        <li>In Schoology, open <strong>Calendar</strong> → the <strong>⚙ / Export</strong> button → <strong>Enable</strong> the iCal feed and copy its URL (it looks like <code>https://app.schoology.com/calendar/feed/ical/…/schoology.ics</code>).</li>
-        <li>Paste it below. Schoology does not allow browsers on other sites to read the feed directly, so either add a small <strong>CORS proxy</strong> (a free Cloudflare Worker; code in <code>docs/cors-proxy-worker.js</code> in the repo), or upload the <code>.ics</code> file by hand whenever you want to refresh.</li>
-        <li>Assignments land here and in Today / Upcoming, tagged 🔄. Courses are matched by name (set “Name in Schoology” on a course to pin the match) or created automatically.</li>
-      </ol>
-      <form class="grid" onsubmit={(e) => { e.preventDefault(); saveSetup(); }}>
-        <label>Feed URL <input class="input" bind:value={url} placeholder="https://app.schoology.com/calendar/feed/ical/…/schoology.ics" /></label>
-        {#if url && !isSchoologyFeedUrl(url)}<span class="warn">That doesn’t look like a Schoology iCal URL, but you can try it.</span>{/if}
-        <label>CORS proxy prefix (optional) <input class="input" bind:value={proxy} placeholder="https://your-worker.workers.dev/?url=" /></label>
-        <label class="check"><input type="checkbox" checked={store.settings.schoologyAutoCreateCourses} onchange={(e) => store.updateSettings({ schoologyAutoCreateCourses: (e.target as HTMLInputElement).checked })} /> Create courses automatically for new class names</label>
-        <label class="check"><input type="checkbox" checked={store.settings.autoDescribe} onchange={(e) => store.updateSettings({ autoDescribe: (e.target as HTMLInputElement).checked })} /> Auto-describe assignments that have no description (plan, steps, estimate)</label>
-        <div class="btns">
-          <button class="btn primary" type="submit" disabled={!url.trim()}>Save and sync</button>
-          {#if store.settings.schoologyFeedUrl}<button type="button" class="btn danger" onclick={disconnect}>Disconnect</button>{/if}
-        </div>
-      </form>
-      <div class="manual">
-        <h3>Or import the file manually</h3>
-        <div class="btns">
-          <button class="btn" onclick={() => fileInput?.click()} disabled={busy}>Upload .ics file…</button>
-          <input type="file" accept=".ics,text/calendar" class="visually-hidden" bind:this={fileInput} onchange={onFile} aria-label="Upload calendar file" />
-        </div>
-        <textarea class="textarea" bind:value={pasted} placeholder="…or paste the contents of the .ics file here (starts with BEGIN:VCALENDAR)"></textarea>
-        <button class="btn sm" onclick={() => void importText(pasted)} disabled={!pasted.trim() || busy}>Import pasted calendar</button>
+      <h2>Connect Schoology</h2>
+      <div class="modes" role="tablist">
+        <button role="tab" aria-selected={mode === 'api'} class:on={mode === 'api'} onclick={() => (mode = 'api')}>Sign in with API key <span class="rec">assignments + grades</span></button>
+        <button role="tab" aria-selected={mode === 'ics'} class:on={mode === 'ics'} onclick={() => (mode = 'ics')}>Calendar feed <span class="rec">assignments only</span></button>
       </div>
+      <p class="help">Schoology has no “Sign in with Schoology” button for outside apps, and it blocks browsers on other sites from talking to it. Both ways below need a tiny relay you own: deploy <code>docs/cors-proxy-worker.js</code> as a free Cloudflare Worker (about two minutes) and paste its URL. Your keys go only from your browser to Schoology through that relay.</p>
+      <label class="fld">CORS proxy prefix <input class="input" bind:value={proxy} placeholder="https://your-worker.workers.dev/?url=" /></label>
+      {#if mode === 'api'}
+        <ol class="steps">
+          <li>Open <a href="https://app.schoology.com/api" target="_blank" rel="noopener noreferrer">app.schoology.com/api</a> while logged in. It shows your personal <strong>Consumer Key</strong> and <strong>Secret</strong>. (If the page is missing, your school has disabled student API access; use the calendar feed instead.)</li>
+          <li>Paste them below and sign in. The app then syncs every course, assignment, due date and grade on load and every {interval} minutes.</li>
+        </ol>
+        <form class="grid" onsubmit={(e) => { e.preventDefault(); void signIn(); }}>
+          <label class="fld">Consumer key <input class="input" bind:value={apiKey} autocomplete="off" /></label>
+          <label class="fld">Consumer secret <input class="input" type="password" bind:value={apiSecret} autocomplete="off" /></label>
+          <label class="fld">Your school’s Schoology address (optional, for links) <input class="input" bind:value={domain} placeholder="https://myschool.schoology.com" /></label>
+          <label class="fld">Sync every <input class="input num" type="number" min="5" max="240" bind:value={interval} /> minutes</label>
+          <label class="check"><input type="checkbox" checked={store.settings.schoologyImportGrades} onchange={(e) => store.updateSettings({ schoologyImportGrades: (e.target as HTMLInputElement).checked })} /> Import grades (fills scores on assignments and course final grades; pays grade XP)</label>
+          <label class="check"><input type="checkbox" checked={store.settings.schoologyAutoCreateCourses} onchange={(e) => store.updateSettings({ schoologyAutoCreateCourses: (e.target as HTMLInputElement).checked })} /> Create courses automatically for new class names</label>
+          <label class="check"><input type="checkbox" checked={store.settings.autoDescribe} onchange={(e) => store.updateSettings({ autoDescribe: (e.target as HTMLInputElement).checked })} /> Auto-describe assignments that have no description</label>
+          <div class="btns">
+            <button class="btn primary" type="submit" disabled={signingIn || !apiKey.trim() || !apiSecret.trim()}>{signingIn ? 'Signing in…' : 'Sign in and sync'}</button>
+            {#if schoologyConfigured()}<button type="button" class="btn danger" onclick={disconnect}>Disconnect</button>{/if}
+          </div>
+        </form>
+      {:else}
+        <ol class="steps">
+          <li>In Schoology open <strong>Calendar</strong> → <strong>⚙ / Export</strong> → <strong>Enable</strong> the iCal feed and copy its URL (<code>https://app.schoology.com/calendar/feed/ical/…/schoology.ics</code>).</li>
+          <li>Paste it below. Without a proxy you can still upload the <code>.ics</code> file by hand whenever you want to refresh.</li>
+        </ol>
+        <form class="grid" onsubmit={(e) => { e.preventDefault(); saveSetup(); }}>
+          <label class="fld">Feed URL <input class="input" bind:value={url} placeholder="https://app.schoology.com/calendar/feed/ical/…/schoology.ics" /></label>
+          {#if url && !isSchoologyFeedUrl(url)}<span class="warn">That doesn’t look like a Schoology iCal URL, but you can try it.</span>{/if}
+          <label class="fld">Sync every <input class="input num" type="number" min="5" max="240" bind:value={interval} /> minutes</label>
+          <label class="check"><input type="checkbox" checked={store.settings.schoologyAutoCreateCourses} onchange={(e) => store.updateSettings({ schoologyAutoCreateCourses: (e.target as HTMLInputElement).checked })} /> Create courses automatically for new class names</label>
+          <label class="check"><input type="checkbox" checked={store.settings.autoDescribe} onchange={(e) => store.updateSettings({ autoDescribe: (e.target as HTMLInputElement).checked })} /> Auto-describe assignments that have no description (plan, steps, estimate)</label>
+          <div class="btns">
+            <button class="btn primary" type="submit" disabled={!url.trim()}>Save and sync</button>
+            {#if schoologyConfigured()}<button type="button" class="btn danger" onclick={disconnect}>Disconnect</button>{/if}
+          </div>
+        </form>
+        <div class="manual">
+          <h3>Or import the file manually</h3>
+          <div class="btns">
+            <button class="btn" onclick={() => fileInput?.click()} disabled={busy}>Upload .ics file…</button>
+            <input type="file" accept=".ics,text/calendar" class="visually-hidden" bind:this={fileInput} onchange={onFile} aria-label="Upload calendar file" />
+          </div>
+          <textarea class="textarea" bind:value={pasted} placeholder="…or paste the contents of the .ics file here (starts with BEGIN:VCALENDAR)"></textarea>
+          <button class="btn sm" onclick={() => void importText(pasted)} disabled={!pasted.trim() || busy}>Import pasted calendar</button>
+        </div>
+      {/if}
     </section>
   {/if}
 
@@ -217,6 +270,47 @@
     display: flex;
     flex-direction: column;
     gap: 8px;
+  }
+  .modes {
+    display: flex;
+    gap: 4px;
+    flex-wrap: wrap;
+    margin-bottom: 10px;
+  }
+  .modes button {
+    padding: 8px 12px;
+    border-radius: 10px;
+    border: 1px solid var(--border);
+    font-weight: 600;
+    font-size: 13px;
+    color: var(--text-muted);
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 2px;
+  }
+  .modes button.on {
+    border-color: var(--accent);
+    color: var(--text);
+    background: color-mix(in srgb, var(--accent) 12%, transparent);
+  }
+  .modes .rec {
+    font-size: 11px;
+    font-weight: 400;
+    color: var(--text-faint);
+  }
+  .fld {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-muted);
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    margin-bottom: 8px;
+  }
+  .input.num {
+    width: 80px;
+    display: inline-block;
   }
   .grid label {
     font-size: 12px;

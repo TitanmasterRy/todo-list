@@ -11,6 +11,7 @@ export const pwa = new PwaState();
 
 export function setupPwa(): void {
   if (typeof window === 'undefined') return;
+  if (location.protocol === 'file:' || import.meta.env.LITE) return; // offline single-file build: no service worker
   const update = registerSW({
     immediate: true,
     onNeedRefresh() {

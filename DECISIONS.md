@@ -73,3 +73,27 @@ A 5% chance of double XP on completion is intentional variable reward. It is cou
 ## Grade XP is awarded once per task
 
 Entering a score the first time pays XP (`gradedXpAt` marks it). Editing the score later does not pay again, so a student cannot farm XP by retyping grades.
+
+## Schoology "simple sign-in"
+
+Schoology offers no OAuth sign-in for third-party web apps. The closest thing is the per-user API key/secret on `app.schoology.com/api`, so "sign in" is pasting those once. The app signs requests with OAuth 1.0a (HMAC-SHA1 via WebCrypto) in the browser and sends them through the user's own Cloudflare Worker relay because `api.schoology.com` sends no CORS headers. Some schools disable student API access; the calendar-feed mode remains for them.
+
+## Google as the optional account system
+
+Rather than building a backend with accounts, "sign in to sync" is Google sign-in (Google Identity Services, implicit token flow) with the data file in Drive's hidden app folder. It needs the user's own OAuth client ID because the project cannot ship one; the setup panel walks through creating it.
+
+## Spotify and Apple Music
+
+Spotify supports PKCE from a static site, so full Connect control (including device transfer) is implemented; Spotify limits playback control to Premium accounts. Apple Music's MusicKit requires a paid developer token, so Apple Music (and YouTube, SoundCloud) use their embedded players instead.
+
+## PowerSchool
+
+There is no student-facing PowerSchool API, and scraping the portal through a relay would require sending the student's password through it. The import reads a saved or pasted Grades and Attendance page instead.
+
+## Offline single-file build
+
+`npm run build:lite` inlines the whole app into `dist/lite/index.html` (served at `/lite/index.html`, and offered as a download in Settings). It runs from `file://`, stores data in that browser profile's IndexedDB, and skips the service worker, Gist/Google/Schoology sync and AI calls that need the network.
+
+## Quiz exports
+
+Game platforms have no public write APIs for third parties, so exports match each platform's official import format: Quizlet's paste importer (tab / newline), Blooket's and Gimkit's spreadsheet importers (CSV), Kahoot's spreadsheet template, and IMS QTI 1.2 for Schoology (also accepted by Canvas, Moodle and Blackboard).

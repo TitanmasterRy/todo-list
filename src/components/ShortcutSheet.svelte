@@ -24,6 +24,7 @@
         ['s', 'Snooze menu'],
         ['x', 'Select for bulk actions'],
         ['f', 'Focus on task'],
+        ['d', 'Duplicate task'],
         ['Del', 'Delete task'],
         ['Shift click', 'Select a range'],
       ],

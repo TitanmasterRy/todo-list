@@ -2,6 +2,7 @@
   // Completion checkbox: spring fill + particle burst. Fires onchange immediately so it never blocks input.
   import { store } from '../lib/store.svelte';
   import { playSound } from '../lib/sounds';
+  import { themeById } from '../lib/themes';
 
   interface Props {
     checked: boolean;
@@ -14,7 +15,16 @@
 
   let burst = $state(0);
   const prefersReduced = typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-  const particles = Array.from({ length: 10 }, (_, i) => ({ angle: (i / 10) * 360, dist: 18 + (i % 3) * 6, hue: (i * 36) % 360 }));
+  const theme = $derived(themeById(store.settings.themePack));
+  const particles = $derived(
+    Array.from({ length: theme.particles.count }, (_, i) => ({
+      angle: (i / theme.particles.count) * 360 + (i % 2) * 7,
+      dist: theme.particles.spread * 0.7 + (i % 3) * (theme.particles.spread * 0.15),
+      color: theme.particles.colors[i % theme.particles.colors.length],
+      shape: theme.particles.shapes[i % theme.particles.shapes.length],
+    })),
+  );
+  const isEmoji = (s: string) => !['dot', 'line', 'pixel', 'star'].includes(s);
 
   function click(e: MouseEvent) {
     e.stopPropagation();
@@ -52,7 +62,7 @@
     {#key burst}
       <span class="particles" aria-hidden="true">
         {#each particles as p}
-          <i style="--a:{p.angle}deg; --d:{p.dist}px; --h:{p.hue}"></i>
+          <i class="s-{isEmoji(p.shape) ? 'emoji' : p.shape}" style="--a:{p.angle}deg; --d:{p.dist}px; --c:{p.color}">{isEmoji(p.shape) ? p.shape : ''}</i>
         {/each}
       </span>
     {/key}
@@ -135,9 +145,41 @@
     height: 6px;
     margin: -3px;
     border-radius: 50%;
-    background: hsl(var(--h) 90% 65%);
+    background: var(--c);
     animation: fly 520ms var(--ease) forwards;
     transform: rotate(var(--a)) translateX(0) scale(1);
+    font-style: normal;
+    font-size: 11px;
+    line-height: 1;
+    display: grid;
+    place-items: center;
+  }
+  .particles i.s-line {
+    width: 10px;
+    height: 2px;
+    margin: -1px -5px;
+    border-radius: 1px;
+  }
+  .particles i.s-pixel {
+    width: 5px;
+    height: 5px;
+    border-radius: 0;
+  }
+  .particles i.s-star {
+    background: none;
+    color: var(--c);
+    width: 10px;
+    height: 10px;
+    margin: -5px;
+  }
+  .particles i.s-star::before {
+    content: '✦';
+  }
+  .particles i.s-emoji {
+    background: none;
+    width: 14px;
+    height: 14px;
+    margin: -7px;
   }
   @keyframes fly {
     0% {

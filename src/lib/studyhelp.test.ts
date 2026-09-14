@@ -71,3 +71,56 @@ describe('searchTopics', () => {
     expect(TOPICS.length).toBeGreaterThanOrEqual(22);
   });
 });
+
+describe('textbook-level depth', () => {
+  it('every topic has at least 2 fully worked examples with steps and an answer', () => {
+    for (const t of TOPICS) {
+      expect(t.examples, t.id).toBeDefined();
+      expect(t.examples!.length, t.id).toBeGreaterThanOrEqual(2);
+      expect(t.examples!.length, t.id).toBeLessThanOrEqual(4);
+      for (const ex of t.examples!) {
+        expect(ex.problem.trim().length, t.id).toBeGreaterThan(0);
+        expect(ex.steps.length, t.id).toBeGreaterThanOrEqual(2);
+        for (const step of ex.steps) expect(step.trim().length, t.id).toBeGreaterThan(0);
+        expect(ex.answer.trim().length, t.id).toBeGreaterThan(0);
+      }
+    }
+  });
+  it('every topic has 2–3 paragraph-length "deeper" explanations', () => {
+    for (const t of TOPICS) {
+      expect(t.deeper, t.id).toBeDefined();
+      expect(t.deeper!.length, t.id).toBeGreaterThanOrEqual(2);
+      expect(t.deeper!.length, t.id).toBeLessThanOrEqual(3);
+      for (const d of t.deeper!) {
+        expect(d.heading.trim().length, t.id).toBeGreaterThan(0);
+        const words = d.text.trim().split(/\s+/).length;
+        expect(words, `${t.id}: ${d.heading}`).toBeGreaterThanOrEqual(60);
+        expect(words, `${t.id}: ${d.heading}`).toBeLessThanOrEqual(120);
+      }
+    }
+  });
+  it('every topic links to at least one OpenStax textbook', () => {
+    for (const t of TOPICS) {
+      expect(t.textbook, t.id).toBeDefined();
+      expect(t.textbook!.length, t.id).toBeGreaterThanOrEqual(1);
+      for (const b of t.textbook!) {
+        expect(b.title.trim().length, t.id).toBeGreaterThan(0);
+        expect(b.url, t.id).toMatch(/^https:\/\/openstax\.org\//);
+        expect(b.url, t.id).not.toMatch(/\s/);
+      }
+    }
+  });
+  it('worked examples have correct arithmetic (spot checks)', () => {
+    const algebra = TOPICS.find((t) => t.id === 'algebra-essentials')!;
+    expect(algebra.examples![0].answer).toBe('(2x + 1)(x + 3)');
+    expect(algebra.examples![1].answer).toContain('x = 2');
+    const stats = TOPICS.find((t) => t.id === 'statistics-probability')!;
+    expect(stats.examples![0].answer).toContain('Mean 7');
+    const si = TOPICS.find((t) => t.id === 'si-units-conversions')!;
+    expect(si.examples![0].answer).toBe('20 m/s');
+  });
+  it('keeps the quick-reference sections intact and searchable', () => {
+    for (const t of TOPICS) expect(t.sections.length).toBeGreaterThanOrEqual(3);
+    expect(searchTopics('quadratic formula')[0].id).toBe('algebra-essentials');
+  });
+});

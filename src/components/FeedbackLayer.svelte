@@ -45,6 +45,7 @@
         if (e.xp.frog) parts.push('🐸 frog ×2');
         if (e.xp.early && e.xp.earlyDays >= 3) parts[parts.indexOf('early +25%')] = `${e.xp.earlyDays} days early ×1.5`;
         if (e.xp.crit) parts.unshift('💥 CRITICAL HIT ×2');
+        if (e.xp.powerHour) parts.unshift('⚡ POWER HOUR ×1.5');
         if (e.xp.comboCount > 0) parts.push(`combo ×${e.xp.comboMultiplier.toFixed(1)}`);
         if (e.xp.subtaskBonus) parts.push(`+${e.xp.subtaskBonus} subtasks`);
         toasts.push({
@@ -91,6 +92,21 @@
         if (!store.settings.gamification) return;
         toasts.push({ message: `+${e.xp} XP · ${e.clearedAll ? 'Deck cleared!' : 'Study session'}`, detail: `${e.correct}/${e.reviewed} cards right`, kind: 'xp', combo: e.clearedAll ? 4 : 0, emoji: e.clearedAll ? '🃏' : '📚' });
         if (e.clearedAll) playSound('badge');
+      }),
+      on('collectible', (c) => {
+        enqueue(() => {
+          toasts.push({ message: `Mystery reward: ${c.emoji} ${c.name}`, detail: c.kind === 'title' ? 'A new title for your profile. See Settings → Collection.' : 'A new sticker for your collection.', kind: 'badge', emoji: '🎁', timeout: 7000 });
+          playSound('badge');
+          done(600);
+        });
+      }),
+      on('streakMilestone', ({ days }) => {
+        enqueue(() => {
+          confetti++;
+          playSound('levelup');
+          toasts.push({ message: `${days}-day streak!`, detail: days >= 30 ? 'That is real discipline.' : 'Keep the chain going.', kind: 'levelup', emoji: '🔥', timeout: 6000 });
+          done(1500);
+        });
       }),
       on('synced', (e) => {
         if (e.created > 0) playSound('tick');

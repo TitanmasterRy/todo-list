@@ -10,24 +10,65 @@
   import { sync, syncNow, checkToken, disconnect } from '../lib/gist.svelte';
   import { pwa, promptInstall } from '../lib/pwa.svelte';
   import { pomodoro } from '../lib/pomodoro.svelte';
-  import { MAX_FREEZES, ACCENT_UNLOCKS, levelTitle } from '../lib/gamification';
-  import { testKey } from '../lib/ai';
+  import { MAX_FREEZES, ACCENT_UNLOCKS, levelTitle, COLLECTIBLES } from '../lib/gamification';
+  import { testKey, currentProvider, currentModel } from '../lib/ai';
+  import { PROVIDERS, providerInfo } from '../lib/ai-providers';
+  import type { AiProvider } from '../lib/types';
+  import ThemePicker from '../components/ThemePicker.svelte';
+  import { notificationsSupported, requestNotifications } from '../lib/reminders';
+  import { folderBackupSupported, chooseFolder, forgetFolder, folderName, requestPersistence, isPersisted, writeBackup } from '../lib/localBackup.svelte';
+  let persisted = $state<boolean | null>(null);
+  void isPersisted().then((v) => (persisted = v));
+  let backupFolder = $state(folderName());
+  async function pickFolder() {
+    try {
+      backupFolder = await chooseFolder();
+      toasts.push({ message: `Backups will be written to “${backupFolder}”`, detail: 'A JSON copy is saved a few seconds after every change, plus one dated file per day.', kind: 'success', emoji: '💾' });
+    } catch (e) {
+      if ((e as Error).name !== 'AbortError') toasts.push({ message: 'Could not use that folder', detail: String(e), kind: 'warn' });
+    }
+  }
+  async function persistNow() {
+    persisted = await requestPersistence();
+    toasts.push({ message: persisted ? 'Storage marked persistent' : 'Browser declined persistence', detail: persisted ? 'The browser will not evict this app’s data under storage pressure.' : 'Install the app or use it more; browsers grant this to sites you use often. Folder backups still protect you.', kind: persisted ? 'success' : 'info' });
+  }
+  async function enableNotifications() {
+    const ok = await requestNotifications();
+    toasts.push({ message: ok ? 'Notifications on' : 'Notifications blocked', kind: ok ? 'success' : 'warn' });
+    if (ok) set('notifyDueSoon', true);
+  }
+  const provider = $derived(currentProvider());
+  const pInfo = $derived(providerInfo(provider));
+  let providerKey = $state('');
+  function setProvider(p: AiProvider) {
+    store.updateSettings({ aiProvider: p });
+    providerKey = '';
+  }
+  function saveKey() {
+    if (!providerKey.trim()) return;
+    store.updateSettings({ aiKeys: { ...store.settings.aiKeys, [provider]: providerKey.trim() } });
+    providerKey = '';
+    void connectAI();
+  }
+  function removeKey() {
+    const k = { ...store.settings.aiKeys };
+    delete k[provider];
+    store.updateSettings({ aiKeys: k, aiApiKey: provider === 'anthropic' ? '' : store.settings.aiApiKey });
+  }
+  function setModel(m: string) {
+    store.updateSettings({ aiModels: { ...store.settings.aiModels, [provider]: m }, aiModel: provider === 'anthropic' ? m : store.settings.aiModel });
+  }
   import { schoology, syncNow as syncSchoology } from '../lib/schoologySync.svelte';
-  let aiKey = $state('');
   let aiBusy = $state(false);
   let schoologyUrl = $state(store.settings.schoologyFeedUrl);
   let schoologyProxy = $state(store.settings.schoologyProxy);
   async function connectAI() {
-    if (!aiKey.trim()) return;
     aiBusy = true;
-    store.updateSettings({ aiApiKey: aiKey.trim() });
     try {
       await testKey();
-      toasts.push({ message: 'AI helper connected', kind: 'success', emoji: '✨' });
-      aiKey = '';
+      toasts.push({ message: `${pInfo.name} connected`, detail: `Model: ${currentModel()}`, kind: 'success', emoji: '✨' });
     } catch (err) {
-      store.updateSettings({ aiApiKey: '' });
-      toasts.push({ message: 'Key check failed', detail: err instanceof Error ? err.message : String(err), kind: 'warn' });
+      toasts.push({ message: 'Check failed', detail: err instanceof Error ? err.message : String(err), kind: 'warn', timeout: 9000 });
     } finally {
       aiBusy = false;
     }
@@ -115,6 +156,12 @@
 
 <div class="page">
   <header class="page-head"><h1>Settings</h1></header>
+
+  <section class="card">
+    <h2>Theme pack</h2>
+    <p class="help">Each pack changes colors, corners, the completion sound, the particles that fly out of the checkbox, and the confetti.</p>
+    <ThemePicker />
+  </section>
 
   <section class="card">
     <h2>Appearance</h2>
@@ -220,29 +267,89 @@
 
   <section class="card">
     <h2>AI helper <span class="chip optional">optional</span></h2>
-    <p class="help">Powers “Ask the tutor” in Study help and “Generate from notes” in Notecards. Uses your own <a href="https://console.anthropic.com/settings/keys" target="_blank" rel="noopener noreferrer">Anthropic API key</a>, stored only in this browser and sent only to api.anthropic.com. You pay Anthropic directly for usage.</p>
-    {#if s.aiApiKey}
-      <div class="row"><span>Status</span><span class="status ok">Connected · {s.aiModel}</span></div>
+    <p class="help">Powers “Ask the tutor”, notecard generation, photo transcription and answer keys. Keys stay in this browser and go only to the provider you pick. <strong>Free options:</strong> Google Gemini and Groq have free tiers, OpenRouter has free models, and Ollama runs on your own computer.</p>
+    <div class="providers" role="radiogroup" aria-label="AI provider">
+      {#each PROVIDERS as p (p.id)}
+        <button class="prov" class:on={provider === p.id} role="radio" aria-checked={provider === p.id} onclick={() => setProvider(p.id)}>
+          <span class="pn">{p.name}</span>
+          {#if p.free}<span class="free">free{p.needsKey ? ' tier' : ''}</span>{/if}
+          {#if store.settings.aiKeys[p.id] || (p.id === 'anthropic' && s.aiApiKey)}<span class="ok">● key saved</span>{/if}
+        </button>
+      {/each}
+    </div>
+    <p class="help">{pInfo.note}{#if pInfo.keyUrl} <a href={pInfo.keyUrl} target="_blank" rel="noopener noreferrer">Get a key ↗</a>{/if}</p>
+    {#if provider === 'custom' || provider === 'ollama'}
       <div class="row">
-        <label for="aimodel">Model</label>
-        <select id="aimodel" class="select" value={s.aiModel} onchange={(e) => set('aiModel', (e.target as HTMLSelectElement).value)}>
-          <option value="claude-opus-5">Claude Opus 5 (best)</option>
-          <option value="claude-sonnet-5">Claude Sonnet 5 (cheaper)</option>
-          <option value="claude-haiku-4-5">Claude Haiku 4.5 (fastest)</option>
-        </select>
+        <label for="aibase">Endpoint URL</label>
+        <input id="aibase" class="input" value={s.aiBaseUrl || (provider === 'ollama' ? 'http://localhost:11434/v1' : '')} placeholder="https://host/v1" onchange={(e) => set('aiBaseUrl', (e.target as HTMLInputElement).value.trim())} />
       </div>
-      <div class="btns"><button class="btn danger" onclick={() => set('aiApiKey', '')}>Remove key</button></div>
+    {/if}
+    <div class="row">
+      <label for="aimodel">Model</label>
+      {#if provider === 'custom'}
+        <input id="aimodel" class="input" value={currentModel()} placeholder="model name" onchange={(e) => setModel((e.target as HTMLInputElement).value.trim())} />
+      {:else}
+        <select id="aimodel" class="select" value={currentModel()} onchange={(e) => setModel((e.target as HTMLSelectElement).value)}>
+          {#each pInfo.models as m (m.id)}<option value={m.id}>{m.label}{m.vision ? ' · vision' : ''}</option>{/each}
+        </select>
+      {/if}
+    </div>
+    {#if pInfo.needsKey}
+      {#if store.settings.aiKeys[provider] || (provider === 'anthropic' && s.aiApiKey)}
+        <div class="btns">
+          <span class="status ok">Key saved</span>
+          <button class="btn sm" onclick={() => void connectAI()} disabled={aiBusy}>{aiBusy ? 'Testing…' : 'Test'}</button>
+          <button class="btn danger sm" onclick={removeKey}>Remove key</button>
+        </div>
+      {:else}
+        <form class="btns" onsubmit={(e) => { e.preventDefault(); saveKey(); }}>
+          <input class="input" type="password" bind:value={providerKey} placeholder="Paste API key" aria-label="API key" autocomplete="off" />
+          <button class="btn primary" type="submit" disabled={aiBusy || !providerKey.trim()}>{aiBusy ? 'Checking…' : 'Save and test'}</button>
+        </form>
+      {/if}
     {:else}
-      <form class="btns" onsubmit={(e) => { e.preventDefault(); void connectAI(); }}>
-        <input class="input" type="password" bind:value={aiKey} placeholder="sk-ant-…" aria-label="Anthropic API key" autocomplete="off" />
-        <button class="btn primary" type="submit" disabled={aiBusy || !aiKey.trim()}>{aiBusy ? 'Checking…' : 'Connect'}</button>
-      </form>
+      <div class="btns"><button class="btn sm" onclick={() => void connectAI()} disabled={aiBusy}>{aiBusy ? 'Testing…' : 'Test connection'}</button></div>
     {/if}
   </section>
 
   <section class="card">
+    <h2>Notifications</h2>
+    {#if !notificationsSupported()}
+      <p class="help">This browser doesn’t support notifications.</p>
+    {:else}
+      <div class="row">
+        <label for="ndue">Remind me before timed deadlines</label>
+        <input id="ndue" type="checkbox" class="switch" checked={s.notifyDueSoon} onchange={(e) => { const on = (e.target as HTMLInputElement).checked; if (on) void enableNotifications(); else set('notifyDueSoon', false); }} />
+      </div>
+      <div class="row">
+        <label for="nlead">Lead time (minutes)</label>
+        <input id="nlead" class="input num" type="number" min="5" max="1440" value={s.notifyLeadMin} onchange={(e) => set('notifyLeadMin', Math.max(5, Number((e.target as HTMLInputElement).value) || 60))} />
+      </div>
+      <div class="row">
+        <label for="ndig">Morning digest (what’s due today, after 7 am)</label>
+        <input id="ndig" type="checkbox" class="switch" checked={s.notifyMorningDigest} onchange={(e) => { const on = (e.target as HTMLInputElement).checked; set('notifyMorningDigest', on); if (on) void enableNotifications(); }} />
+      </div>
+      <p class="help">Notifications fire while the app is open or installed and running in the background tab.</p>
+    {/if}
+  </section>
+
+  <section class="card">
+    <h2>Music &amp; accounts</h2>
+    <div class="row">
+      <label for="spid">Spotify Client ID</label>
+      <input id="spid" class="input" value={s.spotifyClientId} placeholder="from developer.spotify.com/dashboard" onchange={(e) => set('spotifyClientId', (e.target as HTMLInputElement).value.trim())} />
+    </div>
+    <p class="help">Create a free app at developer.spotify.com/dashboard, add <code>{typeof location !== 'undefined' ? location.origin + location.pathname : ''}</code> as a Redirect URI, paste the Client ID, then connect from Focus → Music. Playback control (devices, play/pause) needs Spotify Premium; the embedded player works for everyone.</p>
+    <div class="row">
+      <label for="gcid">Google Client ID</label>
+      <input id="gcid" class="input" value={s.googleClientId} placeholder="….apps.googleusercontent.com" onchange={(e) => set('googleClientId', (e.target as HTMLInputElement).value.trim())} />
+    </div>
+    <p class="help">Enables Gmail scanning, Google Classroom import, Google Calendar push and Drive sync (sign in on any device to sync). Setup is in Tools → Google.</p>
+  </section>
+
+  <section class="card">
     <h2>Schoology sync <span class="chip optional">optional</span></h2>
-    <p class="help">Pulls assignments from your Schoology calendar feed into the app (sync on load and every 30 minutes). Full setup and manual import live in the <button class="link" onclick={() => store.go('schoology')}>Schoology view</button>.</p>
+    <p class="help">Mode: <strong>{s.schoologyMode === 'api' ? 'API sign-in (assignments + grades)' : 'calendar feed (assignments)'}</strong>, syncing every {s.schoologyIntervalMin} min. Full setup (API key sign-in, proxy, manual import) lives in the <button class="link" onclick={() => store.go('schoology')}>Schoology view</button>.</p>
     <form class="btns" onsubmit={(e) => { e.preventDefault(); store.updateSettings({ schoologyFeedUrl: schoologyUrl.trim(), schoologyProxy: schoologyProxy.trim() }); if (schoologyUrl.trim()) void syncSchoology(); }}>
       <input class="input" bind:value={schoologyUrl} placeholder="https://app.schoology.com/calendar/feed/ical/…/schoology.ics" aria-label="Schoology feed URL" />
       <input class="input" bind:value={schoologyProxy} placeholder="CORS proxy prefix (optional)" aria-label="CORS proxy" />
@@ -322,6 +429,28 @@
       <input type="file" accept="application/json,.json" bind:this={fileInput} onchange={importFile} class="visually-hidden" aria-label="Import file" />
     </div>
     <p class="help">Last export: {s.lastExportAt ? new Date(s.lastExportAt).toLocaleString() : 'never'}. You’ll get a reminder after 14 days without one.</p>
+    <h3 class="sub">Never lose data</h3>
+    <div class="row">
+      <span>Persistent storage {persisted === null ? '' : persisted ? '· granted' : '· not yet'}</span>
+      <button class="btn sm" onclick={persistNow} disabled={persisted === true}>Ask the browser to keep my data</button>
+    </div>
+    {#if folderBackupSupported()}
+      <div class="row">
+        <span>Auto-backup to a folder{backupFolder ? ` · ${backupFolder}` : ''}{s.lastLocalBackupAt ? ` · last ${new Date(s.lastLocalBackupAt).toLocaleTimeString()}` : ''}</span>
+        <span class="btns">
+          <button class="btn sm" onclick={pickFolder}>{backupFolder ? 'Change folder' : 'Choose folder'}</button>
+          {#if backupFolder}<button class="btn ghost sm" onclick={() => void writeBackup()}>Back up now</button><button class="btn ghost sm" onclick={() => { void forgetFolder(); backupFolder = null; }}>Stop</button>{/if}
+        </span>
+      </div>
+      <p class="help">Writes <code>homework-todo-backup.json</code> (and a dated copy each day) into a folder on this device a few seconds after every change. Works in Chrome and Edge; pick a folder that syncs to the cloud (Drive, iCloud, OneDrive) for off-device safety.</p>
+    {:else}
+      <p class="help">Folder auto-backup needs Chrome or Edge on desktop. On this browser, use Download backup, Gist sync, or Google Drive sync.</p>
+    {/if}
+    <div class="row">
+      <span>Offline copy of the app</span>
+      <a class="btn sm" href="./lite/index.html" download="homework-todo-offline.html">Download offline version</a>
+    </div>
+    <p class="help">A single HTML file you can keep on a USB stick or your desktop. It runs from a double-click with no internet: tasks, courses, notecards, calculator, timers and stats work; sync, AI and Schoology need the online app. Its data lives in that browser profile separately from the online app, so export/import to move between them.</p>
     <div class="row">
       <label for="arch">Archive completed older than (days, 0 = never)</label>
       <input id="arch" class="input num" type="number" min="0" max="3650" value={s.archiveAfterDays} onchange={(e) => set('archiveAfterDays', Math.max(0, Number((e.target as HTMLInputElement).value) || 0))} />
@@ -343,6 +472,18 @@
       {#if resetStep > 0}<button class="btn ghost sm" onclick={() => (resetStep = 0)}>Cancel</button>{/if}
     </div>
   </section>
+
+  {#if s.collection.length}
+    <section class="card">
+      <h2>Collection <span class="muted">{s.collection.length}/{COLLECTIBLES.length}</span></h2>
+      <p class="help">Mystery rewards from closing your daily ring.</p>
+      <div class="collection">
+        {#each COLLECTIBLES as c (c.id)}
+          <span class="coll" class:on={s.collection.includes(c.id)} title={s.collection.includes(c.id) ? c.name : '???'}>{s.collection.includes(c.id) ? c.emoji : '❔'}</span>
+        {/each}
+      </div>
+    </section>
+  {/if}
 
   <section class="card">
     <h2>Help</h2>
@@ -510,5 +651,70 @@
   .danger-zone {
     border-top: 1px solid var(--border);
     padding-top: 10px;
+  }
+  .sub {
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--text-muted);
+    margin: 14px 0 4px;
+  }
+  .providers {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin: 6px 0;
+  }
+  .prov {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 2px;
+    padding: 8px 10px;
+    border-radius: 10px;
+    border: 1px solid var(--border);
+    font-size: 13px;
+    color: var(--text);
+    min-width: 120px;
+    text-align: left;
+  }
+  .prov.on {
+    border-color: var(--accent);
+    background: color-mix(in srgb, var(--accent) 12%, transparent);
+  }
+  .pn {
+    font-weight: 600;
+  }
+  .free {
+    font-size: 11px;
+    color: var(--success);
+    font-weight: 600;
+  }
+  .ok {
+    font-size: 11px;
+    color: var(--text-muted);
+  }
+  .collection {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+  .coll {
+    width: 40px;
+    height: 40px;
+    border-radius: 10px;
+    display: grid;
+    place-items: center;
+    font-size: 22px;
+    background: var(--bg-elev-2);
+    border: 1px solid var(--border);
+    opacity: 0.5;
+  }
+  .coll.on {
+    opacity: 1;
+    border-color: var(--warn);
+  }
+  .row .input:not(.num) {
+    max-width: 320px;
   }
 </style>

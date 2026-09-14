@@ -52,7 +52,7 @@ export interface Task {
   frogDate?: string; // YYYY-MM-DD the frog pick applies to
   archived?: boolean; // archived completed tasks (kept for stats)
   templateId?: string;
-  source?: 'schoology'; // synced from an external feed
+  source?: 'schoology' | 'gmail' | 'classroom' | 'scan'; // synced/imported from elsewhere
   externalId?: string; // stable id in the external system
   url?: string; // link back to the assignment
   syncedAt?: string;
@@ -80,6 +80,7 @@ export interface Stats {
   cardsReviewed: number;
   critCount: number;
   syncedCount: number;
+  xpByDay: Record<string, number>;
 }
 
 export interface Template {
@@ -117,7 +118,9 @@ export interface DayNote {
 }
 
 export type Theme = 'dark' | 'light' | 'system';
-export type SoundPack = 'soft' | 'click' | 'arcade';
+export type ThemePack = 'classic' | 'sleek' | 'cute' | 'arcade' | 'nature' | 'space' | 'paper';
+export type AiProvider = 'anthropic' | 'openai' | 'gemini' | 'groq' | 'openrouter' | 'ollama' | 'custom';
+export type SoundPack = 'soft' | 'click' | 'arcade' | 'bubble' | 'chime' | 'synth' | 'paper';
 
 export interface Settings {
   theme: Theme;
@@ -148,7 +151,38 @@ export interface Settings {
   aiApiKey: string; // optional Anthropic API key, stored only in localStorage
   aiModel: string;
   aiDescriptions: boolean; // use AI for auto-descriptions when a key is present
+  aiProvider: AiProvider;
+  aiKeys: Partial<Record<AiProvider, string>>; // per-provider keys (browser only)
+  aiModels: Partial<Record<AiProvider, string>>; // chosen model per provider
+  aiBaseUrl: string; // custom OpenAI-compatible endpoint (ollama / lm studio / other)
   weeklyXpGoal: number;
+  themePack: ThemePack;
+  timerPresets: { label: string; work: number; brk: number }[];
+  notifyDueSoon: boolean;
+  notifyLeadMin: number;
+  notifyMorningDigest: boolean;
+  powerHourEnabled: boolean;
+  powerHourStart?: number; // hour of the day chosen for today
+  powerHourDate?: string;
+  collection: string[]; // cosmetic unlock ids earned from mystery rewards
+  schoologyMode: 'ics' | 'api';
+  schoologyDomain: string; // e.g. https://myschool.schoology.com (optional, for links)
+  schoologyKey: string; // API consumer key (from app.schoology.com/api)
+  schoologySecret: string;
+  schoologyIntervalMin: number;
+  schoologyImportGrades: boolean;
+  spotifyClientId: string;
+  spotifyRefreshToken: string;
+  musicEmbedUrl: string;
+  googleClientId: string;
+  googleSyncEnabled: boolean;
+  googleDriveFileId: string;
+  lastGoogleSyncAt?: string;
+  gmailQuery: string;
+  googleClassroomEnabled: boolean;
+  gmailIgnored: string[];
+  localBackupEnabled: boolean;
+  lastLocalBackupAt?: string;
   dailyCapacityMin: number; // planner: minutes of homework you can do per day
   targetGrade: number; // grade calculator default target %
   onboarded: boolean;
@@ -184,7 +218,39 @@ export const DEFAULT_SETTINGS: Settings = {
   aiApiKey: '',
   aiModel: 'claude-opus-5',
   aiDescriptions: false,
+  aiProvider: 'anthropic',
+  aiKeys: {},
+  aiModels: {},
+  aiBaseUrl: '',
   weeklyXpGoal: 500,
+  themePack: 'classic',
+  timerPresets: [
+    { label: 'Classic 25/5', work: 25, brk: 5 },
+    { label: 'Deep 50/10', work: 50, brk: 10 },
+    { label: 'Ultradian 90/20', work: 90, brk: 20 },
+    { label: 'Sprint 15/3', work: 15, brk: 3 },
+  ],
+  notifyDueSoon: false,
+  notifyLeadMin: 60,
+  notifyMorningDigest: false,
+  powerHourEnabled: true,
+  collection: [],
+  schoologyMode: 'ics',
+  schoologyDomain: '',
+  schoologyKey: '',
+  schoologySecret: '',
+  schoologyIntervalMin: 30,
+  schoologyImportGrades: true,
+  spotifyClientId: '',
+  spotifyRefreshToken: '',
+  musicEmbedUrl: '',
+  googleClientId: '',
+  googleSyncEnabled: false,
+  googleDriveFileId: '',
+  gmailQuery: 'newer_than:30d (assignment OR homework OR due OR quiz OR test OR project)',
+  googleClassroomEnabled: true,
+  gmailIgnored: [],
+  localBackupEnabled: false,
   dailyCapacityMin: 180,
   targetGrade: 90,
   onboarded: false,
@@ -208,6 +274,7 @@ export const DEFAULT_STATS: Stats = {
   cardsReviewed: 0,
   critCount: 0,
   syncedCount: 0,
+  xpByDay: {},
 };
 
 export interface ExportBundle {
