@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { focusTrap } from '../lib/focusTrap';
   // Eat-the-frog morning prompt, end-of-day recap, weekly review prompt (Sunday), backup reminder.
   import { onMount } from 'svelte';
   import { fly } from 'svelte/transition';
@@ -77,7 +78,7 @@
   <!-- svelte-ignore a11y_no_static_element_interactions, a11y_click_events_have_key_events -->
   <div class="modal-backdrop" onclick={() => (ui.frogPrompt = false)} role="presentation">
     <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
-    <div class="modal" role="dialog" aria-modal="true" aria-label="Eat the frog" tabindex="-1" onclick={(e) => e.stopPropagation()} in:fly={{ y: 20, duration: 250 }}>
+    <div use:focusTrap class="modal" role="dialog" aria-modal="true" aria-label="Eat the frog" tabindex="-1" onclick={(e) => e.stopPropagation()} in:fly={{ y: 20, duration: 250 }}>
       <h2>🐸 Eat the frog</h2>
       <p class="muted">Pick the hardest thing on today’s list. It gets pinned to the top and pays double XP.</p>
       <ul class="choices">
@@ -103,7 +104,7 @@
   <!-- svelte-ignore a11y_no_static_element_interactions, a11y_click_events_have_key_events -->
   <div class="modal-backdrop" onclick={() => (ui.recap = false)} role="presentation">
     <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
-    <div class="modal recap" role="dialog" aria-modal="true" aria-label="End of day recap" tabindex="-1" onclick={(e) => e.stopPropagation()} in:fly={{ y: 20, duration: 250 }}>
+    <div use:focusTrap class="modal recap" role="dialog" aria-modal="true" aria-label="End of day recap" tabindex="-1" onclick={(e) => e.stopPropagation()} in:fly={{ y: 20, duration: 250 }}>
       <h2>🌙 Today’s recap</h2>
       <div class="stats">
         <div><span class="big">{doneToday.length}</span><span class="lbl">done</span></div>

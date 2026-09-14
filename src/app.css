@@ -67,6 +67,27 @@
   transition-duration: 0.001ms !important;
 }
 
+@media (prefers-reduced-motion: reduce) {
+  :root:not(.motion-ok) *,
+  :root:not(.motion-ok) *::before,
+  :root:not(.motion-ok) *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+}
+
+@media (hover: none) {
+  .kbd.hint-only {
+    display: none;
+  }
+}
+
+body.is-dragging {
+  user-select: none;
+  cursor: grabbing;
+}
+
 * {
   box-sizing: border-box;
 }

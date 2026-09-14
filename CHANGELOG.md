@@ -73,3 +73,11 @@
 - Homework touches: workload bar in Today header, exam/quiz badges with days-until in Upcoming and task rows, due-this-week-by-course card in Stats
 - Semester setup: create several courses at once with presets, colors, emojis, or a pasted list
 - Three-step onboarding (welcome, quick-add syntax, daily goal + sounds) that can open semester setup
+
+## Phase 10 — Polish
+
+- Mobile layout: bottom tab bar, compact rows, full-width dialogs; desktop keeps the left sidebar
+- Empty states on every list view; onboarding tour on first run (re-openable from Settings)
+- Accessibility: focus trap and focus restore on all dialogs, focus rings, ARIA roles/labels on custom checkbox, ring, tabs, toolbars and combobox; OS `prefers-reduced-motion` honored in addition to the in-app switch
+- Performance: derived lists only, single global drag handler, deferred confetti canvas, no external fonts
+- README covers local dev, Pages deploy, Gist sync setup, and keyboard shortcuts

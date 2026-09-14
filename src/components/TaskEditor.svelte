@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { focusTrap } from '../lib/focusTrap';
   import { store, PRIORITY_LABEL } from '../lib/store.svelte';
   import { PRIORITIES, TASK_TYPES, type Recurrence, type Subtask, type Task } from '../lib/types';
   import { isDateOnly, dueKey, combineDateTime, pad } from '../lib/dates';
@@ -118,7 +119,7 @@
 <!-- svelte-ignore a11y_no_static_element_interactions, a11y_click_events_have_key_events -->
 <div class="modal-backdrop" onclick={onclose} onkeydown={onKey} role="presentation">
   <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_noninteractive_element_interactions -->
-  <form class="modal" aria-label="Edit task" onclick={(e) => e.stopPropagation()} onsubmit={save}>
+  <form use:focusTrap class="modal" aria-label="Edit task" onclick={(e) => e.stopPropagation()} onsubmit={save}>
     {#if !original}
       <p>Task not found.</p>
     {:else}

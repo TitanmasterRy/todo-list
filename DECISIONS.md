@@ -37,3 +37,19 @@ A freeze is credited once per 7-day milestone (7, 14, 21, …), max 2 banked. Wh
 ## Gist sync conflict rule
 
 Last-write-wins per task by `updatedAt`. The "conflict notice" fires only when the local and remote `updatedAt` for the same task differ but fall within the same second, as the spec requires.
+
+## Focus restore after dialogs
+
+Every dialog traps Tab focus and, on close, returns focus to the element that had it before. If the quick-add box was focused when a dialog opened (it autofocuses on desktop), focus goes back there, so single-key shortcuts like `1`–`6` are typed into the box until you press `Esc`. This follows the WAI-ARIA dialog pattern and was kept over the alternative of dropping focus on the body.
+
+## Gist sync on a second device
+
+The gist id is stored in localStorage next to the token, so a brand-new device with the same token creates a second gist rather than guessing which existing gist to use. The README documents the export/import-then-connect path. Searching the user's gists for a matching filename was rejected because it would silently pick up an unrelated gist with the same name.
+
+## Icons
+
+The manifest icons are an SVG plus 192/512 PNGs rendered from it. There is no separate maskable PNG; the maskable entry is the SVG with generous padding.
+
+## Weekly review "biggest wins"
+
+XP per task is not stored, so wins are ranked by a proxy: base XP for the priority plus estimate minutes / 10 plus 2 per subtask.

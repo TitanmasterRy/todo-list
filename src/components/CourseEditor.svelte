@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { focusTrap } from '../lib/focusTrap';
   import { store } from '../lib/store.svelte';
   import { ui } from '../lib/ui.svelte';
 
@@ -45,7 +46,7 @@
 <!-- svelte-ignore a11y_no_static_element_interactions, a11y_click_events_have_key_events -->
 <div class="modal-backdrop" onclick={close} onkeydown={onKey} role="presentation">
   <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_noninteractive_element_interactions -->
-  <form class="modal" aria-label={editing ? 'Edit course' : 'New course'} onclick={(e) => e.stopPropagation()} onsubmit={save}>
+  <form use:focusTrap class="modal" aria-label={editing ? 'Edit course' : 'New course'} onclick={(e) => e.stopPropagation()} onsubmit={save}>
     <h2>{editing ? 'Edit course' : 'New course'}</h2>
     <div class="field">
       <label for="c-name">Name</label>

@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { focusTrap } from '../lib/focusTrap';
   import { ui } from '../lib/ui.svelte';
   const groups: { title: string; keys: [string, string][] }[] = [
     {
@@ -44,7 +45,7 @@
 <!-- svelte-ignore a11y_no_static_element_interactions, a11y_click_events_have_key_events -->
 <div class="modal-backdrop" onclick={() => (ui.shortcuts = false)} role="presentation">
   <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
-  <div class="modal sheet" role="dialog" aria-modal="true" aria-label="Keyboard shortcuts" tabindex="-1" onclick={(e) => e.stopPropagation()}>
+  <div use:focusTrap class="modal sheet" role="dialog" aria-modal="true" aria-label="Keyboard shortcuts" tabindex="-1" onclick={(e) => e.stopPropagation()}>
     <h2>Keyboard shortcuts</h2>
     <div class="cols">
       {#each groups as g}

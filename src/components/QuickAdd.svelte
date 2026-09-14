@@ -124,7 +124,7 @@
   {#if text}
     <button class="btn primary sm go" type="submit">Add</button>
   {:else}
-    <span class="hint" aria-hidden="true"><span class="kbd">n</span></span>
+    <span class="hint" aria-hidden="true"><span class="kbd hint-only">n</span></span>
   {/if}
 </form>
 {#if text.trim()}

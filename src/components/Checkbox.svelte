@@ -13,6 +13,7 @@
   let { checked, color, onchange, label = 'Complete task', size = 22 }: Props = $props();
 
   let burst = $state(0);
+  const prefersReduced = typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   const particles = Array.from({ length: 10 }, (_, i) => ({ angle: (i / 10) * 360, dist: 18 + (i % 3) * 6, hue: (i * 36) % 360 }));
 
   function click(e: MouseEvent) {
@@ -47,7 +48,7 @@
       <path d="M5 12.5l4.5 4.5L19 7.5" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" />
     </svg>
   </span>
-  {#if burst && !store.settings.reducedMotion}
+  {#if burst && !store.settings.reducedMotion && !prefersReduced}
     {#key burst}
       <span class="particles" aria-hidden="true">
         {#each particles as p}

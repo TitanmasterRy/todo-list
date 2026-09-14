@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { focusTrap } from '../lib/focusTrap';
   import { store } from '../lib/store.svelte';
   import { ui } from '../lib/ui.svelte';
   import { addDaysKey, daysAgoKey, dueKey, formatMinutes, fromKey, DAY_NAMES, MONTH_SHORT } from '../lib/dates';
@@ -44,7 +45,7 @@
 <!-- svelte-ignore a11y_no_static_element_interactions, a11y_click_events_have_key_events -->
 <div class="modal-backdrop" onclick={close} role="presentation">
   <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
-  <div class="modal review" role="dialog" aria-modal="true" aria-label="Weekly review" tabindex="-1" onclick={(e) => e.stopPropagation()}>
+  <div use:focusTrap class="modal review" role="dialog" aria-modal="true" aria-label="Weekly review" tabindex="-1" onclick={(e) => e.stopPropagation()}>
     <h2>📋 Weekly review</h2>
     <p class="muted">Last 7 days, and a look at the week ahead.</p>
 

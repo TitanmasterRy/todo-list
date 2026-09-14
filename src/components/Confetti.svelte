@@ -29,7 +29,7 @@
   const colors = ['#6c5ce7', '#00cec9', '#fdcb6e', '#e17055', '#55efc4', '#fd79a8', '#74b9ff', '#ffeaa7'];
 
   function fire() {
-    if (!canvas || store.settings.reducedMotion) return;
+    if (!canvas || store.settings.reducedMotion || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
     const W = (canvas.width = window.innerWidth);
     const H = (canvas.height = window.innerHeight);
     parts = [];

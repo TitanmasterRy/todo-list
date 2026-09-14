@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { focusTrap } from '../lib/focusTrap';
   import { store } from '../lib/store.svelte';
   import { ui } from '../lib/ui.svelte';
   import { toasts } from '../lib/toast.svelte';
@@ -58,7 +59,7 @@
 <!-- svelte-ignore a11y_no_static_element_interactions, a11y_click_events_have_key_events -->
 <div class="modal-backdrop" onclick={close} role="presentation">
   <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_noninteractive_element_interactions -->
-  <form class="modal setup" aria-label="Semester setup" onclick={(e) => e.stopPropagation()} onsubmit={create}>
+  <form use:focusTrap class="modal setup" aria-label="Semester setup" onclick={(e) => e.stopPropagation()} onsubmit={create}>
     <h2>🎓 Semester setup</h2>
     <p class="muted">Add all your courses at once. Pick a color and emoji for each so they’re easy to spot.</p>
     <div class="presets">
