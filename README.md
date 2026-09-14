@@ -15,7 +15,7 @@ npm run build      # type check + production build into dist/
 npm run preview    # serve dist/ at http://localhost:4173/todo-list/
 ```
 
-Requires Node 22+. The demo dataset (3 courses, 9 tasks) is seeded on first run; remove it with **Clear demo data** in Settings or the command palette.
+Requires Node 22+. The app starts empty; use **Semester setup** (Courses view or the onboarding tour) to add your courses quickly.
 
 ## Deploying to GitHub Pages
 

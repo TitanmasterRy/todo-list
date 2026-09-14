@@ -53,3 +53,7 @@ The manifest icons are an SVG plus 192/512 PNGs rendered from it. There is no se
 ## Weekly review "biggest wins"
 
 XP per task is not stored, so wins are ranked by a proxy: base XP for the priority plus estimate minutes / 10 plus 2 per subtask.
+
+## No demo dataset
+
+The spec asked for a seeded demo dataset on first run. At the owner's request the seed was removed, so the app starts empty. The "Clear demo data" button remains in Settings and the command palette, shown only when `demo_`-prefixed records exist, so browsers that loaded the earlier build can still remove them.

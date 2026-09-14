@@ -9,7 +9,6 @@ import { undo } from './undo.svelte';
 import { emit } from './events';
 import { toasts } from './toast.svelte';
 import { configureSounds, playSound } from './sounds';
-import { seedDemoData } from './seed';
 
 export type View = 'today' | 'upcoming' | 'courses' | 'inbox' | 'focus' | 'stats' | 'settings';
 export const VIEWS: { id: View; label: string; icon: string; key: string }[] = [
@@ -99,13 +98,6 @@ class Store {
       this.templates = templates;
       this.stats = { ...stats, dailyGoal: this.settings.dailyGoal };
       this.dayNotes = notes;
-      if (!this.settings.demoSeeded && tasks.length === 0 && courses.length === 0) {
-        const seeded = seedDemoData();
-        this.courses = seeded.courses;
-        this.tasks = seeded.tasks;
-        await Promise.all([...seeded.courses.map((c) => db.putCourse(c)), db.putTasks(seeded.tasks)]);
-        this.updateSettings({ demoSeeded: true });
-      }
       this.applyTheme();
       configureSounds({ enabled: this.settings.soundsEnabled, pack: this.settings.soundPack });
       await this.archiveOldCompleted();

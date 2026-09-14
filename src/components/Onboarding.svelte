@@ -36,7 +36,7 @@
           <div class="hero">✓</div>
           <h2>Welcome to Homework To-Do</h2>
           <p>A fast, offline to-do list built for school. Everything stays in your browser. Finishing a task should feel great, so we made it feel great.</p>
-          <p class="muted">We added a few demo courses and tasks so you can poke around. Clear them any time from Settings.</p>
+          <p class="muted">Start by adding a task below, or set up your courses on the last step.</p>
         {:else if step === 1}
           <div class="hero">⌨️</div>
           <h2>Type tasks like you’d say them</h2>

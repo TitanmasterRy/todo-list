@@ -81,3 +81,7 @@
 - Accessibility: focus trap and focus restore on all dialogs, focus rings, ARIA roles/labels on custom checkbox, ring, tabs, toolbars and combobox; OS `prefers-reduced-motion` honored in addition to the in-app switch
 - Performance: derived lists only, single global drag handler, deferred confetti canvas, no external fonts
 - README covers local dev, Pages deploy, Gist sync setup, and keyboard shortcuts
+
+## Post-launch
+
+- Removed the demo courses and tasks seeded on first run; the app now starts empty. "Clear demo data" stays available for browsers that already have them.
