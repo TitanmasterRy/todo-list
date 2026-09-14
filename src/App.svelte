@@ -91,10 +91,9 @@
   {#if ui.shortcuts}
     <ShortcutSheet />
   {/if}
+  <DailyPrompts />
   {#if !store.settings.onboarded}
     <Onboarding />
-  {:else}
-    <DailyPrompts />
   {/if}
 {/if}
 

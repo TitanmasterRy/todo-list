@@ -50,3 +50,12 @@
 - Bulk select (checkbox mode, `x`, or shift-click ranges) with move course, reschedule, tag, priority, delete
 - Search from Inbox with `/` plus filters
 - Backup module (bundle build, JSON download, import validation, last-write-wins merge) with tests
+
+## Phase 7 — Focus mode, Pomodoro, templates, eat-the-frog, recap
+
+- Focus view: one task big with notes (safe markdown), subtasks, complete / snooze / edit / next; task picker
+- Pomodoro timer (25/5/15 by default, configurable) that keeps running across views, records sessions for stats and the Marathon badge, tab-title countdown, optional notifications
+- Templates: save any task with subtasks from the editor, create with `@name` in quick add (with suggestions)
+- Eat the frog: morning prompt on first open, frog pinned to the top of Today, double XP
+- End-of-day recap after 6 pm with tasks done, XP, streak status and a one-line note saved to the day
+- Sunday weekly review prompt and 14-day backup reminder toasts
