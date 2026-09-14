@@ -639,6 +639,11 @@ class Store {
     return this.dayNotes.find((n) => n.date === date)?.note ?? '';
   }
 
+  markRingCelebrated(day: string): void {
+    this.stats = { ...this.stats, ringCelebratedDate: day };
+    this.persistStats();
+  }
+
   // ---------- pomodoro ----------
   recordPomodoro(): void {
     const stats = structuredClone($state.snapshot(this.stats)) as Stats;

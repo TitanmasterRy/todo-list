@@ -1,6 +1,4 @@
 <script lang="ts">
-  import { flip } from 'svelte/animate';
-  import { fly } from 'svelte/transition';
   import { store } from '../lib/store.svelte';
   import { ui } from '../lib/ui.svelte';
   import { formatMinutes, DAY_NAMES, MONTH_SHORT, fromKey } from '../lib/dates';
@@ -9,16 +7,19 @@
   import GoalRing from '../components/GoalRing.svelte';
   import Sortable from '../components/Sortable.svelte';
 
-  const visible = (ids: Set<string>) => (t: { id: string; completedAt?: string }) => !t.completedAt || ids.has(t.id);
-  const overdue = $derived(store.tasks.filter((t) => store.overdueTasks.includes(t) || (t.completedAt && store.lingering.has(t.id) && lastSection.get(t.id) === 'overdue')));
-  const lastSection = new Map<string, string>();
-  const dueToday = $derived(store.dueTodayTasks);
-  const pinned = $derived(store.pinnedTodayTasks);
-  const lingeringDone = $derived(store.tasks.filter((t) => t.completedAt && store.lingering.has(t.id)));
-  const allIds = $derived([...store.overdueTasks, ...dueToday, ...pinned].map((t) => t.id));
+  import type { Task } from '../lib/types';
+  import { isOverdue, isDueToday } from '../lib/dates';
+  import { byDueThenOrder, byFrogThenOrder, byOrder } from '../lib/store.svelte';
+
+  // Sections keep recently completed tasks (store.lingering) in place until their exit animation runs.
+  const live = (t: Task) => !t.completedAt || store.lingering.has(t.id);
+  const overdue = $derived(store.tasks.filter((t) => live(t) && isOverdue(t.dueAt, store.now) && !isDueToday(t.dueAt, store.now)).sort(byDueThenOrder));
+  const dueToday = $derived(store.tasks.filter((t) => live(t) && isDueToday(t.dueAt, store.now)).sort(byFrogThenOrder));
+  const pinned = $derived(store.tasks.filter((t) => live(t) && !t.dueAt && t.pinnedDay === store.today).sort(byOrder));
+  const allIds = $derived([...overdue, ...dueToday, ...pinned].map((t) => t.id));
   const d = $derived(fromKey(store.today));
   const dateLabel = $derived(`${DAY_NAMES[d.getDay()]}, ${MONTH_SHORT[d.getMonth()]} ${d.getDate()}`);
-  const empty = $derived(store.todayTasks.length === 0 && lingeringDone.length === 0);
+  const empty = $derived(overdue.length === 0 && dueToday.length === 0 && pinned.length === 0);
   let showNoDate = $state(false);
   const frog = $derived(store.frogTask);
   const doneToday = $derived(store.completedTasks.filter((t) => t.completedAt && t.completedAt.slice(0, 10) === new Date().toISOString().slice(0, 10)));
@@ -67,13 +68,13 @@
 
   <QuickAdd defaultDueKey={store.today} autofocus />
 
-  {#if store.overdueTasks.length}
+  {#if overdue.length}
     <div class="section-title overdue">
       <span>Overdue</span><span class="count">{store.overdueTasks.length}</span>
       <span class="spacer"></span>
       <button class="btn sm" onclick={() => store.rollOverdueToToday()}>Roll all to today</button>
     </div>
-    <Sortable items={store.overdueTasks} onreorder={(ids) => store.reorder(ids)} ondropfrom={(id) => onDrop(id, 'today')} group="today">
+    <Sortable items={overdue} onreorder={(ids) => store.reorder(ids)} ondropfrom={(id) => onDrop(id, 'today')} group="today">
       {#snippet item(task)}
         <TaskItem {task} listIds={allIds} dragHandle />
       {/snippet}
@@ -88,16 +89,6 @@
       <TaskItem {task} listIds={allIds} dragHandle />
     {/snippet}
   </Sortable>
-
-  {#if lingeringDone.length}
-    <div class="task-list">
-      {#each lingeringDone as task (task.id)}
-        <div animate:flip={{ duration: 250 }} out:fly={{ x: 40, duration: 260 }}>
-          <TaskItem {task} />
-        </div>
-      {/each}
-    </div>
-  {/if}
 
   {#if pinned.length || showNoDate}
     <div class="section-title">

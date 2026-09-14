@@ -12,3 +12,10 @@
 - Task item with animated checkbox, chips, inline subtasks, snooze menu; full task editor modal
 - Demo dataset seeded on first run
 - PWA manifest and icons
+
+## Phase 2 — Feel: completion animation, sounds, undo
+
+- Checkbox spring fill, left-to-right strike-through, particle burst, task slides out after a short linger
+- Three WebAudio sound packs (soft / click / arcade), muted by default with a one-time enable prompt
+- XP toast with Undo button and escalating combo visuals; level-up overlay; badge unlock card; full-screen confetti when the daily ring closes (once per day)
+- Undo stack with toasts for add / complete / delete / edit / snooze and `Ctrl+Z`
