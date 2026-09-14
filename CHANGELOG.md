@@ -65,3 +65,11 @@
 - Settings view: theme, accent, sounds + pack, reduced motion, daily goal, Pomodoro lengths, week start, time format, gamification switch, streak freeze info, templates, Gist sync, export/import (merge or replace, both undoable), archive old completed tasks, clear demo data, install button, reset all data (triple click confirm)
 - Service worker via `vite-plugin-pwa` (offline-first precache, update toast), install prompt capture
 - Optional Gist sync: token with gist scope stored only in localStorage, private gist created on first sync, sync on load and 2 s after changes, last-write-wins per task with same-second conflict notice, resync when back online
+
+## Phase 9 — Badges, weekly review, homework summaries, semester setup
+
+- 14 badges with unlock animation (First Task … Marathon), shown in Stats
+- Weekly review (Sunday prompt, command palette, Stats button): completed by course, biggest wins, stale tasks snoozed 3+ times with reschedule / no date / delete, next week's heaviest day chart
+- Homework touches: workload bar in Today header, exam/quiz badges with days-until in Upcoming and task rows, due-this-week-by-course card in Stats
+- Semester setup: create several courses at once with presets, colors, emojis, or a pasted list
+- Three-step onboarding (welcome, quick-add syntax, daily goal + sounds) that can open semester setup
