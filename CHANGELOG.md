@@ -35,3 +35,10 @@
 - Inbox / All view with search and filters: status, course, tag, type, date range, sort
 - Quick-add parser wired to every list view with live preview chips (dates, times, `#course`/`#tag`, `!priority`, `~estimate`, recurrence, `@template`, `type:`)
 - Subtasks as an inline checklist on the task row; priorities, estimates, types and weights on the editor and as chips
+
+## Phase 5 — Streak, ring, XP, combo, heatmap, Stats
+
+- Stats view: streak with best and banked freezes, level/XP progress, today ring, last-7-days sparkline
+- GitHub-style year heatmap with hover counts
+- "Due this week by course" summary bars
+- Badge grid with locked/unlocked states
