@@ -42,3 +42,11 @@
 - GitHub-style year heatmap with hover counts
 - "Due this week by course" summary bars
 - Badge grid with locked/unlocked states
+
+## Phase 6 — Keyboard, command palette, search, bulk select, drag-and-drop
+
+- Full keyboard shortcuts: `n` `/` `j` `k` `Enter` `Space` `e` `s` `x` `f` `Del` `Esc` `Ctrl+K` `Ctrl+Z` `1–6` `?`, with a shortcut sheet
+- Command palette: jump to views and courses, create course, toggles (sounds, gamification, reduced motion, theme), weekly review, recap, frog, roll overdue, export, bulk select, open a task by name
+- Bulk select (checkbox mode, `x`, or shift-click ranges) with move course, reschedule, tag, priority, delete
+- Search from Inbox with `/` plus filters
+- Backup module (bundle build, JSON download, import validation, last-write-wins merge) with tests
