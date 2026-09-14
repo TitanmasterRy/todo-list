@@ -20,7 +20,7 @@
   import DailyPrompts from './components/DailyPrompts.svelte';
   import BulkBar from './components/BulkBar.svelte';
   import { ui } from './lib/ui.svelte';
-  import { startSync } from './lib/gist';
+  import { startSync } from './lib/gist.svelte';
 
   onMount(() => {
     void store.init().then(() => startSync());

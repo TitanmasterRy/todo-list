@@ -59,3 +59,9 @@
 - Eat the frog: morning prompt on first open, frog pinned to the top of Today, double XP
 - End-of-day recap after 6 pm with tasks done, XP, streak status and a one-line note saved to the day
 - Sunday weekly review prompt and 14-day backup reminder toasts
+
+## Phase 8 — Export/import, PWA, Gist sync
+
+- Settings view: theme, accent, sounds + pack, reduced motion, daily goal, Pomodoro lengths, week start, time format, gamification switch, streak freeze info, templates, Gist sync, export/import (merge or replace, both undoable), archive old completed tasks, clear demo data, install button, reset all data (triple click confirm)
+- Service worker via `vite-plugin-pwa` (offline-first precache, update toast), install prompt capture
+- Optional Gist sync: token with gist scope stored only in localStorage, private gist created on first sync, sync on load and 2 s after changes, last-write-wins per task with same-second conflict notice, resync when back online
