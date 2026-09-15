@@ -40,6 +40,16 @@
   details { font-size:13px; color: var(--muted); }
   details summary { cursor:pointer; }
   details textarea { width:100%; min-height:60px; font-family:monospace; font-size:12px; margin-top:6px; }
+  /* settings */
+  #settings { display:none; background:#fff; border-bottom:1px solid var(--line); padding:10px 16px; font-size:14px; }
+  #settings.show { display:block; }
+  #settings .grid { display:grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap:8px 20px; align-items:center; }
+  #settings label { display:flex; align-items:center; gap:8px; justify-content:space-between; }
+  #settings label input[type=text], #settings label input[type=number], #settings label select { width:150px; }
+  #settings .wide { grid-column: 1 / -1; display:block; }
+  #settings .wide textarea { width:100%; min-height:56px; font-family:monospace; font-size:12px; margin-top:4px; }
+  #settings .row { display:flex; gap:8px; margin-top:10px; align-items:center; }
+  #settings .hint { color: var(--muted); font-size:12px; }
   /* console */
   #console { display:none; flex-direction:column; height:240px; background:#1e1e1e; color:#ddd; font:12px/1.5 Menlo, Consolas, monospace; border-top:2px solid #444; }
   #console.show { display:flex; }
@@ -76,7 +86,7 @@
 </header>
 
 <noscript>
-  <style>#controls, #proxyBtn, #newTabBtn, #directBtn, .filebtn { display:none; }</style>
+  <style>#controls, #proxyBtn, #newTabBtn, #directBtn, .filebtn, #settings { display:none; }</style>
   <div class="nojs">
     <b>JavaScript is off, so this page cannot click for you.</b> No web page can: only scripts can create clicks,
     and browsers never let one page click inside another site's frame anyway.
@@ -99,6 +109,7 @@
   <button id="startBtn" class="primary">Start (F8)</button>
   <button id="testBtn">Test area</button>
   <button id="consoleBtn" title="Toggle the console (F12 or Ctrl+`)">Console</button>
+  <button id="settingsBtn">Settings</button>
   <span class="status" id="status">Target: <b>none</b> · Clicks: <b id="count">0</b></span>
   <details><summary>How it works / limits / relay list</summary>
     Runs a timer that fires real mouse events at the chosen spot. The browser does not allow those events to reach
@@ -111,12 +122,32 @@
     it so its images and scripts still load from the real site, and puts it in the frame as part of this page.
     Nested game frames are pulled through the same way. Relays are third-party services: they may be slow, rate
     limited, offline, or blocked by a filter. Pages that need you to be logged in, or that talk to their own server
-    from script, usually will not work through it. One relay per line, <code>{url}</code> is replaced by the address:
-    <textarea id="relays">https://corsproxy.io/?url={url}
-https://api.allorigins.win/raw?url={url}
-https://api.codetabs.com/v1/proxy?quest={url}</textarea>
+    from script, usually will not work through it. The relay list lives in <b>Settings</b>.<br>
     <b>Drag and drop</b> an .html file onto the frame to load it. Press <b>F12</b> or Ctrl+` for the console.
   </details>
+</div>
+
+<div id="settings">
+  <div class="grid">
+    <label>Default clicks per second <input type="number" id="s_cps" min="1" max="100"></label>
+    <label>Hotkey <input type="text" id="s_hotkey" readonly title="Click here, then press the key you want"></label>
+    <label>Click type <select id="s_type"><option value="click">Left click</option><option value="dblclick">Double click</option><option value="right">Right click</option></select></label>
+    <label>Hold each click for (ms) <input type="number" id="s_hold" min="0" max="1000"></label>
+    <label>Stop after this many clicks (0 = never) <input type="number" id="s_limit" min="0"></label>
+    <label>Show target marker <input type="checkbox" id="s_marker"></label>
+    <label>Start page (loaded in the URL box) <input type="text" id="s_home"></label>
+    <label>Console height (px) <input type="number" id="s_conh" min="120" max="800"></label>
+    <label class="wide">Proxy / relay URLs, one per line. <code>{url}</code> is replaced by the page address; a plain URL gets the address appended.
+      <textarea id="relays"></textarea>
+      <span class="hint">Use your own relay here if the public ones are slow or blocked, for example a CORS relay you run somewhere: <code>https://my-relay.example/?url={url}</code></span>
+    </label>
+  </div>
+  <div class="row">
+    <button id="saveSettings" class="primary">Save</button>
+    <button id="resetSettings">Reset to defaults</button>
+    <button id="closeSettings">Close</button>
+    <span class="hint" id="settingsMsg">Settings are saved in this browser only.</span>
+  </div>
 </div>
 
 <div id="testpad">
@@ -153,6 +184,47 @@ https://api.codetabs.com/v1/proxy?quest={url}</textarea>
   var consoleEl = $('console'), logEl = $('log'), cmd = $('cmd');
 
   var timer = null, count = 0, target = null, picking = false, hotkey = 'F8', proxyMode = false;
+
+  // ----- settings -----
+  var DEFAULTS = {
+    cps: 10, hotkey: 'F8', type: 'click', hold: 0, limit: 0, marker: true, conh: 240,
+    home: 'https://noahstutoring.academy/',
+    relays: 'https://corsproxy.io/?url={url}\nhttps://api.allorigins.win/raw?url={url}\nhttps://api.codetabs.com/v1/proxy?quest={url}'
+  };
+  var settings = {};
+  function loadSettings() {
+    var saved = {};
+    try { saved = JSON.parse(localStorage.getItem('autoclicker-settings') || '{}') || {}; } catch (e) {}
+    Object.keys(DEFAULTS).forEach(function (k) { settings[k] = (k in saved) ? saved[k] : DEFAULTS[k]; });
+  }
+  function saveSettings() {
+    try { localStorage.setItem('autoclicker-settings', JSON.stringify(settings)); return true; } catch (e) { return false; }
+  }
+  function settingsToForm() {
+    $('s_cps').value = settings.cps; $('s_hotkey').value = settings.hotkey; $('s_type').value = settings.type;
+    $('s_hold').value = settings.hold; $('s_limit').value = settings.limit; $('s_marker').checked = !!settings.marker;
+    $('s_home').value = settings.home; $('s_conh').value = settings.conh; $('relays').value = settings.relays;
+  }
+  function formToSettings() {
+    settings.cps = Math.min(100, Math.max(1, parseInt($('s_cps').value, 10) || DEFAULTS.cps));
+    settings.hotkey = $('s_hotkey').value || 'F8';
+    settings.type = $('s_type').value;
+    settings.hold = Math.max(0, parseInt($('s_hold').value, 10) || 0);
+    settings.limit = Math.max(0, parseInt($('s_limit').value, 10) || 0);
+    settings.marker = $('s_marker').checked;
+    settings.home = $('s_home').value.trim();
+    settings.conh = Math.min(800, Math.max(120, parseInt($('s_conh').value, 10) || DEFAULTS.conh));
+    settings.relays = $('relays').value;
+  }
+  function applySettings(initial) {
+    cpsInput.value = settings.cps;
+    hotkey = settings.hotkey; hotkeyInput.value = hotkey;
+    startBtn.textContent = (timer ? 'Stop (' : 'Start (') + hotkey + ')';
+    crosshair.style.visibility = settings.marker ? 'visible' : 'hidden';
+    consoleEl.style.height = settings.conh + 'px';
+    if (initial && settings.home) urlInput.value = settings.home;
+    if (timer) { stop(); start(); }
+  }
 
   function esc(s) { return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;'); }
 
@@ -228,7 +300,8 @@ https://api.codetabs.com/v1/proxy?quest={url}</textarea>
 
   // ----- proxy mode -----
   function relayList() {
-    return $('relays').value.split('\n').map(function (s) { return s.trim(); }).filter(function (s) { return s.indexOf('{url}') >= 0; });
+    return settings.relays.split('\n').map(function (s) { return s.trim(); }).filter(function (s) { return /^https?:\/\//i.test(s); })
+      .map(function (s) { return s.indexOf('{url}') >= 0 ? s : s + '{url}'; });
   }
 
   function fetchVia(url) {
@@ -391,12 +464,24 @@ https://api.codetabs.com/v1/proxy?quest={url}</textarea>
     var h = hit(target.x, target.y), el = h.el;
     if (!el || el === crosshair) return;
     var win = h.doc.defaultView || window;
-    var opts = { bubbles: true, cancelable: true, view: win, clientX: h.x, clientY: h.y, button: 0 };
+    var right = settings.type === 'right';
+    var opts = { bubbles: true, cancelable: true, view: win, clientX: h.x, clientY: h.y, button: right ? 2 : 0, buttons: right ? 2 : 1 };
     el.dispatchEvent(new MouseEvent('mousedown', opts));
-    el.dispatchEvent(new MouseEvent('mouseup', opts));
-    el.dispatchEvent(new MouseEvent('click', opts));
+    function up() {
+      el.dispatchEvent(new MouseEvent('mouseup', opts));
+      if (right) el.dispatchEvent(new MouseEvent('contextmenu', opts));
+      else {
+        el.dispatchEvent(new MouseEvent('click', opts));
+        if (settings.type === 'dblclick') {
+          el.dispatchEvent(new MouseEvent('mousedown', opts)); el.dispatchEvent(new MouseEvent('mouseup', opts));
+          el.dispatchEvent(new MouseEvent('click', opts)); el.dispatchEvent(new MouseEvent('dblclick', opts));
+        }
+      }
+    }
+    if (settings.hold > 0) setTimeout(up, settings.hold); else up();
     count++;
     countEl.textContent = count;
+    if (settings.limit && count % settings.limit === 0) { stop(); setStatus('Stopped after ' + settings.limit + ' clicks.'); }
   }
 
   function start() {
@@ -418,14 +503,14 @@ https://api.codetabs.com/v1/proxy?quest={url}</textarea>
   function toggle() { if (timer) stop(); else start(); }
 
   startBtn.addEventListener('click', toggle);
-  cpsInput.addEventListener('change', function () { if (timer) { stop(); start(); } });
+  cpsInput.addEventListener('change', function () { settings.cps = Math.min(100, Math.max(1, parseInt(cpsInput.value, 10) || 10)); saveSettings(); if (timer) { stop(); start(); } });
 
   // ----- keys -----
   hotkeyInput.addEventListener('keydown', function (e) {
     e.preventDefault();
     if (e.key === 'Escape') { hotkeyInput.blur(); return; }
     hotkey = e.key.length === 1 ? e.key.toUpperCase() : e.key;
-    hotkeyInput.value = hotkey;
+    hotkeyInput.value = hotkey; settings.hotkey = hotkey; saveSettings();
     startBtn.textContent = (timer ? 'Stop (' : 'Start (') + hotkey + ')';
     hotkeyInput.blur();
   });
@@ -547,6 +632,32 @@ https://api.codetabs.com/v1/proxy?quest={url}</textarea>
     } else if (e.key === 'Escape') { toggleConsole(false); }
     else if (e.key === 'F12') { e.preventDefault(); toggleConsole(false); }
   });
+
+  // ----- settings UI -----
+  var settingsEl = $('settings');
+  $('settingsBtn').addEventListener('click', function () { settingsToForm(); settingsEl.classList.toggle('show'); });
+  $('closeSettings').addEventListener('click', function () { settingsEl.classList.remove('show'); });
+  $('saveSettings').addEventListener('click', function () {
+    formToSettings(); applySettings(false);
+    $('settingsMsg').textContent = saveSettings() ? 'Saved.' : 'Applied, but this browser would not store it.';
+  });
+  $('resetSettings').addEventListener('click', function () {
+    Object.keys(DEFAULTS).forEach(function (k) { settings[k] = DEFAULTS[k]; });
+    settingsToForm(); applySettings(false); saveSettings();
+    $('settingsMsg').textContent = 'Defaults restored.';
+  });
+  $('s_hotkey').addEventListener('keydown', function (e) {
+    e.preventDefault(); e.stopPropagation();
+    if (e.key === 'Escape') { this.blur(); return; }
+    this.value = e.key.length === 1 ? e.key.toUpperCase() : e.key;
+    this.blur();
+  });
+  ['s_home', 's_hold', 's_limit', 's_cps', 's_conh', 'relays'].forEach(function (id) {
+    $(id).addEventListener('keydown', function (e) { e.stopPropagation(); });
+  });
+
+  loadSettings();
+  applySettings(true);
 })();
 </script>
 
