@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Frame + Auto Clicker</title>
+<style>
+  :root { --bg:#f4f4f4; --panel:#fff; --line:#dadce0; --text:#202124; --muted:#5f6368; --accent:#1a73e8; --ok:#188038; --bad:#c5221f; }
+  * { box-sizing: border-box; }
+  html, body { margin:0; height:100%; }
+  body { font-family: Arial, sans-serif; background: var(--bg); color: var(--text); display:flex; flex-direction:column; }
+  header { background: var(--panel); border-bottom:1px solid var(--line); padding:10px 16px; display:flex; flex-wrap:wrap; gap:10px; align-items:center; }
+  header h1 { font-size:16px; margin:0 12px 0 0; white-space:nowrap; }
+  form { display:flex; flex:1; gap:8px; min-width:260px; }
+  input[type=text], input[type=number] { padding:8px 10px; font-size:15px; border:1px solid #ccc; border-radius:4px; }
+  input[type=text] { flex:1; min-width:120px; }
+  input[type=number] { width:80px; }
+  button { background:#f8f9fa; border:1px solid #f8f9fa; border-radius:4px; color:#3c4043; cursor:pointer; font-size:14px; height:36px; padding:0 14px; white-space:nowrap; }
+  button:hover { border-color: var(--line); box-shadow: rgba(0,0,0,.1) 0 1px 1px; color: var(--text); }
+  button.primary { background: var(--accent); border-color: var(--accent); color:#fff; }
+  button.stop { background: var(--bad); border-color: var(--bad); color:#fff; }
+  .panel { background: var(--panel); border-bottom:1px solid var(--line); padding:8px 16px; display:flex; flex-wrap:wrap; gap:8px 14px; align-items:center; font-size:14px; }
+  .panel label { display:flex; align-items:center; gap:6px; }
+  .status { color: var(--muted); }
+  .status b { color: var(--text); }
+  .warn { color: var(--bad); }
+  .good { color: var(--ok); }
+  main { flex:1; display:flex; flex-direction:column; min-height:0; }
+  iframe { border:none; width:100%; flex:1; background:#fff; }
+  #testpad { display:none; padding:16px; align-items:center; gap:14px; background:#fffbe6; border-bottom:1px solid #f2d675; font-size:14px; }
+  #testpad.show { display:flex; }
+  #testbtn { background:#fbbc04; border-color:#fbbc04; color:#000; font-weight:bold; }
+  #crosshair { position:fixed; width:22px; height:22px; margin:-11px 0 0 -11px; border:2px solid var(--bad); border-radius:50%; pointer-events:none; display:none; z-index:9999; box-shadow:0 0 0 1px #fff; }
+  #crosshair::after { content:""; position:absolute; left:8px; top:8px; width:2px; height:2px; background:var(--bad); }
+  body.picking { cursor: crosshair; }
+  body.picking iframe { pointer-events:none; }
+  noscript .nojs { background:#fce8e6; color:#3c4043; padding:12px 16px; font-size:14px; line-height:1.5; border-bottom:1px solid #f5c2c0; }
+  noscript ol { margin:6px 0 0 20px; padding:0; }
+  details { font-size:13px; color: var(--muted); }
+  details summary { cursor:pointer; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Frame + Auto Clicker</h1>
+  <!-- Without JavaScript this form still works: it searches DuckDuckGo inside the frame,
+       and you can click through to the site from the results. With JavaScript, the page
+       loads the typed URL directly. -->
+  <form id="urlForm" action="https://duckduckgo.com/" method="get" target="viewer">
+    <input type="text" id="urlInput" name="q" placeholder="https://example.com" value="https://noahstutoring.academy/" autocomplete="off">
+    <button type="submit" class="primary">Open in Frame</button>
+    <button type="button" id="newTabBtn" title="Opens a blank tab that frames the URL (needs JavaScript)">Open in new tab</button>
+  </form>
+</header>
+
+<noscript>
+  <style>#controls, #newTabBtn { display:none; }</style>
+  <div class="nojs">
+    <b>JavaScript is off, so this page cannot click for you.</b> No web page can: only scripts can create clicks,
+    and browsers never let one page click inside another site's frame anyway.
+    The one thing on a Chromebook that clicks without JavaScript or an extension is the built-in dwell click:
+    <ol>
+      <li>Open <b>Settings</b> → <b>Accessibility</b> → <b>Cursor and touchpad</b> (older versions: Manage accessibility features → Mouse and touchpad).</li>
+      <li>Turn on <b>Automatically click when the cursor stops</b>.</li>
+      <li>Set the delay to the shortest option (0.6 s) and turn on <b>Revert to left click after action</b>.</li>
+      <li>Park the cursor on the target. It clicks each time the cursor stops, so a tiny wiggle triggers another click.</li>
+    </ol>
+    If a school admin has locked that setting, the only remaining option is hardware, such as a mouse with a macro button.
+    The search box above still works without JavaScript: results open inside the frame and you can click through to the site.
+  </div>
+</noscript>
+
+<div class="panel" id="controls">
+  <label>Clicks/sec <input type="number" id="cps" min="1" max="100" value="10"></label>
+  <label>Hotkey <input type="text" id="hotkey" value="F8" size="4" readonly title="Click here, then press the key you want"></label>
+  <button id="pickBtn">Pick target</button>
+  <button id="startBtn" class="primary">Start (F8)</button>
+  <button id="testBtn">Test area</button>
+  <span class="status" id="status">Target: <b>none</b> · Clicks: <b id="count">0</b></span>
+  <details><summary>How it works / limits</summary>
+    Runs a timer that fires real mouse events at the chosen spot on <em>this</em> page. The browser does not allow
+    those events to reach a site loaded from another domain inside the frame, so the clicker can only hit
+    things on this page (like the test button) or a same-domain frame. That is a browser security rule, not a bug.
+    For other sites use the ChromeOS dwell click: Settings → Accessibility → Cursor and touchpad → Automatically click when the cursor stops.
+  </details>
+</div>
+
+<div id="testpad">
+  <button id="testbtn">Click me</button>
+  <span>Test button hits: <b id="testcount">0</b></span>
+  <span class="status">Use "Pick target" and choose this button to verify the clicker is working.</span>
+</div>
+
+<div id="crosshair"></div>
+
+<main>
+  <iframe id="viewer" name="viewer" src="about:blank" title="Framed site"></iframe>
+</main>
+
+<script>
+(function () {
+  var $ = function (id) { return document.getElementById(id); };
+  var form = $('urlForm'), urlInput = $('urlInput'), viewer = $('viewer');
+  var cpsInput = $('cps'), hotkeyInput = $('hotkey'), startBtn = $('startBtn'), pickBtn = $('pickBtn');
+  var status = $('status'), countEl = $('count'), crosshair = $('crosshair');
+  var testpad = $('testpad'), testbtn = $('testbtn'), testcount = $('testcount');
+
+  var timer = null, count = 0, target = null, picking = false, hotkey = 'F8';
+
+  function normalizeUrl(u) {
+    u = u.trim();
+    if (!u) return '';
+    if (!/^https?:\/\//i.test(u)) u = 'https://' + u;
+    return u;
+  }
+
+  // With JS on, the form loads the typed URL directly into the frame instead of searching.
+  form.addEventListener('submit', function (e) {
+    e.preventDefault();
+    var url = normalizeUrl(urlInput.value);
+    if (url) viewer.src = url;
+  });
+
+  // Same behaviour as the original blank.html: a new blank tab holding a full-size frame.
+  $('newTabBtn').addEventListener('click', function () {
+    var url = normalizeUrl(urlInput.value);
+    if (!url) return;
+    var win = window.open('', '_blank');
+    if (!win) { alert('Popup blocked. Allow popups for this page or use "Open in Frame".'); return; }
+    var f = win.document.createElement('iframe');
+    f.style.cssText = 'border:none;width:100%;height:100vh;margin:0;';
+    f.src = url;
+    win.document.body.style.margin = '0';
+    win.document.body.appendChild(f);
+  });
+
+  // ----- target picking -----
+  pickBtn.addEventListener('click', function () {
+    picking = true;
+    document.body.classList.add('picking');
+    setStatus('Click anywhere on the page to set the target (Esc to cancel).');
+  });
+
+  document.addEventListener('click', function (e) {
+    if (!picking) return;
+    if (e.target === pickBtn) return;
+    e.preventDefault(); e.stopPropagation();
+    picking = false;
+    document.body.classList.remove('picking');
+    setTarget(e.clientX, e.clientY);
+  }, true);
+
+  function setTarget(x, y) {
+    target = { x: x, y: y };
+    crosshair.style.left = x + 'px';
+    crosshair.style.top = y + 'px';
+    crosshair.style.display = 'block';
+    var el = document.elementFromPoint(x, y);
+    var name = el ? describe(el) : 'nothing';
+    setStatus('Target: <b>' + name + '</b> at ' + Math.round(x) + ',' + Math.round(y) +
+      (el && el.tagName === 'IFRAME' ? ' <span class="warn">(frame from another site: clicks will not reach inside it)</span>' : ''));
+  }
+
+  function describe(el) {
+    var s = el.tagName.toLowerCase();
+    if (el.id) s += '#' + el.id;
+    var t = (el.textContent || '').trim();
+    if (t && el.tagName !== 'IFRAME') s += ' "' + t.slice(0, 20) + '"';
+    return s.replace(/</g, '&lt;');
+  }
+
+  function setStatus(html) {
+    status.innerHTML = html + ' · Clicks: <b id="count">' + count + '</b>';
+    countEl = $('count');
+  }
+
+  // ----- clicking -----
+  function fireClick() {
+    if (!target) return;
+    var el = document.elementFromPoint(target.x, target.y);
+    if (!el || el === crosshair) return;
+    var opts = { bubbles: true, cancelable: true, view: window, clientX: target.x, clientY: target.y, button: 0 };
+    el.dispatchEvent(new MouseEvent('mousedown', opts));
+    el.dispatchEvent(new MouseEvent('mouseup', opts));
+    el.dispatchEvent(new MouseEvent('click', opts));
+    count++;
+    countEl.textContent = count;
+  }
+
+  function start() {
+    if (timer) return;
+    if (!target) { setStatus('<span class="warn">Pick a target first.</span>'); return; }
+    var cps = Math.min(100, Math.max(1, parseInt(cpsInput.value, 10) || 10));
+    timer = setInterval(fireClick, 1000 / cps);
+    startBtn.textContent = 'Stop (' + hotkey + ')';
+    startBtn.classList.remove('primary'); startBtn.classList.add('stop');
+  }
+
+  function stop() {
+    if (!timer) return;
+    clearInterval(timer); timer = null;
+    startBtn.textContent = 'Start (' + hotkey + ')';
+    startBtn.classList.remove('stop'); startBtn.classList.add('primary');
+  }
+
+  function toggle() { if (timer) stop(); else start(); }
+
+  startBtn.addEventListener('click', toggle);
+  cpsInput.addEventListener('change', function () { if (timer) { stop(); start(); } });
+
+  // ----- hotkey -----
+  hotkeyInput.addEventListener('keydown', function (e) {
+    e.preventDefault();
+    if (e.key === 'Escape') { hotkeyInput.blur(); return; }
+    hotkey = e.key.length === 1 ? e.key.toUpperCase() : e.key;
+    hotkeyInput.value = hotkey;
+    startBtn.textContent = (timer ? 'Stop (' : 'Start (') + hotkey + ')';
+    hotkeyInput.blur();
+  });
+
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape' && picking) {
+      picking = false; document.body.classList.remove('picking'); setStatus('Pick cancelled.'); return;
+    }
+    if (document.activeElement === hotkeyInput) return;
+    var k = e.key.length === 1 ? e.key.toUpperCase() : e.key;
+    if (k === hotkey && !(document.activeElement && /^(INPUT|TEXTAREA)$/.test(document.activeElement.tagName))) {
+      e.preventDefault(); toggle();
+    }
+  });
+
+  // Hotkeys only work while this page (not the frame) has keyboard focus, so remind the user.
+  window.addEventListener('blur', function () {
+    if (timer) setStatus('<span class="warn">Frame has focus: hotkey will not work until you click outside it.</span> Running');
+  });
+
+  // ----- test area -----
+  $('testBtn').addEventListener('click', function () { testpad.classList.toggle('show'); });
+  testbtn.addEventListener('click', function () { testcount.textContent = ++testbtn._n || (testbtn._n = 1); });
+
+  // Keep the target marker in place if the window resizes.
+  window.addEventListener('resize', function () { if (target) setTarget(Math.min(target.x, innerWidth - 1), Math.min(target.y, innerHeight - 1)); });
+})();
+</script>
+
+</body>
+</html>
