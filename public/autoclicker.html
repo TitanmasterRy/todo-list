@@ -19,6 +19,10 @@
   button:hover { border-color: var(--line); box-shadow: rgba(0,0,0,.1) 0 1px 1px; color: var(--text); }
   button.primary { background: var(--accent); border-color: var(--accent); color:#fff; }
   button.stop { background: var(--bad); border-color: var(--bad); color:#fff; }
+  .filebtn { background:#f8f9fa; border:1px solid #f8f9fa; border-radius:4px; color:#3c4043; cursor:pointer; font-size:14px; height:36px; padding:0 14px; display:flex; align-items:center; white-space:nowrap; }
+  .filebtn:hover { border-color: var(--line); box-shadow: rgba(0,0,0,.1) 0 1px 1px; color: var(--text); }
+  .filebtn input { display:none; }
+  body.dragover iframe { outline: 3px dashed var(--accent); outline-offset:-3px; }
   .panel { background: var(--panel); border-bottom:1px solid var(--line); padding:8px 16px; display:flex; flex-wrap:wrap; gap:8px 14px; align-items:center; font-size:14px; }
   .panel label { display:flex; align-items:center; gap:6px; }
   .status { color: var(--muted); }
@@ -33,7 +37,7 @@
   #crosshair { position:fixed; width:22px; height:22px; margin:-11px 0 0 -11px; border:2px solid var(--bad); border-radius:50%; pointer-events:none; display:none; z-index:9999; box-shadow:0 0 0 1px #fff; }
   #crosshair::after { content:""; position:absolute; left:8px; top:8px; width:2px; height:2px; background:var(--bad); }
   body.picking { cursor: crosshair; }
-  body.picking iframe { pointer-events:none; }
+  body.picking iframe { cursor: crosshair; }
   noscript .nojs { background:#fce8e6; color:#3c4043; padding:12px 16px; font-size:14px; line-height:1.5; border-bottom:1px solid #f5c2c0; }
   noscript ol { margin:6px 0 0 20px; padding:0; }
   details { font-size:13px; color: var(--muted); }
@@ -51,11 +55,15 @@
     <input type="text" id="urlInput" name="q" placeholder="https://example.com" value="https://noahstutoring.academy/" autocomplete="off">
     <button type="submit" class="primary">Open in Frame</button>
     <button type="button" id="newTabBtn" title="Opens a blank tab that frames the URL (needs JavaScript)">Open in new tab</button>
+    <button type="button" id="directBtn" title="Opens the URL as a normal tab, for sites that refuse to be framed">Open directly</button>
+    <label class="filebtn" title="Load an .html file from this Chromebook into the frame. The clicker can click inside it.">
+      Load HTML file <input type="file" id="htmlFile" accept=".html,.htm,text/html">
+    </label>
   </form>
 </header>
 
 <noscript>
-  <style>#controls, #newTabBtn { display:none; }</style>
+  <style>#controls, #newTabBtn, #directBtn, .filebtn { display:none; }</style>
   <div class="nojs">
     <b>JavaScript is off, so this page cannot click for you.</b> No web page can: only scripts can create clicks,
     and browsers never let one page click inside another site's frame anyway.
@@ -79,10 +87,13 @@
   <button id="testBtn">Test area</button>
   <span class="status" id="status">Target: <b>none</b> · Clicks: <b id="count">0</b></span>
   <details><summary>How it works / limits</summary>
-    Runs a timer that fires real mouse events at the chosen spot on <em>this</em> page. The browser does not allow
-    those events to reach a site loaded from another domain inside the frame, so the clicker can only hit
-    things on this page (like the test button) or a same-domain frame. That is a browser security rule, not a bug.
-    For other sites use the ChromeOS dwell click: Settings → Accessibility → Cursor and touchpad → Automatically click when the cursor stops.
+    Runs a timer that fires real mouse events at the chosen spot. The browser does not allow those events to reach
+    a site loaded from another domain inside the frame, so the clicker can only hit things on this page (like the
+    test button) or an HTML file you loaded with "Load HTML file", which runs as part of this page. That is a browser
+    security rule, not a bug. For other sites use the ChromeOS dwell click: Settings → Accessibility → Cursor and touchpad
+    → Automatically click when the cursor stops.<br>
+    "Refused to connect" inside the frame means that site forbids being framed. Use "Open directly" for it.
+    <b>Drag and drop</b> an .html file onto the frame to load it.
   </details>
 </div>
 
@@ -119,7 +130,7 @@
   form.addEventListener('submit', function (e) {
     e.preventDefault();
     var url = normalizeUrl(urlInput.value);
-    if (url) viewer.src = url;
+    if (url) { viewer.removeAttribute('srcdoc'); viewer.src = url; }
   });
 
   // Same behaviour as the original blank.html: a new blank tab holding a full-size frame.
@@ -135,11 +146,69 @@
     win.document.body.appendChild(f);
   });
 
+  $('directBtn').addEventListener('click', function () {
+    var url = normalizeUrl(urlInput.value);
+    if (url) window.open(url, '_blank');
+  });
+
+  // ----- local HTML file -----
+  // srcdoc keeps the loaded file on this page's origin, so the clicker can reach into it.
+  function loadHtmlFile(file) {
+    if (!file) return;
+    var r = new FileReader();
+    r.onload = function () {
+      viewer.removeAttribute('src');
+      viewer.srcdoc = r.result;
+      setStatus('Loaded <b>' + file.name.replace(/</g, '&lt;') + '</b> into the frame. Pick a target inside it.');
+    };
+    r.readAsText(file);
+  }
+  $('htmlFile').addEventListener('change', function (e) { loadHtmlFile(e.target.files[0]); });
+  ['dragenter', 'dragover'].forEach(function (t) {
+    document.addEventListener(t, function (e) { e.preventDefault(); document.body.classList.add('dragover'); });
+  });
+  ['dragleave', 'drop'].forEach(function (t) {
+    document.addEventListener(t, function (e) { e.preventDefault(); if (t === 'dragleave' && e.relatedTarget) return; document.body.classList.remove('dragover'); });
+  });
+  document.addEventListener('drop', function (e) {
+    var f = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
+    if (f) loadHtmlFile(f);
+  });
+
+  // Returns the innermost document + element at a page coordinate, drilling into same-origin frames.
+  function hit(x, y) {
+    var doc = document, el = doc.elementFromPoint(x, y);
+    while (el && el.tagName === 'IFRAME') {
+      var inner;
+      try { inner = el.contentDocument; } catch (err) { inner = null; }
+      if (!inner) break;
+      var rect = el.getBoundingClientRect();
+      x -= rect.left; y -= rect.top;
+      doc = inner; el = inner.elementFromPoint(x, y);
+    }
+    return { doc: doc, el: el, x: x, y: y, foreign: !!(el && el.tagName === 'IFRAME') };
+  }
+
   // ----- target picking -----
   pickBtn.addEventListener('click', function () {
     picking = true;
     document.body.classList.add('picking');
     setStatus('Click anywhere on the page to set the target (Esc to cancel).');
+  });
+
+  // Clicks inside a same-origin frame (a loaded HTML file) do not bubble to this document, so listen there too.
+  viewer.addEventListener('load', function () {
+    var inner; try { inner = viewer.contentDocument; } catch (err) { return; }
+    if (!inner) return;
+    inner.addEventListener('click', function (e) {
+      if (!picking) return;
+      e.preventDefault(); e.stopPropagation();
+      picking = false;
+      document.body.classList.remove('picking');
+      var rect = viewer.getBoundingClientRect();
+      setTarget(e.clientX + rect.left, e.clientY + rect.top);
+    }, true);
+    inner.addEventListener('keydown', onKey);
   });
 
   document.addEventListener('click', function (e) {
@@ -156,10 +225,11 @@
     crosshair.style.left = x + 'px';
     crosshair.style.top = y + 'px';
     crosshair.style.display = 'block';
-    var el = document.elementFromPoint(x, y);
+    var h = hit(x, y), el = h.el;
     var name = el ? describe(el) : 'nothing';
     setStatus('Target: <b>' + name + '</b> at ' + Math.round(x) + ',' + Math.round(y) +
-      (el && el.tagName === 'IFRAME' ? ' <span class="warn">(frame from another site: clicks will not reach inside it)</span>' : ''));
+      (h.foreign ? ' <span class="warn">(frame from another site: clicks will not reach inside it)</span>' :
+       h.doc !== document ? ' <span class="good">(inside loaded file)</span>' : ''));
   }
 
   function describe(el) {
@@ -178,9 +248,10 @@
   // ----- clicking -----
   function fireClick() {
     if (!target) return;
-    var el = document.elementFromPoint(target.x, target.y);
+    var h = hit(target.x, target.y), el = h.el;
     if (!el || el === crosshair) return;
-    var opts = { bubbles: true, cancelable: true, view: window, clientX: target.x, clientY: target.y, button: 0 };
+    var win = h.doc.defaultView || window;
+    var opts = { bubbles: true, cancelable: true, view: win, clientX: h.x, clientY: h.y, button: 0 };
     el.dispatchEvent(new MouseEvent('mousedown', opts));
     el.dispatchEvent(new MouseEvent('mouseup', opts));
     el.dispatchEvent(new MouseEvent('click', opts));
@@ -219,7 +290,7 @@
     hotkeyInput.blur();
   });
 
-  document.addEventListener('keydown', function (e) {
+  function onKey(e) {
     if (e.key === 'Escape' && picking) {
       picking = false; document.body.classList.remove('picking'); setStatus('Pick cancelled.'); return;
     }
@@ -228,7 +299,8 @@
     if (k === hotkey && !(document.activeElement && /^(INPUT|TEXTAREA)$/.test(document.activeElement.tagName))) {
       e.preventDefault(); toggle();
     }
-  });
+  }
+  document.addEventListener('keydown', onKey);
 
   // Hotkeys only work while this page (not the frame) has keyboard focus, so remind the user.
   window.addEventListener('blur', function () {
