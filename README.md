@@ -48,15 +48,7 @@ Two ways to connect, both in the **Schoology** view (`8`):
 
 Schoology blocks browsers on other sites from reading either, so both need a tiny relay you own: `docs/cors-proxy-worker.js` deploys as a free Cloudflare Worker in about two minutes and only forwards to schoology.com. Without it, the feed can still be uploaded or pasted by hand.
 
-### Old feed instructions
-
-The **Schoology** view (`8`) pulls assignments from your Schoology calendar feed and files them under Overdue, Due in the next 7 days, Later, and Completed. Completing them here earns XP like any task; deadlines follow the feed; deleting one keeps it from coming back.
-
-1. In Schoology open **Calendar → ⚙/Export**, enable the iCal feed, and copy its URL.
-2. Paste it under **Schoology → Setup** (or Settings → Schoology sync) and save. The app syncs on load and every 30 minutes while open.
-3. Schoology does not send CORS headers, so a browser on another site cannot read the feed directly. Either deploy the 20-line Cloudflare Worker in `docs/cors-proxy-worker.js` (free) and paste its URL as the proxy prefix, or upload / paste the `.ics` file by hand whenever you want to refresh.
-
-Courses are matched by name (set **Name in Schoology** on a course to pin a match) or created automatically. Assignments with no description get an auto-generated plan and steps. The Schoology REST API is not used because it needs OAuth request signing and a server, which a static site cannot provide.
+Courses are matched by name (set **Name in Schoology** on a course to pin a match) or created automatically. Assignments with no description get an auto-generated plan and steps. Completing them here earns XP like any task; deleting one keeps it from coming back.
 
 ## Google: Gmail, Classroom, Calendar, Drive sync
 
@@ -110,14 +102,13 @@ Settings → Theme pack: Classic, Sleek, Cute, Arcade, Nature, Space, Paper. Eac
 The **Tools** view (`7`) is grouped into Plan, Grades, Study, Compute and Connect:
 
 - **Notecards:** decks per course, cards typed, pasted (`term :: definition`, `Q:/A:`), or generated from notes with the optional AI helper; study with Leitner spaced repetition (boxes 1–5) and earn XP.
-- **Study help:** 22 built-in reference sheets (algebra, trig, calculus, statistics, physics, chemistry, biology, essays, MLA/APA, study skills, units, programming, languages) plus an optional **Ask the tutor** box powered by your own Anthropic API key.
+- **Study help:** worked examples, textbook-style explanations, links to the matching free OpenStax textbook, and 22 built-in reference sheets (algebra, trig, calculus, statistics, physics, chemistry, biology, essays, MLA/APA, study skills, units, programming, languages) plus an optional **Ask the tutor** box powered by your own Anthropic API key.
 - **Calculator:** scientific calculator with functions, factorials, percent, degrees/radians, history and `ans`.
 - **Graphing:** plot up to six `y = f(x)` functions, hover to trace, drag to pan, scroll to zoom.
 - **Transcript:** courses by term with credits, grade, letter and GPA points; term and cumulative GPA; CSV export and print-to-PDF.
 - **Quiz maker:** build question sets by hand, from an AI prompt (subject, topic, count, difficulty, question types, student or teacher mode), from pasted text, from your notes, or from a notecard deck. Export to Quizlet (paste), Blooket, Gimkit and Kahoot (CSV), a printable worksheet with answer key, notecards, or a **QTI zip that imports into Schoology tests and quizzes** (also Canvas, Moodle, Blackboard).
 - **Book reader:** add PDFs (textbooks, readings) to a local library, read with page memory, bookmarks and highlights; select text to copy, make a notecard, or ask the AI to explain. Free OpenStax textbooks are linked from Study help.
 - **Code editor:** CodeMirror with JavaScript, Python (runs in the browser via Pyodide), HTML/CSS live preview, Java and C++ editing; snippets saved locally.
-- **Study help** now includes worked examples, textbook-style explanations and links to the matching free OpenStax textbook for every topic.
 - **Timer:** presets (25/5, 50/10, 90/20, 15/3), a custom-minutes timer and a stopwatch that logs work time.
 
 - **Plan my day:** set how many minutes of homework you can do per day, see today's committed time against it and the load for the next 7 days, and pull upcoming tasks into Today without moving their deadlines ("Auto-fill free time" does it for you).

@@ -3,7 +3,7 @@
   import { store, VIEWS } from '../lib/store.svelte';
   import { ui } from '../lib/ui.svelte';
   import { toasts } from '../lib/toast.svelte';
-  import { buildBundle, backupFilename, downloadJSON } from '../lib/backup';
+  import { backupFilename, downloadJSON } from '../lib/backup';
   import { buildICS } from '../lib/ics';
   import { downloadText } from '../lib/download';
 
@@ -38,7 +38,7 @@
     list.push({ id: 'frog', label: 'Pick today’s frog (hardest task, double XP)', icon: '🐸', run: () => (ui.frogPrompt = true) });
     list.push({ id: 'roll', label: 'Roll all overdue to today', icon: '⏩', run: () => store.rollOverdueToToday() });
     list.push({ id: 'export', label: 'Export backup (JSON)', icon: '💾', run: () => {
-      downloadJSON(backupFilename(), buildBundle({ tasks: store.tasks, courses: store.courses, templates: store.templates, stats: store.stats, dayNotes: store.dayNotes, decks: store.decks, cards: store.cards }));
+      downloadJSON(backupFilename(), store.snapshotBundle());
       store.updateSettings({ lastExportAt: new Date().toISOString() });
       toasts.push({ message: 'Backup downloaded', kind: 'success' });
     } });

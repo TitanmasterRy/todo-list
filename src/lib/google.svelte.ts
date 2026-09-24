@@ -4,7 +4,7 @@
 import { store } from './store.svelte';
 import { on } from './events';
 import { toasts } from './toast.svelte';
-import { buildBundle, mergeBundles, parseBundle } from './backup';
+import { mergeBundles, parseBundle } from './backup';
 import { addDaysKey, dueKey, isDateOnly, pad } from './dates';
 import { inferType } from './schoology';
 import type { ExportBundle, Task } from './types';
@@ -557,15 +557,7 @@ let inFlight: Promise<void> | null = null;
 let started = false;
 
 function localBundle(): ExportBundle {
-  return buildBundle({
-    tasks: $state.snapshot(store.tasks),
-    courses: $state.snapshot(store.courses),
-    templates: $state.snapshot(store.templates),
-    stats: $state.snapshot(store.stats),
-    dayNotes: $state.snapshot(store.dayNotes),
-    decks: $state.snapshot(store.decks),
-    cards: $state.snapshot(store.cards),
-  });
+  return store.snapshotBundle();
 }
 
 const driveOpts: ApiOpts = { scopes: [SCOPE_DRIVE], api: 'Google Drive API' };

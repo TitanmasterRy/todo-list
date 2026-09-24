@@ -2,7 +2,7 @@
 import { store } from './store.svelte';
 import { on } from './events';
 import { toasts } from './toast.svelte';
-import { buildBundle, mergeBundles, parseBundle } from './backup';
+import { mergeBundles, parseBundle } from './backup';
 import type { ExportBundle } from './types';
 
 const GIST_FILE = 'homework-todo.json';
@@ -26,15 +26,7 @@ function headers(token: string): HeadersInit {
 }
 
 function localBundle(): ExportBundle {
-  return buildBundle({
-    tasks: $state.snapshot(store.tasks),
-    courses: $state.snapshot(store.courses),
-    templates: $state.snapshot(store.templates),
-    stats: $state.snapshot(store.stats),
-    dayNotes: $state.snapshot(store.dayNotes),
-    decks: $state.snapshot(store.decks),
-    cards: $state.snapshot(store.cards),
-  });
+  return store.snapshotBundle();
 }
 
 async function fetchRemote(token: string, gistId: string): Promise<ExportBundle | null> {

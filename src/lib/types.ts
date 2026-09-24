@@ -13,6 +13,7 @@ export interface Course {
   term?: string; // e.g. "Fall 2026"
   finalGrade?: number; // override for the transcript, 0–100
   schoologyName?: string; // course name as it appears in the Schoology feed
+  updatedAt?: string; // last-write-wins sync (missing on courses from older versions)
 }
 
 export interface Subtask {
@@ -112,6 +113,44 @@ export interface Card {
   updatedAt: string;
 }
 
+/** A deletion record, so sync can tell "deleted on another device" from "never seen". */
+export type TombstoneKind = 'task' | 'course' | 'template' | 'deck' | 'card';
+export interface Tombstone {
+  kind: TombstoneKind;
+  id: string;
+  deletedAt: string;
+  task?: Task; // snapshot kept for the trash can (tasks only, dropped after TRASH_DAYS)
+}
+
+/** Economy: every earn and spend is an append-only ledger entry, so wallets merge across devices by id. */
+export type Currency = 'coins' | 'chips' | 'vouchers';
+export type LedgerCurrency = Currency | `item:${string}`;
+export interface LedgerEntry {
+  id: string;
+  at: string; // ISO time
+  currency: LedgerCurrency;
+  amount: number; // positive = earned/bought, negative = spent/used
+  reason: string; // 'task', 'ring', 'shop:chips-100', 'casino:slots', 'arcade:snake', ...
+  ref?: string; // task id, game id, ...
+}
+
+/** A game added by the site admin (games.json) or locally in the admin panel. */
+export interface ArcadeGame {
+  id: string;
+  title: string;
+  emoji?: string;
+  description?: string;
+  src?: string; // HTML file path relative to the site's games/ folder
+  url?: string; // external embed link
+  html?: string; // uploaded HTML (local admin games only)
+  cost: number; // vouchers per play
+  minutes?: number; // play time per voucher; unlimited when absent
+  theme?: ThemePack;
+  tags?: string[];
+  local?: boolean; // added in this browser's admin panel
+  builtIn?: boolean;
+}
+
 export interface DayNote {
   date: string; // YYYY-MM-DD
   note: string;
@@ -185,6 +224,14 @@ export interface Settings {
   lastLocalBackupAt?: string;
   dailyCapacityMin: number; // planner: minutes of homework you can do per day
   targetGrade: number; // grade calculator default target %
+  economyEnabled: boolean; // coins, shop, casino, arcade
+  casinoEnabled: boolean;
+  casinoBreakMin: number; // remind to take a homework break after N minutes of casino play (0 = off)
+  arcadeAdmin: boolean; // show the arcade admin panel in Settings
+  equippedTitle?: string; // shop cosmetic ids
+  equippedFrame?: string;
+  equippedConfetti?: string;
+  lastChipBonusDate?: string;
   onboarded: boolean;
   demoSeeded: boolean;
   lastFrogPromptDate?: string;
@@ -253,6 +300,10 @@ export const DEFAULT_SETTINGS: Settings = {
   localBackupEnabled: false,
   dailyCapacityMin: 180,
   targetGrade: 90,
+  economyEnabled: true,
+  casinoEnabled: true,
+  casinoBreakMin: 20,
+  arcadeAdmin: false,
   onboarded: false,
   demoSeeded: false,
 };
@@ -287,6 +338,8 @@ export interface ExportBundle {
   dayNotes: DayNote[];
   decks?: Deck[];
   cards?: Card[];
+  tombstones?: Tombstone[];
+  ledger?: LedgerEntry[];
   settings?: Partial<Settings>;
 }
 

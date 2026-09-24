@@ -1,5 +1,5 @@
 import { openDB, type DBSchema, type IDBPDatabase } from 'idb';
-import type { Card, Course, DayNote, Deck, Stats, Task, Template, Settings } from './types';
+import type { ArcadeGame, Card, Course, DayNote, Deck, LedgerEntry, Stats, Task, Template, Tombstone, Settings } from './types';
 import { DEFAULT_SETTINGS, DEFAULT_STATS } from './types';
 
 interface TodoDB extends DBSchema {
@@ -10,10 +10,12 @@ interface TodoDB extends DBSchema {
   dayNotes: { key: string; value: DayNote };
   decks: { key: string; value: Deck };
   cards: { key: string; value: Card; indexes: { byDeck: string } };
+  ledger: { key: string; value: LedgerEntry };
+  games: { key: string; value: ArcadeGame };
 }
 
 export const DB_NAME = 'homework-todo';
-export const DB_VERSION = 2;
+export const DB_VERSION = 3;
 const SETTINGS_KEY = 'homework-todo:settings';
 
 let dbPromise: Promise<IDBPDatabase<TodoDB>> | null = null;
@@ -35,6 +37,10 @@ export function getDB(): Promise<IDBPDatabase<TodoDB>> {
           db.createObjectStore('decks', { keyPath: 'id' });
           const cards = db.createObjectStore('cards', { keyPath: 'id' });
           cards.createIndex('byDeck', 'deckId');
+        }
+        if (oldVersion < 3) {
+          db.createObjectStore('ledger', { keyPath: 'id' });
+          db.createObjectStore('games', { keyPath: 'id' });
         }
       },
     });
@@ -137,6 +143,39 @@ export async function deleteCard(id: string): Promise<void> {
   await db.delete('cards', id);
 }
 
+// ---------- Economy ledger ----------
+export async function getLedger(): Promise<LedgerEntry[]> {
+  const db = await getDB();
+  return db.getAll('ledger');
+}
+export async function putLedgerEntries(entries: LedgerEntry[]): Promise<void> {
+  const db = await getDB();
+  const tx = db.transaction('ledger', 'readwrite');
+  await Promise.all([...entries.map((e) => tx.store.put(e)), tx.done]);
+}
+
+// ---------- Local arcade games (admin panel) ----------
+export async function getLocalGames(): Promise<ArcadeGame[]> {
+  const db = await getDB();
+  return db.getAll('games');
+}
+export async function putLocalGame(g: ArcadeGame): Promise<void> {
+  const db = await getDB();
+  await db.put('games', g);
+}
+export async function deleteLocalGame(id: string): Promise<void> {
+  const db = await getDB();
+  await db.delete('games', id);
+}
+
+// ---------- Tombstones (meta) ----------
+export async function getTombstones(): Promise<Tombstone[]> {
+  return ((await getMeta<Tombstone[]>('tombstones')) ?? []).filter(Boolean);
+}
+export async function putTombstones(list: Tombstone[]): Promise<void> {
+  await putMeta('tombstones', list);
+}
+
 // ---------- Day notes ----------
 export async function getAllDayNotes(): Promise<DayNote[]> {
   const db = await getDB();
@@ -173,8 +212,10 @@ export async function putMeta(key: string, value: unknown): Promise<void> {
 // ---------- Wipe ----------
 export async function clearAllData(): Promise<void> {
   const db = await getDB();
-  const tx = db.transaction(['tasks', 'courses', 'templates', 'meta', 'dayNotes', 'decks', 'cards'], 'readwrite');
+  const tx = db.transaction(['tasks', 'courses', 'templates', 'meta', 'dayNotes', 'decks', 'cards', 'ledger', 'games'], 'readwrite');
   await Promise.all([
+    tx.objectStore('ledger').clear(),
+    tx.objectStore('games').clear(),
     tx.objectStore('tasks').clear(),
     tx.objectStore('courses').clear(),
     tx.objectStore('templates').clear(),
@@ -195,9 +236,12 @@ export async function replaceAll(data: {
   dayNotes: DayNote[];
   decks?: Deck[];
   cards?: Card[];
+  tombstones?: Tombstone[];
+  ledger?: LedgerEntry[];
 }): Promise<void> {
   const db = await getDB();
-  const tx = db.transaction(['tasks', 'courses', 'templates', 'meta', 'dayNotes', 'decks', 'cards'], 'readwrite');
+  const tx = db.transaction(['tasks', 'courses', 'templates', 'meta', 'dayNotes', 'decks', 'cards', 'ledger'], 'readwrite');
+  const ledger = tx.objectStore('ledger');
   const decks = tx.objectStore('decks');
   const cards = tx.objectStore('cards');
   const tasks = tx.objectStore('tasks');
@@ -205,8 +249,10 @@ export async function replaceAll(data: {
   const templates = tx.objectStore('templates');
   const meta = tx.objectStore('meta');
   const notes = tx.objectStore('dayNotes');
-  await Promise.all([tasks.clear(), courses.clear(), templates.clear(), notes.clear(), decks.clear(), cards.clear()]);
+  await Promise.all([tasks.clear(), courses.clear(), templates.clear(), notes.clear(), decks.clear(), cards.clear(), ledger.clear()]);
   await Promise.all([
+    ...(data.ledger ?? []).map((e) => ledger.put(e)),
+    meta.put(data.tombstones ?? [], 'tombstones'),
     ...(data.decks ?? []).map((d) => decks.put(d)),
     ...(data.cards ?? []).map((c) => cards.put(c)),
     ...data.tasks.map((t) => tasks.put(t)),

@@ -1,7 +1,24 @@
-import type { ExportBundle, Task, Course, Template, Stats, DayNote, Deck, Card } from './types';
+import type { ExportBundle, Task, Course, Template, Stats, DayNote, Deck, Card, Tombstone, LedgerEntry } from './types';
 import { DEFAULT_STATS } from './types';
 
-export function buildBundle(data: { tasks: Task[]; courses: Course[]; templates: Template[]; stats: Stats; dayNotes: DayNote[]; decks?: Deck[]; cards?: Card[] }): ExportBundle {
+/** Tombstones older than this are forgotten (every device has synced by then). */
+export const TOMBSTONE_DAYS = 60;
+/** Deleted tasks stay restorable from the trash this long. */
+export const TRASH_DAYS = 30;
+
+export interface BundleData {
+  tasks: Task[];
+  courses: Course[];
+  templates: Template[];
+  stats: Stats;
+  dayNotes: DayNote[];
+  decks?: Deck[];
+  cards?: Card[];
+  tombstones?: Tombstone[];
+  ledger?: LedgerEntry[];
+}
+
+export function buildBundle(data: BundleData): ExportBundle {
   return {
     version: 1,
     exportedAt: new Date().toISOString(),
@@ -12,6 +29,8 @@ export function buildBundle(data: { tasks: Task[]; courses: Course[]; templates:
     dayNotes: data.dayNotes,
     decks: data.decks ?? [],
     cards: data.cards ?? [],
+    tombstones: data.tombstones ?? [],
+    ledger: data.ledger ?? [],
   };
 }
 
@@ -40,13 +59,19 @@ export function parseBundle(raw: unknown): ExportBundle {
   const tasks: Task[] = b.tasks.map((t) => normalizeTask(t as Partial<Task>));
   const courses: Course[] = b.courses
     .filter((c): c is Course => !!c && typeof (c as Course).id === 'string' && typeof (c as Course).name === 'string')
-    .map((c) => ({ id: c.id, name: c.name, color: c.color ?? '#6c5ce7', emoji: c.emoji, archived: !!c.archived, credits: c.credits, term: c.term, finalGrade: c.finalGrade, schoologyName: c.schoologyName }));
+    .map((c) => ({ id: c.id, name: c.name, color: c.color ?? '#6c5ce7', emoji: c.emoji, archived: !!c.archived, credits: c.credits, term: c.term, finalGrade: c.finalGrade, schoologyName: c.schoologyName, updatedAt: c.updatedAt }));
   const templates: Template[] = Array.isArray(b.templates) ? (b.templates as Template[]).filter((t) => t && t.id && t.name && t.task) : [];
   const stats: Stats = { ...structuredClone(DEFAULT_STATS), ...((b.stats as Partial<Stats>) ?? {}) };
   const dayNotes: DayNote[] = Array.isArray(b.dayNotes) ? (b.dayNotes as DayNote[]).filter((n) => n && n.date) : [];
   const decks: Deck[] = Array.isArray(b.decks) ? (b.decks as Deck[]).filter((d) => d && d.id && d.name) : [];
   const cards: Card[] = Array.isArray(b.cards) ? (b.cards as Card[]).filter((c) => c && c.id && c.deckId && typeof c.front === 'string') : [];
-  return { version: 1, exportedAt: b.exportedAt ?? new Date().toISOString(), tasks, courses, templates, stats, dayNotes, decks, cards, settings: b.settings };
+  const tombstones: Tombstone[] = Array.isArray(b.tombstones)
+    ? (b.tombstones as Tombstone[]).filter((t) => t && typeof t.id === 'string' && typeof t.kind === 'string' && typeof t.deletedAt === 'string')
+    : [];
+  const ledger: LedgerEntry[] = Array.isArray(b.ledger)
+    ? (b.ledger as LedgerEntry[]).filter((e) => e && typeof e.id === 'string' && typeof e.currency === 'string' && Number.isFinite(e.amount))
+    : [];
+  return { version: 1, exportedAt: b.exportedAt ?? new Date().toISOString(), tasks, courses, templates, stats, dayNotes, decks, cards, tombstones, ledger, settings: b.settings };
 }
 
 export function normalizeTask(t: Partial<Task>): Task {
@@ -86,8 +111,15 @@ export function normalizeTask(t: Partial<Task>): Task {
 }
 
 /** Merge two datasets, last-write-wins per task by updatedAt. Returns merged data and ids whose timestamps clashed within the same second. */
-export function mergeBundles(local: ExportBundle, remote: ExportBundle): { merged: ExportBundle; conflicts: string[] } {
+export function mergeBundles(local: ExportBundle, remote: ExportBundle, now: Date = new Date()): { merged: ExportBundle; conflicts: string[] } {
   const conflicts: string[] = [];
+  const tombstones = mergeTombstones(local.tombstones ?? [], remote.tombstones ?? [], now);
+  const deletedAt = new Map(tombstones.map((t) => [`${t.kind}:${t.id}`, t.deletedAt]));
+  /** An item survives unless it was deleted at or after its last edit. */
+  const alive = (kind: Tombstone['kind'], id: string, updatedAt: string | undefined) => {
+    const d = deletedAt.get(`${kind}:${id}`);
+    return !d || (!!updatedAt && updatedAt > d);
+  };
   const tasks = new Map<string, Task>();
   for (const t of local.tasks) tasks.set(t.id, t);
   for (const r of remote.tasks) {
@@ -103,7 +135,11 @@ export function mergeBundles(local: ExportBundle, remote: ExportBundle): { merge
     if (r.updatedAt > l.updatedAt) tasks.set(r.id, r);
   }
   const courses = new Map<string, Course>();
-  for (const c of [...remote.courses, ...local.courses]) courses.set(c.id, c); // local wins for courses
+  for (const c of [...remote.courses, ...local.courses]) {
+    const cur = courses.get(c.id);
+    // last-write-wins; on a tie (or courses from versions without updatedAt) local wins
+    if (!cur || (c.updatedAt ?? '') >= (cur.updatedAt ?? '')) courses.set(c.id, c);
+  }
   const templates = new Map<string, Template>();
   for (const t of [...remote.templates, ...local.templates]) templates.set(t.id, t);
   const notes = new Map<string, DayNote>();
@@ -125,18 +161,39 @@ export function mergeBundles(local: ExportBundle, remote: ExportBundle): { merge
   stats.completionsByDay = days;
   stats.badges = Array.from(new Set([...local.stats.badges, ...remote.stats.badges]));
   stats.cardsReviewed = Math.max(local.stats.cardsReviewed ?? 0, remote.stats.cardsReviewed ?? 0);
+  // ledger entries are immutable, so a union by id is exact
+  const ledger = new Map<string, LedgerEntry>();
+  for (const e of [...(remote.ledger ?? []), ...(local.ledger ?? [])]) ledger.set(e.id, e);
+  const liveDecks = [...decks.values()].filter((d) => alive('deck', d.id, d.updatedAt));
+  const deckIds = new Set(liveDecks.map((d) => d.id));
   return {
     merged: {
       version: 1,
-      exportedAt: new Date().toISOString(),
-      tasks: [...tasks.values()],
-      courses: [...courses.values()],
-      templates: [...templates.values()],
+      exportedAt: now.toISOString(),
+      tasks: [...tasks.values()].filter((t) => alive('task', t.id, t.updatedAt)),
+      courses: [...courses.values()].filter((c) => alive('course', c.id, c.updatedAt)),
+      templates: [...templates.values()].filter((t) => alive('template', t.id, undefined)),
       stats,
       dayNotes: [...notes.values()],
-      decks: [...decks.values()],
-      cards: [...cards.values()],
+      decks: liveDecks,
+      cards: [...cards.values()].filter((c) => deckIds.has(c.deckId) && alive('card', c.id, c.updatedAt)),
+      tombstones,
+      ledger: [...ledger.values()].sort((a, b) => (a.at < b.at ? -1 : a.at > b.at ? 1 : 0)),
     },
     conflicts,
   };
+}
+
+/** Union two tombstone lists (latest deletion wins), forgetting ones past TOMBSTONE_DAYS and trash snapshots past TRASH_DAYS. */
+export function mergeTombstones(a: Tombstone[], b: Tombstone[], now: Date = new Date()): Tombstone[] {
+  const forget = new Date(now.getTime() - TOMBSTONE_DAYS * 86_400_000).toISOString();
+  const trashCutoff = new Date(now.getTime() - TRASH_DAYS * 86_400_000).toISOString();
+  const out = new Map<string, Tombstone>();
+  for (const t of [...a, ...b]) {
+    if (t.deletedAt < forget) continue;
+    const key = `${t.kind}:${t.id}`;
+    const cur = out.get(key);
+    if (!cur || t.deletedAt > cur.deletedAt) out.set(key, { ...t, task: t.task ?? cur?.task });
+  }
+  return [...out.values()].map((t) => (t.task && t.deletedAt < trashCutoff ? { kind: t.kind, id: t.id, deletedAt: t.deletedAt } : t));
 }

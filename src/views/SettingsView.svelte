@@ -6,7 +6,7 @@
   import type { SoundPack, Theme } from '../lib/types';
   import { ACCENT_COLORS } from '../lib/colors';
   import { previewPack, playSound } from '../lib/sounds';
-  import { buildBundle, backupFilename, downloadJSON, parseBundle } from '../lib/backup';
+  import { backupFilename, downloadJSON, parseBundle } from '../lib/backup';
   import { sync, syncNow, checkToken, disconnect } from '../lib/gist.svelte';
   import { pwa, promptInstall } from '../lib/pwa.svelte';
   import { pomodoro } from '../lib/pomodoro.svelte';
@@ -88,7 +88,7 @@
   }
 
   function exportNow() {
-    downloadJSON(backupFilename(), buildBundle({ tasks: store.tasks, courses: store.courses, templates: store.templates, stats: store.stats, dayNotes: store.dayNotes, decks: store.decks, cards: store.cards }));
+    downloadJSON(backupFilename(), store.snapshotBundle());
     set('lastExportAt', new Date().toISOString());
     toasts.push({ message: 'Backup downloaded', kind: 'success', emoji: '💾' });
   }
@@ -100,12 +100,12 @@
       const text = await file.text();
       const bundle = parseBundle(JSON.parse(text));
       if (importMode === 'replace') {
-        const before = buildBundle({ tasks: $state.snapshot(store.tasks), courses: $state.snapshot(store.courses), templates: $state.snapshot(store.templates), stats: $state.snapshot(store.stats), dayNotes: $state.snapshot(store.dayNotes), decks: $state.snapshot(store.decks), cards: $state.snapshot(store.cards) });
+        const before = store.snapshotBundle();
         await store.loadBundle(bundle);
         undo.push({ label: `Imported ${bundle.tasks.length} tasks (replaced data)`, undo: () => void store.loadBundle(before) }, { kind: 'warn', timeout: 10000 });
       } else {
         const { mergeBundles } = await import('../lib/backup');
-        const local = buildBundle({ tasks: $state.snapshot(store.tasks), courses: $state.snapshot(store.courses), templates: $state.snapshot(store.templates), stats: $state.snapshot(store.stats), dayNotes: $state.snapshot(store.dayNotes), decks: $state.snapshot(store.decks), cards: $state.snapshot(store.cards) });
+        const local = store.snapshotBundle();
         const { merged } = mergeBundles(local, bundle);
         await store.loadBundle(merged);
         undo.push({ label: `Merged ${bundle.tasks.length} tasks from file`, undo: () => void store.loadBundle(local) }, { timeout: 10000 });
@@ -473,6 +473,25 @@
     </div>
   </section>
 
+  <section class="card">
+    <h2>Trash <span class="muted">{store.trash.length}</span></h2>
+    <p class="help">Deleted tasks stay here for 30 days. Deletions also sync, so a task deleted on one device is removed on the others.</p>
+    {#if store.trash.length}
+      <ul class="trash">
+        {#each store.trash.slice(0, 50) as t (t.id)}
+          <li>
+            <span class="t-title">{t.task.title}</span>
+            <span class="muted">{new Date(t.deletedAt).toLocaleDateString()}</span>
+            <button class="btn sm" onclick={() => store.restoreFromTrash(t.id)}>Restore</button>
+          </li>
+        {/each}
+      </ul>
+      <div class="btns"><button class="btn ghost sm" onclick={() => store.emptyTrash()}>Empty trash</button></div>
+    {:else}
+      <p class="muted">Nothing here.</p>
+    {/if}
+  </section>
+
   {#if s.collection.length}
     <section class="card">
       <h2>Collection <span class="muted">{s.collection.length}/{COLLECTIBLES.length}</span></h2>
@@ -497,6 +516,28 @@
 <style>
   section {
     margin-bottom: 12px;
+  }
+  .trash {
+    list-style: none;
+    margin: 0 0 8px;
+    padding: 0;
+    max-height: 260px;
+    overflow: auto;
+  }
+  .trash li {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 6px 0;
+    border-top: 1px solid var(--border);
+    font-size: 14px;
+  }
+  .t-title {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
   h2 {
     font-size: 15px;

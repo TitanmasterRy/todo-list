@@ -1,5 +1,5 @@
 // AI helper. Anthropic goes through the official SDK; every other provider speaks the OpenAI-compatible chat API.
-import Anthropic from '@anthropic-ai/sdk';
+import type Anthropic from '@anthropic-ai/sdk';
 import { store } from './store.svelte';
 import type { AiProvider, TaskType } from './types';
 import { chatOpenAICompatible, providerInfo, type ChatImage, type ChatRequest } from './ai-providers';
@@ -34,13 +34,21 @@ export function aiSupportsVision(): boolean {
   return m ? m.vision : p === 'custom' || p === 'ollama';
 }
 
-function anthropicClient(): Anthropic {
+// The SDK is loaded on first use so it stays out of the main bundle.
+let sdk: Promise<typeof import('@anthropic-ai/sdk')> | null = null;
+function loadSdk(): Promise<typeof import('@anthropic-ai/sdk')> {
+  return (sdk ??= import('@anthropic-ai/sdk'));
+}
+
+async function anthropicClient(): Promise<Anthropic> {
   const apiKey = currentKey('anthropic');
   if (!apiKey) throw new Error('Add an Anthropic API key in Settings → AI helper first.');
-  return new Anthropic({ apiKey, dangerouslyAllowBrowser: true });
+  const { default: AnthropicClient } = await loadSdk();
+  return new AnthropicClient({ apiKey, dangerouslyAllowBrowser: true });
 }
 
 async function askAnthropic(req: ChatRequest): Promise<string> {
+  const { default: SDK } = await loadSdk();
   try {
     const content: Anthropic.ContentBlockParam[] = [];
     for (const img of req.images ?? []) {
@@ -48,7 +56,7 @@ async function askAnthropic(req: ChatRequest): Promise<string> {
       if (m) content.push({ type: 'image', source: { type: 'base64', media_type: m[1] as 'image/jpeg' | 'image/png' | 'image/gif' | 'image/webp', data: m[2] } });
     }
     content.push({ type: 'text', text: req.user });
-    const res = await anthropicClient().messages.create({
+    const res = await (await anthropicClient()).messages.create({
       model: currentModel('anthropic'),
       max_tokens: req.maxTokens ?? 2048,
       system: req.system,
@@ -61,9 +69,9 @@ async function askAnthropic(req: ChatRequest): Promise<string> {
       .join('\n')
       .trim();
   } catch (e) {
-    if (e instanceof Anthropic.AuthenticationError) throw new Error('API key rejected. Check it in Settings → AI helper.');
-    if (e instanceof Anthropic.RateLimitError) throw new Error('Rate limited. Try again in a moment.');
-    if (e instanceof Anthropic.APIError) throw new Error(`API error ${e.status}: ${e.message}`);
+    if (e instanceof SDK.AuthenticationError) throw new Error('API key rejected. Check it in Settings → AI helper.');
+    if (e instanceof SDK.RateLimitError) throw new Error('Rate limited. Try again in a moment.');
+    if (e instanceof SDK.APIError) throw new Error(`API error ${e.status}: ${e.message}`);
     throw e;
   }
 }

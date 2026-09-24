@@ -7,7 +7,7 @@
   import { ui } from '../lib/ui.svelte';
   import { toasts } from '../lib/toast.svelte';
   import { formatMinutes, dueKey } from '../lib/dates';
-  import { buildBundle, backupFilename, downloadJSON } from '../lib/backup';
+  import { backupFilename, downloadJSON } from '../lib/backup';
   import WeeklyReview from './WeeklyReview.svelte';
   import SemesterSetup from './SemesterSetup.svelte';
 
@@ -47,7 +47,7 @@
             action: {
               label: 'Download',
               onClick: () => {
-                downloadJSON(backupFilename(), buildBundle({ tasks: store.tasks, courses: store.courses, templates: store.templates, stats: store.stats, dayNotes: store.dayNotes, decks: store.decks, cards: store.cards }));
+                downloadJSON(backupFilename(), store.snapshotBundle());
                 store.updateSettings({ lastExportAt: new Date().toISOString() });
               },
             },

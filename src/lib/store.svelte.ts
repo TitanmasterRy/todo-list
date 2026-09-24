@@ -1,5 +1,6 @@
 import * as db from './storage';
-import type { Card, Course, DayNote, Deck, Priority, Settings, Stats, Subtask, Task, Template } from './types';
+import type { Card, Course, DayNote, Deck, ExportBundle, LedgerEntry, Priority, Settings, Stats, Subtask, Task, Template, Tombstone, TombstoneKind } from './types';
+import { buildBundle, mergeTombstones, TRASH_DAYS, type BundleData } from './backup';
 import { DEFAULT_STATS } from './types';
 import { uid } from './id';
 import { addDaysKey, dueKey, isDateOnly, isDueToday, isOverdue, isoNow, nextWeekKey, thisWeekendKey, todayKey, daysAgoKey, startOfWeekKey as startOfWeekKeyFn } from './dates';
@@ -42,6 +43,8 @@ class Store {
   decks = $state<Deck[]>([]);
   cards = $state<Card[]>([]);
   dayNotes = $state<DayNote[]>([]);
+  tombstones = $state<Tombstone[]>([]);
+  ledger = $state<LedgerEntry[]>([]);
   stats = $state<Stats>(structuredClone(DEFAULT_STATS));
   settings = $state<Settings>(db.loadSettings());
   ready = $state(false);
@@ -99,7 +102,7 @@ class Store {
   // ---------- init ----------
   async init(): Promise<void> {
     try {
-      const [tasks, courses, templates, stats, notes, decks, cards] = await Promise.all([
+      const [tasks, courses, templates, stats, notes, decks, cards, tombstones, ledger] = await Promise.all([
         db.getAllTasks(),
         db.getAllCourses(),
         db.getAllTemplates(),
@@ -107,7 +110,12 @@ class Store {
         db.getAllDayNotes(),
         db.getAllDecks(),
         db.getAllCards(),
+        db.getTombstones(),
+        db.getLedger(),
       ]);
+      this.tombstones = mergeTombstones(tombstones, [], this.now);
+      if (this.tombstones.length !== tombstones.length) void db.putTombstones($state.snapshot(this.tombstones) as Tombstone[]);
+      this.ledger = ledger.sort((a, b) => (a.at < b.at ? -1 : a.at > b.at ? 1 : 0));
       this.tasks = tasks;
       this.courses = courses;
       this.templates = templates;
@@ -177,6 +185,91 @@ class Store {
     emit('changed', { reason: 'stats' });
   }
 
+  // ---------- deletions (tombstones + trash) ----------
+  /** Record deletions so sync removes them on other devices too. Task snapshots go to the trash. */
+  private bury(kind: TombstoneKind, ids: string[], snapshots: Task[] = []): void {
+    if (!ids.length) return;
+    const at = isoNow();
+    const snap = new Map(snapshots.map((t) => [t.id, t]));
+    const set = new Set(ids);
+    this.tombstones = [
+      ...this.tombstones.filter((t) => !(t.kind === kind && set.has(t.id))),
+      ...ids.map((id) => ({ kind, id, deletedAt: at, ...(snap.has(id) ? { task: snap.get(id) } : {}) })),
+    ];
+    this.persistTombstones();
+  }
+  /** Forget deletions (undo / restore). The restored item also gets a fresh updatedAt so it outranks the tombstone elsewhere. */
+  private unbury(kind: TombstoneKind, ids: string[]): void {
+    const set = new Set(ids);
+    const next = this.tombstones.filter((t) => !(t.kind === kind && set.has(t.id)));
+    if (next.length === this.tombstones.length) return;
+    this.tombstones = next;
+    this.persistTombstones();
+  }
+  private persistTombstones(): void {
+    db.putTombstones($state.snapshot(this.tombstones) as Tombstone[]).catch((e) => console.error('save failed', e));
+    emit('changed', { reason: 'tombstones' });
+  }
+
+  /** Deleted tasks still restorable, newest first. */
+  trash = $derived.by(() => {
+    const cutoff = new Date(this.now.getTime() - TRASH_DAYS * 86_400_000).toISOString();
+    return this.tombstones
+      .filter((t): t is Tombstone & { task: Task } => t.kind === 'task' && !!t.task && t.deletedAt >= cutoff)
+      .sort((a, b) => (a.deletedAt < b.deletedAt ? 1 : -1));
+  });
+
+  restoreFromTrash(id: string): void {
+    const t = this.trash.find((x) => x.id === id);
+    if (!t) return;
+    this.restoreTaskInternal(structuredClone($state.snapshot(t.task)) as Task);
+    toasts.push({ message: `Restored “${t.task.title}”`, kind: 'success' });
+  }
+
+  emptyTrash(): void {
+    this.tombstones = this.tombstones.map((t) => (t.task ? { kind: t.kind, id: t.id, deletedAt: t.deletedAt } : t));
+    this.persistTombstones();
+  }
+
+  // ---------- economy ledger ----------
+  /** Append ledger entries (earn / spend). Entries are never edited; reversals are new entries. */
+  addLedger(entries: Omit<LedgerEntry, 'id' | 'at'>[]): LedgerEntry[] {
+    const at = isoNow();
+    const made = entries.filter((e) => e.amount !== 0).map((e) => ({ ...e, id: uid('l'), at }));
+    if (!made.length) return [];
+    this.ledger = [...this.ledger, ...made];
+    db.putLedgerEntries(made).catch((e) => console.error('save failed', e));
+    emit('changed', { reason: 'ledger' });
+    return made;
+  }
+
+  /** Grant a streak freeze (shop). Returns false when already at the cap. */
+  addStreakFreeze(max: number): boolean {
+    if (this.stats.streak.freezes >= max) return false;
+    this.stats = { ...this.stats, streak: { ...this.stats.streak, freezes: this.stats.streak.freezes + 1 } };
+    this.persistStats();
+    return true;
+  }
+
+  // ---------- bundle ----------
+  /** Plain (non-reactive) copy of everything that export, backup and sync carry. */
+  snapshotBundle(): ExportBundle {
+    return buildBundle(this.snapshotData());
+  }
+  private snapshotData(): BundleData {
+    return {
+      tasks: $state.snapshot(this.tasks) as Task[],
+      courses: $state.snapshot(this.courses) as Course[],
+      templates: $state.snapshot(this.templates) as Template[],
+      stats: $state.snapshot(this.stats) as Stats,
+      dayNotes: $state.snapshot(this.dayNotes) as DayNote[],
+      decks: $state.snapshot(this.decks) as Deck[],
+      cards: $state.snapshot(this.cards) as Card[],
+      tombstones: $state.snapshot(this.tombstones) as Tombstone[],
+      ledger: $state.snapshot(this.ledger) as LedgerEntry[],
+    };
+  }
+
   // ---------- tasks ----------
   private nextOrder(): number {
     return this.tasks.reduce((m, t) => Math.max(m, t.order), 0) + 1;
@@ -237,6 +330,7 @@ class Store {
           const ids = new Set(created.map((t) => t.id));
           this.tasks = this.tasks.filter((t) => !ids.has(t.id));
           db.deleteTasks([...ids]).catch(() => {});
+          this.bury('task', [...ids]);
           emit('changed', { reason: 'tasks' });
         },
       });
@@ -244,13 +338,18 @@ class Store {
     return created;
   }
 
-  private removeTaskInternal(id: string): void {
+  private removeTaskInternal(id: string, toTrash = false): void {
+    const snap = toTrash ? this.tasks.find((t) => t.id === id) : undefined;
     this.tasks = this.tasks.filter((t) => t.id !== id);
     db.deleteTask(id).catch((e) => console.error(e));
+    this.bury('task', [id], snap ? [structuredClone($state.snapshot(snap)) as Task] : []);
     emit('changed', { reason: 'task' });
   }
 
   private restoreTaskInternal(task: Task): void {
+    // a fresh updatedAt makes the restored version win over older copies (and tombstones) on other devices
+    task = { ...task, updatedAt: isoNow() };
+    this.unbury('task', [task.id]);
     if (this.tasks.some((t) => t.id === task.id)) {
       this.tasks = this.tasks.map((t) => (t.id === task.id ? task : t));
     } else {
@@ -327,11 +426,16 @@ class Store {
       {
         label: `Completed “${task.title}”`,
         undo: () => {
-          this.tasks = this.tasks.filter((t) => !(spawned && t.id === spawned.id)).map((t) => (t.id === id ? prevTask : t));
-          if (spawned) db.deleteTask(spawned.id).catch(() => {});
+          // fresh updatedAt so sync treats the undo as the latest edit
+          const reopened = { ...prevTask, updatedAt: isoNow() };
+          this.tasks = this.tasks.filter((t) => !(spawned && t.id === spawned.id)).map((t) => (t.id === id ? reopened : t));
+          if (spawned) {
+            db.deleteTask(spawned.id).catch(() => {});
+            this.bury('task', [spawned.id]);
+          }
           this.stats = prevStats;
           this.combo = prevCombo;
-          this.persistTask(prevTask);
+          this.persistTask(reopened);
           this.persistStats();
           playSound('undo');
           emit('uncompleted', { task: prevTask });
@@ -419,7 +523,7 @@ class Store {
     if (task.externalId && !this.settings.schoologyIgnored.includes(task.externalId)) {
       this.updateSettings({ schoologyIgnored: [...this.settings.schoologyIgnored, task.externalId] });
     }
-    this.removeTaskInternal(id);
+    this.removeTaskInternal(id, true);
     if (this.selectedTaskId === id) this.selectedTaskId = null;
     if (this.focusTaskId === id) this.focusTaskId = null;
     undo.push({ label: `Deleted “${task.title}”`, undo: () => this.restoreTaskInternal(snapshot) }, { kind: 'warn' });
@@ -430,14 +534,18 @@ class Store {
     if (!snaps.length) return;
     this.tasks = this.tasks.filter((t) => !ids.includes(t.id));
     db.deleteTasks(ids).catch((e) => console.error(e));
+    this.bury('task', snaps.map((t) => t.id), snaps);
     emit('changed', { reason: 'tasks' });
     this.clearSelection();
     undo.push(
       {
         label: `Deleted ${snaps.length} tasks`,
         undo: () => {
-          this.tasks = [...this.tasks, ...snaps];
-          this.persistTasks(snaps);
+          const now = isoNow();
+          const back = snaps.map((t) => ({ ...t, updatedAt: now }));
+          this.unbury('task', back.map((t) => t.id));
+          this.tasks = [...this.tasks, ...back];
+          this.persistTasks(back);
         },
       },
       { kind: 'warn' },
@@ -457,9 +565,11 @@ class Store {
     undo.push({
       label,
       undo: () => {
-        const m = new Map(snaps.map((t) => [t.id, t]));
+        const now = isoNow();
+        const back = snaps.map((t) => ({ ...t, updatedAt: now }));
+        const m = new Map(back.map((t) => [t.id, t]));
         this.tasks = this.tasks.map((t) => m.get(t.id) ?? t);
-        this.persistTasks(snaps);
+        this.persistTasks(back);
       },
     });
   }
@@ -476,9 +586,11 @@ class Store {
     undo.push({
       label: `Tagged ${updated.length} tasks #${tag}`,
       undo: () => {
-        const m = new Map(snaps.map((t) => [t.id, t]));
+        const now = isoNow();
+        const back = snaps.map((t) => ({ ...t, updatedAt: now }));
+        const m = new Map(back.map((t) => [t.id, t]));
         this.tasks = this.tasks.map((t) => m.get(t.id) ?? t);
-        this.persistTasks(snaps);
+        this.persistTasks(back);
       },
     });
   }
@@ -532,9 +644,11 @@ class Store {
     undo.push({
       label: `Rolled ${updated.length} overdue to today`,
       undo: () => {
-        const m = new Map(snaps.map((t) => [t.id, t]));
+        const now = isoNow();
+        const back = snaps.map((t) => ({ ...t, updatedAt: now }));
+        const m = new Map(back.map((t) => [t.id, t]));
         this.tasks = this.tasks.map((t) => m.get(t.id) ?? t);
-        this.persistTasks(snaps);
+        this.persistTasks(back);
       },
     });
   }
@@ -639,7 +753,7 @@ class Store {
 
   // ---------- courses ----------
   addCourse(input: { name: string; color: string; emoji?: string }): Course {
-    const c: Course = { id: uid('c'), name: input.name.trim(), color: input.color, emoji: input.emoji, archived: false };
+    const c: Course = { id: uid('c'), name: input.name.trim(), color: input.color, emoji: input.emoji, archived: false, updatedAt: isoNow() };
     this.courses = [...this.courses, c];
     db.putCourse(c).catch((e) => console.error(e));
     emit('changed', { reason: 'course' });
@@ -648,7 +762,7 @@ class Store {
   updateCourse(id: string, patch: Partial<Course>): void {
     const prev = this.courses.find((c) => c.id === id);
     if (!prev) return;
-    const next = { ...prev, ...patch };
+    const next = { ...prev, ...patch, updatedAt: isoNow() };
     this.courses = this.courses.map((c) => (c.id === id ? next : c));
     db.putCourse(next).catch((e) => console.error(e));
     emit('changed', { reason: 'course' });
@@ -659,6 +773,7 @@ class Store {
     const affected = this.tasks.filter((t) => t.courseId === id).map((t) => structuredClone($state.snapshot(t)) as Task);
     this.courses = this.courses.filter((c) => c.id !== id);
     db.deleteCourse(id).catch((e) => console.error(e));
+    this.bury('course', [id]);
     const now = isoNow();
     const updated = affected.map((t) => ({ ...t, courseId: undefined, updatedAt: now }));
     const map = new Map(updated.map((t) => [t.id, t]));
@@ -670,11 +785,14 @@ class Store {
       {
         label: `Deleted course “${course.name}”`,
         undo: () => {
-          this.courses = [...this.courses, course];
-          db.putCourse(course).catch(() => {});
-          const m = new Map(affected.map((t) => [t.id, t]));
+          const back = { ...course, updatedAt: isoNow() };
+          this.unbury('course', [id]);
+          this.courses = [...this.courses, back];
+          db.putCourse(back).catch(() => {});
+          const restored = affected.map((t) => ({ ...t, updatedAt: back.updatedAt! }));
+          const m = new Map(restored.map((t) => [t.id, t]));
           this.tasks = this.tasks.map((t) => m.get(t.id) ?? t);
-          if (affected.length) this.persistTasks(affected);
+          if (restored.length) this.persistTasks(restored);
         },
       },
       { kind: 'warn' },
@@ -703,6 +821,9 @@ class Store {
         subtasks: task.subtasks.map((s) => s.title),
       },
     };
+    const replaced = this.templates.filter((x) => x.name === t.name);
+    for (const r of replaced) db.deleteTemplate(r.id).catch(() => {});
+    this.bury('template', replaced.map((r) => r.id));
     this.templates = [...this.templates.filter((x) => x.name !== t.name), t];
     db.putTemplate(t).catch((e) => console.error(e));
     emit('changed', { reason: 'template' });
@@ -713,9 +834,11 @@ class Store {
     if (!t) return;
     this.templates = this.templates.filter((x) => x.id !== id);
     db.deleteTemplate(id).catch((e) => console.error(e));
+    this.bury('template', [id]);
     undo.push({
       label: `Deleted template @${t.name}`,
       undo: () => {
+        this.unbury('template', [id]);
         this.templates = [...this.templates, t];
         db.putTemplate(t).catch(() => {});
       },
@@ -770,15 +893,20 @@ class Store {
     this.decks = this.decks.filter((d) => d.id !== id);
     this.cards = this.cards.filter((c) => c.deckId !== id);
     db.deleteDeck(id).catch((e) => console.error(e));
+    this.bury('deck', [id]);
     emit('changed', { reason: 'deck' });
     undo.push(
       {
         label: `Deleted deck “${deck.name}”`,
         undo: () => {
-          this.decks = [...this.decks, deck];
-          this.cards = [...this.cards, ...cards];
-          db.putDeck(deck).catch(() => {});
-          this.persistCards(cards);
+          const now = isoNow();
+          const d = { ...deck, updatedAt: now };
+          const back = cards.map((c) => ({ ...c, updatedAt: now }));
+          this.unbury('deck', [id]);
+          this.decks = [...this.decks, d];
+          this.cards = [...this.cards, ...back];
+          db.putDeck(d).catch(() => {});
+          this.persistCards(back);
         },
       },
       { kind: 'warn' },
@@ -808,11 +936,14 @@ class Store {
     const snap = structuredClone($state.snapshot(card)) as Card;
     this.cards = this.cards.filter((c) => c.id !== id);
     db.deleteCard(id).catch((e) => console.error(e));
+    this.bury('card', [id]);
     undo.push({
       label: 'Deleted card',
       undo: () => {
-        this.cards = [...this.cards, snap];
-        this.persistCards([snap]);
+        const back = { ...snap, updatedAt: isoNow() };
+        this.unbury('card', [id]);
+        this.cards = [...this.cards, back];
+        this.persistCards([back]);
       },
     });
   }
@@ -942,6 +1073,8 @@ class Store {
     this.decks = [];
     this.cards = [];
     this.dayNotes = [];
+    this.tombstones = [];
+    this.ledger = [];
     this.stats = structuredClone(DEFAULT_STATS);
     this.settings = { ...db.loadSettings(), demoSeeded: true, onboarded: true };
     db.saveSettings(this.settings);
@@ -950,7 +1083,9 @@ class Store {
   }
 
   /** Load a full dataset (import / sync). */
-  async loadBundle(data: { tasks: Task[]; courses: Course[]; templates: Template[]; stats: Stats; dayNotes: DayNote[]; decks?: Deck[]; cards?: Card[] }): Promise<void> {
+  async loadBundle(data: BundleData): Promise<void> {
+    this.tombstones = data.tombstones ?? [];
+    this.ledger = data.ledger ?? [];
     this.tasks = data.tasks;
     this.courses = data.courses;
     this.templates = data.templates;
@@ -966,6 +1101,8 @@ class Store {
       dayNotes: data.dayNotes,
       decks: data.decks ?? [],
       cards: data.cards ?? [],
+      tombstones: data.tombstones ?? [],
+      ledger: data.ledger ?? [],
     });
   }
 

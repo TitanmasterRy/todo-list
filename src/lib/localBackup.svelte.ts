@@ -1,7 +1,6 @@
 // "Never lose data": persistent storage + automatic JSON backups into a folder the user picks (File System Access API).
 import { openDB } from 'idb';
 import { store } from './store.svelte';
-import { buildBundle } from './backup';
 import { on } from './events';
 
 type DirHandle = FileSystemDirectoryHandle;
@@ -84,15 +83,7 @@ async function ensurePermission(): Promise<boolean> {
 /** Write homework-todo-backup.json (and a dated copy once per day) into the chosen folder. */
 export async function writeBackup(): Promise<boolean> {
   if (!handle || !(await ensurePermission())) return false;
-  const bundle = buildBundle({
-    tasks: $state.snapshot(store.tasks),
-    courses: $state.snapshot(store.courses),
-    templates: $state.snapshot(store.templates),
-    stats: $state.snapshot(store.stats),
-    dayNotes: $state.snapshot(store.dayNotes),
-    decks: $state.snapshot(store.decks),
-    cards: $state.snapshot(store.cards),
-  });
+  const bundle = store.snapshotBundle();
   const json = JSON.stringify(bundle, null, 2);
   const write = async (name: string) => {
     const f = await handle!.getFileHandle(name, { create: true });
