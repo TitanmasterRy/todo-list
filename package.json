@@ -10,7 +10,12 @@
     "check": "svelte-check --tsconfig ./tsconfig.json",
     "test": "vitest run",
     "test:watch": "vitest",
-    "build:lite": "vite build --config vite.lite.config.ts && node scripts/fix-lite.mjs"
+    "build:lite": "vite build --config vite.lite.config.ts && node scripts/fix-lite.mjs",
+    "deploy:vercel": "npx vercel --prod",
+    "deploy:netlify": "npm run build && npx netlify-cli deploy --prod --dir dist",
+    "deploy:cloudflare": "npm run build && npx wrangler pages deploy dist --project-name homework-todo",
+    "deploy:surge": "npm run build && npx surge dist",
+    "deploy:firebase": "npm run build && npx firebase-tools deploy --only hosting"
   },
   "devDependencies": {
     "@sveltejs/vite-plugin-svelte": "^7.3.0",

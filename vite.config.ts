@@ -2,14 +2,25 @@ import { defineConfig } from 'vitest/config';
 import { svelte } from '@sveltejs/vite-plugin-svelte';
 import { VitePWA } from 'vite-plugin-pwa';
 
-// GitHub Pages serves project sites from /<repo>/. Derive the base from the
-// repository name in CI (GITHUB_REPOSITORY = "owner/repo") so a rename keeps
-// working; default to the current repo name for local production builds.
+// Where the site is served from. Most hosts (Vercel, Netlify, Render, Replit,
+// Cloudflare Pages, Firebase, Surge, Docker) serve from the domain root: "/".
+// GitHub Pages serves project sites from /<repo>/; the Pages workflow sets
+// GITHUB_PAGES=true and the base is derived from the repository name so a
+// rename keeps working. VITE_BASE overrides both (e.g. a custom sub-path).
 const repoName = process.env.GITHUB_REPOSITORY?.split('/')[1] ?? 'todo-list';
-const base = process.env.VITE_BASE ?? (process.env.NODE_ENV === 'production' ? `/${repoName}/` : '/');
+const base = process.env.VITE_BASE ?? (process.env.GITHUB_PAGES === 'true' ? `/${repoName}/` : '/');
 
 export default defineConfig({
   base,
+  server: {
+    // Replit, Codespaces and Gitpod proxy the dev server through their own hostnames.
+    host: process.env.REPL_ID || process.env.CODESPACES || process.env.GITPOD_WORKSPACE_ID ? true : undefined,
+    allowedHosts: process.env.REPL_ID || process.env.CODESPACES || process.env.GITPOD_WORKSPACE_ID ? true : undefined,
+  },
+  preview: {
+    host: process.env.REPL_ID ? true : undefined,
+    allowedHosts: process.env.REPL_ID ? true : undefined,
+  },
   plugins: [
     svelte(),
     VitePWA({

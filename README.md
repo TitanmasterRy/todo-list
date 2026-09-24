@@ -12,16 +12,25 @@ npm run dev        # http://localhost:5173
 npm test           # Vitest: data layer, parser, gamification, recurrence, backup merge, markdown
 npm run check      # svelte-check (type errors)
 npm run build      # type check + production build into dist/
-npm run preview    # serve dist/ at http://localhost:4173/todo-list/
+npm run preview    # serve dist/ at http://localhost:4173/
 ```
 
 Requires Node 22+. The app starts empty; use **Semester setup** (Courses view or the onboarding tour) to add your courses quickly.
 
-## Deploying to GitHub Pages
+## Deploying
+
+One-click deploys for Vercel, Netlify, Render and Replit, plus Cloudflare Pages, Firebase, Surge and Docker (Fly.io, Railway, Koyeb): see **[DEPLOY.md](DEPLOY.md)**.
+
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/TitanmasterRy/todo-list)
+[![Deploy to Netlify](https://www.netlify.com/img/deploy/button.svg)](https://app.netlify.com/start/deploy?repository=https://github.com/TitanmasterRy/todo-list)
+[![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/TitanmasterRy/todo-list)
+[![Run on Replit](https://replit.com/badge/github/TitanmasterRy/todo-list)](https://replit.com/github/TitanmasterRy/todo-list)
+
+### GitHub Pages
 
 1. In the repository settings, under **Pages**, set **Source** to **GitHub Actions** (one time).
 2. Push to `main`. The workflow in `.github/workflows/deploy.yml` runs the tests, builds, and publishes `dist/` to Pages. It can also be run by hand from the Actions tab (`workflow_dispatch`).
-3. The site is served at `https://<owner>.github.io/<repo>/`. Vite's `base` is derived from the repository name in CI (`GITHUB_REPOSITORY`), so renaming the repo needs no code change. Set `VITE_BASE` to override (for example `/` for a user site or custom domain).
+3. The site is served at `https://<owner>.github.io/<repo>/`. The workflow sets `GITHUB_PAGES=true`, so Vite's `base` becomes `/<repo>/` (derived from `GITHUB_REPOSITORY`; renaming the repo needs no code change). Every other host uses `/`. Set `VITE_BASE` to override (for example `/` for a user site or custom domain).
 
 The app is a PWA: after the first visit it loads offline, and browsers offer **Install** (also available as a button in Settings). When a new version is deployed, an "Update available" toast offers a reload.
 

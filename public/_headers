@@ -1,0 +1,8 @@
+# Used by Netlify and Cloudflare Pages. The service worker must never be cached,
+# otherwise updates take a day to reach people. Hashed assets can be cached forever.
+/sw.js
+  Cache-Control: no-cache
+/assets/*
+  Cache-Control: public, max-age=31536000, immutable
+/games/*
+  X-Content-Type-Options: nosniff
