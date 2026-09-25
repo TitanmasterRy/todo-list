@@ -18,6 +18,7 @@
     | 'week'
     | 'practice'
     | 'elements'
+    | 'canvas'
     | 'planner'
     | 'calendar'
     | 'reading'
@@ -69,6 +70,7 @@
     { id: 'elements', label: 'Periodic table', icon: '⚗️', group: 'compute' },
     { id: 'code', label: 'Code editor', icon: '💻', group: 'compute' },
     { id: 'google', label: 'Google (Gmail, Classroom, Calendar, Drive)', icon: '🟢', group: 'connect' },
+    { id: 'canvas', label: 'Canvas', icon: '🎨', group: 'connect' },
     { id: 'class', label: 'Class mode', icon: '🧑‍🏫', group: 'connect' },
   ];
   const groups: { id: Group; label: string }[] = [
@@ -129,6 +131,12 @@
     {/await}
   {:else if tab === 'timetable'}
     {#await import('../components/tools/TimetableTool.svelte')}
+      <div class="card muted">Loading…</div>
+    {:then m}
+      <m.default />
+    {/await}
+  {:else if tab === 'canvas'}
+    {#await import('../components/tools/CanvasTool.svelte')}
       <div class="card muted">Loading…</div>
     {:then m}
       <m.default />

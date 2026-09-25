@@ -46,6 +46,8 @@
       startSync();
       void startAccount();
       startSchoologySync();
+      // Canvas feed sync (its code loads only when a feed is connected)
+      if (hasSecret('canvasFeedUrl')) void import('./lib/canvasSync.svelte').then((m) => m.startCanvasSync());
       startReminders();
       void startLocalBackup();
       startSocial();

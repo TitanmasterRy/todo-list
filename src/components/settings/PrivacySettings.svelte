@@ -15,6 +15,7 @@
     gistToken: 'GitHub token',
     aiApiKey: 'Anthropic key',
     schoologyFeedUrl: 'Schoology feed URL',
+    canvasFeedUrl: 'Canvas feed URL',
     schoologyKey: 'Schoology API key',
     schoologySecret: 'Schoology API secret',
     spotifyRefreshToken: 'Spotify sign-in',

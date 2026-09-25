@@ -3,7 +3,7 @@
 import type { AiProvider, Settings } from './types';
 
 /** String settings that are credentials (or, for the Schoology feed URL, contain a private token). */
-export const SECRET_FIELDS = ['gistToken', 'aiApiKey', 'schoologyFeedUrl', 'schoologyKey', 'schoologySecret', 'spotifyRefreshToken', 'syncPassphrase'] as const;
+export const SECRET_FIELDS = ['gistToken', 'aiApiKey', 'schoologyFeedUrl', 'canvasFeedUrl', 'schoologyKey', 'schoologySecret', 'spotifyRefreshToken', 'syncPassphrase'] as const;
 export type SecretField = (typeof SECRET_FIELDS)[number];
 export type SecretSlot = SecretField | `aiKeys.${AiProvider}`;
 

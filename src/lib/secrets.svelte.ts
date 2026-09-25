@@ -227,7 +227,7 @@ export function forgetVault(): void {
 }
 
 /** Slots that background work (sync on load, Schoology refresh, Spotify) needs. */
-const BACKGROUND: SecretSlot[] = ['gistToken', 'syncPassphrase', 'schoologyFeedUrl', 'schoologyKey', 'spotifyRefreshToken'];
+const BACKGROUND: SecretSlot[] = ['gistToken', 'syncPassphrase', 'schoologyFeedUrl', 'canvasFeedUrl', 'schoologyKey', 'spotifyRefreshToken'];
 
 /**
  * Called once after startup. The less annoying option: ask right away only when something that runs in the

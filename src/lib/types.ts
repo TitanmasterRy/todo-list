@@ -62,7 +62,7 @@ export interface Task {
   frogDate?: string; // YYYY-MM-DD the frog pick applies to
   archived?: boolean; // archived completed tasks (kept for stats)
   templateId?: string;
-  source?: 'schoology' | 'gmail' | 'classroom' | 'scan' | 'class'; // synced/imported from elsewhere ('class': a teacher's class list)
+  source?: 'schoology' | 'gmail' | 'classroom' | 'scan' | 'class' | 'canvas'; // synced/imported from elsewhere ('class': a teacher's class list)
   externalId?: string; // stable id in the external system
   url?: string; // link back to the assignment
   syncedAt?: string;
@@ -240,6 +240,9 @@ export interface Settings {
   archiveAfterDays: number; // 0 disables
   autoDescribe: boolean; // fill notes/subtasks/estimate for new tasks
   schoologyFeedUrl: string;
+  canvasFeedUrl: string; // Canvas → Calendar → Calendar Feed (private link; kept behind the key lock)
+  canvasIncludeEvents?: boolean; // also add calendar events, not just assignments
+  lastCanvasSync?: string;
   schoologyProxy: string; // optional CORS proxy prefix, e.g. https://my-worker.example.workers.dev/?url=
   schoologyAutoCreateCourses: boolean;
   schoologyIgnored: string[]; // externalIds deleted by the user
@@ -332,6 +335,7 @@ export const DEFAULT_SETTINGS: Settings = {
   archiveAfterDays: 90,
   autoDescribe: true,
   schoologyFeedUrl: '',
+  canvasFeedUrl: '',
   schoologyProxy: '',
   schoologyAutoCreateCourses: true,
   schoologyIgnored: [],

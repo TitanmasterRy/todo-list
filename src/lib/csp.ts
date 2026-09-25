@@ -22,6 +22,7 @@ export const CONNECT_HOSTS: Record<string, string[]> = {
   google: ['https://www.googleapis.com', 'https://gmail.googleapis.com', 'https://classroom.googleapis.com', 'https://accounts.google.com'],
   // calendar feeds and the REST API, directly or through the user's Cloudflare Worker relay
   schoology: ['https://*.schoology.com', 'https://*.workers.dev'],
+  canvas: ['https://*.instructure.com'],
   spotify: ['https://accounts.spotify.com', 'https://api.spotify.com'],
   // citation lookups: DOI and ISBN
   citations: ['https://api.crossref.org', 'https://openlibrary.org'],

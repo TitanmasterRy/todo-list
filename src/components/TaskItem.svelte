@@ -185,6 +185,9 @@
               >🔄 Schoology ↗</a
             >{:else}<span class="chip synced" title="Synced from Schoology">🔄</span>{/if}
         {/if}
+        {#if task.source === 'canvas' && task.url}
+          <a class="chip synced" href={task.url} target="_blank" rel="noopener noreferrer" title="Open in Canvas" onclick={(e) => e.stopPropagation()}>🎨 Canvas ↗</a>
+        {/if}
         {#if typeof task.score === 'number'}
           <span class="chip score" class:aced={task.score >= 95}>{task.score}%</span>
         {/if}

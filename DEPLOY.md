@@ -79,6 +79,7 @@ Study rooms, friend codes and class lists work with no server at all. With accou
 `docs/cors-proxy-worker.js` is a Cloudflare Worker that forwards only to schoology.com. Once it works, lock it to your site and rate-limit it so a leaked URL can't be used by others:
 
 1. Worker → **Settings → Variables and Secrets** → add `ALLOWED_ORIGINS` = your site's origin, e.g. `https://my-homework.vercel.app` (comma-separate several; include `http://localhost:5173` if you test locally). Requests from any other site (and requests with no `Origin`) get `403`.
+   Optional: `EXTRA_FEED_HOSTS` = extra hosts allowed for calendar feeds, for schools that run Canvas on their own domain (e.g. `canvas.myschool.edu`). `*.instructure.com` Canvas feeds work without it.
 2. Optional: `RATE_LIMIT_PER_MIN` (default `60` requests per minute per visitor IP; `0` turns it off). The built-in limiter keeps counts in each Worker instance's memory, so it's a per-location cap, not an exact global one.
 3. For an exact limit, add Cloudflare's rate-limiting binding named `RATE_LIMITER` and the Worker uses it instead. With wrangler:
    ```toml

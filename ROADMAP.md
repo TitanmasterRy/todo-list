@@ -75,7 +75,8 @@ Everything we could improve or add to Homework To-Do, grouped by area. Checked i
 
 ## 🎓 School features
 
-- [ ] Canvas and Microsoft Teams Assignments integrations.
+- [x] Canvas integration. (Tools → Connect → Canvas: the Calendar Feed link, synced like Schoology.)
+- [ ] Microsoft Teams Assignments integration (Teams has no assignment feed; needs a Microsoft Graph app).
 - [x] Class timetable (periods, rooms) with "what's next" on Today. (Tools → Timetable; also "Next class" as a due date.)
 - [x] Bell schedule and A/B day rotations.
 - [x] Exam prep plans: spaced study sessions leading to an exam, tied to a notecard deck. (Plan it out → Exam prep, with a Study button per session.)

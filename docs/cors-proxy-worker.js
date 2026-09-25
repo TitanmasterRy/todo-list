@@ -1,18 +1,29 @@
-// CORS proxy for Schoology, deployable as a Cloudflare Worker (free tier).
+// CORS proxy for Schoology (and Canvas calendar feeds), deployable as a Cloudflare Worker (free tier).
 // 1. https://dash.cloudflare.com → Workers & Pages → Create → paste this file → Deploy.
 // 2. Your prefix is https://<worker-name>.<account>.workers.dev/?url=
 // 3. In the app: Schoology → Setup → "CORS proxy prefix".
-// It only forwards to *.schoology.com (calendar feeds and the REST API), GET only, and passes
+// It only forwards to *.schoology.com (calendar feeds and the REST API) and Canvas calendar feeds (*.instructure.com,
+// plus any hosts in EXTRA_FEED_HOSTS for schools on their own domain), GET only, and passes
 // the OAuth Authorization header through untouched. Keys never leave your browser except to Schoology.
 //
 // Locking it down (Settings → Variables and Secrets on the Worker; see DEPLOY.md):
 //   ALLOWED_ORIGINS    comma-separated sites allowed to use the relay, e.g. "https://my-homework.vercel.app".
 //                      Other sites get 403. Unset means any site (fine for trying it out, not for sharing the URL).
 //   RATE_LIMIT_PER_MIN requests per minute per visitor IP (default 60; 0 turns the limit off).
+//   EXTRA_FEED_HOSTS   comma-separated extra hosts allowed for calendar feeds only, e.g. "canvas.myschool.edu".
 //   RATE_LIMITER       optional Cloudflare rate-limiting binding (wrangler.toml [[ratelimits]], see DEPLOY.md);
 //                      when present it's used instead of the built-in per-isolate limiter.
 
 const ALLOWED_HOSTS = /(^|\.)schoology\.com$/i;
+const CANVAS_HOSTS = /(^|\.)instructure\.com$/i;
+
+/** Hosts allowed for calendar feeds only (Canvas on a school's own domain). */
+export function extraFeedHosts(env) {
+  return String(env?.EXTRA_FEED_HOSTS ?? '')
+    .split(',')
+    .map((s) => s.trim().toLowerCase())
+    .filter(Boolean);
+}
 const DEFAULT_PER_MIN = 60;
 
 // In-memory token buckets, one per IP. Each Worker isolate keeps its own, so this is a per-location cap rather
@@ -83,9 +94,11 @@ export default {
     } catch {
       return new Response('Bad url', { status: 400, headers: cors });
     }
-    if (u.protocol !== 'https:' || !ALLOWED_HOSTS.test(u.hostname)) return new Response('Only schoology.com is allowed', { status: 403, headers: cors });
+    const schoology = ALLOWED_HOSTS.test(u.hostname);
+    const canvas = CANVAS_HOSTS.test(u.hostname) || extraFeedHosts(env).includes(u.hostname.toLowerCase());
+    if (u.protocol !== 'https:' || (!schoology && !canvas)) return new Response('Only schoology.com and Canvas calendar feeds are allowed', { status: 403, headers: cors });
     const isApi = u.hostname === 'api.schoology.com';
-    const isFeed = /ical|\.ics$/i.test(u.pathname);
+    const isFeed = schoology ? /ical|\.ics$/i.test(u.pathname) : /^\/feeds\/calendars\/[\w.-]+\.ics$/i.test(u.pathname);
     if (!isApi && !isFeed) return new Response('Only calendar feeds and the API are allowed', { status: 403, headers: cors });
     const headers = { 'User-Agent': 'homework-todo-sync', Accept: isApi ? 'application/json' : 'text/calendar' };
     const auth = request.headers.get('X-Schoology-Authorization') ?? request.headers.get('Authorization');

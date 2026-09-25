@@ -44,6 +44,16 @@ describe('CORS relay worker', () => {
     expect((await worker.fetch(req('https://a.example', 'https://app.schoology.com/home'), {})).status).toBe(403);
   });
 
+  it("forwards Canvas calendar feeds, including a school's own domain when listed", async () => {
+    const canvas = 'https://myschool.instructure.com/feeds/calendars/user_AbC123.ics';
+    expect((await worker.fetch(req('https://a.example', canvas), {})).status).toBe(200);
+    // only the feed path, nothing else on Canvas
+    expect((await worker.fetch(req('https://a.example', 'https://myschool.instructure.com/api/v1/courses'), {})).status).toBe(403);
+    const own = 'https://canvas.myschool.edu/feeds/calendars/user_AbC123.ics';
+    expect((await worker.fetch(req('https://a.example', own), {})).status).toBe(403);
+    expect((await worker.fetch(req('https://a.example', own), { EXTRA_FEED_HOSTS: 'canvas.myschool.edu' })).status).toBe(200);
+  });
+
   it('rate-limits each IP', async () => {
     const env = { RATE_LIMIT_PER_MIN: '3' };
     const codes: number[] = [];
