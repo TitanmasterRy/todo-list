@@ -1,11 +1,175 @@
 {
   "games": [
-    { "id": "snake", "title": "Snake", "emoji": "🐍", "description": "Arcade classic. Eat, grow, don't bite yourself.", "src": "snake.html", "cost": 1, "minutes": 10, "theme": "arcade", "tags": ["arcade"], "builtIn": true },
-    { "id": "2048", "title": "2048", "emoji": "🔢", "description": "Slide and merge tiles to reach 2048.", "src": "2048.html", "cost": 1, "minutes": 15, "theme": "sleek", "tags": ["puzzle"], "builtIn": true },
-    { "id": "memory", "title": "Memory match", "emoji": "🐰", "description": "Flip cards and find the animal pairs.", "src": "memory.html", "cost": 1, "minutes": 10, "theme": "cute", "tags": ["memory"], "builtIn": true },
-    { "id": "minesweeper", "title": "Minesweeper", "emoji": "💣", "description": "Clear the field without hitting a mine.", "src": "minesweeper.html", "cost": 1, "minutes": 15, "theme": "classic", "tags": ["puzzle"], "builtIn": true },
-    { "id": "catcher", "title": "Leaf catcher", "emoji": "🍃", "description": "Catch leaves and fruit, dodge the bugs.", "src": "catcher.html", "cost": 1, "minutes": 10, "theme": "nature", "tags": ["arcade"], "builtIn": true },
-    { "id": "asteroids", "title": "Asteroids", "emoji": "🚀", "description": "Blast space rocks into smaller space rocks.", "src": "asteroids.html", "cost": 2, "minutes": 10, "theme": "space", "tags": ["arcade"], "builtIn": true },
-    { "id": "wordsearch", "title": "Word search", "emoji": "✏️", "description": "Find the hidden words. Uses words from your notecards when it can.", "src": "wordsearch.html", "cost": 1, "minutes": 15, "theme": "paper", "tags": ["words", "study"], "builtIn": true }
+    {
+      "id": "snake",
+      "title": "Snake",
+      "emoji": "🐍",
+      "description": "Arcade classic. Eat, grow, don't bite yourself.",
+      "src": "snake.html",
+      "cost": 1,
+      "minutes": 10,
+      "theme": "arcade",
+      "tags": [
+        "arcade"
+      ],
+      "builtIn": true
+    },
+    {
+      "id": "2048",
+      "title": "2048",
+      "emoji": "🔢",
+      "description": "Slide and merge tiles to reach 2048.",
+      "src": "2048.html",
+      "cost": 1,
+      "minutes": 15,
+      "theme": "sleek",
+      "tags": [
+        "puzzle"
+      ],
+      "builtIn": true
+    },
+    {
+      "id": "memory",
+      "title": "Memory match",
+      "emoji": "🐰",
+      "description": "Flip cards and find the animal pairs.",
+      "src": "memory.html",
+      "cost": 1,
+      "minutes": 10,
+      "theme": "cute",
+      "tags": [
+        "memory"
+      ],
+      "builtIn": true
+    },
+    {
+      "id": "minesweeper",
+      "title": "Minesweeper",
+      "emoji": "💣",
+      "description": "Clear the field without hitting a mine.",
+      "src": "minesweeper.html",
+      "cost": 1,
+      "minutes": 15,
+      "theme": "classic",
+      "tags": [
+        "puzzle"
+      ],
+      "builtIn": true
+    },
+    {
+      "id": "catcher",
+      "title": "Leaf catcher",
+      "emoji": "🍃",
+      "description": "Catch leaves and fruit, dodge the bugs.",
+      "src": "catcher.html",
+      "cost": 1,
+      "minutes": 10,
+      "theme": "nature",
+      "tags": [
+        "arcade"
+      ],
+      "builtIn": true
+    },
+    {
+      "id": "asteroids",
+      "title": "Asteroids",
+      "emoji": "🚀",
+      "description": "Blast space rocks into smaller space rocks.",
+      "src": "asteroids.html",
+      "cost": 2,
+      "minutes": 10,
+      "theme": "space",
+      "tags": [
+        "arcade"
+      ],
+      "builtIn": true
+    },
+    {
+      "id": "wordsearch",
+      "title": "Word search",
+      "emoji": "✏️",
+      "description": "Find the hidden words. Uses words from your notecards when it can.",
+      "src": "wordsearch.html",
+      "cost": 1,
+      "minutes": 15,
+      "theme": "paper",
+      "tags": [
+        "words",
+        "study"
+      ],
+      "builtIn": true
+    },
+    {
+      "id": "breakout",
+      "title": "Breakout",
+      "emoji": "🧱",
+      "description": "Bounce the ball, break every brick.",
+      "src": "breakout.html",
+      "cost": 1,
+      "minutes": 10,
+      "theme": "arcade",
+      "tags": [
+        "arcade"
+      ],
+      "builtIn": true
+    },
+    {
+      "id": "sudoku",
+      "title": "Sudoku",
+      "emoji": "🔢",
+      "description": "Fill the grid: every row, column and box 1–9.",
+      "src": "sudoku.html",
+      "cost": 1,
+      "minutes": 20,
+      "theme": "sleek",
+      "tags": [
+        "puzzle"
+      ],
+      "builtIn": true
+    },
+    {
+      "id": "hangman",
+      "title": "Hangman",
+      "emoji": "🪢",
+      "description": "Guess the word letter by letter. Uses your vocab.",
+      "src": "hangman.html",
+      "cost": 1,
+      "minutes": 10,
+      "theme": "paper",
+      "tags": [
+        "words",
+        "study"
+      ],
+      "builtIn": true
+    },
+    {
+      "id": "lightsout",
+      "title": "Lights Out",
+      "emoji": "💡",
+      "description": "Turn off every light. Each press flips its neighbors.",
+      "src": "lightsout.html",
+      "cost": 1,
+      "minutes": 10,
+      "theme": "classic",
+      "tags": [
+        "puzzle"
+      ],
+      "builtIn": true
+    },
+    {
+      "id": "typing",
+      "title": "Typing defense",
+      "emoji": "⌨️",
+      "description": "Type the falling words before they land. Uses your vocab.",
+      "src": "typing.html",
+      "cost": 1,
+      "minutes": 10,
+      "theme": "space",
+      "tags": [
+        "words",
+        "study"
+      ],
+      "builtIn": true
+    }
   ]
 }

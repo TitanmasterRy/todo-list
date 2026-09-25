@@ -16,7 +16,7 @@ Everything we could improve or add to Homework To-Do, grouped by area. Checked i
 - [x] **Course edits can lose during sync.** Courses merge "local always wins" and have no `updatedAt`. Add `updatedAt` to courses and merge last-write-wins.
 - [x] **CI only runs on pushes to `main`.** Add a `ci.yml` that runs tests, type check and build on every pull request and branch push.
 - [x] **Heavy first load.** `SettingsView` imports `lib/ai` eagerly, pulling the AI SDK into the main bundle. Load AI code on demand.
-- [ ] **Code editor chunk is ~771 kB.** Load each CodeMirror language only when it's picked.
+- [x] **Code editor chunk is ~771 kB.** Load each CodeMirror language only when it's picked.
 - [x] **Bundle building is copy-pasted in 6 places.** One `store.snapshotBundle()` used by export, sync, backup and import.
 
 ## 🧱 Code health
@@ -24,14 +24,14 @@ Everything we could improve or add to Homework To-Do, grouped by area. Checked i
 - [ ] Split `store.svelte.ts` (1,000 lines) into tasks, courses, stats and sync pieces.
 - [ ] Split `ToolsView.svelte` and `SettingsView.svelte` into one component per section.
 - [ ] Move the 2,600-line `studyhelp.ts` content into lazily loaded JSON/Markdown.
-- [ ] ESLint + Prettier + a pre-commit hook.
-- [ ] Playwright end-to-end tests: quick add, complete, undo, drag-to-reschedule, export/import, offline, shop purchase, a casino round.
+- [x] ESLint + Prettier + a pre-commit hook.
+- [x] Playwright end-to-end tests: quick add, complete, undo, drag-to-reschedule, export/import, offline, shop purchase, a casino round.
 - [ ] Component tests for `TaskItem`, `QuickAdd`, `TaskEditor`.
 - [x] Schema version on IndexedDB with step-by-step upgrades (v3 adds the ledger and games stores).
-- [ ] Bundle-size budget in CI (`size-limit`).
+- [x] Bundle-size budget in CI (`size-limit`).
 - [ ] Lighthouse CI (performance, accessibility, PWA).
-- [ ] Dependabot or Renovate.
-- [ ] Remove the leftover "Clear demo data" code once old installs have moved on.
+- [x] Dependabot or Renovate.
+- [x] Remove the leftover "Clear demo data" code once old installs have moved on.
 - [x] Tidy the README (duplicate "Old feed instructions", "Study help" listed twice).
 
 ## 🔐 Security and privacy
@@ -47,11 +47,11 @@ Everything we could improve or add to Homework To-Do, grouped by area. Checked i
 ## ♿ Accessibility
 
 - [ ] Screen-reader pass (NVDA, VoiceOver) on completion, drag-and-drop, palette, casino tables.
-- [ ] Keyboard alternative to drag-and-drop ("move to day" with arrows).
-- [ ] axe checks in the Playwright tests.
-- [ ] Contrast audit of all theme packs in light and dark.
-- [ ] High-contrast theme and a dyslexia-friendly font option.
-- [ ] Separate toggles for confetti/particles and sounds.
+- [x] Keyboard alternative to drag-and-drop ("move to day" with arrows).
+- [x] axe checks in the Playwright tests.
+- [x] Contrast audit of all theme packs in light and dark.
+- [x] High-contrast theme and a dyslexia-friendly font option.
+- [x] Separate toggles for confetti/particles and sounds.
 
 ## 🌍 Reach
 
@@ -67,9 +67,9 @@ Everything we could improve or add to Homework To-Do, grouped by area. Checked i
 - [ ] Attachments on tasks (photo of the worksheet, a PDF) stored in IndexedDB.
 - [ ] Saved filters / smart lists ("Exams in the next 14 days").
 - [ ] Kanban board (To do / Doing / Done) per course or project.
-- [ ] Month calendar view next to Upcoming.
+- [x] Month calendar view next to Upcoming.
 - [ ] Time tracking per task vs. estimate, with a personal "estimates are usually off by X%" note.
-- [ ] "What should I do now?" auto-priority from due date, weight and estimate.
+- [x] "What should I do now?" auto-priority from due date, weight and estimate.
 - [ ] Recurrence exceptions (skip one) and "every 2nd Tuesday".
 - [x] Trash can: deleted tasks kept 30 days and restorable (built on the tombstones).
 
@@ -93,9 +93,10 @@ Everything we could improve or add to Homework To-Do, grouped by area. Checked i
 - [ ] Anki `.apkg` and Quizlet import/export.
 - [ ] Practice-test mode that plays quizzes in the app, with scores over time.
 - [ ] Shared study-room timer by link.
-- [ ] Citation generator (MLA/APA/Chicago) from URL, ISBN or DOI.
-- [ ] Essay tools: word/page counter, outline template, readability.
-- [ ] Unit converter and periodic table.
+- [x] Citation generator (MLA/APA/Chicago) from URL, ISBN or DOI.
+- [x] Essay tools: word/page counter, outline template, readability.
+- [x] Unit converter.
+- [ ] Periodic table.
 - [ ] LaTeX math in notes and notecards (KaTeX).
 
 ## 🤖 AI (optional, bring your own key)
@@ -118,9 +119,9 @@ A soft currency earned only by doing schoolwork. No real money, ever: nothing in
 - [x] **Ledger-based and sync-safe.** Every earn and spend is an append-only entry with its own id, so Gist/Drive sync merges wallets from two devices without double counting or resurrecting spent coins.
 - [x] Undoing a completion reverses the coins it paid.
 - [x] Economy on/off switch in Settings (off hides the Play view entirely).
-- [ ] Weekly coin summary in the weekly review.
+- [x] Weekly coin summary in the weekly review.
 - [ ] Coin rain animation on big payouts.
-- [ ] Parent/teacher mode: a PIN-locked setting to cap casino time or turn it off.
+- [x] Parent/teacher mode: a PIN-locked setting to cap casino time or turn it off.
 
 ## 🛍️ Item shop
 
@@ -134,7 +135,7 @@ A soft currency earned only by doing schoolwork. No real money, ever: nothing in
   - [x] Extra confetti styles
 - [x] **Prize counter**: spend Chips on casino-only trophies (chips never convert back to coins).
 - [x] Owned items and trophies shown in an **Inventory** grid.
-- [ ] Daily rotating "deal of the day" at a discount.
+- [x] Daily rotating "deal of the day" at a discount.
 - [ ] Limited seasonal items (Halloween, finals week, summer).
 - [ ] Gift items to a friend with a code.
 
@@ -159,7 +160,7 @@ Chips are bought with Coins in the shop and can't be turned back into Coins, so 
 - [x] **Homework break reminder** after 20 minutes of casino play (configurable), plus a session stats bar (played, won, net).
 - [ ] Three Card Poker and Let It Ride.
 - [ ] Texas Hold'em vs. bots.
-- [ ] Casino achievements (first blackjack, royal flush, 10× Plinko).
+- [x] Casino achievements (first blackjack, royal flush, 10× Plinko).
 - [ ] Chip leaderboard between friends (opt-in).
 
 ## 🕹️ Arcade: vouchers and admin-added games
@@ -188,18 +189,20 @@ Each ships as a standalone HTML file in `public/games/`, so they double as examp
 - [x] **Space → Asteroids**
 - [x] **Paper → Word search** (can use words from your notecards via `?words=`)
 - [ ] Classic → Solitaire (Klondike)
-- [ ] Sleek → Sudoku, Lights Out
+- [x] Sleek → Sudoku; Classic → Lights Out
 - [ ] Cute → Virtual pet you feed with coins; bubble pop
-- [ ] Arcade → Breakout, Space-invaders-lite, Flappy
+- [x] Arcade → Breakout
+- [ ] Arcade → Space-invaders-lite, Flappy
 - [ ] Nature → Garden that grows as you finish tasks; fishing
 - [ ] Space → Lunar lander; star map you fill in with streak days
-- [ ] Paper → Crossword and Hangman from your vocab decks; paper-plane glider
+- [x] Paper → Hangman from your vocab decks
+- [ ] Paper → Crossword from your vocab; paper-plane glider
 
 ### Study-linked game ideas
 
 - [ ] **Notecard boss battle**: each right answer hits the boss; wrong answers hurt you.
 - [ ] **Quiz race**: race a ghost of your last score through a quiz.
-- [ ] **Typing defense**: type vocab words to stop falling letters.
+- [x] **Typing defense**: type vocab words to stop falling letters.
 - [ ] **Match rush**: drag terms onto definitions against the clock.
 - [ ] **Homework dungeon**: each completed task opens a room; courses are floors.
 
@@ -224,7 +227,7 @@ Each ships as a standalone HTML file in `public/games/`, so they double as examp
 
 - [ ] Friends by share code: compare streaks and weekly XP only.
 - [ ] Class mode for teachers: publish a read-only assignment list students can subscribe to.
-- [ ] Daily quests ("finish 1 reading, 1 homework, 1 study session") paying bonus coins.
+- [x] Daily quests ("finish 1 reading, 1 homework, 1 study session") paying bonus coins.
 - [ ] Seasonal events with themed shop items and games.
 - [ ] Focus-mode companions (a cat that sleeps while the timer runs).
 - [ ] Widgets for the phone home screen (via Capacitor).
@@ -255,5 +258,6 @@ Each ships as a standalone HTML file in `public/games/`, so they double as examp
 - [ ] Field-level merge so two devices editing different fields both win.
 - [ ] Dropbox / OneDrive / pick-a-file sync.
 - [ ] Per-task edit history.
-- [ ] Import from Todoist, Google Tasks, Microsoft To Do.
-- [ ] CSV and Markdown export.
+- [x] Import from Todoist (and any CSV).
+- [ ] Import from Google Tasks and Microsoft To Do.
+- [x] CSV and Markdown export.

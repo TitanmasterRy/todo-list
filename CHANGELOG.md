@@ -1,5 +1,15 @@
 # Changelog
 
+## Roadmap pass 2: quality, accessibility, planning, study tools, quests, more games
+
+- **Quality:** ESLint + Prettier, Playwright end-to-end tests against the production build (offline, phone layout, shop/casino/arcade, tools, economy), axe accessibility checks on every view in light and dark, a unit-tested contrast audit of every theme pack, first-load bundle budget, Dependabot. Less-used views and editor languages load on demand (first load 199 → ~114 kB gzipped).
+- **Fixes found by the new checks:** calendar export didn't escape semicolons; faint text, accent buttons and signal colors failed contrast in several themes; list semantics; the deal of the day switched items after you bought it.
+- **Accessibility:** `[`/`]` move tasks by day, high contrast, reading fonts, text size, confetti toggle.
+- **Planning:** What should I do now?, month calendar, CSV/Markdown export, CSV import (Todoist and spreadsheets).
+- **Study tools:** essay tools, citation generator (DOI/ISBN lookup), unit converter.
+- **Economy:** daily quests, deal of the day, casino achievements, parent PIN and daily casino time limit, coins in the weekly review.
+- **Arcade:** Breakout, Sudoku, Hangman, Lights Out and Typing defense.
+
 ## Roadmap pass 1: sync fixes, deploy anywhere, AI fix, accounts, economy
 
 - **Sync:** deletions are recorded as tombstones and sync to other devices (no more resurrected tasks); Trash keeps deleted tasks 30 days; courses merge last-write-wins; undo and restore stamp a fresh `updatedAt`; change detection covers every synced collection.

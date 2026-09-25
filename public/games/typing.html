@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Typing defense</title>
+<style>
+  :root { --accent: #7c9cff; }
+  html, body { margin: 0; height: 100%; background: radial-gradient(#10163a, #05060f); color: #dfe6ff; font: 16px system-ui, sans-serif; overflow: hidden; }
+  #field { position: fixed; inset: 0 0 70px 0; }
+  .w { position: absolute; font: 700 20px ui-monospace, monospace; white-space: nowrap; text-shadow: 0 0 8px #0008; }
+  .w b { color: var(--accent); }
+  .base { position: fixed; left: 0; right: 0; bottom: 60px; height: 4px; background: linear-gradient(90deg, #ff6b6b, #feca57, #1dd1a1); opacity: 0.7; }
+  .bar { position: fixed; left: 0; right: 0; bottom: 0; height: 60px; display: flex; gap: 14px; align-items: center; justify-content: center; background: #0b0f25; font-weight: 700; }
+  input { font: 700 18px ui-monospace, monospace; padding: 8px 12px; border-radius: 8px; border: 2px solid var(--accent); background: #05060f; color: #fff; width: min(260px, 50vw); text-transform: uppercase; }
+  .center { position: fixed; inset: 0; display: grid; place-items: center; text-align: center; pointer-events: none; }
+  .center button { pointer-events: auto; font: inherit; padding: 10px 22px; border: 0; border-radius: 10px; background: var(--accent); color: #05060f; font-weight: 800; cursor: pointer; }
+</style>
+</head>
+<body>
+<div id="field"></div>
+<div class="base"></div>
+<div class="bar"><span>Score <span id="score">0</span></span><input id="in" autocomplete="off" autocapitalize="characters" spellcheck="false" aria-label="Type the words" /><span>Shields <span id="hp">5</span></span></div>
+<div class="center" id="menu"><div><h2>⌨️ Typing defense</h2><p>Type the falling words before they hit the base.<br />Uses words from your notecards when it can.</p><button id="go">Start</button></div></div>
+<script>
+  const q = new URLSearchParams(location.search);
+  if (q.get('accent')) document.documentElement.style.setProperty('--accent', q.get('accent'));
+  const report = (score) => parent.postMessage({ type: 'hwtodo:score', score }, '*');
+  const DEFAULT = 'atom cell verb noun graph proof essay quiz orbit prism lens force mass volt ratio slope sine cosine vector matrix nucleus enzyme protein genome fossil climate tundra delta empire treaty senate thesis clause'.split(' ');
+  const custom = (q.get('words') || '').split(',').map((w) => w.toLowerCase().replace(/[^a-z]/g, '')).filter((w) => w.length >= 3 && w.length <= 12);
+  const POOL = custom.length >= 4 ? custom : DEFAULT;
+  const $ = (id) => document.getElementById(id), field = $('field'), input = $('in');
+  let words = [], score = 0, hp = 5, running = false, t = 0, last = 0;
+  function spawn() { const w = POOL[Math.floor(Math.random() * POOL.length)]; const el = document.createElement('div'); el.className = 'w'; field.appendChild(el); words.push({ w, el, x: 20 + Math.random() * (innerWidth - 180), y: -20, v: 0.35 + Math.random() * 0.3 + t / 60000 }); }
+  function start() { words.forEach((o) => o.el.remove()); words = []; score = 0; hp = 5; t = 0; running = true; $('menu').style.display = 'none'; input.value = ''; input.focus(); hud(); last = performance.now(); requestAnimationFrame(step); }
+  function hud() { $('score').textContent = score; $('hp').textContent = hp; }
+  function step(now) {
+    if (!running) return;
+    const dt = now - last; last = now; t += dt;
+    if (Math.random() < dt / Math.max(700, 2200 - t / 20)) spawn();
+    const typed = input.value.trim().toLowerCase();
+    for (const o of words) {
+      o.y += o.v * dt / 16;
+      const pre = typed && o.w.startsWith(typed) ? typed.length : 0;
+      o.el.innerHTML = `<b>${o.w.slice(0, pre)}</b>${o.w.slice(pre)}`;
+      o.el.style.transform = `translate(${o.x}px, ${o.y}px)`;
+      if (o.y > field.clientHeight - 20) { o.dead = true; hp--; hud(); }
+    }
+    words = words.filter((o) => { if (o.dead) o.el.remove(); return !o.dead; });
+    if (hp <= 0) { running = false; report(score); $('menu').style.display = 'grid'; $('menu').querySelector('h2').textContent = `Score ${score}`; $('go').textContent = 'Again'; return; }
+    requestAnimationFrame(step);
+  }
+  input.addEventListener('input', () => {
+    const typed = input.value.trim().toLowerCase();
+    const hit = words.find((o) => o.w === typed);
+    if (hit) { hit.dead = true; hit.el.remove(); words = words.filter((o) => o !== hit); score += hit.w.length * 10; hud(); input.value = ''; }
+  });
+  $('go').onclick = start;
+</script>
+</body>
+</html>

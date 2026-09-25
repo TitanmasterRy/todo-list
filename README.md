@@ -13,6 +13,10 @@ npm test           # Vitest: data layer, parser, gamification, recurrence, backu
 npm run check      # svelte-check (type errors)
 npm run build      # type check + production build into dist/
 npm run preview    # serve dist/ at http://localhost:4173/
+npm run lint       # ESLint
+npm run format     # Prettier (CI runs format:check)
+npm run e2e        # Playwright end-to-end + accessibility tests (npx playwright install chromium first)
+npm run size       # first-load bundle budget (after a build)
 ```
 
 Requires Node 22+. The app starts empty; use **Semester setup** (Courses view or the onboarding tour) to add your courses quickly.
@@ -87,6 +91,17 @@ Settings → AI helper. Pick a provider and paste its key (stored only in your b
 | OpenAI | paid | yes |
 | Custom OpenAI-compatible endpoint | depends | depends |
 
+## Planning
+
+- **What should I do now?** (`w`, or the 🧭 button on Today) picks the best next task from deadlines, priority, grade weight, exams coming up, your frog, repeat snoozes and the time you have left, shows why, and starts it in Focus.
+- **Upcoming → Month** shows a calendar of due dates with course colors. Arrow keys move between days; pick a day to see its tasks and add to it.
+- **Keyboard rescheduling:** select a task (`j`/`k`) and press `[` or `]` to move it a day earlier or later.
+- **Export and import:** Settings → Data exports CSV (for spreadsheets) and Markdown (checklists by course), and imports CSV from this app, Todoist or any spreadsheet with a title column.
+
+## Accessibility
+
+Settings → Appearance: high-contrast mode, reading fonts (Atkinson Hyperlegible, Lexend, OpenDyslexic, bundled so they work offline), text size up to 140%, reduced motion, and a separate switch for confetti and sparkle bursts. Every view is checked with axe in light and dark mode on each pull request, and every theme pack passes WCAG AA text contrast.
+
 ## Adding tasks quickly
 
 - Quick add parses natural language (below). New tasks get an **auto plan**: a short description, 2–5 steps, an estimate and a type inferred from the title and course. Toggle it per task with the “auto plan” chip, or globally in Settings.
@@ -105,7 +120,9 @@ The **Play** view (`9`) turns schoolwork into a currency. Everything here is pla
 - **Coins 🪙** come only from schoolwork: finishing tasks (about XP ÷ 5), closing the daily ring, streak milestones, the first grade entered on a task, notecard study sessions, Pomodoros and level-ups. Undoing a completion takes its coins back.
 - **Shop:** chip packs for the casino, arcade vouchers, streak freezes, a coin booster, and cosmetics (titles next to your level, level-card frames, confetti styles). The **prize counter** sells casino trophies for chips.
 - **Casino 🎰:** Slots (symbols follow your theme pack), Blackjack, Roulette, Video poker, Baccarat, Craps, Hi-Lo, Plinko, Keno, Mines, Dice, Big Six and Scratch cards. Chips are bought with coins and never turn back into coins. Each game shows its odds, and a homework-break reminder pops up after 20 minutes (configurable). Closing your daily ring also gives 100 free chips.
-- **Arcade 🕹️:** spend vouchers on games. Seven are built in, one per theme pack (Minesweeper, 2048, Memory match, Snake, Leaf catcher, Asteroids, Word search). **Site admins add more** by putting an HTML file in `public/games/` or an embed link in `public/games/games.json` (see [`public/games/README.md`](public/games/README.md)), or try them first in **Settings → Arcade admin**. Games run in a sandbox that can't see your data, and can report high scores.
+- **Arcade 🕹️:** spend vouchers on games. Twelve are built in: Minesweeper, 2048, Memory match, Snake, Leaf catcher, Asteroids, Word search, Breakout, Sudoku, Hangman, Lights Out and Typing defense (the word games use words from your notecards). **Site admins add more** by putting an HTML file in `public/games/` or an embed link in `public/games/games.json` (see [`public/games/README.md`](public/games/README.md)), or try them first in **Settings → Arcade admin**. Games run in a sandbox that can't see your data, and can report high scores.
+- **Daily quests:** three small goals a day (finish 3 tasks, clear an overdue task, do a Pomodoro…) with coins to claim and a bonus for all three. The shop also has a **deal of the day** at 30% off, and the casino has **achievements** that pay chips.
+- **Parent lock:** Settings → Economy → set a PIN to lock the casino switch, reminders and an optional **daily casino time limit**. It lives in this browser: a speed bump, not a security system.
 - The wallet is a ledger of entries, so it syncs through your account, Gist or Drive without double-counting.
 
 ## Themes
@@ -126,6 +143,9 @@ The **Tools** view (`7`) is grouped into Plan, Grades, Study, Compute and Connec
 
 - **Notecards:** decks per course, cards typed, pasted (`term :: definition`, `Q:/A:`), or generated from notes with the optional AI helper; study with Leitner spaced repetition (boxes 1–5) and earn XP.
 - **Study help:** worked examples, textbook-style explanations, links to the matching free OpenStax textbook, and 22 built-in reference sheets (algebra, trig, calculus, statistics, physics, chemistry, biology, essays, MLA/APA, study skills, units, programming, languages) plus an optional **Ask the tutor** box powered by your own Anthropic API key.
+- **Essay tools:** word, character, sentence and page counts, reading and speaking time, readability grade, most-used and filler words, long and passive sentences, and a word goal.
+- **Citations:** MLA 9, APA 7 and Chicago for web pages, articles and books; paste a DOI or ISBN to fill it in; copy a sorted works-cited list with italics.
+- **Unit converter:** length, mass, volume, temperature, time, speed, area, energy, pressure and data.
 - **Calculator:** scientific calculator with functions, factorials, percent, degrees/radians, history and `ans`.
 - **Graphing:** plot up to six `y = f(x)` functions, hover to trace, drag to pan, scroll to zoom.
 - **Transcript:** courses by term with credits, grade, letter and GPA points; term and cumulative GPA; CSV export and print-to-PDF.

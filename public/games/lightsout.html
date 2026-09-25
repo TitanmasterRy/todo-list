@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Lights Out</title>
+<style>
+  :root { --bg: #0f1115; --fg: #e8eaf0; --accent: #6c5ce7; }
+  html, body { margin: 0; min-height: 100%; background: var(--bg); color: var(--fg); font: 15px system-ui, sans-serif; display: grid; place-items: center; }
+  .wrap { display: grid; gap: 12px; justify-items: center; }
+  .grid { display: grid; gap: 8px; }
+  .l { width: min(64px, 17vw); height: min(64px, 17vw); border-radius: 12px; border: 0; background: #252a35; cursor: pointer; transition: background 120ms, box-shadow 120ms; }
+  .l.on { background: #ffe066; box-shadow: 0 0 18px #ffe06699; }
+  button.b { font: inherit; padding: 6px 14px; border: 0; border-radius: 8px; background: var(--accent); color: #fff; font-weight: 700; cursor: pointer; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div><b>💡 Lights Out</b> · Level <span id="lvl">1</span> · Moves <span id="moves">0</span></div>
+  <div class="grid" id="g"></div>
+  <div id="msg">Turn every light off. Each press flips a light and its neighbors.</div>
+  <div><button class="b" id="restart">Restart level</button></div>
+</div>
+<script>
+  const q = new URLSearchParams(location.search);
+  if (q.get('accent')) document.documentElement.style.setProperty('--accent', q.get('accent'));
+  if (q.get('dark') === '0') { document.documentElement.style.setProperty('--bg', '#f6f7fb'); document.documentElement.style.setProperty('--fg', '#171923'); }
+  const report = (score) => parent.postMessage({ type: 'hwtodo:score', score }, '*');
+  const $ = (id) => document.getElementById(id);
+  let N = 5, cells, start, level = 1, moves = 0, score = 0;
+  function press(b, i) { const r = (i / N) | 0, c = i % N; for (const [dr, dc] of [[0, 0], [1, 0], [-1, 0], [0, 1], [0, -1]]) { const rr = r + dr, cc = c + dc; if (rr >= 0 && cc >= 0 && rr < N && cc < N) b[rr * N + cc] ^= 1; } }
+  function make() { N = level < 4 ? 4 : 5; cells = Array(N * N).fill(0); const k = Math.min(N * N - 2, 3 + level * 2); for (let j = 0; j < k; j++) press(cells, Math.floor(Math.random() * N * N)); if (cells.every((v) => !v)) press(cells, 0); start = [...cells]; moves = 0; render(); }
+  function render() { $('g').style.gridTemplateColumns = `repeat(${N}, auto)`; $('g').innerHTML = cells.map((v, i) => `<button class="l ${v ? 'on' : ''}" data-i="${i}" aria-label="light ${i + 1} ${v ? 'on' : 'off'}"></button>`).join(''); $('lvl').textContent = level; $('moves').textContent = moves; }
+  $('g').addEventListener('click', (e) => {
+    const b = e.target.closest('.l'); if (!b) return; press(cells, +b.dataset.i); moves++; render();
+    if (cells.every((v) => !v)) { score += Math.max(10, 100 - moves * 3) + level * 10; report(score); $('msg').textContent = `Level ${level} cleared in ${moves} moves! Score ${score}.`; level++; setTimeout(make, 800); }
+  });
+  $('restart').onclick = () => { cells = [...start]; moves = 0; render(); };
+  make();
+</script>
+</body>
+</html>
