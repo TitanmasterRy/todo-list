@@ -17,6 +17,7 @@ class UIState {
   inboxListNonce = $state(0); // "What should I do now?" card on Today
   toolsTab = $state<string>('planner');
   quickAddPrefill = $state('');
+  openDeck = $state<string | null>(null); // a task's "Study" button opens this deck in Notecards
   captureKeys = $state(false); // a tool (e.g. notecard study) owns single-key shortcuts
 }
 

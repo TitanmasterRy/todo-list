@@ -54,6 +54,8 @@ export default defineConfig({
         globPatterns: ['**/*.{js,css,html,svg,png,ico,woff2,json}'],
         navigateFallback: `${base}index.html`,
         navigateFallbackDenylist: [/^\/api\//],
+        // notification clicks + periodic background digest/badge (public/sw-extra.js)
+        importScripts: ['sw-extra.js'],
       },
       devOptions: { enabled: false },
     }),

@@ -122,6 +122,13 @@ export function normalizeTask(t: Partial<Task>): Task {
     reminders: Array.isArray(t.reminders) ? t.reminders.filter((r) => r && typeof r === 'object') : undefined,
     timeSpentMin: typeof t.timeSpentMin === 'number' && t.timeSpentMin >= 0 ? t.timeSpentMin : undefined,
     timerStartedAt: typeof t.timerStartedAt === 'string' ? t.timerStartedAt : undefined,
+    deckId: typeof t.deckId === 'string' ? t.deckId : undefined,
+    parentId: typeof t.parentId === 'string' ? t.parentId : undefined,
+    attachments: Array.isArray(t.attachments)
+      ? t.attachments
+          .filter((a) => a && typeof a.id === 'string' && typeof a.name === 'string')
+          .map((a) => ({ id: a.id, name: a.name, type: String(a.type ?? ''), size: Number(a.size) || 0, addedAt: String(a.addedAt ?? '') }))
+      : undefined,
   };
 }
 

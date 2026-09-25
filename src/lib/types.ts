@@ -70,6 +70,24 @@ export interface Task {
   reminders?: ReminderRule[];
   timeSpentMin?: number; // tracked time
   timerStartedAt?: string; // a running timer (ISO)
+  deckId?: string; // notecard deck to study for this task (exam prep sessions)
+  parentId?: string; // milestone or study session of this bigger task
+  attachments?: AttachmentMeta[]; // files kept on this device (metadata syncs, the files don't)
+}
+
+export interface AttachmentMeta {
+  id: string;
+  name: string;
+  type: string; // MIME type
+  size: number; // bytes
+  addedAt: string;
+}
+
+/** A stored attachment file (IndexedDB only; never synced or exported). */
+export interface AttachmentBlob {
+  id: string;
+  taskId: string;
+  blob: Blob;
 }
 
 export interface Stats {
@@ -226,6 +244,8 @@ export interface Settings {
   notifyDueSoon: boolean;
   notifyLeadMin: number;
   notifyMorningDigest: boolean;
+  appBadge: boolean; // today's count on the installed app's icon
+  backgroundReminders: boolean; // morning digest + badge from the service worker when the app is closed
   powerHourEnabled: boolean;
   powerHourStart?: number; // hour of the day chosen for today
   powerHourDate?: string;
@@ -315,6 +335,8 @@ export const DEFAULT_SETTINGS: Settings = {
   notifyDueSoon: false,
   notifyLeadMin: 60,
   notifyMorningDigest: false,
+  appBadge: true,
+  backgroundReminders: true,
   powerHourEnabled: true,
   collection: [],
   schoologyMode: 'ics',

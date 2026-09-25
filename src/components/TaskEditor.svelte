@@ -1,13 +1,15 @@
 <script lang="ts">
   import { focusTrap } from '../lib/focusTrap';
   import { store, PRIORITY_LABEL } from '../lib/store.svelte';
-  import { PRIORITIES, TASK_TYPES, type Recurrence, type ReminderRule, type Subtask, type Task } from '../lib/types';
+  import { PRIORITIES, TASK_TYPES, type Recurrence, type ReminderRule, type Subtask, type Task, type TaskType } from '../lib/types';
   import { REMINDER_PRESETS, ruleKey, ruleLabel } from '../lib/remind';
   import { wouldCycle, dependents } from '../lib/deps';
   import { describeRecurrence } from '../lib/recurrence';
   import { isDateOnly, dueKey, combineDateTime, pad } from '../lib/dates';
   import { toasts } from '../lib/toast.svelte';
   import { uid } from '../lib/id';
+  import PlanItOut from './PlanItOut.svelte';
+  import Attachments from './Attachments.svelte';
 
   interface Props {
     taskId: string;
@@ -340,6 +342,7 @@
         </div>
         {#if waitingOnMe.length}<p class="muted">Finishing this unblocks: {waitingOnMe.map((t) => t.title).join(', ')}</p>{/if}
       </div>
+      <PlanItOut {taskId} {title} {dateKey} type={(type || '') as TaskType | ''} onchain={(id) => (blockedBy = [...new Set([...blockedBy, id])])} />
       <div class="field">
         <span class="lbl" id="ed-rem-l">Reminders</span>
         <div class="chips" role="group" aria-labelledby="ed-rem-l">
@@ -363,6 +366,7 @@
         </div>
         {#if !dateKey}<p class="muted">Set a due date to use reminders relative to it.</p>{/if}
       </div>
+      <Attachments {taskId} />
       <div class="field">
         <label for="ed-spent">Time spent (min)</label>
         <input id="ed-spent" class="input n2" type="number" min="0" step="5" bind:value={spent} placeholder="0" />

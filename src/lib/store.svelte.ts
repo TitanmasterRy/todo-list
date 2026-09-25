@@ -17,6 +17,7 @@ import { planningMethods } from './store/planning.svelte';
 import { organizeMethods } from './store/organize.svelte';
 import { notecardsMethods } from './store/notecards.svelte';
 import { externalMethods } from './store/external.svelte';
+import { attachmentMethods } from './store/attachments.svelte';
 
 export type View = 'today' | 'upcoming' | 'courses' | 'inbox' | 'focus' | 'stats' | 'tools' | 'schoology' | 'play' | 'settings';
 export const VIEWS: { id: View; label: string; icon: string; key: string }[] = [
@@ -127,6 +128,8 @@ export class Store {
       await this.archiveOldCompleted();
       this.ready = true;
       this.startClock();
+      // tidy up files left behind by tasks deleted for good (on this or another device)
+      setTimeout(() => void this.collectAttachmentGarbage(), 5000);
     } catch (e) {
       console.error(e);
       this.loadError = e instanceof Error ? e.message : String(e);
@@ -239,6 +242,7 @@ export class Store {
   emptyTrash(): void {
     this.tombstones = this.tombstones.map((t) => (t.task ? { kind: t.kind, id: t.id, deletedAt: t.deletedAt } : t));
     this.persistTombstones();
+    void this.collectAttachmentGarbage();
   }
 
   // ---------- economy ledger ----------
@@ -325,6 +329,9 @@ export class Store {
       pinnedDay: input.pinnedDay,
       templateId: input.templateId,
       autoDescribed: described || undefined,
+      blockedBy: input.blockedBy?.length ? input.blockedBy : undefined,
+      deckId: input.deckId,
+      parentId: input.parentId,
     };
     this.tasks = [...this.tasks, task];
     this.persistTask(task);
@@ -742,9 +749,10 @@ type PlanningMethods = typeof planningMethods;
 type OrganizeMethods = typeof organizeMethods;
 type NotecardMethods = typeof notecardsMethods;
 type ExternalMethods = typeof externalMethods;
+type AttachmentMethods = typeof attachmentMethods;
 // The method groups live in ./store/*; merging them into the class type keeps store.method(...) typed.
 // eslint-disable-next-line @typescript-eslint/no-unsafe-declaration-merging
-export interface Store extends PlanningMethods, OrganizeMethods, NotecardMethods, ExternalMethods {}
-Object.assign(Store.prototype, planningMethods, organizeMethods, notecardsMethods, externalMethods);
+export interface Store extends PlanningMethods, OrganizeMethods, NotecardMethods, ExternalMethods, AttachmentMethods {}
+Object.assign(Store.prototype, planningMethods, organizeMethods, notecardsMethods, externalMethods, attachmentMethods);
 
 export const store = new Store();

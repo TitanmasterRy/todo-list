@@ -14,7 +14,7 @@
   import { aiAvailable, makeNotecards } from '../../lib/ai';
   import { playSound } from '../../lib/sounds';
 
-  let deckId = $state<string | null>(null);
+  let deckId = $state<string | null>(ui.openDeck);
   let newDeckName = $state('');
   let newDeckCourse = $state('');
   let front = $state('');
@@ -160,6 +160,12 @@
       aiBusy = false;
     }
   }
+  // opened from a study-session task: jump straight into the deck (everything if nothing is due yet)
+  $effect(() => {
+    if (!ui.openDeck || deck?.id !== ui.openDeck) return;
+    ui.openDeck = null;
+    if (cards.length) startStudy(!due.length);
+  });
   function startStudy(all = false) {
     const pool = all ? cards : due;
     if (!pool.length) return;

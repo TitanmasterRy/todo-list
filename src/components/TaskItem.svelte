@@ -33,7 +33,17 @@
   const spentNow = $derived(
     (task.timeSpentMin ?? 0) + (task.timerStartedAt ? Math.max(0, Math.floor((store.now.getTime() - new Date(task.timerStartedAt).getTime()) / 60_000)) : 0),
   );
+  const parent = $derived(task.parentId ? store.byId.get(task.parentId) : undefined);
+  const deck = $derived(task.deckId ? store.decks.find((d) => d.id === task.deckId) : undefined);
   let expanded = $state(false);
+
+  function studyDeck(e: MouseEvent) {
+    e.stopPropagation();
+    if (!deck) return;
+    ui.openDeck = deck.id;
+    ui.toolsTab = 'notecards';
+    store.go('tools');
+  }
   let newSub = $state('');
 
   function open() {
@@ -157,6 +167,15 @@
         {/if}
         {#if task.reminders?.length}
           <span class="chip" title={task.reminders.map(ruleLabel).join(', ')}>🔔{task.reminders.length > 1 ? ` ${task.reminders.length}` : ''}</span>
+        {/if}
+        {#if parent}
+          <span class="chip part" title="Step of: {parent.title}">🪜 {parent.title}</span>
+        {/if}
+        {#if deck && !done}
+          <button type="button" class="chip deck" onclick={studyDeck} title="Study the {deck.name} deck">🃏 Study {deck.name}</button>
+        {/if}
+        {#if task.attachments?.length}
+          <span class="chip" title={task.attachments.map((a) => a.name).join(', ')}>📎{task.attachments.length > 1 ? ` ${task.attachments.length}` : ''}</span>
         {/if}
         {#if task.pinnedDay === store.today && task.dueAt && !today && !overdue}
           <span class="chip planned" title="Planned for today (deadline unchanged)">📌 today</span>
@@ -359,6 +378,20 @@
     flex-wrap: wrap;
     gap: 4px;
     margin-top: 4px;
+  }
+  .chip.part {
+    max-width: 200px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .chip.deck {
+    cursor: pointer;
+    color: var(--accent-text);
+    border-color: color-mix(in srgb, var(--accent) 40%, transparent);
+  }
+  .chip.deck:hover {
+    background: color-mix(in srgb, var(--accent) 12%, transparent);
   }
   .chip.course {
     color: var(--text-muted);

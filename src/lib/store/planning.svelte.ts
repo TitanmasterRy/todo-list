@@ -198,4 +198,48 @@ export const planningMethods = {
     if (prevFrog && prevFrog.id !== id) this.updateTask(prevFrog.id, { frog: false, frogDate: undefined });
     if (id) this.updateTask(id, { frog: true, frogDate: this.today });
   },
+
+  // ---------- work-back plans ----------
+  /**
+   * Add the steps of a plan for a bigger task (milestones or exam study sessions) with one undo.
+   * With `chain`, each step waits on the one before and the big task waits on the last step.
+   */
+  addPlan(this: Store, parentId: string, steps: { title: string; dateKey: string; estimateMin?: number; deckId?: string }[], opts: { chain?: boolean; label: string }): Task[] {
+    const parent = this.taskById(parentId);
+    if (!parent || !steps.length) return [];
+    const before = structuredClone($state.snapshot(parent)) as Task;
+    const created: Task[] = [];
+    for (const s of steps) {
+      const prev = created[created.length - 1];
+      created.push(
+        this.addTask(
+          {
+            title: s.title,
+            dueAt: s.dateKey,
+            estimateMin: s.estimateMin,
+            courseId: parent.courseId,
+            priority: parent.priority === 'urgent' ? 'high' : parent.priority,
+            tags: [...parent.tags],
+            parentId,
+            deckId: s.deckId,
+            blockedBy: opts.chain && prev ? [prev.id] : undefined,
+          },
+          { undoable: false, describe: false },
+        ),
+      );
+    }
+    const last = created[created.length - 1];
+    if (opts.chain) this.updateTask(parentId, { blockedBy: [...new Set([...(before.blockedBy ?? []), last.id])] });
+    undo.push(
+      {
+        label: opts.label,
+        undo: () => {
+          for (const t of created) this.removeTaskInternal(t.id);
+          if (opts.chain) this.restoreTaskInternal(before);
+        },
+      },
+      { timeout: 6000 },
+    );
+    return created;
+  },
 };

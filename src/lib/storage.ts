@@ -1,5 +1,5 @@
 import { openDB, type DBSchema, type IDBPDatabase } from 'idb';
-import type { ArcadeGame, Card, Course, DayNote, Deck, LedgerEntry, Stats, Task, Template, Tombstone, Settings } from './types';
+import type { ArcadeGame, AttachmentBlob, Card, Course, DayNote, Deck, LedgerEntry, Stats, Task, Template, Tombstone, Settings } from './types';
 import { DEFAULT_SETTINGS, DEFAULT_STATS } from './types';
 
 interface TodoDB extends DBSchema {
@@ -12,10 +12,11 @@ interface TodoDB extends DBSchema {
   cards: { key: string; value: Card; indexes: { byDeck: string } };
   ledger: { key: string; value: LedgerEntry };
   games: { key: string; value: ArcadeGame };
+  attachments: { key: string; value: AttachmentBlob; indexes: { byTask: string } };
 }
 
 export const DB_NAME = 'homework-todo';
-export const DB_VERSION = 3;
+export const DB_VERSION = 4;
 const SETTINGS_KEY = 'homework-todo:settings';
 
 let dbPromise: Promise<IDBPDatabase<TodoDB>> | null = null;
@@ -41,6 +42,10 @@ export function getDB(): Promise<IDBPDatabase<TodoDB>> {
         if (oldVersion < 3) {
           db.createObjectStore('ledger', { keyPath: 'id' });
           db.createObjectStore('games', { keyPath: 'id' });
+        }
+        if (oldVersion < 4) {
+          const att = db.createObjectStore('attachments', { keyPath: 'id' });
+          att.createIndex('byTask', 'taskId');
         }
       },
     });
@@ -209,11 +214,42 @@ export async function putMeta(key: string, value: unknown): Promise<void> {
   await db.put('meta', value, key);
 }
 
+// ---------- Attachments (files on tasks; this device only) ----------
+export async function putAttachment(a: AttachmentBlob): Promise<void> {
+  const db = await getDB();
+  await db.put('attachments', a);
+}
+
+export async function getAttachment(id: string): Promise<AttachmentBlob | undefined> {
+  const db = await getDB();
+  return db.get('attachments', id);
+}
+
+export async function deleteAttachments(ids: string[]): Promise<void> {
+  if (!ids.length) return;
+  const db = await getDB();
+  const tx = db.transaction('attachments', 'readwrite');
+  await Promise.all([...ids.map((id) => tx.store.delete(id)), tx.done]);
+}
+
+/** Every stored file's id and task, without loading the files. */
+export async function listAttachments(): Promise<{ id: string; taskId: string }[]> {
+  const db = await getDB();
+  const out: { id: string; taskId: string }[] = [];
+  let cur = await db.transaction('attachments').store.index('byTask').openKeyCursor();
+  while (cur) {
+    out.push({ id: String(cur.primaryKey), taskId: String(cur.key) });
+    cur = await cur.continue();
+  }
+  return out;
+}
+
 // ---------- Wipe ----------
 export async function clearAllData(): Promise<void> {
   const db = await getDB();
-  const tx = db.transaction(['tasks', 'courses', 'templates', 'meta', 'dayNotes', 'decks', 'cards', 'ledger', 'games'], 'readwrite');
+  const tx = db.transaction(['tasks', 'courses', 'templates', 'meta', 'dayNotes', 'decks', 'cards', 'ledger', 'games', 'attachments'], 'readwrite');
   await Promise.all([
+    tx.objectStore('attachments').clear(),
     tx.objectStore('ledger').clear(),
     tx.objectStore('games').clear(),
     tx.objectStore('tasks').clear(),
