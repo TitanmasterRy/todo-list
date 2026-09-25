@@ -134,3 +134,18 @@ describe('timetable', () => {
     expect(mergeSchedules(undefined, a)).toBe(a);
   });
 });
+
+describe('attendance', () => {
+  it('totals marks per course and lists recent classes', async () => {
+    const { attendanceSummary, recentMeetings } = await import('./timetable');
+    const s = sched();
+    s.attendance = { '2026-10-05': { m1: 'present', m3: 'late' }, '2026-10-06': { m2: 'absent', m3: 'excused' }, '2026-10-07': { m1: 'absent', gone: 'present' } };
+    const sum = attendanceSummary(s);
+    const chem = sum.find((r) => r.courseId === 'chem')!;
+    expect(chem).toMatchObject({ present: 1, absent: 1, rate: 0.5 });
+    expect(sum.find((r) => r.courseId === 'math')).toMatchObject({ late: 1, excused: 1, rate: 1 });
+    expect(sum.some((r) => r.courseId === 'gone')).toBe(false);
+    const recent = recentMeetings(s, '2026-10-06', 3);
+    expect(recent.map((r) => `${r.key}:${r.meeting.courseId}`)).toEqual(['2026-10-06:art', '2026-10-06:math', '2026-10-05:chem', '2026-10-05:math']);
+  });
+});

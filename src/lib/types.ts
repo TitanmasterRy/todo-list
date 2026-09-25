@@ -445,7 +445,10 @@ export interface SchoolSchedule {
   weekdayBells?: Record<number, string>; // e.g. every Wednesday uses the late-start bell
   overrides: Record<string, DayOverride>; // by YYYY-MM-DD
   classes: ClassMeeting[];
+  attendance?: Record<string, Record<string, AttendanceMark>>; // day → class meeting id → mark
 }
+
+export type AttendanceMark = 'present' | 'late' | 'absent' | 'excused';
 
 export interface ExportBundle {
   version: 1;

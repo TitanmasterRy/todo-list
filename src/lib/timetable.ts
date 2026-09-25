@@ -2,7 +2,7 @@
 // Pure functions over a SchoolSchedule; breaks (Settings → Break mode) and "no school" overrides skip days.
 import { addDaysKey, dateKey, fromKey } from './dates';
 import { uid } from './id';
-import type { BellPeriod, BellSchedule, BreakRange, ClassMeeting, SchoolSchedule } from './types';
+import type { AttendanceMark, BellPeriod, BellSchedule, BreakRange, ClassMeeting, SchoolSchedule } from './types';
 
 export function emptySchedule(): SchoolSchedule {
   return {
@@ -178,4 +178,51 @@ export function mergeSchedules(a: SchoolSchedule | undefined, b: SchoolSchedule 
   if (!a) return b;
   if (!b) return a;
   return b.updatedAt > a.updatedAt ? b : a;
+}
+
+// ---------- attendance ----------
+export const ATTENDANCE: { id: AttendanceMark; label: string; emoji: string }[] = [
+  { id: 'present', label: 'Present', emoji: '✓' },
+  { id: 'late', label: 'Late', emoji: '⏰' },
+  { id: 'absent', label: 'Absent', emoji: '✗' },
+  { id: 'excused', label: 'Excused', emoji: '📝' },
+];
+
+export interface AttendanceSummary {
+  courseId: string;
+  present: number;
+  late: number;
+  absent: number;
+  excused: number;
+  /** Share of counted classes you were there for (late counts as there; excused doesn't count either way). */
+  rate: number | null;
+}
+
+/** Totals per course from the marks (unmarked classes aren't counted). */
+export function attendanceSummary(s: SchoolSchedule): AttendanceSummary[] {
+  const byCourse = new Map<string, AttendanceSummary>();
+  const courseOf = new Map(s.classes.map((m) => [m.id, m.courseId]));
+  for (const marks of Object.values(s.attendance ?? {})) {
+    for (const [meetingId, mark] of Object.entries(marks)) {
+      const courseId = courseOf.get(meetingId);
+      if (!courseId) continue;
+      const row = byCourse.get(courseId) ?? { courseId, present: 0, late: 0, absent: 0, excused: 0, rate: null };
+      row[mark]++;
+      byCourse.set(courseId, row);
+    }
+  }
+  for (const r of byCourse.values()) {
+    const counted = r.present + r.late + r.absent;
+    r.rate = counted ? (r.present + r.late) / counted : null;
+  }
+  return [...byCourse.values()];
+}
+
+/** Class meetings on recent school days (newest first), for marking attendance after the fact. */
+export function recentMeetings(s: SchoolSchedule, today: string, days = 14, breaks?: BreakRange[]): { key: string; slot: Slot; meeting: ClassMeeting }[] {
+  const out: { key: string; slot: Slot; meeting: ClassMeeting }[] = [];
+  for (let i = 0, k = today; i < days; i++, k = addDaysKey(k, -1)) {
+    for (const slot of daySlots(s, k, breaks)) for (const meeting of slot.meetings) out.push({ key: k, slot, meeting });
+  }
+  return out;
 }

@@ -4,10 +4,10 @@
   import { store } from '../../lib/store.svelte';
   import { uid } from '../../lib/id';
   import { addDaysKey, DAY_NAMES, DAY_SHORT, fromKey, MONTH_SHORT, startOfWeekKey } from '../../lib/dates';
-  import { bellProblems, daySlots, defaultBell, emptySchedule, formatHM, rotationDay } from '../../lib/timetable';
+  import { ATTENDANCE, attendanceSummary, bellProblems, daySlots, defaultBell, emptySchedule, formatHM, recentMeetings, rotationDay } from '../../lib/timetable';
   import type { BellSchedule, ClassMeeting, DayOverride, SchoolSchedule } from '../../lib/types';
 
-  let mode = $state<'week' | 'setup'>(store.schedule?.classes.length ? 'week' : 'setup');
+  let mode = $state<'week' | 'attendance' | 'setup'>(store.schedule?.classes.length ? 'week' : 'setup');
   // the editor works on a copy and saves it (debounced) whenever it changes
   let draft = $state<SchoolSchedule>(structuredClone($state.snapshot(store.schedule) ?? emptySchedule()) as SchoolSchedule);
   let saved = JSON.stringify(draft);
@@ -18,7 +18,8 @@
     clearTimeout(saveTimer);
     saveTimer = setTimeout(() => {
       saved = snap;
-      store.saveSchedule(draft);
+      // attendance is marked through the store (Today, the Attendance tab), so never overwrite it from this copy
+      store.saveSchedule({ ...draft, attendance: store.schedule?.attendance });
     }, 400);
   });
 
@@ -29,6 +30,12 @@
   const fmt = (t: string) => formatHM(t, store.settings.timeFormat);
   const md = (k: string) => `${MONTH_SHORT[fromKey(k).getMonth()]} ${fromKey(k).getDate()}`;
   const course = (id: string) => store.courseById(id);
+
+  // ---------- attendance (always read from / written to the store, not the draft) ----------
+  const live = $derived(store.schedule);
+  const summary = $derived(live ? attendanceSummary(live) : []);
+  const recent = $derived(live ? recentMeetings(live, store.today, 14, breaks) : []);
+  const recentDays = $derived([...new Set(recent.map((r) => r.key))]);
 
   // ---------- setup helpers ----------
   const ROTATIONS: { label: string; days: string[] }[] = [
@@ -96,6 +103,7 @@
     <h2>🏫 Timetable</h2>
     <div class="seg" role="radiogroup" aria-label="Timetable mode">
       <button role="radio" aria-checked={mode === 'week'} class:on={mode === 'week'} onclick={() => (mode = 'week')}>Week</button>
+      <button role="radio" aria-checked={mode === 'attendance'} class:on={mode === 'attendance'} onclick={() => (mode = 'attendance')}>Attendance</button>
       <button role="radio" aria-checked={mode === 'setup'} class:on={mode === 'setup'} onclick={() => (mode = 'setup')}>Setup</button>
     </div>
   </div>
@@ -142,6 +150,49 @@
         </div>
       {/each}
     </div>
+  {:else if mode === 'attendance'}
+    {#if !recent.length}
+      <p class="muted">Add classes in Setup, and the last two weeks of classes show up here to mark.</p>
+    {:else}
+      {#if summary.length}
+        <table class="att-sum">
+          <thead><tr><th>Class</th><th>Present</th><th>Late</th><th>Absent</th><th>Excused</th><th>Attendance</th></tr></thead>
+          <tbody>
+            {#each summary as r (r.courseId)}
+              <tr>
+                <td>{course(r.courseId)?.name ?? 'Class'}</td>
+                <td>{r.present}</td>
+                <td>{r.late}</td>
+                <td>{r.absent}</td>
+                <td>{r.excused}</td>
+                <td><strong>{r.rate === null ? '—' : `${Math.round(r.rate * 100)}%`}</strong></td>
+              </tr>
+            {/each}
+          </tbody>
+        </table>
+      {/if}
+      {#each recentDays as k (k)}
+        <h3 class="sh">{DAY_NAMES[fromKey(k).getDay()]} {md(k)}{k === store.today ? ' · today' : ''}</h3>
+        <ul class="att">
+          {#each recent.filter((r) => r.key === k) as r (r.meeting.id)}
+            {@const cur = live?.attendance?.[k]?.[r.meeting.id]}
+            <li>
+              <span class="n">{course(r.meeting.courseId)?.name ?? 'Class'} <span class="muted">{fmt(r.slot.period.start)}</span></span>
+              <span class="marks" role="group" aria-label="Attendance for {course(r.meeting.courseId)?.name ?? 'class'} on {md(k)}">
+                {#each ATTENDANCE as a (a.id)}
+                  <button
+                    class="chip pick {a.id}"
+                    class:on={cur === a.id}
+                    aria-pressed={cur === a.id}
+                    onclick={() => store.markAttendance(k, r.meeting.id, cur === a.id ? undefined : a.id)}>{a.emoji} {a.label}</button
+                  >
+                {/each}
+              </span>
+            </li>
+          {/each}
+        </ul>
+      {/each}
+    {/if}
   {:else}
     <h3 class="sh">School days</h3>
     <div class="chips" role="group" aria-label="School days">
@@ -516,6 +567,35 @@
   .wd {
     display: flex;
     align-items: center;
+    gap: 4px;
+  }
+  .att-sum {
+    max-width: 640px;
+    margin-bottom: 8px;
+  }
+  .att-sum td {
+    padding: 4px;
+    border-top: 1px solid var(--border);
+    font-variant-numeric: tabular-nums;
+  }
+  .att {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    gap: 6px;
+  }
+  .att li {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 6px;
+    font-size: 13px;
+  }
+  .marks {
+    display: inline-flex;
+    flex-wrap: wrap;
     gap: 4px;
   }
 </style>

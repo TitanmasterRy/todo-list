@@ -128,6 +128,7 @@ export function normalizeSchedule(raw: unknown): SchoolSchedule | undefined {
     weekdayBells: s.weekdayBells && typeof s.weekdayBells === 'object' ? s.weekdayBells : undefined,
     overrides: s.overrides && typeof s.overrides === 'object' ? s.overrides : {},
     classes: s.classes.filter((m) => m && isStr(m.id) && isStr(m.courseId) && isStr(m.periodId)),
+    attendance: s.attendance && typeof s.attendance === 'object' ? s.attendance : undefined,
   };
 }
 

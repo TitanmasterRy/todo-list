@@ -1,5 +1,6 @@
 import * as db from './storage';
 import type {
+  AttendanceMark,
   BreakRange,
   Card,
   Course,
@@ -329,6 +330,18 @@ export class Store {
     this.schedule = s;
     db.putSchedule(s).catch((e) => console.error(e));
     emit('changed', { reason: 'schedule' });
+  }
+
+  /** Mark (or clear) attendance for one class meeting on one day. */
+  markAttendance(day: string, meetingId: string, mark: AttendanceMark | undefined): void {
+    if (!this.schedule) return;
+    const all = { ...(this.schedule.attendance ?? {}) };
+    const dayMarks = { ...(all[day] ?? {}) };
+    if (mark) dayMarks[meetingId] = mark;
+    else delete dayMarks[meetingId];
+    if (Object.keys(dayMarks).length) all[day] = dayMarks;
+    else delete all[day];
+    this.saveSchedule({ ...this.schedule, attendance: all });
   }
 
   // ---------- tasks ----------

@@ -52,4 +52,28 @@ test('timetable: A/B classes, what’s on now, and due next class', async ({ pag
   await ed.getByRole('button', { name: /Next class: Wed/ }).click();
   await expect(ed.getByLabel('Due date')).toHaveValue('2026-10-07');
   await expect(ed.getByLabel('Time', { exact: true })).toHaveValue('08:00');
+  await page.getByRole('button', { name: 'Cancel' }).click();
+
+  // attendance: mark absent on Today, add the catch-up task, see it in the Attendance tab
+  await page
+    .getByRole('group', { name: 'Attendance for this class' })
+    .getByRole('button', { name: /Absent/ })
+    .click();
+  await expect(page.getByText('Marked absent from Chemistry')).toBeVisible();
+  await page.getByRole('button', { name: 'Add catch-up task' }).click();
+  await goKey(page, '4'); // due at the next class (Wednesday), so it's in the Inbox rather than Today
+  await expect(page.getByRole('group', { name: /Catch up on missed Chemistry/ })).toBeVisible();
+  await goKey(page, '7');
+  await page
+    .getByRole('tablist', { name: 'Tools' })
+    .getByRole('tab', { name: /Timetable/ })
+    .click();
+  await page.getByRole('radio', { name: 'Attendance' }).click();
+  await expect(page.locator('.att-sum')).toContainText('Chemistry');
+  await expect(page.locator('.att-sum')).toContainText('0%');
+  await page
+    .getByRole('group', { name: 'Attendance for Chemistry on Oct 5' })
+    .getByRole('button', { name: /Present/ })
+    .click();
+  await expect(page.locator('.att-sum')).toContainText('100%');
 });
