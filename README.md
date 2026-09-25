@@ -96,6 +96,11 @@ Settings → AI helper. Pick a provider and paste its key (stored only in your b
 - **What should I do now?** (`w`, or the 🧭 button on Today) picks the best next task from deadlines, priority, grade weight, exams coming up, your frog, repeat snoozes and the time you have left, shows why, and starts it in Focus.
 - **Upcoming → Month** shows a calendar of due dates with course colors. Arrow keys move between days; pick a day to see its tasks and add to it.
 - **Keyboard rescheduling:** select a task (`j`/`k`) and press `[` or `]` to move it a day earlier or later.
+- **Plan it out** (task editor) splits a big task into dated milestones working back from the due date, each waiting on the one before, or spaces exam study sessions before a test with a Study button that opens the linked notecard deck.
+- **Course boards:** switch a course page to **Board** for To do / Doing / Done columns (drag cards or use the arrow buttons).
+- **Files on tasks:** attach photos, PDFs and documents in the task editor. Files stay on the device (big photos are shrunk); other devices see the names.
+- **Break mode** (Settings → Goals) pauses your streak during school breaks.
+- **Print week** (Upcoming) prints a one-page weekly planner, or saves it as a PDF.
 - **Export and import:** Settings → Data exports CSV (for spreadsheets) and Markdown (checklists by course), and imports CSV from this app, Todoist or any spreadsheet with a title column.
 
 ## Accessibility
@@ -137,6 +142,7 @@ Settings → Theme pack: Classic, Sleek, Cute, Arcade, Nature, Space, Paper. Eac
 - **Persistent storage** asks the browser never to evict the app's data.
 - **Auto-backup to a folder** (Chrome/Edge) writes a JSON copy a few seconds after every change into a folder you choose, plus one dated file per day.
 - Gist sync and Google Drive sync keep copies off-device.
+- **Notifications** go through the service worker, the installed app's icon shows today's count, and installed Chrome/Edge apps get a morning digest in the background (periodic sync). Exact-time reminders need the app open.
 
 ## Tools
 

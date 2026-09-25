@@ -1,5 +1,18 @@
 # Changelog
 
+## Roadmap pass 4: plan it out, attachments, course boards, background reminders, more games
+
+- **Plan it out** (task editor): split a big task into dated milestones working back from the due date, each waiting on the one before; or space exam study sessions before a test, linked to a notecard deck so each session has a Study button.
+- **Attachments:** photos, PDFs and documents on tasks, kept on this device (big photos are shrunk). The file names sync, so other devices show "on another device".
+- **Course boards:** a List / Board switch on each course page with To do / Doing / Done columns.
+- **Break mode:** add school breaks in Settings; days inside them don't count against your streak, and Today shows that you're on break.
+- **Notifications:** reminders go through the service worker (so they work on Android, and clicking one opens the task), today's count shows on the app icon, and the installed app gets a morning digest and badge in the background.
+- **Printable weekly planner** (Upcoming → Print week): one landscape page with each day's tasks and blank lines.
+- **What's new** after an update, from this changelog.
+- **Arcade:** Solitaire (Klondike, draw 1 or 3, undo), Invaders, Lunar lander and a Flappy-style paper-plane glider.
+- **Study games** (Play → Study games): Boss battle (multiple choice from your deck against a three-phase boss) and Match rush (match terms to definitions against the clock).
+- **Code health:** Settings and Tools are split into one component per section.
+
 ## Roadmap pass 3: task planning, smarter notecards, store split
 
 - **Tasks:** "waiting on" dependencies (blocked tasks are dimmed and can be hidden), per-task reminders (minutes before, the night before, the morning of, or a set time), a start/stop timer with tracked time next to the estimate and an "estimates are usually off by X%" note, repeat every n weeks / monthly / "2nd Tuesday", and "Skip this one" for a single occurrence.
