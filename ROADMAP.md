@@ -194,14 +194,14 @@ Each ships as a standalone HTML file in `public/games/`, so they double as examp
 - [x] Arcade → Breakout
 - [x] Arcade → Space-invaders-lite (Invaders); the Flappy-style game is the Paper paper-plane glider
 - [ ] Nature → Garden that grows as you finish tasks; fishing
-- [ ] Space → Lunar lander (done: `lander.html`); star map you fill in with streak days
+- [x] Space → Lunar lander (`lander.html`); star map you fill in with streak days (Play → Star map)
 - [x] Paper → Hangman from your vocab decks
-- [ ] Paper → Crossword from your vocab; paper-plane glider (done: `glider.html`)
+- [x] Paper → Crossword from your vocab (Play → Study games, printable); paper-plane glider (`glider.html`)
 
 ### Study-linked game ideas
 
 - [x] **Notecard boss battle**: each right answer hits the boss; wrong answers hurt you. (Play → Study games)
-- [ ] **Quiz race**: race a ghost of your last score through a quiz.
+- [x] **Quiz race**: race a ghost of your last score through a quiz. (Play → Study games, the ghost is your best run per deck or quiz set)
 - [x] **Typing defense**: type vocab words to stop falling letters.
 - [x] **Match rush**: drag terms onto definitions against the clock. (Play → Study games, best time per deck)
 - [ ] **Homework dungeon**: each completed task opens a room; courses are floors.
