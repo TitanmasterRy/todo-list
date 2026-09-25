@@ -1,5 +1,16 @@
 # Changelog
 
+## Roadmap pass 1: sync fixes, deploy anywhere, AI fix, accounts, economy
+
+- **Sync:** deletions are recorded as tombstones and sync to other devices (no more resurrected tasks); Trash keeps deleted tasks 30 days; courses merge last-write-wins; undo and restore stamp a fresh `updatedAt`; change detection covers every synced collection.
+- **Accounts:** sign up and sign in with email and password (Supabase), forgot/change password, version-checked sync.
+- **AI:** keys work again across providers (token budgets for thinking models, OpenAI reasoning-model parameters, live model list with automatic replacement of retired models, cleaned-up keys). The Anthropic SDK loads on demand.
+- **Deploy:** Vercel, Netlify, Render, Replit, Cloudflare Pages, Firebase, Surge and Docker (Fly.io, Railway, Koyeb) configs, `DEPLOY.md`, one-click buttons; base path defaults to `/` off GitHub Pages; CI runs on pull requests.
+- **Economy:** coins from schoolwork, shop, wallet history, cosmetics.
+- **Casino:** 13 play-chip games with tested payout tables and a homework-break reminder.
+- **Arcade:** vouchers, admin-managed `games.json`, in-app admin panel, sandboxed player, high scores, 7 built-in theme games.
+- PWA home-screen shortcuts; `ROADMAP.md` with everything still to do.
+
 ## Phase 1 — Scaffold, data layer, Today view
 
 - Vite + Svelte 5 + TypeScript scaffold, plain CSS with variables, system font stack

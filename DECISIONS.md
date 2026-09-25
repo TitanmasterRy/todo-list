@@ -97,3 +97,31 @@ There is no student-facing PowerSchool API, and scraping the portal through a re
 ## Quiz exports
 
 Game platforms have no public write APIs for third parties, so exports match each platform's official import format: Quizlet's paste importer (tab / newline), Blooket's and Gimkit's spreadsheet importers (CSV), Kahoot's spreadsheet template, and IMS QTI 1.2 for Schoology (also accepted by Canvas, Moodle and Blackboard).
+
+## Deletions sync as tombstones
+
+Deleting used to remove the record outright, so a merge with another device's copy brought it back. Deletions now leave a small tombstone (`kind`, `id`, `deletedAt`) that syncs with everything else; an item is dropped when its tombstone is newer than its last edit, so restoring (which stamps a fresh `updatedAt`) wins over an older deletion. Tombstones are forgotten after 60 days, and task tombstones carry a snapshot for 30 days, which is what the Trash shows.
+
+## Base path
+
+GitHub Pages serves project sites from `/<repo>/`; every other host serves from `/`. The default is now `/`, and the Pages workflow opts into `/<repo>/` with `GITHUB_PAGES=true`. Local `npm run preview` therefore serves at `/`.
+
+## Accounts use Supabase
+
+"Make an account with an email and password" needs a server that stores password hashes, sends confirmation and reset emails, and rate-limits sign-ins. A static site can't do that, and a hand-rolled Worker would have to reimplement all of it (and couldn't send email without another service). Supabase's free tier provides it, and row-level security keeps each user's row private, so the public anon key can ship in the bundle. The site admin sets it up once (`docs/supabase.sql`, two build variables). Writes are conditional on a `version` column so two devices syncing at the same moment re-merge instead of overwriting. Settings and API keys are not part of the synced bundle.
+
+## AI requests and thinking models
+
+Current Claude models (and Gemini 2.5, Qwen3, OpenAI o-series) reason before answering, and that reasoning counts against the output limit. The old limits (16 tokens for the key test, 2,048 for answers) left nothing for the answer, which looked like a broken key. Anthropic requests now allow 16,000 output tokens (you pay only for what's used) with `effort: low` for quick calls, OpenAI-compatible calls get per-provider minimums, and OpenAI reasoning models get `max_completion_tokens` without `temperature`. The key test lists the provider's live models first, so a retired model id is replaced automatically. Claude Opus 5 requests include server-side refusal fallbacks and retry without them if the key can't use that beta.
+
+## Economy is a ledger
+
+Stats merge by "highest XP wins", which would resurrect spent coins across devices. The wallet is instead an append-only list of entries with unique ids (earn, spend, reversal), so merging is a set union and balances are sums. Undo adds a reversal entry instead of deleting one, because deleted entries would come back from another device.
+
+## Casino design
+
+The casino uses play chips only. Chips are bought with coins earned from schoolwork and can't be converted back, so the casino can't inflate the economy or become a way to skip homework. Every game uses `crypto.getRandomValues`, shows its odds, and has a tested payout table (returns between 89% and 99.5%). A homework-break reminder fires after 20 minutes of play by default, and the whole casino can be switched off in Settings without affecting the rest of the economy.
+
+## Arcade games and the sandbox
+
+Admin-added games are arbitrary HTML, so they run in an iframe sandbox without `allow-same-origin`: files from `public/games/` and uploaded HTML get an opaque origin and can't read the app's IndexedDB, localStorage or keys (verified in the browser test). External embed links run on their own origin and keep `allow-same-origin` because many embeds need their own storage to load. Games talk to the app only through `postMessage` score reports. The site-wide list is `games.json` because a static site has no admin backend; the in-app admin panel stores trial games in that browser and exports the `games.json` entry.

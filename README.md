@@ -98,6 +98,16 @@ Settings → AI helper. Pick a provider and paste its key (stored only in your b
 
 XP for completing tasks scales with priority, subtasks, estimate, and how early you finish (same day ×1.1, 1–2 days ×1.25, 3+ days ×1.5), with a combo multiplier for back-to-back completions, a 5% **critical hit** for double XP, and double XP on the day's frog. Entering a **score** on a graded task pays grade XP (an A+ triggers confetti). Notecard study sessions pay XP too. Levels have titles (Freshman → Valedictorian) and unlock accent colors; 21 badges; streaks with freezes; daily ring confetti.
 
+## Coins, shop, casino and arcade
+
+The **Play** view (`9`) turns schoolwork into a currency. Everything here is play money: nothing can be bought with cash, and nothing can be cashed out. Turn it all off (or just the casino) in **Settings → Economy**.
+
+- **Coins 🪙** come only from schoolwork: finishing tasks (about XP ÷ 5), closing the daily ring, streak milestones, the first grade entered on a task, notecard study sessions, Pomodoros and level-ups. Undoing a completion takes its coins back.
+- **Shop:** chip packs for the casino, arcade vouchers, streak freezes, a coin booster, and cosmetics (titles next to your level, level-card frames, confetti styles). The **prize counter** sells casino trophies for chips.
+- **Casino 🎰:** Slots (symbols follow your theme pack), Blackjack, Roulette, Video poker, Baccarat, Craps, Hi-Lo, Plinko, Keno, Mines, Dice, Big Six and Scratch cards. Chips are bought with coins and never turn back into coins. Each game shows its odds, and a homework-break reminder pops up after 20 minutes (configurable). Closing your daily ring also gives 100 free chips.
+- **Arcade 🕹️:** spend vouchers on games. Seven are built in, one per theme pack (Minesweeper, 2048, Memory match, Snake, Leaf catcher, Asteroids, Word search). **Site admins add more** by putting an HTML file in `public/games/` or an embed link in `public/games/games.json` (see [`public/games/README.md`](public/games/README.md)), or try them first in **Settings → Arcade admin**. Games run in a sandbox that can't see your data, and can report high scores.
+- The wallet is a ledger of entries, so it syncs through your account, Gist or Drive without double-counting.
+
 ## Themes
 
 Settings → Theme pack: Classic, Sleek, Cute, Arcade, Nature, Space, Paper. Each pack changes colors and corners, the completion sound pack, the particles that burst from the checkbox (hearts and stars, pixels, leaves, starfield…) and the confetti.
