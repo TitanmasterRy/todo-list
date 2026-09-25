@@ -188,22 +188,22 @@ Each ships as a standalone HTML file in `public/games/`, so they double as examp
 - [x] **Nature → Leaf catcher** (catch falling leaves and fruit, dodge bugs)
 - [x] **Space → Asteroids**
 - [x] **Paper → Word search** (can use words from your notecards via `?words=`)
-- [ ] Classic → Solitaire (Klondike)
+- [x] Classic → Solitaire (Klondike: draw 1 or 3, drag or click, undo, Windows-style standard scoring)
 - [x] Sleek → Sudoku; Classic → Lights Out
 - [ ] Cute → Virtual pet you feed with coins; bubble pop
 - [x] Arcade → Breakout
-- [ ] Arcade → Space-invaders-lite, Flappy
+- [x] Arcade → Space-invaders-lite (Invaders); the Flappy-style game is the Paper paper-plane glider
 - [ ] Nature → Garden that grows as you finish tasks; fishing
-- [ ] Space → Lunar lander; star map you fill in with streak days
+- [ ] Space → Lunar lander (done: `lander.html`); star map you fill in with streak days
 - [x] Paper → Hangman from your vocab decks
-- [ ] Paper → Crossword from your vocab; paper-plane glider
+- [ ] Paper → Crossword from your vocab; paper-plane glider (done: `glider.html`)
 
 ### Study-linked game ideas
 
-- [ ] **Notecard boss battle**: each right answer hits the boss; wrong answers hurt you.
+- [x] **Notecard boss battle**: each right answer hits the boss; wrong answers hurt you. (Play → Study games)
 - [ ] **Quiz race**: race a ghost of your last score through a quiz.
 - [x] **Typing defense**: type vocab words to stop falling letters.
-- [ ] **Match rush**: drag terms onto definitions against the clock.
+- [x] **Match rush**: drag terms onto definitions against the clock. (Play → Study games, best time per deck)
 - [ ] **Homework dungeon**: each completed task opens a room; courses are floors.
 
 ---
