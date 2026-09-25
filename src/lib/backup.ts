@@ -1,7 +1,6 @@
 import type { ExportBundle, Task, Course, Template, Stats, DayNote, Deck, Card, Tombstone, LedgerEntry, SchoolSchedule } from './types';
 import { DEFAULT_STATS } from './types';
 import { mergeBreaks } from './gamification';
-import { mergeSchedules } from './timetable';
 
 /** Tombstones older than this are forgotten (every device has synced by then). */
 export const TOMBSTONE_DAYS = 60;
@@ -236,7 +235,8 @@ export function mergeBundles(local: ExportBundle, remote: ExportBundle, now: Dat
   // ledger entries are immutable, so a union by id is exact
   const ledger = new Map<string, LedgerEntry>();
   for (const e of [...(remote.ledger ?? []), ...(local.ledger ?? [])]) ledger.set(e.id, e);
-  const schedule = mergeSchedules(local.schedule, remote.schedule);
+  // timetable: last write wins (the whole schedule is one object)
+  const schedule = !local.schedule ? remote.schedule : !remote.schedule ? local.schedule : remote.schedule.updatedAt > local.schedule.updatedAt ? remote.schedule : local.schedule;
   const liveDecks = [...decks.values()].filter((d) => alive('deck', d.id, d.updatedAt));
   const deckIds = new Set(liveDecks.map((d) => d.id));
   return {

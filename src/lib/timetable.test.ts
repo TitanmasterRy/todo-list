@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { bellFor, bellProblems, daySlots, emptySchedule, formatHM, isSchoolDay, mergeSchedules, nextMeeting, rotationDay, whatsNow } from './timetable';
+import { bellFor, bellProblems, daySlots, emptySchedule, formatHM, isSchoolDay, nextMeeting, rotationDay, whatsNow } from './timetable';
 import type { SchoolSchedule } from './types';
 
 // 2026-10-05 is a Monday
@@ -125,13 +125,6 @@ describe('timetable', () => {
     expect(formatHM('13:05')).toBe('1:05 pm');
     expect(formatHM('00:10')).toBe('12:10 am');
     expect(formatHM('13:05', '24h')).toBe('13:05');
-  });
-
-  it('merges last-write-wins', () => {
-    const a = { ...emptySchedule(), updatedAt: '2026-10-01T00:00:00Z' };
-    const b = { ...emptySchedule(), updatedAt: '2026-10-02T00:00:00Z' };
-    expect(mergeSchedules(a, b)).toBe(b);
-    expect(mergeSchedules(undefined, a)).toBe(a);
   });
 });
 

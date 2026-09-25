@@ -6,7 +6,7 @@
   import QuickAdd from '../components/QuickAdd.svelte';
   import TaskItem from '../components/TaskItem.svelte';
   import Sortable from '../components/Sortable.svelte';
-  import CourseEditor from '../components/CourseEditor.svelte';
+  const loadCourseEditor = () => import('../components/CourseEditor.svelte');
   const loadBoard = () => import('../components/KanbanBoard.svelte');
 
   const live = (t: Task) => !t.completedAt || store.lingering.has(t.id);
@@ -155,7 +155,7 @@
 </div>
 
 {#if ui.courseEditor}
-  <CourseEditor />
+  {#await loadCourseEditor() then m}<m.default />{/await}
 {/if}
 
 <style>

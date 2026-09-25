@@ -7,7 +7,7 @@
   import { toasts } from '../lib/toast.svelte';
   import Checkbox from '../components/Checkbox.svelte';
   import SnoozeMenu from '../components/SnoozeMenu.svelte';
-  import MusicPanel from '../components/MusicPanel.svelte';
+  const loadMusic = () => import('../components/MusicPanel.svelte');
   let customInput = $state(String(pomodoro.customMin));
   let showMusic = $state(false);
   const stop = $derived(pomodoro.mode === 'stopwatch');
@@ -147,7 +147,7 @@
   </div>
 
   {#if showMusic}
-    <MusicPanel />
+    {#await loadMusic() then m}<m.default />{/await}
   {/if}
 
   {#if task}

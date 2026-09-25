@@ -173,13 +173,6 @@ export function bellProblems(b: BellSchedule): string[] {
   return out;
 }
 
-/** Last-write-wins between two devices' schedules. */
-export function mergeSchedules(a: SchoolSchedule | undefined, b: SchoolSchedule | undefined): SchoolSchedule | undefined {
-  if (!a) return b;
-  if (!b) return a;
-  return b.updatedAt > a.updatedAt ? b : a;
-}
-
 // ---------- attendance ----------
 export const ATTENDANCE: { id: AttendanceMark; label: string; emoji: string }[] = [
   { id: 'present', label: 'Present', emoji: '✓' },

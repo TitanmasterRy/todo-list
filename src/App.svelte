@@ -19,7 +19,6 @@
   import { startSchoologySync } from './lib/schoologySync.svelte';
   import { startReminders } from './lib/reminders';
   import { startLocalBackup } from './lib/localBackup.svelte';
-  import { init as initSpotify } from './lib/spotify.svelte';
   import FeedbackLayer from './components/FeedbackLayer.svelte';
   import Keyboard from './components/Keyboard.svelte';
   // dialogs load the first time they open
@@ -28,7 +27,7 @@
   const loadShortcuts = () => import('./components/ShortcutSheet.svelte');
   const loadOnboarding = () => import('./components/Onboarding.svelte');
   const loadUnlock = () => import('./components/UnlockDialog.svelte');
-  import { promptAtStartup, vault } from './lib/secrets.svelte';
+  import { hasSecret, promptAtStartup, vault } from './lib/secrets.svelte';
   import DailyPrompts from './components/DailyPrompts.svelte';
   import BulkBar from './components/BulkBar.svelte';
   import { ui } from './lib/ui.svelte';
@@ -46,7 +45,8 @@
       startSchoologySync();
       startReminders();
       void startLocalBackup();
-      void initSpotify();
+      // Spotify's code loads only when it's connected or we're coming back from its sign-in page
+      if (hasSecret('spotifyRefreshToken') || new URLSearchParams(location.search).has('code')) void import('./lib/spotify.svelte').then((m) => m.init());
     });
     const mq = window.matchMedia('(prefers-color-scheme: dark)');
     const apply = () => {

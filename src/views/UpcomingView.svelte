@@ -1,5 +1,5 @@
 <script lang="ts">
-  import MonthCalendar from '../components/MonthCalendar.svelte';
+  const loadMonth = () => import('../components/MonthCalendar.svelte');
   const loadPrint = () => import('../components/PrintPlanner.svelte');
   let printing = $state(false);
   const LAYOUT_KEY = 'homework-todo:upcoming-layout';
@@ -88,7 +88,7 @@
   {/if}
 
   {#if layout === 'month'}
-    <MonthCalendar />
+    {#await loadMonth() then m}<m.default />{/await}
   {:else}
     <QuickAdd defaultDueKey={addDaysKey(store.today, 1)} placeholder="Add a task… “Essay draft fri ~2h #hist”" />
 
