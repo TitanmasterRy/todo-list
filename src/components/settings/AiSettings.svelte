@@ -2,7 +2,8 @@
   // Settings → AI helper: provider, key, endpoint and model.
   import { store } from '../../lib/store.svelte';
   import { toasts } from '../../lib/toast.svelte';
-  import { testKey, currentProvider, currentModel, listModels, setModel as setAiModel } from '../../lib/ai';
+  import { testKey, currentProvider, currentModel, listModels, setModel as setAiModel, hasKey } from '../../lib/ai';
+  import { forgetSecret, setSecrets } from '../../lib/secrets.svelte';
   import { PROVIDERS, providerInfo, cleanKey } from '../../lib/ai-providers';
   import type { AiProvider } from '../../lib/types';
   import { set } from './settings';
@@ -17,14 +18,13 @@
   function saveKey() {
     const key = cleanKey(providerKey);
     if (!key) return;
-    store.updateSettings({ aiKeys: { ...store.settings.aiKeys, [provider]: key }, ...(provider === 'anthropic' ? { aiApiKey: '' } : {}) });
+    setSecrets({ [`aiKeys.${provider}`]: key, ...(provider === 'anthropic' ? { aiApiKey: '' } : {}) });
     providerKey = '';
     void connectAI();
   }
   function removeKey() {
-    const k = { ...store.settings.aiKeys };
-    delete k[provider];
-    store.updateSettings({ aiKeys: k, aiApiKey: provider === 'anthropic' ? '' : store.settings.aiApiKey });
+    if (provider === 'anthropic') forgetSecret('aiKeys.anthropic', 'aiApiKey');
+    else forgetSecret(`aiKeys.${provider}`);
   }
   function setModel(m: string) {
     setAiModel(provider, m);
@@ -83,7 +83,7 @@
       <button class="prov" class:on={provider === p.id} role="radio" aria-checked={provider === p.id} onclick={() => setProvider(p.id)}>
         <span class="pn">{p.name}</span>
         {#if p.free}<span class="free">free{p.needsKey ? ' tier' : ''}</span>{/if}
-        {#if store.settings.aiKeys[p.id] || (p.id === 'anthropic' && s.aiApiKey)}<span class="ok">● key saved</span>{/if}
+        {#if hasKey(p.id)}<span class="ok">● key saved</span>{/if}
       </button>
     {/each}
   </div>
@@ -115,14 +115,14 @@
         <button
           class="btn ghost sm"
           onclick={() => void loadModels()}
-          disabled={modelsBusy || (pInfo.needsKey && !store.settings.aiKeys[provider] && !(provider === 'anthropic' && s.aiApiKey))}
+          disabled={modelsBusy || (pInfo.needsKey && !hasKey(provider))}
           title="Fetch the current model list from the provider">{modelsBusy ? '…' : '↻ Load models'}</button
         >
       </span>
     {/if}
   </div>
   {#if pInfo.needsKey}
-    {#if store.settings.aiKeys[provider] || (provider === 'anthropic' && s.aiApiKey)}
+    {#if hasKey(provider)}
       <div class="btns">
         <span class="status ok">Key saved</span>
         <button class="btn sm" onclick={() => void connectAI()} disabled={aiBusy}>{aiBusy ? 'Testing…' : 'Test'}</button>

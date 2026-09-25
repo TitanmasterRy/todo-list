@@ -299,6 +299,7 @@ export interface Settings {
   courseLayout?: 'list' | 'board'; // course page: list or Kanban board // newest changelog heading already shown in What's new
   lastWeeklyReviewDate?: string;
   lastBackupReminderAt?: string;
+  syncPassphrase: string; // end-to-end encryption of the synced copy (Gist, Drive, account); '' = off
 }
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -379,6 +380,7 @@ export const DEFAULT_SETTINGS: Settings = {
   casinoDailyLimitMin: 0,
   casinoMinutesByDay: {},
   onboarded: false,
+  syncPassphrase: '',
 };
 
 export const DEFAULT_STATS: Stats = {

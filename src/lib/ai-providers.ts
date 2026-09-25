@@ -1,5 +1,6 @@
 // Provider catalog + an OpenAI-compatible chat client (fetch, browser-side). Anthropic goes through the official SDK in ai.ts.
 import type { AiProvider } from './types';
+import { cspHint } from './csp';
 
 export interface ProviderInfo {
   id: AiProvider;
@@ -175,7 +176,9 @@ export async function listModelsOpenAICompatible(cfg: { baseUrl: string; apiKey?
     res = await fetch(`${base}/models`, { headers });
   } catch (e) {
     throw new Error(
-      cfg.provider === 'ollama' ? 'Could not reach Ollama. Is it running with OLLAMA_ORIGINS="*"?' : `Network error calling ${base}: ${e instanceof Error ? e.message : String(e)}`,
+      (cfg.provider === 'ollama'
+        ? 'Could not reach Ollama. Is it running with OLLAMA_ORIGINS="*"?'
+        : `Network error calling ${base}: ${e instanceof Error ? e.message : String(e)}`) + cspHint(base),
     );
   }
   if (res.status === 401 || res.status === 403) throw new Error(`API key rejected (${res.status}). Check it in Settings → AI helper.`);
@@ -222,7 +225,9 @@ export async function chatOpenAICompatible(cfg: { baseUrl: string; apiKey?: stri
     });
   } catch (e) {
     throw new Error(
-      cfg.provider === 'ollama' ? 'Could not reach Ollama. Is it running with OLLAMA_ORIGINS="*"?' : `Network error calling ${base}: ${e instanceof Error ? e.message : String(e)}`,
+      (cfg.provider === 'ollama'
+        ? 'Could not reach Ollama. Is it running with OLLAMA_ORIGINS="*"?'
+        : `Network error calling ${base}: ${e instanceof Error ? e.message : String(e)}`) + cspHint(base),
     );
   }
   if (!res.ok) {

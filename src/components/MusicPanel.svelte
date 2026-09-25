@@ -4,6 +4,7 @@
   import { toasts } from '../lib/toast.svelte';
   import * as sp from '../lib/spotify.svelte';
   import { spotify, toEmbedUrl, type SpotifyPlaylist } from '../lib/spotify.svelte';
+  import { hasSecret } from '../lib/secrets.svelte';
 
   let query = $state('');
   let results = $state<SpotifyPlaylist[]>([]);
@@ -22,7 +23,7 @@
   const activeDevice = $derived(spotify.playback?.device?.id ?? spotify.devices.find((d) => d.isActive)?.id ?? '');
 
   onMount(() => {
-    if (store.settings.spotifyRefreshToken) {
+    if (hasSecret('spotifyRefreshToken')) {
       sp.startPolling();
       void refreshDevices(true);
     }

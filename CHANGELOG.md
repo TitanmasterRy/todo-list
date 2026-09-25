@@ -1,5 +1,13 @@
 # Changelog
 
+## Security and privacy: key lock, end-to-end encrypted sync, delete everything
+
+- **Lock my keys** (Settings → Privacy & security): API keys and tokens are stored encrypted with a passphrase you enter once per session.
+- **End-to-end encrypted sync:** with a sync passphrase, the Gist, Google Drive and account copies (and backups, if you like) are encrypted in your browser before upload.
+- **Delete everything** (Settings → Data) lists what will go and can also delete the gist, the Drive file and your account's server copy.
+- **What goes where:** a plain-language list of what each optional feature sends to which service (also in PRIVACY.md).
+- **Content-Security-Policy** on the site; uploaded games and code previews run in a separate sandbox page. The Schoology relay can be locked to your own site and rate-limited.
+
 ## Roadmap pass 4: plan it out, attachments, course boards, background reminders, more games
 
 - **Plan it out** (task editor): split a big task into dated milestones working back from the due date, each waiting on the one before; or space exam study sessions before a test, linked to a notecard deck so each session has a Study button.

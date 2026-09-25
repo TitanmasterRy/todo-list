@@ -4,7 +4,9 @@
 import { store } from './store.svelte';
 import { on } from './events';
 import { toasts } from './toast.svelte';
-import { mergeBundles, parseBundle } from './backup';
+import { mergeBundles } from './backup';
+import { decodeFromSync, encodeForSync, SyncLockedError } from './syncCrypto';
+import { isLocked } from './secrets.svelte';
 import { addDaysKey, dueKey, isDateOnly, pad } from './dates';
 import { inferType } from './schoology';
 import type { ExportBundle, Task } from './types';
@@ -555,6 +557,8 @@ export async function importClassroom(): Promise<{ courses: { id: string; name: 
 let timer: ReturnType<typeof setTimeout> | undefined;
 let inFlight: Promise<void> | null = null;
 let started = false;
+/** Set when the Drive copy is encrypted and this device can't open it: pushing would overwrite it. */
+let blocked: string | null = null;
 
 function localBundle(): ExportBundle {
   return store.snapshotBundle();
@@ -568,18 +572,18 @@ async function findDriveFile(): Promise<string | null> {
   return res.files?.[0]?.id ?? null;
 }
 
-async function readDriveFile(id: string): Promise<ExportBundle | null> {
+async function readDriveFile(id: string, interactive: boolean): Promise<ExportBundle | null> {
   try {
     const text = await api<string>(`${DRIVE_API}/files/${encodeURIComponent(id)}?alt=media`, { ...driveOpts, text: true });
     if (!text.trim()) return null;
-    return parseBundle(JSON.parse(text));
+    return await decodeFromSync(JSON.parse(text), { interactive });
   } catch (e) {
     if (e instanceof ApiError && e.status === 404) return null;
     throw e;
   }
 }
 
-async function createDriveFile(bundle: ExportBundle): Promise<string> {
+async function createDriveFile(bundle: unknown): Promise<string> {
   const boundary = `hw${Date.now().toString(36)}`;
   const meta = JSON.stringify({ name: DRIVE_FILE, parents: ['appDataFolder'], mimeType: 'application/json' });
   const body =
@@ -594,7 +598,7 @@ async function createDriveFile(bundle: ExportBundle): Promise<string> {
   return res.id;
 }
 
-async function updateDriveFile(id: string, bundle: ExportBundle): Promise<string> {
+async function updateDriveFile(id: string, bundle: unknown): Promise<string> {
   const res = await api<{ id?: string }>(`${DRIVE_UPLOAD}/files/${encodeURIComponent(id)}?uploadType=media&fields=id`, {
     ...driveOpts,
     method: 'PATCH',
@@ -617,16 +621,20 @@ export async function driveSync(opts: { pull: boolean; interactive?: boolean } =
     google.syncStatus = 'idle';
     return;
   }
+  // an encrypted copy needs the sync passphrase: background syncs wait for the key lock to open
+  if (!opts.interactive && isLocked('syncPassphrase')) return;
   if (inFlight) return inFlight;
   inFlight = (async () => {
     google.syncStatus = 'syncing';
     google.syncError = null;
     try {
       if (!opts.interactive && !hasValidToken([SCOPE_DRIVE])) throw new Error('Sign in to Google to sync.');
+      if (!opts.pull && blocked) throw new SyncLockedError(blocked);
       let local = localBundle();
       let id = store.settings.googleDriveFileId || (await findDriveFile()) || '';
       if (opts.pull && id) {
-        const remote = await readDriveFile(id);
+        const remote = await readDriveFile(id, !!opts.interactive);
+        blocked = null;
         if (remote === null) {
           id = (await findDriveFile()) ?? '';
         } else {
@@ -647,11 +655,12 @@ export async function driveSync(opts: { pull: boolean; interactive?: boolean } =
           }
         }
       }
+      const payload = await encodeForSync(local, { interactive: opts.interactive });
       try {
-        id = id ? await updateDriveFile(id, local) : await createDriveFile(local);
+        id = id ? await updateDriveFile(id, payload) : await createDriveFile(payload);
       } catch (e) {
         if (!(e instanceof ApiError && e.status === 404)) throw e;
-        id = await createDriveFile(local);
+        id = await createDriveFile(payload);
       }
       const at = new Date().toISOString();
       const patch: Record<string, unknown> = { lastGoogleSyncAt: at };
@@ -661,6 +670,7 @@ export async function driveSync(opts: { pull: boolean; interactive?: boolean } =
     } catch (e) {
       google.syncStatus = 'error';
       google.syncError = e instanceof Error ? e.message : String(e);
+      if (e instanceof SyncLockedError && opts.pull) blocked = e.message;
       console.warn('google drive sync failed', e);
     } finally {
       inFlight = null;
@@ -682,11 +692,27 @@ export function startGoogleSync(): void {
   started = true;
   google.status = clientId() ? 'ready' : 'off';
   on('changed', () => scheduleDriveSync());
+  on('unlocked', () => {
+    if (store.settings.googleSyncEnabled && hasValidToken([SCOPE_DRIVE])) void driveSync({ pull: true, interactive: false });
+  });
   if (typeof window !== 'undefined') {
     window.addEventListener('online', () => {
       if (store.settings.googleSyncEnabled && google.syncStatus === 'error' && hasValidToken([SCOPE_DRIVE])) void driveSync({ pull: true, interactive: false });
     });
   }
+}
+
+/** Delete the Drive app-data sync file (for "Delete everything"). Signs in if needed. Resolves false when there was none. */
+export async function deleteDriveFile(): Promise<boolean> {
+  const id = store.settings.googleDriveFileId || (await findDriveFile());
+  if (!id) return false;
+  try {
+    await api<void>(`${DRIVE_API}/files/${encodeURIComponent(id)}`, { ...driveOpts, method: 'DELETE' });
+  } catch (e) {
+    if (e instanceof ApiError && e.status === 404) return false;
+    throw e;
+  }
+  return true;
 }
 
 /** Scopes needed for the features currently switched on (Gmail and Calendar are always offered). */

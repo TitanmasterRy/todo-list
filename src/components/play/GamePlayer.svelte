@@ -6,6 +6,7 @@
   import { store } from '../../lib/store.svelte';
   import { toasts } from '../../lib/toast.svelte';
   import { focusTrap } from '../../lib/focusTrap';
+  import SandboxFrame from '../SandboxFrame.svelte';
   import type { ArcadeGame } from '../../lib/types';
 
   interface Props {
@@ -100,7 +101,7 @@
   {:else}
     {#key key}
       {#if game.html}
-        <iframe bind:this={frame} title={game.title} srcdoc={game.html} sandbox={sandboxFor(game)} allow="fullscreen; gamepad; autoplay"></iframe>
+        <SandboxFrame bind:frame html={game.html} title={game.title} sandbox={sandboxFor(game)} allow="fullscreen; gamepad; autoplay" />
       {:else if src}
         <iframe bind:this={frame} title={game.title} {src} sandbox={sandboxFor(game)} allow="fullscreen; gamepad; autoplay" referrerpolicy="no-referrer"></iframe>
       {/if}
@@ -142,7 +143,8 @@
   .time.low {
     color: var(--danger-text);
   }
-  iframe {
+  /* the uploaded-game frame lives in SandboxFrame */
+  .player :global(iframe) {
     width: 100%;
     height: 100%;
     border: 0;

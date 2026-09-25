@@ -35,6 +35,8 @@ Every host except GitHub Pages serves the site from the domain root, which is th
 | `VITE_SUPABASE_URL` | Supabase project URL. Turns on email + password accounts (see [Accounts](#accounts-email--password-sync)). |
 | `VITE_SUPABASE_ANON_KEY` | Supabase *anon public* key. Safe to ship: row-level security keeps each user's data private. |
 | `VITE_ARCADE_MANIFEST` | URL of a `games.json` to load arcade games from instead of the bundled `games/games.json`. Lets you change games without redeploying. The URL must allow CORS. |
+| `VITE_CSP_CONNECT` | Extra origins the page may connect to, space or comma separated (e.g. `https://relay.myschool.org https://llm.example.com`). Needed only for a Schoology relay that isn't on `*.workers.dev` or a custom AI endpoint on another host. See [Content-Security-Policy](#content-security-policy). |
+| `VITE_CSP` | `off` leaves the Content-Security-Policy out of the build (not recommended). |
 
 ## Accounts (email + password sync)
 
@@ -56,6 +58,39 @@ Users then see **Settings → Account → Create account**. Email confirmation i
 What syncs: tasks, courses, templates, notecards, day notes, stats, coins/chips/vouchers and deletions. Settings and API keys stay on each device. Merging uses the same rules as Gist and Drive sync, and writes are version-checked so two devices syncing at once can't overwrite each other.
 
 Without the build variables, anyone can still paste a project URL and anon key under **Settings → Account → Server** (useful for testing or self-hosting).
+
+## Content-Security-Policy
+
+`npm run build` puts a `<meta http-equiv="Content-Security-Policy">` into `dist/index.html` (a small plugin in `vite.config.ts`; the host list is `src/lib/csp.ts`). It forbids inline scripts and plugins and only allows connections to the services the app uses: the AI providers, `*.supabase.co`, GitHub, Google, `*.schoology.com` and `*.workers.dev` relays, Spotify, Crossref/Open Library and `cdn.jsdelivr.net` (Python and OCR engines). `VITE_SUPABASE_URL` and `VITE_ARCADE_MANIFEST` origins are added automatically; anything else goes in `VITE_CSP_CONNECT`. If a request is blocked, the app's error message names the origin to add.
+
+- The dev server (`npm run dev`) has no policy, since Vite's hot reload needs inline scripts and `ws:`.
+- The offline single-file build (`dist/lite/index.html`) has none either: all of its code is inline.
+- The policy is not repeated as an HTTP header in `_headers` / `vercel.json` / `netlify.toml`: a header would also apply to `games/*.html` and `sandbox.html`, which run untrusted game code in sandboxed frames and must not inherit it, and the meta tag already covers the app page on every host. `frame-ancestors` can't be set from a meta tag; add `Content-Security-Policy: frame-ancestors 'self'` for `/` on your host if you want to stop other sites from framing the app.
+
+## Locking down the Schoology relay
+
+`docs/cors-proxy-worker.js` is a Cloudflare Worker that forwards only to schoology.com. Once it works, lock it to your site and rate-limit it so a leaked URL can't be used by others:
+
+1. Worker → **Settings → Variables and Secrets** → add `ALLOWED_ORIGINS` = your site's origin, e.g. `https://my-homework.vercel.app` (comma-separate several; include `http://localhost:5173` if you test locally). Requests from any other site (and requests with no `Origin`) get `403`.
+2. Optional: `RATE_LIMIT_PER_MIN` (default `60` requests per minute per visitor IP; `0` turns it off). The built-in limiter keeps counts in each Worker instance's memory, so it's a per-location cap, not an exact global one.
+3. For an exact limit, add Cloudflare's rate-limiting binding named `RATE_LIMITER` and the Worker uses it instead. With wrangler:
+   ```toml
+   # wrangler.toml for the relay Worker (not the Pages project in the repo root)
+   name = "schoology-relay"
+   main = "docs/cors-proxy-worker.js"
+   compatibility_date = "2026-09-01"
+
+   [vars]
+   ALLOWED_ORIGINS = "https://my-homework.vercel.app"
+
+   [[ratelimits]]
+   name = "RATE_LIMITER"
+   namespace_id = "1001"
+   simple = { limit = 60, period = 60 }
+   ```
+   Then `npx wrangler deploy`.
+
+Blocked requests get `403`, rate-limited ones `429` with `Retry-After: 60`; the app shows both as sync errors.
 
 ## Step by step
 
@@ -106,4 +141,4 @@ docker run -p 8080:8080 homework-todo   # http://localhost:8080
 - **Arcade games:** put `.html` files in `public/games/` and list them in `public/games/games.json` (see `public/games/README.md`), then redeploy. Or host a `games.json` elsewhere and point `VITE_ARCADE_MANIFEST` at it.
 - **Google sign-in:** add your new domain to the OAuth client's *Authorized JavaScript origins*.
 - **Spotify:** add `https://<your-domain>/` to the app's redirect URIs.
-- **Schoology relay:** nothing changes; the relay URL is set per user in Settings.
+- **Schoology relay:** the relay URL is set per user in Settings. If you set `ALLOWED_ORIGINS` on the Worker, add the new domain there.

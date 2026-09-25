@@ -40,7 +40,17 @@ The app is a PWA: after the first visit it loads offline, and browsers offer **I
 
 ## AI helper (optional)
 
-“Ask the tutor” and “Generate from notes” call the Anthropic API directly from your browser with a key you paste under **Settings → AI helper**. The key is stored only in localStorage and sent only to `api.anthropic.com`; you pay Anthropic for usage. Everything else in the app works without it.
+“Ask the tutor” and “Generate from notes” call the Anthropic API directly from your browser with a key you paste under **Settings → AI helper**. The key is stored only in this browser (encrypted if you lock your keys) and sent only to `api.anthropic.com`; you pay Anthropic for usage. Everything else in the app works without it.
+
+## Privacy and security
+
+Local-first, no analytics, no server of its own: **[PRIVACY.md](PRIVACY.md)** lists what each optional feature sends where (also in **Settings → Privacy & security**). In the same section:
+
+- **Lock my keys with a passphrase:** API keys and tokens are stored encrypted (AES-256-GCM, PBKDF2 key). The passphrase is asked once per session: at startup if a sync needs a key, otherwise the first time you use a feature that does.
+- **End-to-end encrypt my synced copy:** Gist, Drive and account copies are encrypted in the browser with a sync passphrase, so those services only see ciphertext. Old plain copies still read; the next sync writes an encrypted one. Forgetting the passphrase means the synced copy can't be read (your devices keep their data).
+- **Delete everything** (Settings → Data) also offers to delete the gist, the Drive file and the account's server copy, and reports each result.
+
+The production build ships a Content-Security-Policy with no inline scripts (see DEPLOY.md).
 
 ## Accounts: sign up with email and password (optional)
 
@@ -54,7 +64,7 @@ Gist sync keeps your data in a **private GitHub Gist** so it follows you across 
 2. Open **Settings → Sync**, paste the token, click **Connect**. The app verifies the token, creates a private gist named `homework-todo.json` on the first sync, and stores the gist id.
 3. Do the same on another device with the same token. The existing gist is found from the stored id; on a fresh device the first sync creates a new gist, so paste the gist id from Settings on the first device if you want them to share one (it's shown as a link under Sync). The simplest path: export a backup on device A, import it on device B, then connect B with the same token.
 
-How it syncs: on load and 2 seconds after any change (debounced). Merging is last-write-wins per task using `updatedAt`; courses, templates and day notes merge by id; stats keep the higher XP and the maximum completions per day. A conflict notice appears only if the same task was edited on two devices within the same second. The token is stored only in this browser's localStorage and is sent only to `api.github.com`. **Disconnect** removes it.
+How it syncs: on load and 2 seconds after any change (debounced). Merging is last-write-wins per task using `updatedAt`; courses, templates and day notes merge by id; stats keep the higher XP and the maximum completions per day. A conflict notice appears only if the same task was edited on two devices within the same second. The token is stored only in this browser (encrypted if you lock your keys) and is sent only to `api.github.com`. **Disconnect** removes it. Turn on end-to-end encryption (Settings → Privacy & security) and the gist only ever holds an encrypted copy.
 
 ## Schoology sync
 

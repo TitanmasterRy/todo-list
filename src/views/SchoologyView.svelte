@@ -5,9 +5,10 @@
   import { addDaysKey, dueKey, isOverdue, isDueToday } from '../lib/dates';
   import { schoology, syncNow, syncFromText, testApiCredentials, schoologyConfigured } from '../lib/schoologySync.svelte';
   import { isSchoologyFeedUrl } from '../lib/schoology';
+  import { forgetSecret, secret } from '../lib/secrets.svelte';
   let mode = $state<'api' | 'ics'>(store.settings.schoologyMode);
-  let apiKey = $state(store.settings.schoologyKey);
-  let apiSecret = $state(store.settings.schoologySecret);
+  let apiKey = $state(secret('schoologyKey'));
+  let apiSecret = $state(secret('schoologySecret'));
   let domain = $state(store.settings.schoologyDomain);
   let interval = $state(store.settings.schoologyIntervalMin);
   let signingIn = $state(false);
@@ -40,7 +41,7 @@
   }
   import TaskItem from '../components/TaskItem.svelte';
 
-  let url = $state(store.settings.schoologyFeedUrl);
+  let url = $state(secret('schoologyFeedUrl'));
   let proxy = $state(store.settings.schoologyProxy);
   let pasted = $state('');
   let showSetup = $state(!schoologyConfigured());
@@ -105,7 +106,8 @@
     toasts.push({ message: `Mapped “${name}”`, detail: 'Sync again to attach existing assignments.', kind: 'success' });
   }
   function disconnect() {
-    store.updateSettings({ schoologyFeedUrl: '', schoologyKey: '', schoologySecret: '', lastSchoologyError: undefined });
+    forgetSecret('schoologyFeedUrl', 'schoologyKey', 'schoologySecret');
+    store.updateSettings({ lastSchoologyError: undefined });
     url = '';
     apiKey = '';
     apiSecret = '';

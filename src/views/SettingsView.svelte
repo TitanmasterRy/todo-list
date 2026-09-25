@@ -16,6 +16,7 @@
   import TemplateSettings from '../components/settings/TemplateSettings.svelte';
   import GistSettings from '../components/settings/GistSettings.svelte';
   import DataSettings from '../components/settings/DataSettings.svelte';
+  import PrivacySettings from '../components/settings/PrivacySettings.svelte';
   import TrashSettings from '../components/settings/TrashSettings.svelte';
   import CollectionSettings from '../components/settings/CollectionSettings.svelte';
   import HelpSettings from '../components/settings/HelpSettings.svelte';
@@ -44,6 +45,7 @@
   <TemplateSettings />
   <AccountPanel />
   <GistSettings />
+  <PrivacySettings />
   <DataSettings />
   <TrashSettings />
   <CollectionSettings />

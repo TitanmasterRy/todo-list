@@ -6,6 +6,14 @@ export async function openApp(page: Page, settings: Record<string, unknown> = {}
   page.on('pageerror', (e) => errors.push(e.message));
   page.on('console', (m) => {
     if (m.type() === 'error' && !/Failed to load resource/.test(m.text())) errors.push(m.text());
+    // the production build ships a Content-Security-Policy: any violation fails the test, in every spec
+    if (/Content Security Policy/i.test(m.text())) {
+      try {
+        expect.soft(m.text(), 'Content-Security-Policy violation').toBe('');
+      } catch {
+        /* reported after the test ended */
+      }
+    }
   });
   const today = new Date().toISOString().slice(0, 10);
   await page.addInitScript(
