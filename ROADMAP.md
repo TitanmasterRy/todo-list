@@ -247,7 +247,7 @@ Each ships as a standalone HTML file in `public/games/`, so they double as examp
 - [x] Browser extension: add the current page as a task. (`extension/`: toolbar button, right-click menu, Alt+Shift+H.)
 - [ ] Skeleton loading and virtual scrolling for large lists.
 - [x] "What's new" after updates, from the changelog.
-- [ ] Shareable weekly review and stats cards.
+- [x] Shareable weekly review and stats cards. (Stats → Share my week: a square PNG with numbers only.)
 
 ## 🔄 Data and sync
 

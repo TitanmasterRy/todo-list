@@ -33,3 +33,22 @@ test('files shared into the app become a task with the file attached', async ({ 
   await expect(ed.getByRole('link', { name: 'chem_worksheet-3.txt' })).toBeVisible();
   await expect(page).not.toHaveURL(/shared=/);
 });
+
+test('share my week: a stats image with no task titles', async ({ page }, info) => {
+  await openApp(page, { autoDescribe: false });
+  const box = page.locator('[data-quick-add]').first();
+  await box.fill('Top secret essay today');
+  await box.press('Enter');
+  await page.locator('.task', { hasText: 'Top secret essay' }).getByRole('checkbox').click();
+  await page.keyboard.press('Escape');
+  await page.locator('body').click({ position: { x: 5, y: 5 } });
+  await page.keyboard.press('6');
+  await page.getByRole('button', { name: /Share my week/ }).click();
+  const dlg = page.getByRole('dialog', { name: /Share my week/ });
+  await expect(dlg.locator('canvas')).toHaveText(/1 task done this week/);
+  await dlg.getByLabel('Name on the card').fill('Sam');
+  const [dl] = await Promise.all([page.waitForEvent('download'), dlg.getByRole('button', { name: 'Download' }).click()]);
+  expect(dl.suggestedFilename()).toMatch(/^my-week-\d{4}-\d{2}-\d{2}\.png$/);
+  await dl.saveAs(info.outputPath('card.png'));
+  if (process.env.SHOT_DIR) await dl.saveAs(`${process.env.SHOT_DIR}/card.png`);
+});

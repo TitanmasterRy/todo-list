@@ -36,6 +36,7 @@
   const last7 = $derived(Array.from({ length: 7 }, (_, i) => daysAgoKey(6 - i, store.now)).map((k) => ({ key: k, n: store.stats.completionsByDay[k] ?? 0 })));
   const week7 = $derived(last7.reduce((a, d) => a + d.n, 0));
   const pomToday = $derived(store.stats.pomodorosByDay[store.today] ?? 0);
+  let sharing = $state(false);
 </script>
 
 <div class="page">
@@ -45,8 +46,12 @@
       <div class="sub">Streaks, levels, badges and your week.</div>
     </div>
     <div class="grow"></div>
+    <button class="btn sm" onclick={() => (sharing = true)}>📸 Share my week</button>
     <button class="btn sm" onclick={() => (ui.weeklyReview = true)}>Weekly review</button>
   </header>
+  {#if sharing}
+    {#await import('../components/ShareStatsCard.svelte') then m}<m.default onclose={() => (sharing = false)} />{/await}
+  {/if}
 
   {#if !store.settings.gamification}
     <div class="card muted">Gamification is off. Turn it on in Settings to see XP, streaks and badges. The heatmap and summaries still work.</div>
