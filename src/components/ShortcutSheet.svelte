@@ -22,6 +22,7 @@
         ['e', 'Edit task'],
         ['Space', 'Complete task'],
         ['s', 'Snooze menu'],
+        ['[ / ]', 'Move selected task a day earlier / later'],
         ['x', 'Select for bulk actions'],
         ['f', 'Focus on task'],
         ['d', 'Duplicate task'],

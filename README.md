@@ -156,6 +156,7 @@ Press `?` in the app for the sheet.
 | `Enter` / `e` | Open / edit selected task |
 | `Space` | Complete selected task (in Focus: start/pause timer) |
 | `s` | Snooze menu |
+| `[` / `]` | Move selected task a day earlier / later |
 | `x` | Toggle bulk selection |
 | `f` | Focus on selected task |
 | `Delete` | Delete selected task |

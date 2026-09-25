@@ -152,6 +152,14 @@
           store.selectedTaskId = ids[idx + 1] ?? ids[idx - 1] ?? null;
         }
         return;
+      case '[':
+      case ']':
+        // keyboard alternative to dragging between days
+        if (store.selectedTaskId) {
+          e.preventDefault();
+          store.shiftTaskDays(store.selectedTaskId, e.key === ']' ? 1 : -1);
+        }
+        return;
       case 's':
         if (store.selectedTaskId) {
           e.preventDefault();

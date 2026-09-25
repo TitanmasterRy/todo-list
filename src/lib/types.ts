@@ -168,6 +168,10 @@ export interface Settings {
   soundPack: SoundPack;
   soundPromptShown: boolean;
   reducedMotion: boolean;
+  celebrations: boolean; // confetti and checkbox particle bursts (separate from sounds and motion)
+  highContrast: boolean;
+  fontChoice: 'system' | 'atkinson' | 'lexend' | 'dyslexic';
+  textScale: number; // percent: 100, 112, 125, 140
   dailyGoal: number;
   pomodoroWorkMin: number;
   pomodoroBreakMin: number;
@@ -249,6 +253,10 @@ export const DEFAULT_SETTINGS: Settings = {
   soundPack: 'soft',
   soundPromptShown: false,
   reducedMotion: false,
+  celebrations: true,
+  highContrast: false,
+  fontChoice: 'system',
+  textScale: 100,
   dailyGoal: 3,
   pomodoroWorkMin: 25,
   pomodoroBreakMin: 5,

@@ -31,7 +31,7 @@
   let parts: P[] = [];
 
   function fire() {
-    if (!canvas || store.settings.reducedMotion || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    if (!canvas || store.settings.celebrations === false || store.settings.reducedMotion || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
     const W = (canvas.width = window.innerWidth);
     const H = (canvas.height = window.innerHeight);
     const theme = themeById(store.settings.themePack);

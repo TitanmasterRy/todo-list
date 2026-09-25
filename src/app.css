@@ -487,3 +487,25 @@ a {
 :root[data-pack='nature'] .task {
   box-shadow: 0 1px 0 color-mix(in srgb, var(--border-strong) 40%, transparent);
 }
+
+/* High contrast (Settings → Appearance): stronger borders and focus rings, muted text close to body text, underlined links. */
+:root.high-contrast {
+  --text-muted: color-mix(in srgb, var(--text) 88%, var(--bg));
+  --border: color-mix(in srgb, var(--text) 45%, var(--bg));
+  --border-strong: var(--text);
+  --accent-text: color-mix(in srgb, var(--accent) 45%, var(--text));
+}
+:root.high-contrast :focus-visible {
+  outline: 3px solid var(--text) !important;
+  outline-offset: 2px;
+}
+:root.high-contrast a {
+  text-decoration: underline;
+}
+:root.high-contrast .btn,
+:root.high-contrast .input,
+:root.high-contrast .select,
+:root.high-contrast .textarea,
+:root.high-contrast .card {
+  border-width: 2px;
+}

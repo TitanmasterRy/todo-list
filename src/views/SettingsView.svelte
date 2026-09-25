@@ -13,6 +13,7 @@
   import { testKey, currentProvider, currentModel, listModels, setModel as setAiModel } from '../lib/ai';
   import { PROVIDERS, providerInfo, cleanKey } from '../lib/ai-providers';
   import AccountPanel from '../components/AccountPanel.svelte';
+  import { FONTS } from '../lib/fonts';
   import ArcadeAdmin from '../components/ArcadeAdmin.svelte';
   import '../components/casino/casino.css';
   import type { AiProvider } from '../lib/types';
@@ -240,6 +241,27 @@
     <div class="row">
       <label for="motion">Reduced motion</label>
       <input id="motion" type="checkbox" class="switch" checked={s.reducedMotion} onchange={(e) => set('reducedMotion', (e.target as HTMLInputElement).checked)} />
+    </div>
+    <div class="row">
+      <label for="celeb">Confetti and sparkle bursts</label>
+      <input id="celeb" type="checkbox" class="switch" checked={s.celebrations} onchange={(e) => set('celebrations', (e.target as HTMLInputElement).checked)} />
+    </div>
+    <div class="row">
+      <label for="hc">High contrast</label>
+      <input id="hc" type="checkbox" class="switch" checked={s.highContrast} onchange={(e) => set('highContrast', (e.target as HTMLInputElement).checked)} />
+    </div>
+    <div class="row">
+      <label for="font">Font</label>
+      <select id="font" class="select" value={s.fontChoice} onchange={(e) => set('fontChoice', (e.target as HTMLSelectElement).value as typeof s.fontChoice)}>
+        {#each FONTS as f (f.id)}<option value={f.id} title={f.hint}>{f.label}</option>{/each}
+      </select>
+    </div>
+    <p class="help">{FONTS.find((f) => f.id === s.fontChoice)?.hint}</p>
+    <div class="row">
+      <label for="ts">Text size</label>
+      <select id="ts" class="select" value={String(s.textScale)} onchange={(e) => set('textScale', Number((e.target as HTMLSelectElement).value))}>
+        {#each [100, 112, 125, 140] as z (z)}<option value={String(z)}>{z}%</option>{/each}
+      </select>
     </div>
     <div class="row">
       <label for="tf">Time format</label>

@@ -70,3 +70,27 @@ test('phone layout has no horizontal scroll @phone', async ({ page }) => {
   const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
   expect(overflow).toBeLessThanOrEqual(0);
 });
+
+test('keyboard [ and ] move the selected task between days', async ({ page }) => {
+  await openApp(page);
+  await addTask(page, 'Keyboard move');
+  await page.keyboard.press('Escape');
+  await page.locator('body').click({ position: { x: 5, y: 5 } });
+  await page.keyboard.press('j'); // select the first task
+  await page.keyboard.press(']');
+  const row = page.locator('.task', { hasText: 'Keyboard move' });
+  await expect(row).toHaveCount(0); // moved off Today
+  await page.keyboard.press('2'); // Upcoming
+  await expect(row).toBeVisible();
+  await page.keyboard.press('j');
+  await page.keyboard.press('[');
+  await page.keyboard.press('1');
+  await expect(row).toBeVisible(); // back on Today
+});
+
+test('accessibility settings: high contrast, font, no confetti', async ({ page }) => {
+  await openApp(page, { highContrast: true, fontChoice: 'atkinson', celebrations: false });
+  await expect(page.locator('html')).toHaveClass(/high-contrast/);
+  await expect.poll(() => page.evaluate(() => getComputedStyle(document.body).fontFamily)).toContain('Atkinson');
+  await expect.poll(() => page.evaluate(() => document.fonts.check('16px "Atkinson Hyperlegible"'))).toBe(true);
+});

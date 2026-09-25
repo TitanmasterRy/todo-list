@@ -6,6 +6,7 @@ import { uid } from './id';
 import { addDaysKey, dueKey, isDateOnly, isDueToday, isOverdue, isoNow, nextWeekKey, thisWeekendKey, todayKey, daysAgoKey, startOfWeekKey as startOfWeekKeyFn } from './dates';
 import { applyCompletion, applyGrade, applyStudySession, effectiveStreak, evaluateBadges, isPowerHour, rollCollectible, STREAK_MILESTONES, type ComboState } from './gamification';
 import { applyThemePack } from './themes';
+import { applyFont } from './fonts';
 import { review as reviewCard } from './flashcards';
 import type { ExternalAssignment, SyncDiff } from './schoology';
 import { autoDescribe } from './autodescribe';
@@ -148,7 +149,8 @@ class Store {
       this.stats = { ...this.stats, dailyGoal: this.settings.dailyGoal };
       void db.putStats($state.snapshot(this.stats));
     }
-    if ('theme' in patch || 'accent' in patch || 'reducedMotion' in patch || 'themePack' in patch) this.applyTheme();
+    if ('theme' in patch || 'accent' in patch || 'reducedMotion' in patch || 'themePack' in patch || 'highContrast' in patch || 'fontChoice' in patch || 'textScale' in patch)
+      this.applyTheme();
     if ('soundsEnabled' in patch || 'soundPack' in patch) {
       configureSounds({ enabled: this.settings.soundsEnabled, pack: this.settings.soundPack });
     }
@@ -162,6 +164,10 @@ class Store {
     const dark = theme === 'dark' || (theme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
     applyThemePack(themePack, dark, accent);
     root.classList.toggle('reduced-motion', reducedMotion);
+    root.classList.toggle('high-contrast', !!this.settings.highContrast);
+    // sizes are in px throughout, so scale with zoom (like browser zoom, but only for this app)
+    root.style.zoom = this.settings.textScale && this.settings.textScale !== 100 ? String(this.settings.textScale / 100) : '';
+    void applyFont(this.settings.fontChoice ?? 'system');
     const meta = document.querySelector('meta[name="theme-color"]');
     if (meta) meta.setAttribute('content', accent);
   }
@@ -715,6 +721,14 @@ class Store {
       dueAt = n.toISOString();
     }
     this.updateTask(id, { dueAt, pinnedDay: undefined }, { undoable: true, label: `Rescheduled “${task.title}”` });
+  }
+
+  /** Move a task earlier or later by whole days (keyboard [ and ]). Undated tasks start from today. */
+  shiftTaskDays(id: string, delta: number): void {
+    const task = this.tasks.find((t) => t.id === id);
+    if (!task) return;
+    const from = task.dueAt ? dueKey(task.dueAt) : this.today;
+    this.moveTaskToDay(id, addDaysKey(from, delta));
   }
 
   pinToToday(id: string): void {
