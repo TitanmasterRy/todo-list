@@ -1,5 +1,18 @@
 # Changelog
 
+## Roadmap pass 6: languages, sharing, practice tests, Canvas, smarter sync
+
+- **Smarter sync:** tasks remember when each field changed, so edits to different fields on two devices both survive.
+- **Practice tests** (Tools → Practice test): take Quiz maker sets like a real test, review, turn misses into notecards, and track scores over time.
+- **Periodic table** (Tools → Compute) with electron configurations, a molar mass calculator and element notecards.
+- **Photo of the board → tasks** in the Syllabus box (AI vision, or on-device text recognition).
+- **Canvas** calendar feed sync (Tools → Connect → Canvas).
+- **Share into the app:** share a PDF, photo or document to the installed app → Book reader or a new task with it attached.
+- **Share my week** (Stats): a square image of your week's numbers (never task titles).
+- **Voice:** the quick-add mic understands "add read chapter four for tomorrow at five p.m., high priority".
+- **Browser extension** (`extension/`): add the page you're on as a task.
+- **Study rooms, friends and class mode** (no server needed): a Pomodoro room anyone can join by link, friend codes that compare streaks and weekly XP, and teacher class lists students can subscribe to.
+
 ## Roadmap pass 5: timetable, attendance, grades, syllabus box, privacy and security, more study games
 
 - **Timetable** (Tools → Timetable): bell schedules (regular, early release, one per weekday), A/B or day 1–4 rotation counted over school days, classes with rooms and teachers, and special days. Today shows the class that's on now, the minutes left and what's next; the task editor can set a due date to "Next class".

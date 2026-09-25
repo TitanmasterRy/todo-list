@@ -85,6 +85,8 @@ Tools → Google. Create a free Google Cloud OAuth client ID (the panel walks th
 
 - **Spotify:** Focus → Music. With a free Spotify app client ID (Settings), connect once and control playback, pick the **device** (phone, laptop, speaker), search focus playlists. Playback control needs Premium. Any Spotify, Apple Music, YouTube or SoundCloud link also plays in an embedded player, no login.
 - **PowerSchool:** Tools → Grades → PowerSchool import. Students get no API, so upload or paste your saved Grades and Attendance page; grades flow into the transcript.
+- **Canvas:** Tools → Connect → Canvas. Paste your Canvas Calendar Feed link; assignments sync every 30 minutes into matching courses, with a link back to Canvas. Goes through the same CORS relay as Schoology (see DEPLOY.md).
+- **Browser extension:** `extension/` adds the page you're on (or a link or selected text) as a task: toolbar button, right-click menu or Alt+Shift+H. Load it unpacked, or `npm run pack:extension` for the stores.
 - **Scan paper:** Tools → Study → Scan paper. Photograph or upload worksheets and notes. AI transcription keeps headings, numbering, tables and math; free on-device OCR (Tesseract) gives plain text. Copy it, make an answer key, a study sheet, or notecards.
 
 ## Study rooms, friends and class mode (no server needed)
@@ -132,8 +134,8 @@ Settings → Appearance: high-contrast mode, reading fonts (Atkinson Hyperlegibl
 
 - Quick add parses natural language (below). New tasks get an **auto plan**: a short description, 2–5 steps, an estimate and a type inferred from the title and course. Toggle it per task with the “auto plan” chip, or globally in Settings.
 - **Paste several lines** into quick add to create one task per line.
-- Tap **🎤** to dictate (browsers with speech recognition).
-- On a phone, the **+** button jumps to quick add; installed as a PWA the app also appears in the system **Share** sheet, so sharing text from any app prefills a task.
+- Tap **🎤** to dictate (browsers with speech recognition). Speech becomes quick-add syntax: "add read chapter four for tomorrow at three thirty p.m., high priority, it takes forty five minutes" → `read chapter 4 tomorrow at 3:30pm !high ~45m`.
+- On a phone, the **+** button jumps to quick add; installed as a PWA the app also appears in the system **Share** sheet, so sharing text from any app prefills a task, and sharing a file (a PDF, a photo of a worksheet) offers to open it in the Book reader or attach it to a new task.
 
 ## Dopamine
 
@@ -163,7 +165,7 @@ Settings → Theme pack: Classic, Sleek, Cute, Arcade, Nature, Space, Paper. Eac
 - **Download offline version** (Settings → Data) saves a single HTML file that runs from a double-click with no internet: tasks, courses, notecards, calculators, timers and stats work; sync, AI and Schoology need the online app.
 - **Persistent storage** asks the browser never to evict the app's data.
 - **Auto-backup to a folder** (Chrome/Edge) writes a JSON copy a few seconds after every change into a folder you choose, plus one dated file per day.
-- Gist sync and Google Drive sync keep copies off-device.
+- Gist sync and Google Drive sync keep copies off-device. When two devices edit the same task, each field keeps its newest change, so a due date moved on your phone and notes added on your laptop both survive.
 - **Notifications** go through the service worker, the installed app's icon shows today's count, and installed Chrome/Edge apps get a morning digest in the background (periodic sync). Exact-time reminders need the app open.
 
 ## Tools
@@ -180,6 +182,8 @@ The **Tools** view (`7`) is grouped into Plan, Grades, Study, Compute and Connec
 - **Transcript:** courses by term with credits, grade, letter and GPA points; term and cumulative GPA; CSV export and print-to-PDF.
 - **Quiz maker:** build question sets by hand, from an AI prompt (subject, topic, count, difficulty, question types, student or teacher mode), from pasted text, from your notes, or from a notecard deck. Export to Quizlet (paste), Blooket, Gimkit and Kahoot (CSV), a printable worksheet with answer key, notecards, or a **QTI zip that imports into Schoology tests and quizzes** (also Canvas, Moodle, Blackboard).
 - **Book reader:** add PDFs (textbooks, readings) to a local library, read with page memory, bookmarks and highlights; select text to copy, make a notecard, or ask the AI to explain. Free OpenStax textbooks are linked from Study help.
+- **Practice test:** take a Quiz maker set like a real test (optional time limit and shuffle), get it graded (short answers forgive small typos), review explanations, turn misses into notecards, and see your scores over time.
+- **Periodic table:** all 118 elements colored by block, a highlight for any category, details with electron configuration, a molar mass calculator with % composition, and notecards for any group of elements.
 - **Code editor:** CodeMirror with JavaScript, Python (runs in the browser via Pyodide), HTML/CSS live preview, Java and C++ editing; snippets saved locally.
 - **Timer:** presets (25/5, 50/10, 90/20, 15/3), a custom-minutes timer and a stopwatch that logs work time.
 
