@@ -241,7 +241,7 @@ Each ships as a standalone HTML file in `public/games/`, so they double as examp
 - [x] Home-screen shortcuts in the PWA manifest (New task, Today, Focus, Play).
 - [ ] Background sync and push reminders. Partly done: notifications go through the service worker, and installed Chromium apps get a background morning digest and badge via periodic sync. True push needs a server.
 - [x] App icon badge with today's due count.
-- [ ] Share files into the app (PDFs straight to the reader).
+- [x] Share files into the app (PDFs straight to the reader). (Installed app: share a PDF, photo or document → Book reader or a new task with it attached.)
 - [ ] Swipe to complete/snooze with haptics.
 - [ ] Capacitor wrap for iOS/Android.
 - [x] Browser extension: add the current page as a task. (`extension/`: toolbar button, right-click menu, Alt+Shift+H.)

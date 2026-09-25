@@ -79,6 +79,43 @@ async function backgroundCheck() {
   }
 }
 
+// Share target (POST): files shared from another app (a PDF, a photo of a worksheet) are parked in Cache Storage
+// and the app opens with ?shared=N to pick them up; shared text and links pass through as ?title=…&text=…&url=….
+const SHARE_CACHE = 'hwtodo-share';
+self.addEventListener('fetch', (event) => {
+  const url = new URL(event.request.url);
+  if (event.request.method !== 'POST' || !url.pathname.endsWith('/share-target')) return;
+  event.respondWith(
+    (async () => {
+      const scope = self.registration.scope;
+      const params = new URLSearchParams();
+      try {
+        const form = await event.request.formData();
+        for (const k of ['title', 'text', 'url']) {
+          const v = form.get(k);
+          if (typeof v === 'string' && v.trim()) params.set(k, v.slice(0, 2000));
+        }
+        const files = form.getAll('files').filter((f) => typeof f === 'object' && f && 'size' in f && f.size > 0 && f.size <= 50 * 1024 * 1024);
+        if (files.length) {
+          const cache = await caches.open(SHARE_CACHE);
+          await Promise.all(
+            files.slice(0, 10).map((f, i) =>
+              cache.put(
+                new Request(`${scope}__shared/${Date.now()}-${i}`),
+                new Response(f, { headers: { 'content-type': f.type || 'application/octet-stream', 'x-file-name': encodeURIComponent(f.name || `shared-${i + 1}`) } }),
+              ),
+            ),
+          );
+          params.set('shared', String(Math.min(files.length, 10)));
+        }
+      } catch {
+        /* a malformed share still opens the app */
+      }
+      return Response.redirect(`${scope}${params.size ? `?${params}` : ''}`, 303);
+    })(),
+  );
+});
+
 self.addEventListener('periodicsync', (event) => {
   if (event.tag === 'hwtodo-daily') event.waitUntil(backgroundCheck().catch(() => {}));
 });

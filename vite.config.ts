@@ -63,7 +63,18 @@ export default defineConfig({
         display: 'standalone',
         start_url: base,
         scope: base,
-        share_target: { action: base, method: 'GET', params: { title: 'title', text: 'text', url: 'url' } },
+        // files (PDFs, photos, documents) and text/links; public/sw-extra.js handles the POST
+        share_target: {
+          action: `${base}share-target`,
+          method: 'POST',
+          enctype: 'multipart/form-data',
+          params: {
+            title: 'title',
+            text: 'text',
+            url: 'url',
+            files: [{ name: 'files', accept: ['application/pdf', '.pdf', 'image/*', 'text/plain', '.txt', '.doc', '.docx', '.ppt', '.pptx', '.xls', '.xlsx'] }],
+          },
+        },
         // long-press the home-screen icon
         shortcuts: [
           { name: 'New task', short_name: 'New', url: `${base}?view=today&new=1`, icons: [{ src: 'icons/icon-192.png', sizes: '192x192' }] },

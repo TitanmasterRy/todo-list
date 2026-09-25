@@ -23,6 +23,8 @@
   import Keyboard from './components/Keyboard.svelte';
   // dialogs load the first time they open
   const loadEditor = () => import('./components/TaskEditor.svelte');
+  const loadShared = () => import('./components/SharedFiles.svelte');
+  let sharedFiles = $state<{ files: File[]; info: { title?: string; text?: string; url?: string } } | null>(null);
   const loadPalette = () => import('./components/CommandPalette.svelte');
   const loadShortcuts = () => import('./components/ShortcutSheet.svelte');
   const loadOnboarding = () => import('./components/Onboarding.svelte');
@@ -89,6 +91,16 @@
       if (params.get('new')) setTimeout(fab, 300);
       window.history.replaceState({}, '', window.location.pathname);
     }
+    // files shared from another app (the service worker parked them): ask what to do with them
+    if (params.has('shared')) {
+      const info = { title: params.get('title') ?? undefined, text: params.get('text') ?? undefined, url: params.get('url') ?? undefined };
+      window.history.replaceState({}, '', window.location.pathname);
+      void import('./lib/share').then(async (m) => {
+        const files = await m.takeSharedFiles();
+        if (files.length) sharedFiles = { files, info };
+      });
+      return;
+    }
     const shared = [params.get('title'), params.get('text'), params.get('url')].filter(Boolean).join(' ').trim();
     if (shared) {
       ui.quickAddPrefill = shared;
@@ -149,6 +161,9 @@
   {/if}
   {#if ui.palette}
     {#await loadPalette() then m}<m.default />{/await}
+  {/if}
+  {#if sharedFiles}
+    {#await loadShared() then m}<m.default files={sharedFiles.files} shared={sharedFiles.info} onclose={() => (sharedFiles = null)} />{/await}
   {/if}
   {#if ui.shortcuts}
     {#await loadShortcuts() then m}<m.default />{/await}

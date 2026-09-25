@@ -66,7 +66,12 @@
     ui.captureKeys = !!book;
   });
   onMount(() => {
-    void refreshList();
+    void refreshList().then(() => {
+      // a PDF shared into the app opens straight away
+      const b = ui.openBook && books.find((x) => x.id === ui.openBook);
+      ui.openBook = null;
+      if (b) void open(b);
+    });
     void refreshUsage();
   });
   onDestroy(() => {

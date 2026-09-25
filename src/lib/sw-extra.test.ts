@@ -15,9 +15,9 @@ function load() {
 }
 
 describe('sw-extra', () => {
-  it('listens for notification clicks and periodic sync', () => {
+  it('listens for shares, notification clicks and periodic sync', () => {
     const { listeners } = load();
-    expect(Object.keys(listeners).sort()).toEqual(['notificationclick', 'periodicsync']);
+    expect(Object.keys(listeners).sort()).toEqual(['fetch', 'notificationclick', 'periodicsync']);
   });
   it('counts open tasks due today and overdue, like the Today view', () => {
     const { todayCounts } = load();
