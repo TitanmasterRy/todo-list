@@ -22,7 +22,7 @@ Everything we could improve or add to Homework To-Do, grouped by area. Checked i
 ## 🧱 Code health
 
 - [x] Split `store.svelte.ts` (1,000 lines) into tasks, courses, stats and sync pieces. Done: planning, courses/templates, notecards and imports live in `src/lib/store/`, attached to the same `store`.
-- [ ] Split `ToolsView.svelte` and `SettingsView.svelte` into one component per section.
+- [x] Split `ToolsView.svelte` and `SettingsView.svelte` into one component per section. Done: `src/components/settings/*` and `src/components/tools/*`.
 - [ ] Move the 2,600-line `studyhelp.ts` content into lazily loaded JSON/Markdown.
 - [x] ESLint + Prettier + a pre-commit hook.
 - [x] Playwright end-to-end tests: quick add, complete, undo, drag-to-reschedule, export/import, offline, shop purchase, a casino round.
@@ -62,9 +62,9 @@ Everything we could improve or add to Homework To-Do, grouped by area. Checked i
 ## ✅ Core to-do features
 
 - [x] Task dependencies ("Outline" before "Draft essay"), blocked tasks dimmed.
-- [ ] Auto-split big projects into dated milestones working back from the due date.
+- [x] Auto-split big projects into dated milestones working back from the due date. (Task editor → Plan it out.)
 - [x] Per-task reminders ("30 min before", "the night before").
-- [ ] Attachments on tasks (photo of the worksheet, a PDF) stored in IndexedDB.
+- [x] Attachments on tasks (photo of the worksheet, a PDF) stored in IndexedDB. (Files stay on the device; names sync.)
 - [x] Saved filters / smart lists ("Exams in the next 14 days").
 - [ ] Kanban board (To do / Doing / Done) per course or project.
 - [x] Month calendar view next to Upcoming.
@@ -78,13 +78,13 @@ Everything we could improve or add to Homework To-Do, grouped by area. Checked i
 - [ ] Canvas and Microsoft Teams Assignments integrations.
 - [ ] Class timetable (periods, rooms) with "what's next" on Today.
 - [ ] Bell schedule and A/B day rotations.
-- [ ] Exam prep plans: spaced study sessions leading to an exam, tied to a notecard deck.
+- [x] Exam prep plans: spaced study sessions leading to an exam, tied to a notecard deck. (Plan it out → Exam prep, with a Study button per session.)
 - [ ] Grade trend charts per course with what-if scenarios.
 - [ ] Per-class letter-grade scales.
 - [ ] Attendance tracking.
 - [ ] Syllabus box that extracts due dates (AI optional).
 - [ ] Group projects: share a task list by link.
-- [ ] Summer / break mode that pauses streaks.
+- [x] Summer / break mode that pauses streaks. (Settings → Break mode.)
 
 ## 🧠 Study tools
 
@@ -239,8 +239,8 @@ Each ships as a standalone HTML file in `public/games/`, so they double as examp
 ## 📱 Platform and polish
 
 - [x] Home-screen shortcuts in the PWA manifest (New task, Today, Focus, Play).
-- [ ] Background sync and push reminders.
-- [ ] App icon badge with today's due count.
+- [ ] Background sync and push reminders. Partly done: notifications go through the service worker, and installed Chromium apps get a background morning digest and badge via periodic sync. True push needs a server.
+- [x] App icon badge with today's due count.
 - [ ] Share files into the app (PDFs straight to the reader).
 - [ ] Swipe to complete/snooze with haptics.
 - [ ] Capacitor wrap for iOS/Android.
