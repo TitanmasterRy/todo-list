@@ -100,22 +100,6 @@
   background: #ef4444;
   color: #fff;
 }
-.cz-seg {
-  display: inline-flex;
-  border-radius: var(--radius-sm);
-  overflow: hidden;
-  border: 1px solid var(--border);
-}
-.cz-seg button {
-  padding: 6px 12px;
-  font-size: 13px;
-  background: var(--bg-elev);
-  color: var(--text-muted);
-}
-.cz-seg button.on {
-  background: var(--accent);
-  color: var(--accent-contrast, #fff);
-}
 @keyframes cz-pop {
   0% {
     transform: scale(0.6);

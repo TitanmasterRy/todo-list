@@ -152,6 +152,11 @@
           store.selectedTaskId = ids[idx + 1] ?? ids[idx - 1] ?? null;
         }
         return;
+      case 'w':
+        e.preventDefault();
+        if (store.view !== 'today') store.go('today');
+        ui.whatNow = !ui.whatNow;
+        return;
       case '[':
       case ']':
         // keyboard alternative to dragging between days

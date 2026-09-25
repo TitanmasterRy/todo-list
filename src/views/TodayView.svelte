@@ -5,6 +5,7 @@
   import QuickAdd from '../components/QuickAdd.svelte';
   import TaskItem from '../components/TaskItem.svelte';
   import GoalRing from '../components/GoalRing.svelte';
+  import WhatNow from '../components/WhatNow.svelte';
   import Sortable from '../components/Sortable.svelte';
 
   import type { Task } from '../lib/types';
@@ -56,6 +57,7 @@
       <div class="sub">{dateLabel}</div>
     </div>
     <div class="grow"></div>
+    <button class="btn sm" onclick={() => (ui.whatNow = !ui.whatNow)} aria-expanded={ui.whatNow}>🧭 What now?</button>
     {#if store.settings.gamification}
       <div class="stat" title="Streak">
         <span class="flame" class:hot={store.streak > 0}>🔥</span>
@@ -64,6 +66,8 @@
       <GoalRing value={store.completedToday} goal={store.settings.dailyGoal} />
     {/if}
   </header>
+
+  <WhatNow />
 
   <div class="workload" aria-label="Workload">
     <span><strong>{formatMinutes(store.todayEstimateMin)}</strong> today</span>

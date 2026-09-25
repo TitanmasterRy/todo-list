@@ -51,6 +51,15 @@
       },
     });
     list.push({ id: 'review', label: 'Run weekly review', icon: '📋', run: () => (ui.weeklyReview = true) });
+    list.push({
+      id: 'whatnow',
+      label: 'What should I do now?',
+      icon: '🧭',
+      run: () => {
+        store.go('today');
+        ui.whatNow = true;
+      },
+    });
     list.push({ id: 'recap', label: 'Show end-of-day recap', icon: '🌙', run: () => (ui.recap = true) });
     list.push({ id: 'frog', label: 'Pick today’s frog (hardest task, double XP)', icon: '🐸', run: () => (ui.frogPrompt = true) });
     list.push({ id: 'roll', label: 'Roll all overdue to today', icon: '⏩', run: () => store.rollOverdueToToday() });

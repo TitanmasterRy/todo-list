@@ -509,3 +509,21 @@ a {
 :root.high-contrast .card {
   border-width: 2px;
 }
+
+/* Segmented toggle (Upcoming list/month, casino options, arcade admin) */
+.cz-seg {
+  display: inline-flex;
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  border: 1px solid var(--border);
+}
+.cz-seg button {
+  padding: 6px 12px;
+  font-size: 13px;
+  background: var(--bg-elev);
+  color: var(--text-muted);
+}
+.cz-seg button.on {
+  background: var(--accent);
+  color: var(--accent-contrast, #fff);
+}

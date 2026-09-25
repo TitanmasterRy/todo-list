@@ -13,9 +13,12 @@
   import { testKey, currentProvider, currentModel, listModels, setModel as setAiModel } from '../lib/ai';
   import { PROVIDERS, providerInfo, cleanKey } from '../lib/ai-providers';
   import AccountPanel from '../components/AccountPanel.svelte';
+  import { downloadText } from '../lib/download';
+  import { tasksToCSV, tasksToMarkdown } from '../lib/exporters';
+  import { importCSV } from '../lib/csvimport';
+  import type { Task } from '../lib/types';
   import { FONTS } from '../lib/fonts';
   import ArcadeAdmin from '../components/ArcadeAdmin.svelte';
-  import '../components/casino/casino.css';
   import type { AiProvider } from '../lib/types';
   import ThemePicker from '../components/ThemePicker.svelte';
   import { notificationsSupported, requestNotifications } from '../lib/reminders';
@@ -131,6 +134,20 @@
     if (key.startsWith('pomodoro')) pomodoro.syncSettings();
   }
 
+  let csvInput: HTMLInputElement | undefined = $state();
+  let csvPreview = $state<ReturnType<typeof importCSV> | null>(null);
+  async function pickCSV(e: Event) {
+    const f = (e.target as HTMLInputElement).files?.[0];
+    (e.target as HTMLInputElement).value = '';
+    if (!f) return;
+    csvPreview = importCSV(await f.text());
+  }
+  function confirmCSV() {
+    if (!csvPreview) return;
+    const made = store.importTasks(csvPreview.tasks);
+    toasts.push({ message: `Imported ${made.length} tasks`, kind: 'success', emoji: '📥' });
+    csvPreview = null;
+  }
   function exportNow() {
     downloadJSON(backupFilename(), store.snapshotBundle());
     set('lastExportAt', new Date().toISOString());
@@ -744,6 +761,41 @@
       </select>
       <input type="file" accept="application/json,.json" bind:this={fileInput} onchange={importFile} class="visually-hidden" aria-label="Import file" />
     </div>
+    <div class="btns">
+      <button class="btn" onclick={() => downloadText(`homework-todo-${store.today}.csv`, tasksToCSV($state.snapshot(store.tasks) as Task[], store.courses), 'text/csv')}
+        >Export CSV</button
+      >
+      <button class="btn" onclick={() => downloadText(`homework-todo-${store.today}.md`, tasksToMarkdown($state.snapshot(store.tasks) as Task[], store.courses), 'text/markdown')}
+        >Export Markdown</button
+      >
+      <button class="btn" onclick={() => csvInput?.click()}>Import CSV…</button>
+      <input type="file" accept=".csv,text/csv,.tsv,text/tab-separated-values,.txt" bind:this={csvInput} onchange={pickCSV} class="visually-hidden" aria-label="Import CSV file" />
+    </div>
+    {#if csvPreview}
+      <div class="csvprev card">
+        <strong>{csvPreview.tasks.length} tasks found</strong>
+        <span class="muted">
+          {Object.keys(csvPreview.columns).length
+            ? `Columns: ${Object.entries(csvPreview.columns)
+                .map(([k, v]) => `${v} → ${k}`)
+                .join(', ')}`
+            : 'No header row: one task per line'}{csvPreview.skipped ? ` · ${csvPreview.skipped} rows skipped` : ''}
+        </span>
+        <ul class="list">
+          {#each csvPreview.tasks.slice(0, 5) as t, i (i)}<li>
+              <span class="grow">{t.done ? '✓ ' : ''}{t.title}</span><span class="muted">{t.dueAt ?? ''} {t.course ?? ''}</span>
+            </li>{/each}
+        </ul>
+        <div class="btns">
+          <button class="btn primary" onclick={confirmCSV} disabled={!csvPreview.tasks.length}>Import {csvPreview.tasks.length}</button>
+          <button class="btn ghost" onclick={() => (csvPreview = null)}>Cancel</button>
+        </div>
+      </div>
+    {/if}
+    <p class="help">
+      CSV import reads this app's CSV export, Todoist's CSV export, or any spreadsheet with a title column (due, notes, priority, course, tags and status are picked up when
+      present).
+    </p>
     <p class="help">Last export: {s.lastExportAt ? new Date(s.lastExportAt).toLocaleString() : 'never'}. You’ll get a reminder after 14 days without one.</p>
     <h3 class="sub">Never lose data</h3>
     <div class="row">
@@ -858,6 +910,11 @@
   }
   .model-pick .select {
     max-width: 260px;
+  }
+  .csvprev {
+    display: grid;
+    gap: 6px;
+    margin: 8px 0;
   }
   .trash {
     list-style: none;
