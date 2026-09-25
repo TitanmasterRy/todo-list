@@ -15,6 +15,8 @@ export interface Course {
   term?: string; // e.g. "Fall 2026"
   finalGrade?: number; // override for the transcript, 0–100
   schoologyName?: string; // course name as it appears in the Schoology feed
+  gradeScale?: string; // letter scale preset id (lib/grades.ts GRADE_SCALES) or 'custom'
+  customScale?: { letter: string; min: number }[]; // highest first
   updatedAt?: string; // last-write-wins sync (missing on courses from older versions)
 }
 

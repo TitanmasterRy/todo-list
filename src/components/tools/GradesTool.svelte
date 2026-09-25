@@ -3,7 +3,9 @@
   import { store, byDueThenOrder } from '../../lib/store.svelte';
   import type { Task } from '../../lib/types';
   import { dueKey, diffDays, formatDue } from '../../lib/dates';
-  import { letterGrade, neededOnRemaining, summarize } from '../../lib/grades';
+  import { formatScale, GRADE_SCALES, gradeTimeline, letterOn, neededOnRemaining, nextLetter, parseScale, scaleFor, summarize, whatIf } from '../../lib/grades';
+  import GradeTrend from '../GradeTrend.svelte';
+  import type { Course } from '../../lib/types';
 
   const target = $derived(store.settings.targetGrade || 90);
   function setTarget(e: Event) {
@@ -17,7 +19,13 @@
         items.map((t) => ({ weight: t.weight!, score: t.score })),
         target,
       );
-      return { course: c, items, summary, needed };
+      const scale = scaleFor(c);
+      const timeline = gradeTimeline(
+        items
+          .filter((t) => typeof t.score === 'number')
+          .map((t) => ({ id: t.id, title: t.title, date: t.completedAt ?? t.dueAt ?? t.updatedAt, weight: t.weight!, score: t.score! })),
+      );
+      return { course: c, items, summary, needed, scale, timeline };
     }),
   );
   function setScore(t: Task, e: Event) {
@@ -32,6 +40,32 @@
     if (v === t.weight) return;
     store.updateTask(t.id, { weight: v }, { undoable: true, label: `Changed weight of “${t.title}”` });
   }
+  // ---------- letter scales ----------
+  let scaleText = $state<Record<string, string>>({});
+  function setScale(c: Course, id: string) {
+    store.updateCourse(c.id, { gradeScale: id === 'plusminus' ? undefined : id, customScale: id === 'custom' ? (c.customScale ?? scaleFor(c)) : c.customScale });
+  }
+  function saveCustom(c: Course) {
+    const steps = parseScale(scaleText[c.id] ?? '');
+    if (steps) store.updateCourse(c.id, { gradeScale: 'custom', customScale: steps });
+  }
+
+  // ---------- what if (nothing here is saved) ----------
+  let whatIfOpen = $state<Record<string, boolean>>({});
+  let imagined = $state<Record<string, Record<number, number | undefined>>>({});
+  let extra = $state<Record<string, { weight: string; score: string }>>({});
+  function projection(courseId: string, items: Task[]) {
+    const e = extra[courseId];
+    const ew = parseFloat(e?.weight ?? '');
+    const es = parseFloat(e?.score ?? '');
+    return whatIf(
+      items.map((t) => ({ weight: t.weight!, score: t.score })),
+      imagined[courseId] ?? {},
+      ew > 0 && Number.isFinite(es) ? [{ weight: ew, score: es }] : [],
+    );
+  }
+  let showTrend = $state<Record<string, boolean>>({});
+
   const exams = $derived(
     store.openTasks
       .filter((t) => (t.type === 'exam' || t.type === 'quiz') && t.dueAt)
@@ -75,7 +109,9 @@
         <span class="dot"></span>
         <strong>{g.course.emoji ?? ''} {g.course.name}</strong>
         {#if g.summary.current !== null}
-          <span class="grade">{g.summary.current.toFixed(1)}% <span class="letter">{letterGrade(g.summary.current)}</span></span>
+          {@const up = nextLetter(g.summary.current, g.scale)}
+          <span class="grade">{g.summary.current.toFixed(1)}% <span class="letter">{letterOn(g.summary.current, g.scale)}</span></span>
+          {#if up}<span class="muted small">{(up.min - g.summary.current).toFixed(1)} to {up.letter}</span>{/if}
         {:else}
           <span class="muted">no scores yet</span>
         {/if}
@@ -113,7 +149,7 @@
           <span>Graded {g.summary.gradedWeight}% of {g.summary.totalWeight}%</span>
           <span>Range {g.summary.floor.toFixed(0)}–{g.summary.ceiling.toFixed(0)}%</span>
           {#if g.needed === null}
-            <span class="ok">Final: {g.summary.floor.toFixed(1)}% ({letterGrade(g.summary.floor)})</span>
+            <span class="ok">Final: {g.summary.floor.toFixed(1)}% ({letterOn(g.summary.floor, g.scale)})</span>
           {:else if g.needed <= 0}
             <span class="ok">✓ {target}% is already locked in</span>
           {:else if g.needed > 100}
@@ -122,6 +158,106 @@
             <span class="need">Need <strong>{g.needed.toFixed(1)}%</strong> average on the remaining {g.summary.remainingWeight}% for {target}%</span>
           {/if}
         </div>
+        <div class="gtools">
+          {#if g.timeline.length >= 2}
+            <button class="btn sm ghost" aria-expanded={!!showTrend[g.course.id]} onclick={() => (showTrend[g.course.id] = !showTrend[g.course.id])}>📈 Trend</button>
+          {/if}
+          <button class="btn sm ghost" aria-expanded={!!whatIfOpen[g.course.id]} onclick={() => (whatIfOpen[g.course.id] = !whatIfOpen[g.course.id])}>🔮 What if…</button>
+          <label class="scale"
+            >Scale
+            <select
+              class="select"
+              value={g.course.gradeScale ?? 'plusminus'}
+              onchange={(e) => setScale(g.course, e.currentTarget.value)}
+              aria-label="Letter scale for {g.course.name}"
+            >
+              {#each GRADE_SCALES as sc (sc.id)}<option value={sc.id}>{sc.label}</option>{/each}
+              <option value="custom">Custom…</option>
+            </select></label
+          >
+        </div>
+        {#if g.course.gradeScale === 'custom'}
+          <div class="custom">
+            <input
+              class="input"
+              value={scaleText[g.course.id] ?? formatScale(g.scale)}
+              oninput={(e) => (scaleText[g.course.id] = e.currentTarget.value)}
+              onchange={() => saveCustom(g.course)}
+              aria-label="Custom scale for {g.course.name}"
+              placeholder="A 94, B 85, C 75, D 65, F 0"
+            />
+            {#if scaleText[g.course.id] && !parseScale(scaleText[g.course.id])}<span class="bad small">Use “letter number” pairs, e.g. A 94, B 85.</span>{/if}
+          </div>
+        {/if}
+        {#if showTrend[g.course.id] && g.timeline.length >= 2}
+          <GradeTrend points={g.timeline} color={g.course.color} {target} letter={(p) => letterOn(p, g.scale)} label="{g.course.name} grade trend" />
+        {/if}
+        {#if whatIfOpen[g.course.id]}
+          {@const p = projection(g.course.id, g.items)}
+          <div class="whatif" role="group" aria-label="What if for {g.course.name}">
+            <p class="muted small">Try scores for work that isn't graded yet. Nothing here is saved.</p>
+            {#each g.items as t, i (t.id)}
+              {#if typeof t.score !== 'number'}
+                <label class="wi"
+                  ><span>{t.title} <span class="muted">({t.weight}%)</span></span>
+                  <input
+                    class="input num"
+                    type="number"
+                    min="0"
+                    max="200"
+                    placeholder="?"
+                    value={imagined[g.course.id]?.[i] ?? ''}
+                    oninput={(e) => {
+                      const v = e.currentTarget.value === '' ? undefined : parseFloat(e.currentTarget.value);
+                      imagined[g.course.id] = { ...(imagined[g.course.id] ?? {}), [i]: Number.isFinite(v) ? v : undefined };
+                    }}
+                    aria-label="Imagined score for {t.title}"
+                  /></label
+                >
+              {/if}
+            {/each}
+            <div class="wi">
+              <span>Extra item</span>
+              <input
+                class="input num"
+                type="number"
+                min="0"
+                max="100"
+                placeholder="wt %"
+                value={extra[g.course.id]?.weight ?? ''}
+                oninput={(e) => (extra[g.course.id] = { score: extra[g.course.id]?.score ?? '', weight: e.currentTarget.value })}
+                aria-label="Extra item weight"
+              />
+              <input
+                class="input num"
+                type="number"
+                min="0"
+                max="200"
+                placeholder="score"
+                value={extra[g.course.id]?.score ?? ''}
+                oninput={(e) => (extra[g.course.id] = { weight: extra[g.course.id]?.weight ?? '', score: e.currentTarget.value })}
+                aria-label="Extra item score"
+              />
+            </div>
+            <p class="result" role="status">
+              {#if p.remainingWeight <= 0}
+                Final grade: <strong>{p.floor.toFixed(1)}% {letterOn(p.floor, g.scale)}</strong>
+              {:else if p.current !== null}
+                Average so far: <strong>{p.current.toFixed(1)}% {letterOn(p.current, g.scale)}</strong>
+                <span class="muted">· final between {p.floor.toFixed(0)}% and {p.ceiling.toFixed(0)}% with {p.remainingWeight}% left</span>
+              {:else}
+                Enter a score to see a projection.
+              {/if}
+            </p>
+            <button
+              class="btn sm ghost"
+              onclick={() => {
+                imagined[g.course.id] = {};
+                extra[g.course.id] = { weight: '', score: '' };
+              }}>Clear</button
+            >
+          </div>
+        {/if}
       {:else}
         <p class="muted">No weighted items yet.</p>
       {/if}
@@ -285,5 +421,58 @@
   .addg .input:not(.num) {
     flex: 1;
     min-width: 160px;
+  }
+  .gtools {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
+    margin-top: 6px;
+  }
+  .scale {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    color: var(--text-muted);
+    margin-left: auto;
+  }
+  .scale .select {
+    width: auto;
+    padding: 4px 8px;
+    font-size: 12px;
+  }
+  .custom {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 6px;
+  }
+  .custom .input {
+    max-width: 320px;
+  }
+  .small {
+    font-size: 12px;
+  }
+  .whatif {
+    margin-top: 8px;
+    padding: 8px 10px;
+    border: 1px dashed var(--border);
+    border-radius: 10px;
+    display: grid;
+    gap: 6px;
+  }
+  .wi {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+  }
+  .wi > span:first-child {
+    flex: 1;
+  }
+  .result {
+    margin: 4px 0;
+    font-size: 14px;
   }
 </style>

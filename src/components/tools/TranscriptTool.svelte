@@ -1,7 +1,7 @@
 <script lang="ts">
   import { store } from '../../lib/store.svelte';
   import { ui } from '../../lib/ui.svelte';
-  import { summarize, letterGrade } from '../../lib/grades';
+  import { letterOn, scaleFor, summarize } from '../../lib/grades';
   import { gpa, groupByTerm, pointsFor, transcriptCSV, type TranscriptRow } from '../../lib/gpa';
   import { downloadText } from '../../lib/download';
 
@@ -16,7 +16,7 @@
         term: c.term ?? '',
         credits: c.credits ?? 1,
         grade,
-        letter: grade === null ? null : letterGrade(grade),
+        letter: grade === null ? null : letterOn(grade, scaleFor(c)),
         points: grade === null ? null : pointsFor(grade),
       };
     }),

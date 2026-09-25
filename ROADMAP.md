@@ -79,8 +79,8 @@ Everything we could improve or add to Homework To-Do, grouped by area. Checked i
 - [x] Class timetable (periods, rooms) with "what's next" on Today. (Tools → Timetable; also "Next class" as a due date.)
 - [x] Bell schedule and A/B day rotations.
 - [x] Exam prep plans: spaced study sessions leading to an exam, tied to a notecard deck. (Plan it out → Exam prep, with a Study button per session.)
-- [ ] Grade trend charts per course with what-if scenarios.
-- [ ] Per-class letter-grade scales.
+- [x] Grade trend charts per course with what-if scenarios. (Tools → Grade calculator → Trend / What if.)
+- [x] Per-class letter-grade scales. (Presets or a custom scale per course.)
 - [ ] Attendance tracking.
 - [ ] Syllabus box that extracts due dates (AI optional).
 - [ ] Group projects: share a task list by link.

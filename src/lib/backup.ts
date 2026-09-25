@@ -73,6 +73,8 @@ export function parseBundle(raw: unknown): ExportBundle {
       term: c.term,
       finalGrade: c.finalGrade,
       schoologyName: c.schoologyName,
+      gradeScale: typeof c.gradeScale === 'string' ? c.gradeScale : undefined,
+      customScale: Array.isArray(c.customScale) ? c.customScale.filter((x) => x && typeof x.letter === 'string' && Number.isFinite(x.min)) : undefined,
       updatedAt: c.updatedAt,
     }));
   const templates: Template[] = Array.isArray(b.templates) ? (b.templates as Template[]).filter((t) => t && t.id && t.name && t.task) : [];
