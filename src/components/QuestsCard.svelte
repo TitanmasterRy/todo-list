@@ -3,11 +3,16 @@
   import { economy } from '../lib/economy.svelte';
   import { store } from '../lib/store.svelte';
   import { ALL_DONE_BONUS } from '../lib/quests';
+  import { hasKey, locale, t } from '../lib/i18n/index.svelte';
 
   interface Props {
     compact?: boolean;
   }
   let { compact = false }: Props = $props();
+  const label = (q: { id: string; label: string }) => {
+    const key = `quest.${q.id}`;
+    return locale() !== 'en' && hasKey(key) ? t(key) : q.label;
+  };
   const claimable = $derived(economy.quests.filter((q) => q.done && !q.claimed).length);
   const KEY = 'homework-todo:quests-open';
   let open = $state(
@@ -30,11 +35,13 @@
 </script>
 
 {#if store.settings.economyEnabled && economy.quests.length}
-  <section class="card quests" class:compact aria-label="Daily quests">
+  <section class="card quests" class:compact aria-label={t('quest.title')}>
     <button class="head" onclick={toggle} aria-expanded={open}>
-      <span class="t">🗺️ Daily quests</span>
+      <span class="t">🗺️ {t('quest.title')}</span>
       <span class="muted"
-        >{economy.quests.filter((q) => q.claimed).length}/{economy.quests.length}{claimable ? ` · ${claimable} to claim` : ''}{economy.allQuestsClaimed ? ' · all done!' : ''}</span
+        >{economy.quests.filter((q) => q.claimed).length}/{economy.quests.length}{claimable ? ` · ${t('quest.toClaim', { n: claimable })}` : ''}{economy.allQuestsClaimed
+          ? ` · ${t('quest.allDone')}`
+          : ''}</span
       >
       <span class="chev" aria-hidden="true">{open ? '▾' : '▸'}</span>
     </button>
@@ -44,22 +51,22 @@
           <li class:done={q.claimed}>
             <span class="e" aria-hidden="true">{q.emoji}</span>
             <span class="l">
-              <span>{q.label}</span>
-              <span class="bar" role="progressbar" aria-valuemin="0" aria-valuemax={q.goal} aria-valuenow={q.progress} aria-label="{q.label} progress"
+              <span>{label(q)}</span>
+              <span class="bar" role="progressbar" aria-valuemin="0" aria-valuemax={q.goal} aria-valuenow={q.progress} aria-label={t('quest.progress', { label: label(q) })}
                 ><span class="fill" style="width:{(q.progress / q.goal) * 100}%"></span></span
               >
             </span>
             {#if q.claimed}
               <span class="got">✓ {q.reward} 🪙</span>
             {:else if q.done}
-              <button class="btn primary sm" onclick={() => economy.claimQuest(q)}>Claim {q.reward} 🪙</button>
+              <button class="btn primary sm" onclick={() => economy.claimQuest(q)}>{t('quest.claim', { n: q.reward })} 🪙</button>
             {:else}
               <span class="muted">{q.progress}/{q.goal} · {q.reward} 🪙</span>
             {/if}
           </li>
         {/each}
       </ul>
-      {#if !economy.allQuestsClaimed}<p class="muted foot">Finish all three for a {ALL_DONE_BONUS}-coin bonus. New quests tomorrow.</p>{/if}
+      {#if !economy.allQuestsClaimed}<p class="muted foot">{t('quest.foot', { n: ALL_DONE_BONUS })}</p>{/if}
     {/if}
   </section>
 {/if}
@@ -76,7 +83,7 @@
     width: 100%;
     background: none;
     padding: 0;
-    text-align: left;
+    text-align: start;
   }
   .t {
     font-weight: 700;

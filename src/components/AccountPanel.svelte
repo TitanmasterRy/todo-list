@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { t } from '../lib/i18n/index.svelte';
   // Settings → Account: sign up / sign in with email and password to sync across devices.
   import { store } from '../lib/store.svelte';
   import { toasts } from '../lib/toast.svelte';
@@ -96,7 +97,7 @@
 </script>
 
 <section class="card" id="account">
-  <h2>Account <span class="chip optional">sync</span></h2>
+  <h2>{t('settings.account')} <span class="chip optional">{t('settings.sync')}</span></h2>
 
   {#if !configured}
     <p class="help">

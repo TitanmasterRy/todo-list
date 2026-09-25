@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { store, byFrogThenOrder } from '../lib/store.svelte';
+  import { store, byFrogThenOrder, PRIORITY_LABEL } from '../lib/store.svelte';
   import { ui } from '../lib/ui.svelte';
   import { pomodoro } from '../lib/pomodoro.svelte';
   import { renderMarkdown } from '../lib/markdown';
@@ -8,6 +8,7 @@
   import Checkbox from '../components/Checkbox.svelte';
   import SnoozeMenu from '../components/SnoozeMenu.svelte';
   import { socialUi } from '../lib/social/state.svelte';
+  import { locale as appLocale, t } from '../lib/i18n/index.svelte';
   const loadMusic = () => import('../components/MusicPanel.svelte');
   const loadRoom = () => import('../components/social/StudyRoom.svelte');
   let customInput = $state(String(pomodoro.customMin));
@@ -29,7 +30,7 @@
 
   $effect(() => {
     if (typeof document === 'undefined') return;
-    if (pomodoro.running) document.title = `${mm}:${ss} · ${pomodoro.mode === 'work' ? 'Focus' : 'Break'} · Homework To-Do`;
+    if (pomodoro.running) document.title = `${mm}:${ss} · ${pomodoro.mode === 'work' ? t('nav.focus') : t('focus.break')} · ${t('app.title')}`;
   });
 
   function pickNext() {
@@ -59,28 +60,28 @@
 <div class="page focus">
   <header class="page-head">
     <div>
-      <h1>Focus</h1>
-      <div class="sub">One task at a time. <span class="kbd">Space</span> starts and pauses the timer.</div>
+      <h1>{t('nav.focus')}</h1>
+      <div class="sub">{t('focus.sub1')} <span class="kbd">{t('focus.space')}</span> {t('focus.sub2')}</div>
     </div>
     <div class="grow"></div>
-    <span class="chip">🍅 {pomToday} today</span>
+    <span class="chip">🍅 {pomToday} {t('today.minToday')}</span>
   </header>
 
   <div class="timer card" class:work={pomodoro.mode === 'work'} class:running={pomodoro.running}>
     <div class="modes" role="tablist">
       <button role="tab" aria-selected={pomodoro.mode === 'work'} class:on={pomodoro.mode === 'work'} onclick={() => pomodoro.setMode('work')}
-        >Focus {store.settings.pomodoroWorkMin}</button
+        >{t('nav.focus')} {store.settings.pomodoroWorkMin}</button
       >
       <button role="tab" aria-selected={pomodoro.mode === 'break'} class:on={pomodoro.mode === 'break'} onclick={() => pomodoro.setMode('break')}
-        >Break {store.settings.pomodoroBreakMin}</button
+        >{t('focus.break')} {store.settings.pomodoroBreakMin}</button
       >
       <button role="tab" aria-selected={pomodoro.mode === 'long'} class:on={pomodoro.mode === 'long'} onclick={() => pomodoro.setMode('long')}
-        >Long {store.settings.pomodoroLongBreakMin}</button
+        >{t('focus.long')} {store.settings.pomodoroLongBreakMin}</button
       >
       <button role="tab" aria-selected={pomodoro.mode === 'custom'} class:on={pomodoro.mode === 'custom'} onclick={() => pomodoro.setMode('custom')}
-        >Custom {pomodoro.customMin}</button
+        >{t('focus.custom')} {pomodoro.customMin}</button
       >
-      <button role="tab" aria-selected={stop} class:on={stop} onclick={() => pomodoro.setMode('stopwatch')}>Stopwatch</button>
+      <button role="tab" aria-selected={stop} class:on={stop} onclick={() => pomodoro.setMode('stopwatch')}>{t('focus.stopwatch')}</button>
     </div>
     <div class="presets">
       {#each store.settings.timerPresets as p (p.label)}
@@ -95,8 +96,8 @@
           pomodoro.setCustom(Number(customInput) || 30);
         }}
       >
-        <input class="input num" type="number" min="1" max="600" bind:value={customInput} aria-label="Custom minutes" />
-        <button class="btn sm" type="submit">min timer</button>
+        <input class="input num" type="number" min="1" max="600" bind:value={customInput} aria-label={t('focus.customMinutes')} />
+        <button class="btn sm" type="submit">{t('focus.minTimer')}</button>
       </form>
     </div>
     <div class="dial">
@@ -118,7 +119,15 @@
       </svg>
       <div class="time" aria-live="off">
         <span class="digits">{stop ? `${elapsedMM}:${elapsedSS}` : `${mm}:${ss}`}</span><span class="mode"
-          >{stop ? 'stopwatch' : pomodoro.mode === 'work' ? 'focus' : pomodoro.mode === 'break' ? 'short break' : pomodoro.mode === 'long' ? 'long break' : 'custom timer'}</span
+          >{stop
+            ? t('focus.modeStopwatch')
+            : pomodoro.mode === 'work'
+              ? t('focus.modeFocus')
+              : pomodoro.mode === 'break'
+                ? t('focus.modeShort')
+                : pomodoro.mode === 'long'
+                  ? t('focus.modeLong')
+                  : t('focus.modeCustom')}</span
         >
       </div>
     </div>
@@ -128,24 +137,24 @@
         onclick={() => {
           requestNotify();
           pomodoro.toggle();
-        }}>{pomodoro.running ? 'Pause' : pomodoro.remaining < pomodoro.total ? 'Resume' : 'Start'}</button
+        }}>{pomodoro.running ? t('focus.pause') : pomodoro.remaining < pomodoro.total ? t('focus.resume') : t('focus.start')}</button
       >
-      <button class="btn" onclick={() => pomodoro.reset()}>Reset</button>
+      <button class="btn" onclick={() => pomodoro.reset()}>{t('focus.reset')}</button>
       {#if stop}
         <button
           class="btn ghost"
           onclick={() => {
             const m = pomodoro.logStopwatch();
-            toasts.push({ message: `Logged ${m} min of work`, kind: 'success' });
+            toasts.push({ message: t('focus.logged', { n: m }), kind: 'success' });
           }}
-          disabled={pomodoro.elapsed < 60}>Log time</button
+          disabled={pomodoro.elapsed < 60}>{t('focus.logTime')}</button
         >
       {:else}
-        <button class="btn ghost" onclick={() => pomodoro.skip()}>Skip</button>
+        <button class="btn ghost" onclick={() => pomodoro.skip()}>{t('common.skip')}</button>
       {/if}
-      <button class="btn ghost" onclick={() => (showMusic = !showMusic)} aria-expanded={showMusic}>🎵 Music</button>
-      <button class="btn ghost" onclick={() => (socialUi.roomOpen = !socialUi.roomOpen)} aria-expanded={socialUi.roomOpen}>👥 Study room</button>
-      <span class="sessions">{pomodoro.sessions} session{pomodoro.sessions === 1 ? '' : 's'} this sitting</span>
+      <button class="btn ghost" onclick={() => (showMusic = !showMusic)} aria-expanded={showMusic}>🎵 {t('focus.music')}</button>
+      <button class="btn ghost" onclick={() => (socialUi.roomOpen = !socialUi.roomOpen)} aria-expanded={socialUi.roomOpen}>👥 {t('focus.studyRoom')}</button>
+      <span class="sessions">{t('focus.sessions', { count: pomodoro.sessions })}</span>
     </div>
   </div>
 
@@ -165,13 +174,13 @@
           <div class="meta">
             {#if course}<span class="chip"><span class="dot"></span>{course.emoji ?? ''} {course.name}</span>{/if}
             {#if task.dueAt}<span class="chip">📅 {formatDue(task.dueAt, store.now, store.settings.timeFormat)}</span>{/if}
-            {#if task.estimateMin || task.timeSpentMin}<span class="chip" title="Tracked / estimated"
-                >⏱ {task.timeSpentMin ? `${formatMinutes(task.timeSpentMin)} tracked` : ''}{task.timeSpentMin && task.estimateMin ? ' of ' : ''}{task.estimateMin
-                  ? `~${formatMinutes(task.estimateMin)}`
-                  : ''}</span
+            {#if task.estimateMin || task.timeSpentMin}<span class="chip" title={t('focus.trackedTitle')}
+                >⏱ {task.timeSpentMin ? t('task.tracked', { spent: formatMinutes(task.timeSpentMin) }) : ''}{task.timeSpentMin && task.estimateMin
+                  ? ` ${t('focus.of')} `
+                  : ''}{task.estimateMin ? `~${formatMinutes(task.estimateMin)}` : ''}</span
               >{/if}
-            {#if task.priority !== 'normal'}<span class="chip p-{task.priority}">{task.priority}</span>{/if}
-            {#each task.tags as t}<span class="chip">#{t}</span>{/each}
+            {#if task.priority !== 'normal'}<span class="chip p-{task.priority}">{appLocale() === 'en' ? task.priority : PRIORITY_LABEL[task.priority]}</span>{/if}
+            {#each task.tags as tg}<span class="chip">#{tg}</span>{/each}
           </div>
         </div>
       </div>
@@ -192,43 +201,43 @@
               newSub = '';
             }}
           >
-            <input class="sub-input" bind:value={newSub} placeholder="Add a step…" />
+            <input class="sub-input" bind:value={newSub} placeholder={t('focus.addStep')} />
           </form>
         </li>
       </ul>
       <div class="task-actions">
-        <button class="btn primary big" onclick={complete} disabled={!!task.completedAt}>Complete ✓</button>
+        <button class="btn primary big" onclick={complete} disabled={!!task.completedAt}>{t('focus.complete')} ✓</button>
         <div class="snooze-wrap">
-          <button class="btn" onclick={() => (ui.snoozeMenuFor = ui.snoozeMenuFor === task.id ? null : task.id)}>Snooze</button>
+          <button class="btn" onclick={() => (ui.snoozeMenuFor = ui.snoozeMenuFor === task.id ? null : task.id)}>{t('task.snooze')}</button>
           {#if ui.snoozeMenuFor === task.id}<SnoozeMenu taskId={task.id} onclose={() => (ui.snoozeMenuFor = null)} />{/if}
         </div>
-        <button class="btn" onclick={() => (store.editingTaskId = task.id)}>Edit</button>
-        <button class="btn ghost" onclick={pickNext}>Next task →</button>
-        <button class="btn ghost" onclick={() => (store.focusTaskId = null)}>Choose…</button>
+        <button class="btn" onclick={() => (store.editingTaskId = task.id)}>{t('common.edit')}</button>
+        <button class="btn ghost" onclick={pickNext}>{t('focus.nextTask')} <span class="flip">→</span></button>
+        <button class="btn ghost" onclick={() => (store.focusTaskId = null)}>{t('focus.choose')}</button>
       </div>
     </div>
   {:else}
     <div class="card picker">
-      <h2>Pick a task to focus on</h2>
+      <h2>{t('focus.pick')}</h2>
       {#if !candidates.length}
-        <p class="muted">Nothing due today. Add something in Today, or pick from the Inbox.</p>
+        <p class="muted">{t('focus.nothing')}</p>
       {/if}
       <ul>
-        {#each candidates as t (t.id)}
+        {#each candidates as ct (ct.id)}
           <li>
-            <button onclick={() => (store.focusTaskId = t.id)}>
-              <span class="dot" style="background:{store.courseById(t.courseId)?.color ?? 'var(--border-strong)'}"></span>
-              <span class="grow">{t.frog && t.frogDate === store.today ? '🐸 ' : ''}{t.title}</span>
-              {#if t.estimateMin}<span class="muted">{formatMinutes(t.estimateMin)}</span>{/if}
+            <button onclick={() => (store.focusTaskId = ct.id)}>
+              <span class="dot" style="background:{store.courseById(ct.courseId)?.color ?? 'var(--border-strong)'}"></span>
+              <span class="grow">{ct.frog && ct.frogDate === store.today ? '🐸 ' : ''}{ct.title}</span>
+              {#if ct.estimateMin}<span class="muted">{formatMinutes(ct.estimateMin)}</span>{/if}
             </button>
           </li>
         {/each}
-        {#each store.noDateTasks.slice(0, 5) as t (t.id)}
+        {#each store.noDateTasks.slice(0, 5) as ct (ct.id)}
           <li>
-            <button onclick={() => (store.focusTaskId = t.id)}>
-              <span class="dot" style="background:{store.courseById(t.courseId)?.color ?? 'var(--border-strong)'}"></span>
-              <span class="grow">{t.title}</span>
-              <span class="muted">no date</span>
+            <button onclick={() => (store.focusTaskId = ct.id)}>
+              <span class="dot" style="background:{store.courseById(ct.courseId)?.color ?? 'var(--border-strong)'}"></span>
+              <span class="grow">{ct.title}</span>
+              <span class="muted">{t('focus.noDate')}</span>
             </button>
           </li>
         {/each}
@@ -385,7 +394,7 @@
   .notes :global(ul),
   .notes :global(ol) {
     margin: 4px 0 8px;
-    padding-left: 20px;
+    padding-inline-start: 20px;
   }
   .notes :global(code) {
     font-family: var(--mono);
@@ -463,7 +472,7 @@
     gap: 10px;
     padding: 10px 12px;
     border-radius: 10px;
-    text-align: left;
+    text-align: start;
     color: var(--text);
     font-size: 15px;
   }

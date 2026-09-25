@@ -3,17 +3,18 @@
   import { store } from '../../lib/store.svelte';
   import { MAX_FREEZES, levelTitle } from '../../lib/gamification';
   import { set } from './settings';
+  import { t } from '../../lib/i18n/index.svelte';
   const s = $derived(store.settings);
 </script>
 
 <section class="card">
-  <h2>Gamification</h2>
+  <h2>{t('settings.gamification')}</h2>
   <div class="row">
-    <label for="gam">XP, streaks, badges, confetti</label>
+    <label for="gam">{t('settings.gamificationToggle')}</label>
     <input id="gam" type="checkbox" class="switch" checked={s.gamification} onchange={(e) => set('gamification', (e.target as HTMLInputElement).checked)} />
   </div>
   <div class="row">
-    <label for="wxp">Weekly XP goal</label>
+    <label for="wxp">{t('settings.weeklyXp')}</label>
     <input
       id="wxp"
       class="input num"

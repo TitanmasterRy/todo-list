@@ -4,13 +4,14 @@
   import type { SoundPack } from '../../lib/types';
   import { previewPack, playSound } from '../../lib/sounds';
   import { set } from './settings';
+  import { t } from '../../lib/i18n/index.svelte';
   const s = $derived(store.settings);
 </script>
 
 <section class="card">
-  <h2>Sounds</h2>
+  <h2>{t('settings.sounds')}</h2>
   <div class="row">
-    <label for="snd">Sounds</label>
+    <label for="snd">{t('settings.sounds')}</label>
     <input
       id="snd"
       type="checkbox"
@@ -23,7 +24,7 @@
     />
   </div>
   <div class="row">
-    <span id="pack-l">Sound pack</span>
+    <span id="pack-l">{t('settings.soundPack')}</span>
     <div class="packs" role="radiogroup" aria-labelledby="pack-l">
       {#each ['soft', 'click', 'arcade'] as p}
         <button

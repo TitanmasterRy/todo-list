@@ -4,6 +4,7 @@
   import { toasts } from '../../lib/toast.svelte';
   import { checkPin, hashPin, validPin } from '../../lib/parental';
   import { set } from './settings';
+  import { t } from '../../lib/i18n/index.svelte';
   const s = $derived(store.settings);
   // ---------- parent lock ----------
   let pinInput = $state('');
@@ -26,7 +27,8 @@
 
 <section class="card">
   <h2>
-    Economy {#if s.parentPinHash}<span class="chip">🔒 parent lock{ecoUnlocked ? ' (unlocked)' : ''}</span>{/if}
+    {t('settings.economy')}
+    {#if s.parentPinHash}<span class="chip">🔒 {t('settings.parentLock')}{ecoUnlocked ? ` ${t('settings.unlocked')}` : ''}</span>{/if}
   </h2>
   <fieldset class="plain" disabled={ecoLocked}>
     <div class="row">

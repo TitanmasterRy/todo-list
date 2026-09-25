@@ -1,5 +1,6 @@
 import type { Recurrence, Task } from './types';
-import { addDaysKey, combineDateTime, dueKey, fromKey, isDateOnly, todayKey } from './dates';
+import { addDaysKey, combineDateTime, dayName, dueKey, fromKey, isDateOnly, todayKey } from './dates';
+import { t } from './i18n/index.svelte';
 
 /** Compute the next due day key strictly after `afterKey` for a recurrence. Returns undefined if past `until`. */
 export function nextOccurrenceKey(rec: Recurrence, anchorKey: string, afterKey: string): string | undefined {
@@ -122,36 +123,34 @@ export function spawnNextInstance(task: Task, now: Date = new Date(), newId: str
   };
 }
 
-const ORD = ['', '1st', '2nd', '3rd', '4th', '5th'];
+const ORD = ['rec.nth1', 'rec.nth1', 'rec.nth2', 'rec.nth3', 'rec.nth4', 'rec.nth5'] as const;
 
 export function describeRecurrence(rec: Recurrence | undefined): string {
   if (!rec) return '';
-  const names = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-  const long = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
   let s = '';
   switch (rec.kind) {
     case 'daily':
-      s = 'Every day';
+      s = t('rec.daily');
       break;
     case 'weekdays':
-      s = 'Weekdays';
+      s = t('rec.weekdays');
       break;
     case 'weekly': {
-      const every = (rec.n ?? 1) > 1 ? (rec.n === 2 ? 'Every other week' : `Every ${rec.n} weeks`) : '';
-      const days = rec.days && rec.days.length ? rec.days.map((d) => names[d]).join(', ') : '';
-      s = every ? `${every}${days ? ` on ${days}` : ''}` : days ? `Every ${days}` : 'Weekly';
+      const every = (rec.n ?? 1) > 1 ? (rec.n === 2 ? t('rec.everyOtherWeek') : t('rec.everyNWeeks', { n: rec.n! })) : '';
+      const days = rec.days && rec.days.length ? rec.days.map((d) => dayName(d)).join(', ') : '';
+      s = every ? (days ? t('rec.everyOn', { every, days }) : every) : days ? t('rec.everyDays', { days }) : t('rec.weekly');
       break;
     }
     case 'monthly':
-      s = 'Monthly';
+      s = t('rec.monthly');
       break;
     case 'monthlyNth':
-      s = `Every ${rec.nth === -1 ? 'last' : ORD[rec.nth ?? 1]} ${long[rec.weekday ?? 1]}`;
+      s = t('rec.monthlyNth', { nth: rec.nth === -1 ? t('rec.last') : t(ORD[rec.nth ?? 1] ?? 'rec.nth1'), day: dayName(rec.weekday ?? 1, 'long') });
       break;
     case 'everyNDays':
-      s = `Every ${rec.n ?? 1} days`;
+      s = t('rec.everyNDays', { n: rec.n ?? 1 });
       break;
   }
-  if (rec.until) s += ` until ${rec.until}`;
+  if (rec.until) s = t('rec.until', { rule: s, date: rec.until });
   return s;
 }

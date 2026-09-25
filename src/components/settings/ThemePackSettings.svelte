@@ -1,10 +1,11 @@
 <script lang="ts">
   // Settings → Theme pack.
   import ThemePicker from '../ThemePicker.svelte';
+  import { t } from '../../lib/i18n/index.svelte';
 </script>
 
 <section class="card">
-  <h2>Theme pack</h2>
+  <h2>{t('settings.themePack')}</h2>
   <p class="help">Each pack changes colors, corners, the completion sound, the particles that fly out of the checkbox, and the confetti.</p>
   <ThemePicker />
 </section>

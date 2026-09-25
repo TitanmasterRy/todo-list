@@ -4,6 +4,7 @@
   import { ui } from '../lib/ui.svelte';
   import { whatNow } from '../lib/whatnow';
   import { formatDue, formatMinutes } from '../lib/dates';
+  import { t } from '../lib/i18n/index.svelte';
 
   let index = $state(0);
   const minutesFree = $derived(Math.max(0, (store.settings.dailyCapacityMin || 180) - store.todayEstimateMin));
@@ -13,14 +14,14 @@
 </script>
 
 {#if ui.whatNow}
-  <section class="card whatnow" aria-live="polite" aria-label="Suggested next task">
+  <section class="card whatnow" aria-live="polite" aria-label={t('now.label')}>
     {#if !pick}
-      <p>Nothing open. Enjoy the free time, or plan ahead in Upcoming.</p>
-      <button class="btn sm" onclick={() => (ui.whatNow = false)}>Close</button>
+      <p>{t('now.nothing')}</p>
+      <button class="btn sm" onclick={() => (ui.whatNow = false)}>{t('common.close')}</button>
     {:else}
       <div class="head">
-        <span class="k">Do this next{picks.length > 1 ? ` · ${(index % picks.length) + 1} of ${picks.length}` : ''}</span>
-        <button class="btn ghost sm" onclick={() => (ui.whatNow = false)} aria-label="Close suggestion">✕</button>
+        <span class="k">{t('now.next')}{picks.length > 1 ? ` · ${t('now.of', { i: (index % picks.length) + 1, n: picks.length })}` : ''}</span>
+        <button class="btn ghost sm" onclick={() => (ui.whatNow = false)} aria-label={t('now.close')}>✕</button>
       </div>
       <div class="title">{course?.emoji ?? ''} {pick.task.title}</div>
       <div class="meta">
@@ -28,11 +29,11 @@
         {#if pick.task.dueAt}<span class="chip">{formatDue(pick.task.dueAt, store.now, store.settings.timeFormat)}</span>{/if}
         {#if pick.task.estimateMin}<span class="chip">~{formatMinutes(pick.task.estimateMin)}</span>{/if}
       </div>
-      {#if pick.reasons.length}<p class="why">Why: {pick.reasons.slice(0, 3).join(' · ')}</p>{/if}
+      {#if pick.reasons.length}<p class="why">{t('now.why', { reasons: pick.reasons.slice(0, 3).join(' · ') })}</p>{/if}
       <div class="btns">
-        <button class="btn primary" onclick={() => store.go('focus', { taskId: pick.task.id })}>🎯 Start in Focus</button>
-        {#if picks.length > 1}<button class="btn" onclick={() => index++}>Something else</button>{/if}
-        <button class="btn ghost" onclick={() => (store.editingTaskId = pick.task.id)}>Open</button>
+        <button class="btn primary" onclick={() => store.go('focus', { taskId: pick.task.id })}>🎯 {t('now.start')}</button>
+        {#if picks.length > 1}<button class="btn" onclick={() => index++}>{t('now.else')}</button>{/if}
+        <button class="btn ghost" onclick={() => (store.editingTaskId = pick.task.id)}>{t('now.open')}</button>
       </div>
     {/if}
   </section>

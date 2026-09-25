@@ -4,6 +4,7 @@
   import { toasts } from '../../lib/toast.svelte';
   import { sync, syncNow, checkToken, disconnect } from '../../lib/gist.svelte';
   import { hasSecret, isLocked, requestUnlock, setSecrets } from '../../lib/secrets.svelte';
+  import { t } from '../../lib/i18n/index.svelte';
   const s = $derived(store.settings);
   let token = $state('');
   let tokenLogin = $state('');
@@ -27,7 +28,7 @@
 </script>
 
 <section class="card">
-  <h2>GitHub Gist sync <span class="chip optional">optional</span></h2>
+  <h2>{t('settings.gist')} <span class="chip optional">{t('settings.optional')}</span></h2>
   <p class="help">
     Keep your data in a <strong>private GitHub Gist</strong> so it follows you across devices. Create a
     <a href="https://github.com/settings/tokens/new?scopes=gist&description=Homework%20To-Do" target="_blank" rel="noopener noreferrer">personal access token</a>

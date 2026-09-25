@@ -1,6 +1,7 @@
 // Service worker registration with an update prompt, plus install prompt capture.
 import { registerSW } from 'virtual:pwa-register';
 import { toasts } from './toast.svelte';
+import { t } from './i18n/index.svelte';
 
 class PwaState {
   installEvent = $state<(Event & { prompt: () => Promise<void>; userChoice: Promise<{ outcome: string }> }) | null>(null);
@@ -16,12 +17,12 @@ export function setupPwa(): void {
     immediate: true,
     onNeedRefresh() {
       toasts.push({
-        message: 'Update available',
-        detail: 'Reload to get the latest version.',
+        message: t('pwa.update'),
+        detail: t('pwa.updateDetail'),
         kind: 'info',
         emoji: '⬆️',
         timeout: 0,
-        action: { label: 'Reload', onClick: () => void update(true) },
+        action: { label: t('pwa.reload'), onClick: () => void update(true) },
       });
     },
     onOfflineReady() {
@@ -35,7 +36,7 @@ export function setupPwa(): void {
   window.addEventListener('appinstalled', () => {
     pwa.installed = true;
     pwa.installEvent = null;
-    toasts.push({ message: 'Installed', detail: 'Homework To-Do is on your home screen.', kind: 'success', emoji: '📱' });
+    toasts.push({ message: t('pwa.installed'), detail: t('pwa.installedDetail'), kind: 'success', emoji: '📱' });
   });
   if (window.matchMedia('(display-mode: standalone)').matches) pwa.installed = true;
 }

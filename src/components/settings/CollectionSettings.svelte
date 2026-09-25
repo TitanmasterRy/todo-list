@@ -2,12 +2,13 @@
   // Settings → Collection: mystery rewards from closing the daily ring (shown once you own one).
   import { store } from '../../lib/store.svelte';
   import { COLLECTIBLES } from '../../lib/gamification';
+  import { t } from '../../lib/i18n/index.svelte';
   const s = $derived(store.settings);
 </script>
 
 {#if s.collection.length}
   <section class="card">
-    <h2>Collection <span class="muted">{s.collection.length}/{COLLECTIBLES.length}</span></h2>
+    <h2>{t('settings.collection')} <span class="muted">{s.collection.length}/{COLLECTIBLES.length}</span></h2>
     <p class="help">Mystery rewards from closing your daily ring.</p>
     <div class="collection">
       {#each COLLECTIBLES as c (c.id)}

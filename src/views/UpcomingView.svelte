@@ -22,7 +22,8 @@
   }
   import { store, byDueThenOrder, byOrder } from '../lib/store.svelte';
   import type { Task } from '../lib/types';
-  import { addDaysKey, dueKey, formatDayHeading, formatMinutes, startOfWeekKey, fromKey, MONTH_SHORT } from '../lib/dates';
+  import { addDaysKey, dueKey, formatDayHeading, formatMinutes, formatMonthDay, startOfWeekKey, fromKey } from '../lib/dates';
+  import { t } from '../lib/i18n/index.svelte';
   import QuickAdd from '../components/QuickAdd.svelte';
   import TaskItem from '../components/TaskItem.svelte';
   import Sortable from '../components/Sortable.svelte';
@@ -63,7 +64,7 @@
   function weekLabel(k: string): string {
     const a = fromKey(k);
     const b = fromKey(addDaysKey(k, 6));
-    return `Week of ${MONTH_SHORT[a.getMonth()]} ${a.getDate()} – ${MONTH_SHORT[b.getMonth()]} ${b.getDate()}`;
+    return t('upcoming.weekOf', { from: formatMonthDay(a, a), to: formatMonthDay(b, b) });
   }
   const est = (tasks: Task[]) => tasks.reduce((a, t) => a + (t.estimateMin ?? 0), 0);
   const exams = (tasks: Task[]) => tasks.filter((t) => t.type === 'exam' || t.type === 'quiz').length;
@@ -72,16 +73,16 @@
 <div class="page">
   <header class="page-head">
     <div>
-      <h1>Upcoming</h1>
-      <div class="sub">Next two weeks by day, then by week. Drag tasks between days to reschedule.</div>
+      <h1>{t('nav.upcoming')}</h1>
+      <div class="sub">{t('upcoming.sub')}</div>
     </div>
     <div class="grow"></div>
-    <div class="cz-seg mode" role="radiogroup" aria-label="Layout">
-      <button role="radio" aria-checked={layout === 'list'} class:on={layout === 'list'} onclick={() => setLayout('list')}>List</button>
-      <button role="radio" aria-checked={layout === 'month'} class:on={layout === 'month'} onclick={() => setLayout('month')}>Month</button>
+    <div class="cz-seg mode" role="radiogroup" aria-label={t('upcoming.layout')}>
+      <button role="radio" aria-checked={layout === 'list'} class:on={layout === 'list'} onclick={() => setLayout('list')}>{t('upcoming.list')}</button>
+      <button role="radio" aria-checked={layout === 'month'} class:on={layout === 'month'} onclick={() => setLayout('month')}>{t('upcoming.month')}</button>
     </div>
-    {#if layout === 'list'}<label class="toggle"><input type="checkbox" bind:checked={showEmptyDays} /> Show empty days</label>{/if}
-    <button class="btn sm" onclick={() => (printing = true)}>🖨️ Print week</button>
+    {#if layout === 'list'}<label class="toggle"><input type="checkbox" bind:checked={showEmptyDays} /> {t('upcoming.showEmpty')}</label>{/if}
+    <button class="btn sm" onclick={() => (printing = true)}>🖨️ {t('upcoming.print')}</button>
   </header>
   {#if printing}
     {#await loadPrint() then m}<m.default onclose={() => (printing = false)} />{/await}
@@ -90,13 +91,13 @@
   {#if layout === 'month'}
     {#await loadMonth() then m}<m.default />{/await}
   {:else}
-    <QuickAdd defaultDueKey={addDaysKey(store.today, 1)} placeholder="Add a task… “Essay draft fri ~2h #hist”" />
+    <QuickAdd defaultDueKey={addDaysKey(store.today, 1)} placeholder={t('quick.placeholderUpcoming')} />
 
     {#if overdue.length}
       <div class="section-title overdue">
-        <span>Overdue</span><span class="count">{overdue.length}</span>
+        <span>{t('today.overdue')}</span><span class="count">{overdue.length}</span>
         <span class="spacer"></span>
-        <button class="btn sm" onclick={() => store.rollOverdueToToday()}>Roll all to today</button>
+        <button class="btn sm" onclick={() => store.rollOverdueToToday()}>{t('today.rollAll')}</button>
       </div>
       <Sortable items={overdue} group="upcoming" onreorder={(ids) => store.reorder(ids)}>
         {#snippet item(task)}
@@ -112,7 +113,7 @@
           <span>{formatDayHeading(k, store.now)}</span>
           {#if tasks.length}
             <span class="count">{tasks.length} · {formatMinutes(est(tasks))}</span>
-            {#if exams(tasks)}<span class="chip exam">{exams(tasks)} exam{exams(tasks) > 1 ? 's' : ''}/quiz</span>{/if}
+            {#if exams(tasks)}<span class="chip exam">{t('upcoming.exams', { count: exams(tasks) })}</span>{/if}
           {/if}
         </div>
         <Sortable
@@ -120,7 +121,7 @@
           group="upcoming"
           onreorder={(ids) => store.reorder(ids)}
           ondropfrom={(id) => store.moveTaskToDay(id, k)}
-          placeholder={tasks.length ? undefined : 'Drop here'}
+          placeholder={tasks.length ? undefined : t('upcoming.drop')}
         >
           {#snippet item(task)}
             <TaskItem {task} listIds={allIds} dragHandle />
@@ -133,7 +134,7 @@
       <div class="section-title">
         <span>{weekLabel(w.key)}</span>
         <span class="count">{w.tasks.length} · {formatMinutes(est(w.tasks))}</span>
-        {#if exams(w.tasks)}<span class="chip exam">{exams(w.tasks)} exam{exams(w.tasks) > 1 ? 's' : ''}/quiz</span>{/if}
+        {#if exams(w.tasks)}<span class="chip exam">{t('upcoming.exams', { count: exams(w.tasks) })}</span>{/if}
       </div>
       <Sortable items={w.tasks} group="upcoming" onreorder={(ids) => store.reorder(ids)} ondropfrom={(id) => store.moveTaskToDay(id, w.key)}>
         {#snippet item(task)}
@@ -145,16 +146,16 @@
     {#if !dated.length}
       <div class="empty">
         <div class="big">📅</div>
-        <h3>Nothing scheduled</h3>
-        <p>Add a task with a date, like “Lab report fri 5pm”.</p>
+        <h3>{t('upcoming.empty')}</h3>
+        <p>{t('upcoming.emptyHint')}</p>
       </div>
     {/if}
 
     {#if undated.length}
       <div class="section-title">
-        <span>No date</span><span class="count">{undated.length}</span>
+        <span>{t('today.noDate')}</span><span class="count">{undated.length}</span>
         <span class="spacer"></span>
-        <span class="hint">Drag onto a day to schedule</span>
+        <span class="hint">{t('upcoming.dragHint')}</span>
       </div>
       <Sortable items={undated} group="upcoming" onreorder={(ids) => store.reorder(ids)} ondropfrom={(id) => store.moveTaskToDay(id, null)}>
         {#snippet item(task)}

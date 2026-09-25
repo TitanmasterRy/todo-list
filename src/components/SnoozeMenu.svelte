@@ -1,6 +1,7 @@
 <script lang="ts">
   import { store } from '../lib/store.svelte';
-  import { addDaysKey, thisWeekendKey, nextWeekKey, DAY_SHORT, fromKey } from '../lib/dates';
+  import { addDaysKey, thisWeekendKey, nextWeekKey, dayName as weekday, fromKey } from '../lib/dates';
+  import { t } from '../lib/i18n/index.svelte';
 
   interface Props {
     taskId: string;
@@ -13,7 +14,7 @@
   const tomorrow = $derived(addDaysKey(store.today, 1));
   const weekend = $derived(thisWeekendKey(store.now));
   const nextWeek = $derived(nextWeekKey(store.now, store.settings.weekStart));
-  const dayName = (k: string) => DAY_SHORT[fromKey(k).getDay()];
+  const dayName = (k: string) => weekday(fromKey(k).getDay());
 
   function pick(k: string, label: string) {
     store.snoozeTask(taskId, k, label);
@@ -30,16 +31,16 @@
 <svelte:window onclick={onclose} onkeydown={onKey} />
 <!-- svelte-ignore a11y_click_events_have_key_events -->
 <div class="menu" role="menu" tabindex="-1" onclick={(e) => e.stopPropagation()}>
-  <button role="menuitem" onclick={() => pick(tomorrow, 'Snoozed to tomorrow')}>Tomorrow <span>{dayName(tomorrow)}</span></button>
-  <button role="menuitem" onclick={() => pick(weekend, 'Snoozed to the weekend')}>This weekend <span>{dayName(weekend)}</span></button>
-  <button role="menuitem" onclick={() => pick(nextWeek, 'Snoozed to next week')}>Next week <span>{dayName(nextWeek)}</span></button>
+  <button role="menuitem" onclick={() => pick(tomorrow, t('snooze.toTomorrow'))}>{t('snooze.tomorrow')} <span>{dayName(tomorrow)}</span></button>
+  <button role="menuitem" onclick={() => pick(weekend, t('snooze.toWeekend'))}>{t('snooze.weekend')} <span>{dayName(weekend)}</span></button>
+  <button role="menuitem" onclick={() => pick(nextWeek, t('snooze.toNextWeek'))}>{t('snooze.nextWeek')} <span>{dayName(nextWeek)}</span></button>
   {#if store.taskById(taskId)?.recurrence}
     <button
       role="menuitem"
       onclick={() => {
         store.skipOccurrence(taskId);
         onclose();
-      }}>Skip this one <span>🔁</span></button
+      }}>{t('snooze.skip')} <span>🔁</span></button
     >
   {/if}
   {#if picking}
@@ -47,21 +48,21 @@
       class="pick"
       onsubmit={(e) => {
         e.preventDefault();
-        if (date) pick(date, 'Rescheduled');
+        if (date) pick(date, t('snooze.rescheduled'));
       }}
     >
       <input class="input" type="date" bind:value={date} min={store.today} />
-      <button class="btn primary sm" type="submit">Go</button>
+      <button class="btn primary sm" type="submit">{t('snooze.go')}</button>
     </form>
   {:else}
-    <button role="menuitem" onclick={() => (picking = true)}>Pick date…</button>
+    <button role="menuitem" onclick={() => (picking = true)}>{t('snooze.pick')}</button>
   {/if}
 </div>
 
 <style>
   .menu {
     position: absolute;
-    right: 0;
+    inset-inline-end: 0;
     top: 34px;
     background: var(--bg-elev-2);
     border: 1px solid var(--border-strong);
@@ -81,7 +82,7 @@
     padding: 8px 10px;
     border-radius: 6px;
     font-size: 14px;
-    text-align: left;
+    text-align: start;
     color: var(--text);
   }
   .menu > button span {

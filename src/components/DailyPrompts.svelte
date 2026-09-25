@@ -9,6 +9,7 @@
   import { formatMinutes, dueKey } from '../lib/dates';
   import { backupFilename, downloadJSON } from '../lib/backup';
   import { whatsNewAction } from '../lib/whatsnew';
+  import { t as tr } from '../lib/i18n/index.svelte';
   const loadReview = () => import('./WeeklyReview.svelte');
   const loadSetup = () => import('./SemesterSetup.svelte');
   const loadWhatsNew = () => import('./WhatsNew.svelte');
@@ -25,12 +26,12 @@
       setTimeout(
         () =>
           toasts.push({
-            message: 'Updated: see what’s new',
+            message: tr('prompt.updated'),
             detail: __CHANGELOG_HEAD__,
             kind: 'info',
             emoji: '✨',
             timeout: 10000,
-            action: { label: 'What’s new', onClick: () => (ui.whatsNew = true) },
+            action: { label: tr('prompt.whatsNew'), onClick: () => (ui.whatsNew = true) },
           }),
         2000,
       );
@@ -49,11 +50,11 @@
       setTimeout(
         () =>
           toasts.push({
-            message: 'It’s Sunday. Run your weekly review?',
+            message: tr('prompt.sunday'),
             kind: 'info',
             emoji: '📋',
             timeout: 10000,
-            action: { label: 'Review', onClick: () => (ui.weeklyReview = true) },
+            action: { label: tr('prompt.review'), onClick: () => (ui.weeklyReview = true) },
           }),
         3000,
       );
@@ -67,13 +68,13 @@
       setTimeout(
         () =>
           toasts.push({
-            message: last ? 'No backup in 14 days' : 'Back up your data',
-            detail: 'Download a JSON export. Your data lives only in this browser.',
+            message: last ? tr('prompt.noBackup') : tr('prompt.backUp'),
+            detail: tr('prompt.backupDetail'),
             kind: 'warn',
             emoji: '💾',
             timeout: 12000,
             action: {
-              label: 'Download',
+              label: tr('prompt.download'),
               onClick: () => {
                 downloadJSON(backupFilename(), store.snapshotBundle());
                 store.updateSettings({ lastExportAt: new Date().toISOString() });
@@ -92,7 +93,7 @@
   function pickFrog(id: string) {
     store.setFrog(id);
     ui.frogPrompt = false;
-    toasts.push({ message: 'Frog picked', detail: 'Eat it first: double XP when you finish it.', kind: 'success', emoji: '🐸' });
+    toasts.push({ message: tr('prompt.frogPicked'), detail: tr('prompt.frogPickedDetail'), kind: 'success', emoji: '🐸' });
   }
   function saveRecap() {
     if (note.trim()) store.saveDayNote(store.today, note.trim());
@@ -104,9 +105,18 @@
 {#if ui.frogPrompt}
   <div class="modal-backdrop" onclick={() => (ui.frogPrompt = false)} role="presentation">
     <!-- svelte-ignore a11y_click_events_have_key_events -->
-    <div use:focusTrap class="modal" role="dialog" aria-modal="true" aria-label="Eat the frog" tabindex="-1" onclick={(e) => e.stopPropagation()} in:fly={{ y: 20, duration: 250 }}>
-      <h2>🐸 Eat the frog</h2>
-      <p class="muted">Pick the hardest thing on today’s list. It gets pinned to the top and pays double XP.</p>
+    <div
+      use:focusTrap
+      class="modal"
+      role="dialog"
+      aria-modal="true"
+      aria-label={tr('prompt.frog')}
+      tabindex="-1"
+      onclick={(e) => e.stopPropagation()}
+      in:fly={{ y: 20, duration: 250 }}
+    >
+      <h2>🐸 {tr('prompt.frog')}</h2>
+      <p class="muted">{tr('prompt.frogText')}</p>
       <ul class="choices">
         {#each frogChoices as t (t.id)}
           <li>
@@ -118,10 +128,10 @@
           </li>
         {/each}
         {#if !frogChoices.length}
-          <li class="muted">Nothing on today’s list yet.</li>
+          <li class="muted">{tr('prompt.frogNone')}</li>
         {/if}
       </ul>
-      <div class="actions"><button class="btn" onclick={() => (ui.frogPrompt = false)}>Not today</button></div>
+      <div class="actions"><button class="btn" onclick={() => (ui.frogPrompt = false)}>{tr('prompt.notToday')}</button></div>
     </div>
   </div>
 {/if}
@@ -134,38 +144,42 @@
       class="modal recap"
       role="dialog"
       aria-modal="true"
-      aria-label="End of day recap"
+      aria-label={tr('prompt.recapLabel')}
       tabindex="-1"
       onclick={(e) => e.stopPropagation()}
       in:fly={{ y: 20, duration: 250 }}
     >
-      <h2>🌙 Today’s recap</h2>
+      <h2>🌙 {tr('prompt.recap')}</h2>
       <div class="stats">
-        <div><span class="big">{doneToday.length}</span><span class="lbl">done</span></div>
+        <div><span class="big">{doneToday.length}</span><span class="lbl">{tr('prompt.done')}</span></div>
         {#if store.settings.gamification}
-          <div><span class="big">{store.stats.xp}</span><span class="lbl">total XP</span></div>
+          <div><span class="big">{store.stats.xp}</span><span class="lbl">{tr('prompt.totalXp')}</span></div>
           <div>
             <span class="big">🔥 {store.streak}</span><span class="lbl"
-              >streak{store.streak > 0 && store.stats.streak.lastDate === store.today ? ' · kept' : store.streak > 0 ? ' · at risk' : ''}</span
+              >{tr('prompt.streak')}{store.streak > 0 && store.stats.streak.lastDate === store.today
+                ? ` · ${tr('prompt.kept')}`
+                : store.streak > 0
+                  ? ` · ${tr('prompt.atRisk')}`
+                  : ''}</span
             >
           </div>
         {/if}
-        <div><span class="big">{openLeft}</span><span class="lbl">left today</span></div>
+        <div><span class="big">{openLeft}</span><span class="lbl">{tr('prompt.left')}</span></div>
       </div>
       {#if doneToday.length}
         <ul class="done">
           {#each doneToday.slice(0, 8) as t (t.id)}<li>✓ {t.title}</li>{/each}
         </ul>
       {:else}
-        <p class="muted">Nothing finished yet today. There’s still time, or tomorrow is a fresh streak day.</p>
+        <p class="muted">{tr('prompt.nothingDone')}</p>
       {/if}
       <label class="note">
-        <span>What went well?</span>
-        <input class="input" bind:value={note} placeholder="One line, saved to today" maxlength="200" onkeydown={(e) => e.key === 'Enter' && saveRecap()} />
+        <span>{tr('prompt.wentWell')}</span>
+        <input class="input" bind:value={note} placeholder={tr('prompt.notePh')} maxlength="200" onkeydown={(e) => e.key === 'Enter' && saveRecap()} />
       </label>
       <div class="actions">
-        <button class="btn" onclick={() => (ui.recap = false)}>Close</button>
-        <button class="btn primary" onclick={saveRecap}>Save</button>
+        <button class="btn" onclick={() => (ui.recap = false)}>{tr('common.close')}</button>
+        <button class="btn primary" onclick={saveRecap}>{tr('common.save')}</button>
       </div>
     </div>
   </div>
@@ -201,7 +215,7 @@
     gap: 10px;
     padding: 10px 12px;
     border-radius: 10px;
-    text-align: left;
+    text-align: start;
     color: var(--text);
     font-size: 15px;
     border: 1px solid var(--border);

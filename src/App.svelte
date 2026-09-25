@@ -38,6 +38,7 @@
   import { startEconomy } from './lib/economy.svelte';
   import { startSocial } from './lib/social/links';
   import CoinPops from './components/CoinPops.svelte';
+  import { t } from './lib/i18n/index.svelte';
 
   onMount(() => {
     void store.init().then(() => {
@@ -114,7 +115,7 @@
 </script>
 
 <svelte:head>
-  <title>{viewLabel ? `${viewLabel} · Homework To-Do` : 'Homework To-Do'}</title>
+  <title>{viewLabel ? `${viewLabel} · ${t('app.title')}` : t('app.title')}</title>
 </svelte:head>
 
 {#if !store.ready}
@@ -126,7 +127,7 @@
     <Sidebar />
     <main class="main" id="main">
       {#if store.loadError}
-        <div class="page"><div class="card">Could not open local storage: {store.loadError}</div></div>
+        <div class="page"><div class="card">{t('app.storageError', { error: store.loadError })}</div></div>
       {/if}
       {#if store.view === 'today'}
         <TodayView />
@@ -152,7 +153,7 @@
     </main>
     <TabBar />
   </div>
-  <button class="fab" onclick={fab} aria-label="Add task">+</button>
+  <button class="fab" onclick={fab} aria-label={t('app.addTask')}>+</button>
   <BulkBar />
   <Toasts />
   <FeedbackLayer />
@@ -210,13 +211,13 @@
   }
   @media (min-width: 721px) {
     .main {
-      margin-left: var(--sidebar-w);
+      margin-inline-start: var(--sidebar-w);
     }
   }
   .fab {
     display: none;
     position: fixed;
-    right: 16px;
+    inset-inline-end: 16px;
     bottom: calc(var(--tabbar-h) + 16px + env(safe-area-inset-bottom));
     width: 54px;
     height: 54px;

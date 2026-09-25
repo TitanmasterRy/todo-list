@@ -2,16 +2,17 @@
 // Attached to Store.prototype in store.svelte.ts, so they're called as store.method(...) like the rest.
 import type { Task } from '../types';
 import { uid } from '../id';
-import { addDaysKey, dueKey, isDateOnly, isoNow, nextWeekKey, thisWeekendKey } from '../dates';
+import { addDaysKey, dueKey, formatDue, isDateOnly, isoNow, nextWeekKey, thisWeekendKey } from '../dates';
 import { nextOccurrenceKey } from '../recurrence';
 import { undo } from '../undo.svelte';
 import { toasts } from '../toast.svelte';
 import { playSound } from '../sounds';
 import type { Store } from '../store.svelte';
+import { locale as appLocale, t as tr } from '../i18n/index.svelte';
 
 export const planningMethods = {
   /** Snooze: reschedule to a day, keeping the time of day if there was one. */
-  snoozeTask(this: Store, id: string, toKey: string, label = 'Snoozed'): void {
+  snoozeTask(this: Store, id: string, toKey: string, label = tr('snooze.snoozed')): void {
     const task = this.tasks.find((t) => t.id === id);
     if (!task) return;
     const snapshot = structuredClone($state.snapshot(task)) as Task;
@@ -29,13 +30,13 @@ export const planningMethods = {
   },
 
   snoozeTomorrow(this: Store, id: string): void {
-    this.snoozeTask(id, addDaysKey(this.today, 1), 'Snoozed to tomorrow');
+    this.snoozeTask(id, addDaysKey(this.today, 1), tr('snooze.toTomorrow'));
   },
   snoozeWeekend(this: Store, id: string): void {
-    this.snoozeTask(id, thisWeekendKey(this.now), 'Snoozed to the weekend');
+    this.snoozeTask(id, thisWeekendKey(this.now), tr('snooze.toWeekend'));
   },
   snoozeNextWeek(this: Store, id: string): void {
-    this.snoozeTask(id, nextWeekKey(this.now, this.settings.weekStart), 'Snoozed to next week');
+    this.snoozeTask(id, nextWeekKey(this.now, this.settings.weekStart), tr('snooze.toNextWeek'));
   },
 
   rollOverdueToToday(this: Store): void {
@@ -57,7 +58,7 @@ export const planningMethods = {
     this.tasks = this.tasks.map((t) => map.get(t.id) ?? t);
     this.persistTasks(updated);
     undo.push({
-      label: `Rolled ${updated.length} overdue to today`,
+      label: tr('toast.rolled', { count: updated.length }),
       undo: () => {
         const now = isoNow();
         const back = snaps.map((t) => ({ ...t, updatedAt: now }));
@@ -85,7 +86,7 @@ export const planningMethods = {
   removeSubtask(this: Store, taskId: string, subId: string): void {
     const task = this.tasks.find((t) => t.id === taskId);
     if (!task) return;
-    this.updateTask(taskId, { subtasks: task.subtasks.filter((s) => s.id !== subId) }, { undoable: true, label: 'Removed subtask' });
+    this.updateTask(taskId, { subtasks: task.subtasks.filter((s) => s.id !== subId) }, { undoable: true, label: tr('toast.removedSubtask') });
   },
 
   /** Reorder: assign sequential `order` to the given ids (in new order). Other tasks keep theirs. */
@@ -111,7 +112,7 @@ export const planningMethods = {
     const task = this.tasks.find((t) => t.id === id);
     if (!task) return;
     if (toKey === null) {
-      this.updateTask(id, { dueAt: undefined, pinnedDay: undefined }, { undoable: true, label: `Removed date from “${task.title}”` });
+      this.updateTask(id, { dueAt: undefined, pinnedDay: undefined }, { undoable: true, label: tr('toast.removedDate', { title: task.title }) });
       return;
     }
     if (task.dueAt && dueKey(task.dueAt) === toKey) return;
@@ -122,7 +123,7 @@ export const planningMethods = {
       n.setHours(d.getHours(), d.getMinutes(), 0, 0);
       dueAt = n.toISOString();
     }
-    this.updateTask(id, { dueAt, pinnedDay: undefined }, { undoable: true, label: `Rescheduled “${task.title}”` });
+    this.updateTask(id, { dueAt, pinnedDay: undefined }, { undoable: true, label: tr('toast.rescheduled', { title: task.title }) });
   },
 
   // ---------- recurrence ----------
@@ -133,7 +134,7 @@ export const planningMethods = {
     const from = task.dueAt ? dueKey(task.dueAt) : this.today;
     const next = nextOccurrenceKey(task.recurrence, from, from);
     if (!next) {
-      toasts.push({ message: 'This was the last one in the series', kind: 'info' });
+      toasts.push({ message: tr('toast.lastInSeries'), kind: 'info' });
       return;
     }
     let dueAt: string = next;
@@ -146,7 +147,7 @@ export const planningMethods = {
     this.updateTask(
       id,
       { dueAt, pinnedDay: undefined, subtasks: task.subtasks.map((st) => ({ ...st, done: false })) },
-      { undoable: true, label: `Skipped “${task.title}” to ${next}` },
+      { undoable: true, label: tr('toast.skipped', { title: task.title, date: appLocale() === 'en' ? next : formatDue(next, this.now) }) },
     );
   },
 
@@ -184,13 +185,13 @@ export const planningMethods = {
   pinToToday(this: Store, id: string): void {
     const task = this.tasks.find((t) => t.id === id);
     if (!task) return;
-    this.updateTask(id, { pinnedDay: this.today }, { undoable: true, label: `Added “${task.title}” to Today` });
+    this.updateTask(id, { pinnedDay: this.today }, { undoable: true, label: tr('toast.pinned', { title: task.title }) });
   },
 
   unpinToday(this: Store, id: string): void {
     const task = this.tasks.find((t) => t.id === id);
     if (!task) return;
-    this.updateTask(id, { pinnedDay: undefined }, { undoable: true, label: `Removed “${task.title}” from Today` });
+    this.updateTask(id, { pinnedDay: undefined }, { undoable: true, label: tr('toast.unpinned', { title: task.title }) });
   },
 
   setFrog(this: Store, id: string | null): void {

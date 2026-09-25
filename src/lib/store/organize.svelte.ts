@@ -7,6 +7,7 @@ import { isoNow } from '../dates';
 import { undo } from '../undo.svelte';
 import { emit } from '../events';
 import type { Store } from '../store.svelte';
+import { t as tr } from '../i18n/index.svelte';
 
 export const organizeMethods = {
   // ---------- courses ----------
@@ -41,7 +42,7 @@ export const organizeMethods = {
     if (this.courseFilter === id) this.courseFilter = null;
     undo.push(
       {
-        label: `Deleted course “${course.name}”`,
+        label: tr('toast.deletedCourse', { name: course.name }),
         undo: () => {
           const back = { ...course, updatedAt: isoNow() };
           this.unbury('course', [id]);
@@ -105,7 +106,7 @@ export const organizeMethods = {
     db.deleteTemplate(id).catch((e) => console.error(e));
     this.bury('template', [id]);
     undo.push({
-      label: `Deleted template @${t.name}`,
+      label: tr('toast.deletedTemplate', { name: t.name }),
       undo: () => {
         this.unbury('template', [id]);
         this.templates = [...this.templates, t];

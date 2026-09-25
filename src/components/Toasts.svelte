@@ -2,6 +2,7 @@
   import { fly } from 'svelte/transition';
   import { flip } from 'svelte/animate';
   import { toasts } from '../lib/toast.svelte';
+  import { t as tr } from '../lib/i18n/index.svelte';
 </script>
 
 <div class="toasts" aria-live="polite" aria-relevant="additions">
@@ -23,7 +24,7 @@
       {#if t.action}
         <button class="btn sm act" onclick={t.action.onClick}>{t.action.label}</button>
       {/if}
-      <button class="x" onclick={() => toasts.dismiss(t.id)} aria-label="Dismiss">×</button>
+      <button class="x" onclick={() => toasts.dismiss(t.id)} aria-label={tr('common.dismiss')}>×</button>
     </div>
   {/each}
 </div>

@@ -4,6 +4,7 @@
   import { toasts } from '../../lib/toast.svelte';
   import { backgroundSupported, notificationsSupported, remindersSettingsChanged, requestNotifications } from '../../lib/reminders';
   import { set } from './settings';
+  import { t } from '../../lib/i18n/index.svelte';
   const s = $derived(store.settings);
   async function enableNotifications() {
     const ok = await requestNotifications();
@@ -18,7 +19,7 @@
 </script>
 
 <section class="card">
-  <h2>Notifications</h2>
+  <h2>{t('settings.notifications')}</h2>
   {#if !notificationsSupported()}
     <p class="help">This browser doesn’t support notifications.</p>
   {:else}

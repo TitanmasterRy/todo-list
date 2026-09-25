@@ -7,6 +7,7 @@
   import { applyFilter, EMPTY_FILTER, isFiltered, LIST_PRESETS, type FilterSort, type FilterStatus, type SavedList, type TaskFilter } from '../lib/filters';
   import { uid } from '../lib/id';
   import { toasts } from '../lib/toast.svelte';
+  import { t } from '../lib/i18n/index.svelte';
   import QuickAdd from '../components/QuickAdd.svelte';
   import TaskItem from '../components/TaskItem.svelte';
   import Sortable from '../components/Sortable.svelte';
@@ -84,7 +85,7 @@
     ui.inboxList = l.id;
     saving = false;
     listName = '';
-    toasts.push({ message: `Saved list “${l.name}”`, detail: 'It’s in the sidebar now.', kind: 'success', emoji: l.emoji });
+    toasts.push({ message: t('inbox.savedList', { name: l.name }), detail: t('inbox.savedListDetail'), kind: 'success', emoji: l.emoji });
   }
   function usePreset(p: (typeof LIST_PRESETS)[number]) {
     load({ ...EMPTY_FILTER, ...p.filter });
@@ -109,88 +110,90 @@
 <div class="page">
   <header class="page-head">
     <div>
-      <h1>{activeList ? `${activeList.emoji} ${activeList.name}` : 'Inbox'}</h1>
-      <div class="sub">{activeList ? 'Saved list' : 'Everything, with filters.'}</div>
+      <h1>{activeList ? `${activeList.emoji} ${activeList.name}` : t('nav.inbox')}</h1>
+      <div class="sub">{activeList ? t('inbox.savedListSub') : t('inbox.sub')}</div>
     </div>
     <div class="grow"></div>
     <button class="btn sm" class:primary={store.bulkMode} onclick={() => (store.bulkMode ? store.clearSelection() : (store.bulkMode = true))}
-      >{store.bulkMode ? 'Done selecting' : 'Select'}</button
+      >{store.bulkMode ? t('inbox.doneSelecting') : t('inbox.select')}</button
     >
   </header>
 
   <QuickAdd />
 
   <div class="filters" role="search">
-    <input class="input search" bind:this={searchInput} bind:value={ui.searchQuery} placeholder="Search tasks…  ( / )" aria-label="Search" data-search />
-    <select class="select" bind:value={status} aria-label="Status">
-      <option value="open">Open</option>
-      <option value="done">Completed</option>
-      <option value="all">All</option>
+    <input class="input search" bind:this={searchInput} bind:value={ui.searchQuery} placeholder={t('inbox.search')} aria-label={t('inbox.searchLabel')} data-search />
+    <select class="select" bind:value={status} aria-label={t('inbox.status')}>
+      <option value="open">{t('inbox.open')}</option>
+      <option value="done">{t('inbox.completed')}</option>
+      <option value="all">{t('common.all')}</option>
     </select>
-    <select class="select" bind:value={courseId} aria-label="Course">
-      <option value="">Any course</option>
-      <option value="none">No course</option>
+    <select class="select" bind:value={courseId} aria-label={t('inbox.course')}>
+      <option value="">{t('inbox.anyCourse')}</option>
+      <option value="none">{t('inbox.noCourse')}</option>
       {#each store.courses as c (c.id)}
-        <option value={c.id}>{c.emoji ? c.emoji + ' ' : ''}{c.name}{c.archived ? ' (archived)' : ''}</option>
+        <option value={c.id}>{c.emoji ? c.emoji + ' ' : ''}{c.name}{c.archived ? ` ${t('inbox.archived')}` : ''}</option>
       {/each}
     </select>
-    <select class="select" bind:value={tag} aria-label="Tag">
-      <option value="">Any tag</option>
-      {#each store.allTags as t}
-        <option value={t}>#{t}</option>
+    <select class="select" bind:value={tag} aria-label={t('inbox.tag')}>
+      <option value="">{t('inbox.anyTag')}</option>
+      {#each store.allTags as tg}
+        <option value={tg}>#{tg}</option>
       {/each}
     </select>
-    <select class="select" bind:value={type} aria-label="Type">
-      <option value="">Any type</option>
-      {#each TASK_TYPES as t}
-        <option value={t}>{t}</option>
+    <select class="select" bind:value={type} aria-label={t('inbox.type')}>
+      <option value="">{t('inbox.anyType')}</option>
+      {#each TASK_TYPES as ty}
+        <option value={ty}>{t(`type.${ty}` as const)}</option>
       {/each}
     </select>
-    <label class="range"><span>From</span><input class="input" type="date" bind:value={from} aria-label="Due from" /></label>
-    <label class="range"><span>To</span><input class="input" type="date" bind:value={to} aria-label="Due to" /></label>
-    <select class="select" bind:value={sort} aria-label="Sort">
-      <option value="due">Sort: due</option>
-      <option value="priority">Sort: priority</option>
-      <option value="manual">Sort: manual</option>
-      <option value="created">Sort: newest</option>
+    <label class="range"><span>{t('inbox.from')}</span><input class="input" type="date" bind:value={from} aria-label={t('inbox.dueFrom')} /></label>
+    <label class="range"><span>{t('inbox.to')}</span><input class="input" type="date" bind:value={to} aria-label={t('inbox.dueTo')} /></label>
+    <select class="select" bind:value={sort} aria-label={t('inbox.sort')}>
+      <option value="due">{t('inbox.sortDue')}</option>
+      <option value="priority">{t('inbox.sortPriority')}</option>
+      <option value="manual">{t('inbox.sortManual')}</option>
+      <option value="created">{t('inbox.sortNewest')}</option>
     </select>
-    <select class="select" bind:value={dueWindow} aria-label="Due dueWindow">
-      <option value="">Any due date</option>
-      <option value="overdue">Overdue</option>
-      <option value="7">Next 7 days</option>
-      <option value="14">Next 14 days</option>
-      <option value="30">Next 30 days</option>
+    <select class="select" bind:value={dueWindow} aria-label={t('inbox.dueWindow')}>
+      <option value="">{t('inbox.anyDue')}</option>
+      <option value="overdue">{t('today.overdue')}</option>
+      <option value="7">{t('inbox.nextDays', { n: 7 })}</option>
+      <option value="14">{t('inbox.nextDays', { n: 14 })}</option>
+      <option value="30">{t('inbox.nextDays', { n: 30 })}</option>
     </select>
-    <select class="select" bind:value={prio} aria-label="Priority">
-      <option value="">Any priority</option>
-      <option value="high">High or urgent</option>
-      <option value="urgent">Urgent</option>
+    <select class="select" bind:value={prio} aria-label={t('inbox.priority')}>
+      <option value="">{t('inbox.anyPriority')}</option>
+      <option value="high">{t('inbox.highOrUrgent')}</option>
+      <option value="urgent">{t('priority.urgent')}</option>
     </select>
-    <select class="select" bind:value={blocked} aria-label="Waiting tasks">
-      <option value="">Waiting: show</option>
-      <option value="hide">Hide waiting</option>
-      <option value="only">Only waiting</option>
+    <select class="select" bind:value={blocked} aria-label={t('inbox.waiting')}>
+      <option value="">{t('inbox.waitingShow')}</option>
+      <option value="hide">{t('inbox.waitingHide')}</option>
+      <option value="only">{t('inbox.waitingOnly')}</option>
     </select>
-    {#if hasFilters}<button class="btn ghost sm" onclick={clear}>Clear</button>{/if}
+    {#if hasFilters}<button class="btn ghost sm" onclick={clear}>{t('inbox.clear')}</button>{/if}
     {#if activeList}
-      <button class="btn ghost sm" onclick={() => deleteList(activeList.id)}>Delete list</button>
+      <button class="btn ghost sm" onclick={() => deleteList(activeList.id)}>{t('inbox.deleteList')}</button>
     {:else}
-      <button class="btn sm" onclick={() => (saving = !saving)} aria-expanded={saving}>☆ Save as list</button>
+      <button class="btn sm" onclick={() => (saving = !saving)} aria-expanded={saving}>☆ {t('inbox.saveList')}</button>
     {/if}
   </div>
   {#if saving}
     <form class="card savelist" onsubmit={saveList}>
-      <input class="input em" bind:value={listEmoji} maxlength="4" aria-label="List emoji" />
-      <input class="input" bind:value={listName} placeholder="List name, e.g. Exams in the next 14 days" aria-label="List name" />
-      <button class="btn primary" type="submit" disabled={!listName.trim()}>Save</button>
+      <input class="input em" bind:value={listEmoji} maxlength="4" aria-label={t('inbox.listEmoji')} />
+      <input class="input" bind:value={listName} placeholder={t('inbox.listNamePh')} aria-label={t('inbox.listName')} />
+      <button class="btn primary" type="submit" disabled={!listName.trim()}>{t('common.save')}</button>
       <div class="presets">
-        <span class="muted">Ideas:</span>
+        <span class="muted">{t('inbox.ideas')}</span>
         {#each LIST_PRESETS as p (p.name)}<button type="button" class="chip" onclick={() => usePreset(p)}>{p.emoji} {p.name}</button>{/each}
       </div>
     </form>
   {/if}
 
-  <div class="section-title"><span>{status === 'done' ? 'Completed' : status === 'all' ? 'All tasks' : 'Open'}</span><span class="count">{filtered.length}</span></div>
+  <div class="section-title">
+    <span>{status === 'done' ? t('inbox.completed') : status === 'all' ? t('inbox.allTasks') : t('inbox.open')}</span><span class="count">{filtered.length}</span>
+  </div>
   {#if sort === 'manual' && status === 'open'}
     <Sortable items={filtered} group="inbox" onreorder={(i) => store.reorder(i)}>
       {#snippet item(task)}
@@ -207,8 +210,8 @@
   {#if !filtered.length}
     <div class="empty">
       <div class="big">{hasFilters ? '🔍' : '📭'}</div>
-      <h3>{hasFilters ? 'No matches' : 'Inbox zero'}</h3>
-      <p>{hasFilters ? 'Try clearing a filter.' : 'Nothing open. Enjoy it.'}</p>
+      <h3>{hasFilters ? t('inbox.noMatches') : t('inbox.zero')}</h3>
+      <p>{hasFilters ? t('inbox.tryClearing') : t('inbox.zeroHint')}</p>
     </div>
   {/if}
 </div>

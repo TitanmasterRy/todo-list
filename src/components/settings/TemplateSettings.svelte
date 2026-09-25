@@ -1,10 +1,11 @@
 <script lang="ts">
   // Settings → Templates: saved task templates for @name in quick add.
   import { store } from '../../lib/store.svelte';
+  import { t } from '../../lib/i18n/index.svelte';
 </script>
 
 <section class="card">
-  <h2>Templates <span class="muted">{store.templates.length}</span></h2>
+  <h2>{t('settings.templates')} <span class="muted">{store.templates.length}</span></h2>
   {#if !store.templates.length}
     <p class="help">Save any task as a template from the task editor, then type <code>@name</code> in quick add.</p>
   {/if}

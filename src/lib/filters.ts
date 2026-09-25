@@ -2,6 +2,7 @@
 import { addDaysKey, dueKey } from './dates';
 import type { Priority, Task, TaskType } from './types';
 import { isBlocked } from './deps';
+import { t, type MessageKey } from './i18n/index.svelte';
 
 export type FilterStatus = 'open' | 'done' | 'all';
 export type FilterSort = 'due' | 'manual' | 'priority' | 'created';
@@ -77,11 +78,19 @@ export interface SavedList {
 }
 
 /** Built-in suggestions offered when creating a saved list. */
+// `name` follows the app language
+const preset = (key: MessageKey, emoji: string, filter: Partial<TaskFilter>) => ({
+  emoji,
+  filter,
+  get name() {
+    return t(key);
+  },
+});
 export const LIST_PRESETS: { name: string; emoji: string; filter: Partial<TaskFilter> }[] = [
-  { name: 'Exams in the next 14 days', emoji: '📝', filter: { type: 'exam', withinDays: 14 } },
-  { name: 'Due this week', emoji: '📅', filter: { withinDays: 7 } },
-  { name: 'Overdue', emoji: '⏰', filter: { overdue: true } },
-  { name: 'High priority', emoji: '❗', filter: { priorities: ['urgent', 'high'] } },
-  { name: 'Ready to start', emoji: '🟢', filter: { blocked: 'hide', withinDays: 30 } },
-  { name: 'Readings', emoji: '📖', filter: { type: 'reading' } },
+  preset('lists.exams14', '📝', { type: 'exam', withinDays: 14 }),
+  preset('lists.thisWeek', '📅', { withinDays: 7 }),
+  preset('lists.overdue', '⏰', { overdue: true }),
+  preset('lists.high', '❗', { priorities: ['urgent', 'high'] }),
+  preset('lists.ready', '🟢', { blocked: 'hide', withinDays: 30 }),
+  preset('lists.readings', '📖', { type: 'reading' }),
 ];

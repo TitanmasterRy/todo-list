@@ -2,10 +2,11 @@
   // Settings → Help: shortcuts, the welcome tour and what's new.
   import { store } from '../../lib/store.svelte';
   import { ui } from '../../lib/ui.svelte';
+  import { t } from '../../lib/i18n/index.svelte';
 </script>
 
 <section class="card">
-  <h2>Help</h2>
+  <h2>{t('settings.help')}</h2>
   <div class="btns">
     <button class="btn" onclick={() => (ui.shortcuts = true)}>Keyboard shortcuts <span class="kbd">?</span></button>
     <button class="btn" onclick={() => store.updateSettings({ onboarded: false })}>Show welcome tour</button>

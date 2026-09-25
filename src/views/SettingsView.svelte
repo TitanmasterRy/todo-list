@@ -4,6 +4,8 @@
   import ArcadeAdmin from '../components/ArcadeAdmin.svelte';
   import ThemePackSettings from '../components/settings/ThemePackSettings.svelte';
   import AppearanceSettings from '../components/settings/AppearanceSettings.svelte';
+  import LanguageSettings from '../components/settings/LanguageSettings.svelte';
+  import { t } from '../lib/i18n/index.svelte';
   import SoundSettings from '../components/settings/SoundSettings.svelte';
   import GoalsSettings from '../components/settings/GoalsSettings.svelte';
   import GamificationSettings from '../components/settings/GamificationSettings.svelte';
@@ -26,10 +28,11 @@
 </script>
 
 <div class="page">
-  <header class="page-head"><h1>Settings</h1></header>
+  <header class="page-head"><h1>{t('nav.settings')}</h1></header>
 
   <ThemePackSettings />
   <AppearanceSettings />
+  <LanguageSettings />
   <SoundSettings />
   <GoalsSettings />
   <GamificationSettings />
