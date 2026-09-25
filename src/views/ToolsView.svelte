@@ -15,6 +15,7 @@
     | 'grades'
     | 'timetable'
     | 'syllabus'
+    | 'week'
     | 'planner'
     | 'calendar'
     | 'reading'
@@ -39,6 +40,7 @@
   });
   const tabs: { id: Tab; label: string; icon: string; group: Group }[] = [
     { id: 'planner', label: 'Plan my day', icon: '🗓️', group: 'plan' },
+    { id: 'week', label: 'Plan my week', icon: '📅', group: 'plan' },
     { id: 'timetable', label: 'Timetable', icon: '🏫', group: 'plan' },
     { id: 'syllabus', label: 'Syllabus box', icon: '📋', group: 'plan' },
     { id: 'reading', label: 'Reading time', icon: '📖', group: 'plan' },
@@ -117,6 +119,12 @@
     {/await}
   {:else if tab === 'timetable'}
     {#await import('../components/tools/TimetableTool.svelte')}
+      <div class="card muted">Loading…</div>
+    {:then m}
+      <m.default />
+    {/await}
+  {:else if tab === 'week'}
+    {#await import('../components/tools/WeekPlanTool.svelte')}
       <div class="card muted">Loading…</div>
     {:then m}
       <m.default />

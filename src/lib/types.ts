@@ -297,8 +297,9 @@ export interface Settings {
   onboarded: boolean;
   lastFrogPromptDate?: string;
   lastRecapDate?: string;
-  lastSeenChangelog?: string;
-  courseLayout?: 'list' | 'board'; // course page: list or Kanban board // newest changelog heading already shown in What's new
+  lastSeenChangelog?: string; // newest changelog heading already shown in What's new
+  courseLayout?: 'list' | 'board'; // course page: list or Kanban board
+  weekdayCapacityMin?: Record<number, number>; // Plan my week: minutes per weekday (else dailyCapacityMin)
   lastWeeklyReviewDate?: string;
   lastBackupReminderAt?: string;
 }

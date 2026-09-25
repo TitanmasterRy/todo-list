@@ -101,7 +101,7 @@ Everything we could improve or add to Homework To-Do, grouped by area. Checked i
 
 ## 🤖 AI (optional, bring your own key)
 
-- [ ] "Plan my week" across days using estimates and daily capacity.
+- [x] "Plan my week" across days using estimates and daily capacity. (Tools → Plan my week.)
 - [ ] AI subtask breakdown.
 - [ ] Photo of the board / syllabus → tasks with dates.
 - [ ] "Explain my mistake" from a graded test → notecards.

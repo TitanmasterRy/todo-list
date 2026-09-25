@@ -256,4 +256,31 @@ export const planningMethods = {
     );
     return created;
   },
+
+  /** Set many tasks' planned days at once (Plan my week), with one undo. */
+  applyPins(this: Store, pins: Record<string, string | undefined>, label: string): number {
+    const now = isoNow();
+    const before: Task[] = [];
+    const after: Task[] = [];
+    for (const [id, day] of Object.entries(pins)) {
+      const t = this.taskById(id);
+      if (!t || t.pinnedDay === day) continue;
+      before.push(structuredClone($state.snapshot(t)) as Task);
+      after.push({ ...(structuredClone($state.snapshot(t)) as Task), pinnedDay: day, updatedAt: now });
+    }
+    if (!after.length) return 0;
+    const m = new Map(after.map((t) => [t.id, t]));
+    this.tasks = this.tasks.map((t) => m.get(t.id) ?? t);
+    this.persistTasks(after);
+    undo.push({
+      label,
+      undo: () => {
+        const back = before.map((t) => ({ ...t, updatedAt: isoNow() }));
+        const bm = new Map(back.map((t) => [t.id, t]));
+        this.tasks = this.tasks.map((t) => bm.get(t.id) ?? t);
+        this.persistTasks(back);
+      },
+    });
+    return after.length;
+  },
 };
