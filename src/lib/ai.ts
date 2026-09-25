@@ -330,14 +330,14 @@ export async function generateQuiz(o: QuizGenOptions): Promise<GeneratedQuestion
   return arr.filter((q) => q && typeof q.prompt === 'string');
 }
 
-/** Syllabus box with AI: pull dated work and breaks out of messy syllabus text (or a transcribed photo). */
-export async function extractSyllabusAI(text: string, today: string): Promise<Found[]> {
+/** Syllabus box with AI: pull dated work and breaks out of messy syllabus text, or photos of the board / a handout. */
+export async function extractSyllabusAI(text: string, today: string, images?: ChatImage[]): Promise<Found[]> {
   const system =
     'You read school syllabi and course schedules. Output ONLY a JSON array. For each assignment, test, quiz, project, reading or deadline with a date, output ' +
     '{"kind":"task","title": short title without the date,"date":"YYYY-MM-DD","type": one of "homework","reading","exam","project","quiz","other"}. ' +
     'For breaks, holidays or days without class output {"kind":"break","name": string,"from":"YYYY-MM-DD","to":"YYYY-MM-DD"}. ' +
     `Dates without a year belong to the school year around ${today}. Skip anything without a date. No markdown fences, no commentary.`;
-  const out = await ask(system, text.slice(0, 20000), 8192);
+  const out = await ask(system, text.slice(0, 20000), 8192, images);
   const rows = parseJSON<Record<string, unknown>[]>(out);
   if (!Array.isArray(rows)) throw new Error('Unexpected response');
   const types: TaskType[] = ['homework', 'reading', 'exam', 'project', 'quiz', 'other'];

@@ -14,7 +14,45 @@
   let searched = $state(false);
   let aiBusy = $state(false);
   let aiOk = $state(false);
-  void import('../../lib/ai').then((m) => (aiOk = m.aiAvailable()));
+  let visionOk = $state(false);
+  void import('../../lib/ai').then((m) => {
+    aiOk = m.aiAvailable();
+    visionOk = aiOk && m.aiSupportsVision();
+  });
+  let photoBusy = $state('');
+
+  /** A photo of the board or a handout: AI reads it straight into rows when it can see images, else on-device OCR fills the text box. */
+  async function fromPhoto(e: Event) {
+    const files = [...((e.currentTarget as HTMLInputElement).files ?? [])].filter((f) => f.type.startsWith('image/'));
+    (e.currentTarget as HTMLInputElement).value = '';
+    if (!files.length) return;
+    try {
+      const { imageToDataUrl } = await import('../../lib/ai-providers');
+      const images = await Promise.all(files.map(async (f) => ({ dataUrl: await imageToDataUrl(f, 1800) })));
+      if (visionOk) {
+        photoBusy = 'Reading the photo…';
+        const { extractSyllabusAI } = await import('../../lib/ai');
+        rows = (await extractSyllabusAI('Read the photo(s): a whiteboard, syllabus or assignment sheet.', store.today, images)).map((f) => ({ ...f, on: !isPast(f, store.today) }));
+        searched = true;
+        return;
+      }
+      photoBusy = 'Loading on-device text recognition (first time ~5 MB)…';
+      const { createWorker } = await import('tesseract.js');
+      const worker = await createWorker('eng');
+      const parts: string[] = [];
+      for (const img of images) {
+        photoBusy = `Reading photo ${parts.length + 1} of ${images.length}…`;
+        parts.push((await worker.recognize(img.dataUrl)).data.text.trim());
+      }
+      await worker.terminate();
+      text = [text.trim(), ...parts].filter(Boolean).join('\n');
+      find();
+    } catch (err) {
+      toasts.push({ message: 'Couldn’t read the photo', detail: err instanceof Error ? err.message : String(err), kind: 'warn' });
+    } finally {
+      photoBusy = '';
+    }
+  }
 
   function find() {
     rows = extractSyllabus(text, { today: store.today, dayFirst }).map((f) => ({ ...f, on: !isPast(f, store.today) }));
@@ -65,7 +103,10 @@
 
 <section class="card">
   <h2>📋 Syllabus box</h2>
-  <p class="help">Paste a syllabus, course calendar or assignment list. Every line with a date becomes a task you can check before adding; breaks become Break mode days.</p>
+  <p class="help">
+    Paste a syllabus, course calendar or assignment list, or snap a photo of the board. Every line with a date becomes a task you can check before adding; breaks become Break mode
+    days.
+  </p>
   <textarea
     class="input"
     rows="8"
@@ -75,6 +116,9 @@
   ></textarea>
   <div class="row">
     <label class="file btn sm ghost">📄 Open a .txt file<input type="file" accept=".txt,.md,.csv,text/plain" onchange={openFile} hidden /></label>
+    <label class="file btn sm ghost" title={visionOk ? 'AI reads the photo' : 'Text recognition on this device'}
+      >📷 Photo of the board<input type="file" accept="image/*" capture="environment" multiple onchange={fromPhoto} hidden aria-label="Photo of the board or a handout" /></label
+    >
     <select class="select" bind:value={courseId} aria-label="Course for these tasks">
       <option value="">No course</option>
       {#each store.activeCourses as c (c.id)}<option value={c.id}>{c.emoji ? c.emoji + ' ' : ''}{c.name}</option>{/each}
@@ -85,6 +129,7 @@
     <button class="btn sm primary" onclick={find} disabled={!text.trim()}>Find dates</button>
   </div>
 
+  {#if photoBusy}<p class="muted" role="status">{photoBusy}</p>{/if}
   {#if searched}
     {#if !rows.length}
       <p class="muted">No dates found. Dates like “Sep 30”, “9/30” or “2026-09-30” work best, one item per line.</p>
