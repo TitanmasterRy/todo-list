@@ -121,3 +121,29 @@ test("what's new shows once after an update, and from Settings → Help", async 
   await page.getByRole('button', { name: '✨ What’s new' }).click();
   await expect(page.getByRole('dialog', { name: /What’s new/ })).toBeVisible();
 });
+
+test('course board: move a task through To do → Doing → Done', async ({ page }) => {
+  await openApp(page, { autoDescribe: false });
+  await goKey(page, '3');
+  await page.getByRole('button', { name: '+ New course' }).click();
+  await page.getByRole('form', { name: 'New course' }).getByLabel('Name', { exact: true }).fill('Chemistry');
+  await page.getByRole('form', { name: 'New course' }).getByLabel('Name', { exact: true }).press('Enter');
+  await page.getByPlaceholder('Add a task to Chemistry…').fill('Titration lab');
+  await page.getByPlaceholder('Add a task to Chemistry…').press('Enter');
+  await page.getByRole('radio', { name: /Board/ }).click();
+  const todo = page.getByRole('region', { name: /To do/ });
+  const doing = page.getByRole('region', { name: /Doing/ });
+  const done = page.getByRole('region', { name: /Done/ });
+  await expect(todo).toContainText('Titration lab');
+  await todo.getByRole('button', { name: 'Move Titration lab to Doing' }).click();
+  await expect(doing).toContainText('Titration lab');
+  await doing.getByRole('button', { name: 'Move Titration lab to Done' }).click();
+  await expect(done).toContainText('Titration lab');
+  await expect(todo).not.toContainText('Titration lab');
+  // the layout choice sticks
+  await page.reload();
+  await goKey(page, '3');
+  await page.locator('.col-title', { hasText: 'Chemistry' }).click();
+  await expect(page.getByRole('radio', { name: /Board/ })).toHaveAttribute('aria-checked', 'true');
+  await expect(page.getByRole('region', { name: /Done/ })).toContainText('Titration lab');
+});

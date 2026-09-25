@@ -66,7 +66,7 @@ Everything we could improve or add to Homework To-Do, grouped by area. Checked i
 - [x] Per-task reminders ("30 min before", "the night before").
 - [x] Attachments on tasks (photo of the worksheet, a PDF) stored in IndexedDB. (Files stay on the device; names sync.)
 - [x] Saved filters / smart lists ("Exams in the next 14 days").
-- [ ] Kanban board (To do / Doing / Done) per course or project.
+- [x] Kanban board (To do / Doing / Done) per course or project. (Course page → Board.)
 - [x] Month calendar view next to Upcoming.
 - [x] Time tracking per task vs. estimate, with a personal "estimates are usually off by X%" note.
 - [x] "What should I do now?" auto-priority from due date, weight and estimate.

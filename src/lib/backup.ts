@@ -123,6 +123,7 @@ export function normalizeTask(t: Partial<Task>): Task {
     reminders: Array.isArray(t.reminders) ? t.reminders.filter((r) => r && typeof r === 'object') : undefined,
     timeSpentMin: typeof t.timeSpentMin === 'number' && t.timeSpentMin >= 0 ? t.timeSpentMin : undefined,
     timerStartedAt: typeof t.timerStartedAt === 'string' ? t.timerStartedAt : undefined,
+    doing: t.doing === true ? true : undefined,
     deckId: typeof t.deckId === 'string' ? t.deckId : undefined,
     parentId: typeof t.parentId === 'string' ? t.parentId : undefined,
     attachments: Array.isArray(t.attachments)

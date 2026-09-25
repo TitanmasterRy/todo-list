@@ -199,6 +199,20 @@ export const planningMethods = {
     if (id) this.updateTask(id, { frog: true, frogDate: this.today });
   },
 
+  // ---------- board ----------
+  /** Move a task between board columns (to Done completes it; out of Done reopens it). */
+  moveToColumn(this: Store, id: string, col: 'todo' | 'doing' | 'done'): void {
+    const task = this.taskById(id);
+    if (!task) return;
+    if (col === 'done') {
+      if (!task.completedAt) this.completeTask(id);
+      return;
+    }
+    if (task.completedAt) this.uncompleteTask(id);
+    if (col === 'todo' && task.timerStartedAt) this.stopTimer(id);
+    this.updateTask(id, { doing: col === 'doing' ? true : undefined });
+  },
+
   // ---------- work-back plans ----------
   /**
    * Add the steps of a plan for a bigger task (milestones or exam study sessions) with one undo.

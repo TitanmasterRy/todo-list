@@ -70,6 +70,7 @@ export interface Task {
   reminders?: ReminderRule[];
   timeSpentMin?: number; // tracked time
   timerStartedAt?: string; // a running timer (ISO)
+  doing?: boolean; // in progress (the Doing column on a course board)
   deckId?: string; // notecard deck to study for this task (exam prep sessions)
   parentId?: string; // milestone or study session of this bigger task
   attachments?: AttachmentMeta[]; // files kept on this device (metadata syncs, the files don't)
@@ -294,7 +295,8 @@ export interface Settings {
   onboarded: boolean;
   lastFrogPromptDate?: string;
   lastRecapDate?: string;
-  lastSeenChangelog?: string; // newest changelog heading already shown in What's new
+  lastSeenChangelog?: string;
+  courseLayout?: 'list' | 'board'; // course page: list or Kanban board // newest changelog heading already shown in What's new
   lastWeeklyReviewDate?: string;
   lastBackupReminderAt?: string;
 }

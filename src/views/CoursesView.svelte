@@ -7,6 +7,7 @@
   import TaskItem from '../components/TaskItem.svelte';
   import Sortable from '../components/Sortable.svelte';
   import CourseEditor from '../components/CourseEditor.svelte';
+  const loadBoard = () => import('../components/KanbanBoard.svelte');
 
   const live = (t: Task) => !t.completedAt || store.lingering.has(t.id);
   const weekEnd = $derived(endOfWeekKey(store.today, store.settings.weekStart));
@@ -29,6 +30,8 @@
     course ? store.tasks.filter((t) => t.courseId === course.id && t.completedAt && !store.lingering.has(t.id)).sort((a, b) => (a.completedAt! < b.completedAt! ? 1 : -1)) : [],
   );
   let showDone = $state(false);
+  const board = $derived(store.settings.courseLayout === 'board');
+  const allCourseTasks = $derived(course ? store.tasks.filter((t) => t.courseId === course.id) : []);
   const archivedCourses = $derived(store.courses.filter((c) => c.archived));
   let showArchived = $state(false);
 </script>
@@ -42,6 +45,10 @@
         <h1>{course.emoji ? course.emoji + ' ' : ''}{course.name}</h1>
       </div>
       <div class="grow"></div>
+      <div class="seg" role="radiogroup" aria-label="Layout">
+        <button role="radio" aria-checked={!board} class:on={!board} onclick={() => store.updateSettings({ courseLayout: 'list' })}>☰ List</button>
+        <button role="radio" aria-checked={board} class:on={board} onclick={() => store.updateSettings({ courseLayout: 'board' })}>▦ Board</button>
+      </div>
       <button class="btn sm" onclick={() => (ui.courseEditor = course.id)}>Edit</button>
     </header>
     <div class="workload">
@@ -56,29 +63,33 @@
       <span><strong>{courseDone.length}</strong> done</span>
     </div>
     <QuickAdd defaultCourseId={course.id} placeholder="Add a task to {course.name}…" autofocus />
-    <div class="section-title"><span>Open</span><span class="count">{courseTasks.length}</span></div>
-    <Sortable items={courseTasks} group="course" onreorder={(ids) => store.reorder(ids)}>
-      {#snippet item(task)}
-        <TaskItem {task} showCourse={false} listIds={courseTasks.map((t) => t.id)} dragHandle />
-      {/snippet}
-    </Sortable>
-    {#if !courseTasks.length}
-      <div class="empty">
-        <div class="big">🎓</div>
-        <h3>All clear</h3>
-        <p>No open tasks for this course.</p>
-      </div>
-    {/if}
-    {#if courseDone.length}
-      <button class="section-title toggle" onclick={() => (showDone = !showDone)} aria-expanded={showDone}>
-        <span>Completed</span><span class="count">{courseDone.length}</span><span class="spacer"></span><span class="hint">{showDone ? 'Hide' : 'Show'}</span>
-      </button>
-      {#if showDone}
-        <div class="task-list">
-          {#each courseDone.slice(0, 50) as task (task.id)}
-            <TaskItem {task} showCourse={false} compact />
-          {/each}
+    {#if board}
+      <div style="--course:{course.color}">{#await loadBoard() then m}<m.default tasks={allCourseTasks} />{/await}</div>
+    {:else}
+      <div class="section-title"><span>Open</span><span class="count">{courseTasks.length}</span></div>
+      <Sortable items={courseTasks} group="course" onreorder={(ids) => store.reorder(ids)}>
+        {#snippet item(task)}
+          <TaskItem {task} showCourse={false} listIds={courseTasks.map((t) => t.id)} dragHandle />
+        {/snippet}
+      </Sortable>
+      {#if !courseTasks.length}
+        <div class="empty">
+          <div class="big">🎓</div>
+          <h3>All clear</h3>
+          <p>No open tasks for this course.</p>
         </div>
+      {/if}
+      {#if courseDone.length}
+        <button class="section-title toggle" onclick={() => (showDone = !showDone)} aria-expanded={showDone}>
+          <span>Completed</span><span class="count">{courseDone.length}</span><span class="spacer"></span><span class="hint">{showDone ? 'Hide' : 'Show'}</span>
+        </button>
+        {#if showDone}
+          <div class="task-list">
+            {#each courseDone.slice(0, 50) as task (task.id)}
+              <TaskItem {task} showCourse={false} compact />
+            {/each}
+          </div>
+        {/if}
       {/if}
     {/if}
   {:else}
@@ -246,5 +257,23 @@
     display: flex;
     gap: 6px;
     flex-wrap: wrap;
+  }
+  .seg {
+    display: inline-flex;
+    gap: 2px;
+    background: var(--bg-sunken, var(--bg-elev));
+    border-radius: 8px;
+    padding: 2px;
+  }
+  .seg button {
+    padding: 4px 10px;
+    border-radius: 6px;
+    font-size: 13px;
+    color: var(--text-muted);
+  }
+  .seg button.on {
+    background: var(--bg-elev);
+    color: var(--text);
+    font-weight: 600;
   }
 </style>
