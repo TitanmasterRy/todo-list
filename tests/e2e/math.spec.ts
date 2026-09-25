@@ -7,7 +7,10 @@ test('LaTeX math renders on notecards', async ({ page }) => {
   await page.locator('body').click({ position: { x: 5, y: 5 } });
   await page.keyboard.press('7');
   await page.getByRole('tablist', { name: 'Tool groups' }).getByRole('tab', { name: 'Study' }).click();
-  await page.getByRole('tablist', { name: 'Tools' }).getByRole('tab', { name: /Notecards/ }).click();
+  await page
+    .getByRole('tablist', { name: 'Tools' })
+    .getByRole('tab', { name: /Notecards/ })
+    .click();
   await page.getByLabel('Deck name').fill('Geometry');
   await page.getByLabel('Deck name').press('Enter');
   await page.getByLabel('Front', { exact: true }).fill('Area of a circle');
