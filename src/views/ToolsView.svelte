@@ -17,6 +17,7 @@
     | 'syllabus'
     | 'week'
     | 'practice'
+    | 'elements'
     | 'planner'
     | 'calendar'
     | 'reading'
@@ -64,6 +65,7 @@
     { id: 'calculator', label: 'Calculator', icon: '🧮', group: 'compute' },
     { id: 'graph', label: 'Graphing', icon: '📈', group: 'compute' },
     { id: 'units', label: 'Unit converter', icon: '📏', group: 'compute' },
+    { id: 'elements', label: 'Periodic table', icon: '⚗️', group: 'compute' },
     { id: 'code', label: 'Code editor', icon: '💻', group: 'compute' },
     { id: 'google', label: 'Google (Gmail, Classroom, Calendar, Drive)', icon: '🟢', group: 'connect' },
   ];
@@ -125,6 +127,12 @@
     {/await}
   {:else if tab === 'timetable'}
     {#await import('../components/tools/TimetableTool.svelte')}
+      <div class="card muted">Loading…</div>
+    {:then m}
+      <m.default />
+    {/await}
+  {:else if tab === 'elements'}
+    {#await import('../components/tools/PeriodicTableTool.svelte')}
       <div class="card muted">Loading…</div>
     {:then m}
       <m.default />
