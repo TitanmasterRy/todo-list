@@ -36,6 +36,7 @@
     const mult = table[bucket];
     const won = Math.floor(amount * mult);
     economy.payout('plinko', won);
+    if (mult >= 10) economy.achieve('plinko-10');
     lastBucket = bucket;
     lastWin = { mult, amount: won };
     if (mult >= 2) playSound('pop');

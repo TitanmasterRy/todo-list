@@ -236,6 +236,9 @@ export interface Settings {
   casinoEnabled: boolean;
   casinoBreakMin: number; // remind to take a homework break after N minutes of casino play (0 = off)
   arcadeAdmin: boolean; // show the arcade admin panel in Settings
+  parentPinHash: string; // '' = no parent lock
+  casinoDailyLimitMin: number; // 0 = no daily limit
+  casinoMinutesByDay: Record<string, number>;
   equippedTitle?: string; // shop cosmetic ids
   equippedFrame?: string;
   equippedConfetti?: string;
@@ -317,6 +320,9 @@ export const DEFAULT_SETTINGS: Settings = {
   casinoEnabled: true,
   casinoBreakMin: 20,
   arcadeAdmin: false,
+  parentPinHash: '',
+  casinoDailyLimitMin: 0,
+  casinoMinutesByDay: {},
   onboarded: false,
 };
 

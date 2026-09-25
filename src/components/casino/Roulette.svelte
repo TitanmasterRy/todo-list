@@ -31,6 +31,7 @@
     history = [n, ...history].slice(0, 12);
     const back = settleRoulette(bets, n);
     economy.payout('roulette', back);
+    if (bets.some((b) => b.bet.kind === 'straight' && b.bet.n === n)) economy.achieve('straight-up');
     result = back > 0 ? { text: `${n} ${color(n)} · returned ${back.toLocaleString()}`, win: back > total } : { text: `${n} ${color(n)} · no win`, win: false };
     if (back > total) playSound('pop');
     spinning = false;

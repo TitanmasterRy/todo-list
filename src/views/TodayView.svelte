@@ -6,6 +6,7 @@
   import TaskItem from '../components/TaskItem.svelte';
   import GoalRing from '../components/GoalRing.svelte';
   import WhatNow from '../components/WhatNow.svelte';
+  import QuestsCard from '../components/QuestsCard.svelte';
   import Sortable from '../components/Sortable.svelte';
 
   import type { Task } from '../lib/types';
@@ -68,6 +69,7 @@
   </header>
 
   <WhatNow />
+  <QuestsCard />
 
   <div class="workload" aria-label="Workload">
     <span><strong>{formatMinutes(store.todayEstimateMin)}</strong> today</span>

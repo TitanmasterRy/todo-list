@@ -18,6 +18,7 @@
   import { importCSV } from '../lib/csvimport';
   import type { Task } from '../lib/types';
   import { FONTS } from '../lib/fonts';
+  import { checkPin, hashPin, validPin } from '../lib/parental';
   import ArcadeAdmin from '../components/ArcadeAdmin.svelte';
   import type { AiProvider } from '../lib/types';
   import ThemePicker from '../components/ThemePicker.svelte';
@@ -147,6 +148,23 @@
     const made = store.importTasks(csvPreview.tasks);
     toasts.push({ message: `Imported ${made.length} tasks`, kind: 'success', emoji: '📥' });
     csvPreview = null;
+  }
+  // ---------- parent lock ----------
+  let pinInput = $state('');
+  let ecoUnlocked = $state(false);
+  const ecoLocked = $derived(!!s.parentPinHash && !ecoUnlocked);
+  async function setParentPin() {
+    if (!validPin(pinInput)) return toasts.push({ message: 'Use 4–8 digits for the PIN', kind: 'warn' });
+    set('parentPinHash', await hashPin(pinInput));
+    pinInput = '';
+    ecoUnlocked = false;
+    toasts.push({ message: 'Parent lock on', detail: 'Economy settings now need the PIN.', kind: 'success', emoji: '🔒' });
+  }
+  async function unlockParent() {
+    if (await checkPin(pinInput, s.parentPinHash)) {
+      ecoUnlocked = true;
+      pinInput = '';
+    } else toasts.push({ message: 'Wrong PIN', kind: 'warn' });
   }
   function exportNow() {
     downloadJSON(backupFilename(), store.snapshotBundle());
@@ -412,38 +430,104 @@
   </section>
 
   <section class="card">
-    <h2>Economy</h2>
-    <div class="row">
-      <label for="eco">Coins, shop and Play view</label>
-      <input id="eco" type="checkbox" class="switch" checked={s.economyEnabled} onchange={(e) => set('economyEnabled', (e.target as HTMLInputElement).checked)} />
-    </div>
-    {#if s.economyEnabled}
+    <h2>
+      Economy {#if s.parentPinHash}<span class="chip">🔒 parent lock{ecoUnlocked ? ' (unlocked)' : ''}</span>{/if}
+    </h2>
+    <fieldset class="plain" disabled={ecoLocked}>
       <div class="row">
-        <label for="cas">Casino (play chips only)</label>
-        <input id="cas" type="checkbox" class="switch" checked={s.casinoEnabled} onchange={(e) => set('casinoEnabled', (e.target as HTMLInputElement).checked)} />
+        <label for="eco">Coins, shop and Play view</label>
+        <input id="eco" type="checkbox" class="switch" checked={s.economyEnabled} onchange={(e) => set('economyEnabled', (e.target as HTMLInputElement).checked)} />
       </div>
-      {#if s.casinoEnabled}
+      {#if s.economyEnabled}
         <div class="row">
-          <label for="brk">Homework-break reminder after (minutes of casino play, 0 = off)</label>
-          <input
-            id="brk"
-            class="input num"
-            type="number"
-            min="0"
-            max="240"
-            value={s.casinoBreakMin}
-            onchange={(e) => set('casinoBreakMin', Math.max(0, Math.min(240, Number((e.target as HTMLInputElement).value) || 0)))}
-          />
+          <label for="cas">Casino (play chips only)</label>
+          <input id="cas" type="checkbox" class="switch" checked={s.casinoEnabled} onchange={(e) => set('casinoEnabled', (e.target as HTMLInputElement).checked)} />
+        </div>
+        {#if s.casinoEnabled}
+          <div class="row">
+            <label for="brk">Homework-break reminder after (minutes of casino play, 0 = off)</label>
+            <input
+              id="brk"
+              class="input num"
+              type="number"
+              min="0"
+              max="240"
+              value={s.casinoBreakMin}
+              onchange={(e) => set('casinoBreakMin', Math.max(0, Math.min(240, Number((e.target as HTMLInputElement).value) || 0)))}
+            />
+          </div>
+          <div class="row">
+            <label for="lim">Casino time limit per day (minutes, 0 = none)</label>
+            <input
+              id="lim"
+              class="input num"
+              type="number"
+              min="0"
+              max="600"
+              step="5"
+              value={s.casinoDailyLimitMin}
+              onchange={(e) => set('casinoDailyLimitMin', Math.max(0, Math.min(600, Number((e.target as HTMLInputElement).value) || 0)))}
+            />
+          </div>
+        {/if}
+        <div class="row">
+          <label for="adm">Show arcade admin (add games)</label>
+          <input id="adm" type="checkbox" class="switch" checked={s.arcadeAdmin} onchange={(e) => set('arcadeAdmin', (e.target as HTMLInputElement).checked)} />
         </div>
       {/if}
-      <div class="row">
-        <label for="adm">Show arcade admin (add games)</label>
-        <input id="adm" type="checkbox" class="switch" checked={s.arcadeAdmin} onchange={(e) => set('arcadeAdmin', (e.target as HTMLInputElement).checked)} />
-      </div>
+    </fieldset>
+    {#if s.economyEnabled}
       <p class="help">
         Coins come only from schoolwork (tasks, the daily ring, streaks, grades, notecards, Pomodoros). There's no real money anywhere: nothing can be bought with cash, and chips
         never turn back into coins.
       </p>
+    {/if}
+    <h3 class="sub">Parent lock</h3>
+    {#if !s.parentPinHash}
+      <form
+        class="btns"
+        onsubmit={(e) => {
+          e.preventDefault();
+          void setParentPin();
+        }}
+      >
+        <input
+          class="input"
+          type="password"
+          inputmode="numeric"
+          autocomplete="new-password"
+          bind:value={pinInput}
+          placeholder="Choose a 4–8 digit PIN"
+          aria-label="New parent PIN"
+        />
+        <button class="btn" type="submit">Set PIN</button>
+      </form>
+      <p class="help">
+        A PIN keeps these economy settings (casino on/off, time limit, reminders) from being changed without it. It's stored only in this browser as a hash: a speed bump, not a
+        security system.
+      </p>
+    {:else if ecoLocked}
+      <form
+        class="btns"
+        onsubmit={(e) => {
+          e.preventDefault();
+          void unlockParent();
+        }}
+      >
+        <input class="input" type="password" inputmode="numeric" autocomplete="off" bind:value={pinInput} placeholder="Parent PIN" aria-label="Parent PIN" />
+        <button class="btn" type="submit">Unlock</button>
+      </form>
+    {:else}
+      <div class="btns">
+        <button class="btn" onclick={() => (ecoUnlocked = false)}>Lock again</button>
+        <button
+          class="btn ghost"
+          onclick={() => {
+            set('parentPinHash', '');
+            ecoUnlocked = false;
+          }}>Remove PIN</button
+        >
+      </div>
     {/if}
   </section>
 
@@ -910,6 +994,15 @@
   }
   .model-pick .select {
     max-width: 260px;
+  }
+  fieldset.plain {
+    border: 0;
+    margin: 0;
+    padding: 0;
+    min-width: 0;
+  }
+  fieldset.plain:disabled {
+    opacity: 0.6;
   }
   .csvprev {
     display: grid;

@@ -41,6 +41,7 @@
   function cashOut() {
     const won = Math.floor(bet * mult);
     economy.payout('hi-lo', won);
+    if (mult >= 5) economy.achieve('hilo-5');
     active = false;
     result = { text: `Cashed out ×${mult} · ${won.toLocaleString()} chips`, win: won > bet };
     playSound('pop');

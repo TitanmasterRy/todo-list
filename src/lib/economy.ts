@@ -272,20 +272,42 @@ export function owned(ledger: LedgerEntry[], id: string): number {
 
 export type BuyCheck = { ok: true } | { ok: false; reason: string };
 
-export function canBuy(ledger: LedgerEntry[], item: ShopItem, ctx: { freezes: number; maxFreezes: number }): BuyCheck {
+export function canBuy(ledger: LedgerEntry[], item: ShopItem, ctx: { freezes: number; maxFreezes: number; price?: number }): BuyCheck {
+  const price = ctx.price ?? item.price;
   if (item.unique && owned(ledger, item.id) > 0) return { ok: false, reason: 'Owned' };
   if (item.kind === 'freeze' && ctx.freezes >= ctx.maxFreezes) return { ok: false, reason: `Max ${ctx.maxFreezes} banked` };
-  if (balance(ledger, item.pay) < item.price) return { ok: false, reason: `Need ${item.price - balance(ledger, item.pay)} more` };
+  if (balance(ledger, item.pay) < price) return { ok: false, reason: `Need ${price - balance(ledger, item.pay)} more` };
   return { ok: true };
 }
 
 /** Ledger entries for a purchase: pay the price, receive the grant (or the item itself). */
-export function purchaseEntries(item: ShopItem): Omit<LedgerEntry, 'id' | 'at'>[] {
-  const out: Omit<LedgerEntry, 'id' | 'at'>[] = [{ currency: item.pay, amount: -item.price, reason: `shop:${item.id}` }];
+export function purchaseEntries(item: ShopItem, price = item.price, ref?: string): Omit<LedgerEntry, 'id' | 'at'>[] {
+  const out: Omit<LedgerEntry, 'id' | 'at'>[] = [{ currency: item.pay, amount: -price, reason: `shop:${item.id}`, ...(ref ? { ref } : {}) }];
   if (item.grant) out.push({ currency: item.grant.currency, amount: item.grant.amount, reason: `shop:${item.id}` });
   else if (item.kind !== 'freeze') out.push({ currency: `item:${item.id}`, amount: 1, reason: `shop:${item.id}` });
   return out;
 }
+
+// ---------- casino achievements ----------
+export interface Achievement {
+  id: string;
+  name: string;
+  emoji: string;
+  description: string;
+  chips: number; // reward
+}
+export const CASINO_ACHIEVEMENTS: Achievement[] = [
+  { id: 'first-bet', name: 'Pull up a chair', emoji: '🪑', description: 'Play your first casino round.', chips: 25 },
+  { id: 'natural', name: 'Natural', emoji: '🃏', description: 'Get a blackjack.', chips: 100 },
+  { id: 'four-kind', name: 'Four of a kind', emoji: '🂡', description: 'Hit four of a kind or better in video poker.', chips: 150 },
+  { id: 'royal', name: 'Royalty', emoji: '👑', description: 'Hit a royal flush in video poker.', chips: 2500 },
+  { id: 'plinko-10', name: 'Edge case', emoji: '🔻', description: 'Land a 10× or bigger Plinko bucket.', chips: 150 },
+  { id: 'hilo-5', name: 'Mind reader', emoji: '🔮', description: 'Cash out Hi-Lo at 5× or more.', chips: 150 },
+  { id: 'mines-10', name: 'Gem hunter', emoji: '💎', description: 'Find 10 gems in one Mines round.', chips: 150 },
+  { id: 'straight-up', name: 'On the number', emoji: '🎯', description: 'Win a straight-up bet in roulette.', chips: 150 },
+  { id: 'jackpot', name: 'Jackpot', emoji: '💰', description: 'Win 50× your bet in a single round.', chips: 300 },
+  { id: 'regular', name: 'Regular', emoji: '🎩', description: 'Play 100 casino rounds.', chips: 200 },
+];
 
 // ---------- cosmetics ----------
 export const TITLE_TEXT: Record<string, string> = {

@@ -37,6 +37,7 @@
     shoe = s.shoe;
     if (s.phase === 'done') {
       economy.payout('blackjack', s.payout);
+      if (s.outcome === 'blackjack') economy.achieve('natural');
       if (s.payout > s.bet) playSound('pop');
     }
   }

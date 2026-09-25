@@ -37,6 +37,7 @@
   function cashOut() {
     const won = Math.floor(bet * mult);
     economy.payout('mines', won);
+    if (open.size >= 10) economy.achieve('mines-10');
     active = false;
     result = { text: `Cashed out ×${mult} · ${won.toLocaleString()} chips`, win: won > bet };
     playSound('pop');

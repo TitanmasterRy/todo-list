@@ -32,6 +32,19 @@
   const heaviest = $derived(nextDays.reduce((best, d) => (d.min > best.min || (d.min === best.min && d.n > best.n) ? d : best), nextDays[0]));
   const maxMin = $derived(Math.max(1, ...nextDays.map((d) => d.min)));
   const overdue = $derived(store.overdueTasks.length);
+  // coins this week (local days), from the ledger
+  const weekCoins = $derived.by(() => {
+    let earned = 0;
+    let spent = 0;
+    let quests = 0;
+    for (const e of store.ledger) {
+      if (e.currency !== 'coins' || dueKey(e.at) < since) continue;
+      if (e.amount > 0) earned += e.amount;
+      else if (e.reason.startsWith('shop:')) spent -= e.amount;
+      if (e.reason === 'quest' && e.amount > 0 && !e.ref?.endsWith(':all')) quests++;
+    }
+    return { earned, spent, quests };
+  });
   const dayLabel = (k: string) => {
     const d = fromKey(k);
     return `${DAY_NAMES[d.getDay()]} ${MONTH_SHORT[d.getMonth()]} ${d.getDate()}`;
@@ -94,6 +107,17 @@
         </ul>
       {/if}
     </section>
+
+    {#if store.settings.economyEnabled}
+      <section>
+        <h3>Coins this week</h3>
+        <p>
+          Earned <strong>{weekCoins.earned.toLocaleString()} 🪙</strong>{weekCoins.spent ? `, spent ${weekCoins.spent.toLocaleString()}` : ''}{weekCoins.quests
+            ? ` · ${weekCoins.quests} daily quest${weekCoins.quests === 1 ? '' : 's'} claimed`
+            : ''}.
+        </p>
+      </section>
+    {/if}
 
     <section>
       <h3>Next week</h3>

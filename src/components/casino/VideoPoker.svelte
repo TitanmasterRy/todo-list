@@ -20,6 +20,8 @@
     if (!s) return;
     s = vpDraw(s, bet);
     economy.payout('video poker', s.payout);
+    if (s.result === 'royal') economy.achieve('royal');
+    if (s.result === 'royal' || s.result === 'straightFlush' || s.result === 'four') economy.achieve('four-kind');
     if (s.payout > bet) playSound('pop');
   }
   const hands = Object.keys(VP_PAYTABLE).filter((h) => h !== 'nothing') as PokerHand[];

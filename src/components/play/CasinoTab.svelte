@@ -3,6 +3,7 @@
   import { economy } from '../../lib/economy.svelte';
   import { store } from '../../lib/store.svelte';
   import { toasts } from '../../lib/toast.svelte';
+  import { addCasinoMinutes, casinoMinutesLeft } from '../../lib/parental';
   import '../casino/casino.css';
   import Slots from '../casino/Slots.svelte';
   import Blackjack from '../casino/Blackjack.svelte';
@@ -54,46 +55,108 @@
       });
     }
   }, 15_000);
+  // daily time limit (Settings → Economy → Parent lock): count minutes while the casino is open and visible
+  const minutesLeft = $derived(casinoMinutesLeft(store.settings.casinoDailyLimitMin, store.settings.casinoMinutesByDay ?? {}, store.today));
+  const clock = setInterval(() => {
+    if (!store.settings.casinoDailyLimitMin || document.visibilityState !== 'visible') return;
+    store.updateSettings({ casinoMinutesByDay: addCasinoMinutes(store.settings.casinoMinutesByDay ?? {}, store.today, 1) });
+  }, 60_000);
   onDestroy(() => {
+    clearInterval(clock);
     clearInterval(timer);
     economy.resetSession();
   });
 </script>
 
-{#if economy.wallet.chips < 10 && !game}
+{#if minutesLeft <= 0}
   <div class="card note">
-    You're out of chips. Buy a stack in the <strong>Shop</strong> with coins from homework, or close your daily ring for 100 free chips.
+    <strong>Casino time is up for today.</strong> The daily limit ({store.settings.casinoDailyLimitMin} min) was set in Settings → Economy. Your chips are safe; come back tomorrow.
   </div>
-{/if}
-
-{#if game}
-  <div class="bar">
-    <button class="btn ghost sm" onclick={() => (current = null)}>← All games</button>
-    <h2>{game.emoji} {game.name}</h2>
-    <div class="grow"></div>
-    {#if economy.session.rounds}
-      <span class="sess">Session: {economy.session.rounds} rounds · <span class:pos={net > 0} class:neg={net < 0}>{net > 0 ? '+' : ''}{net.toLocaleString()}</span></span>
-    {/if}
-  </div>
-  {@const G = game.comp}
-  <G />
 {:else}
-  <div class="lobby">
-    {#each GAMES as g (g.id)}
-      <button class="card tile" onclick={() => (current = g.id)}>
-        <span class="e">{g.emoji}</span>
-        <span class="n">{g.name}</span>
-        <span class="b">{g.blurb}</span>
-      </button>
-    {/each}
-  </div>
-  <p class="muted">
-    Play chips only: no real money, and chips never turn back into coins. Every game shows its odds. A reminder pops up after {store.settings.casinoBreakMin || 'no'} minutes of play
-    (Settings → Economy).
-  </p>
+  {#if Number.isFinite(minutesLeft) && minutesLeft <= 5}
+    <div class="card note">⏳ {minutesLeft} minute{minutesLeft === 1 ? '' : 's'} of casino time left today.</div>
+  {/if}
+  {#if economy.wallet.chips < 10 && !game}
+    <div class="card note">
+      You're out of chips. Buy a stack in the <strong>Shop</strong> with coins from homework, or close your daily ring for 100 free chips.
+    </div>
+  {/if}
+
+  {#if game}
+    <div class="bar">
+      <button class="btn ghost sm" onclick={() => (current = null)}>← All games</button>
+      <h2>{game.emoji} {game.name}</h2>
+      <div class="grow"></div>
+      {#if economy.session.rounds}
+        <span class="sess">Session: {economy.session.rounds} rounds · <span class:pos={net > 0} class:neg={net < 0}>{net > 0 ? '+' : ''}{net.toLocaleString()}</span></span>
+      {/if}
+    </div>
+    {@const G = game.comp}
+    <G />
+  {:else}
+    <div class="lobby">
+      {#each GAMES as g (g.id)}
+        <button class="card tile" onclick={() => (current = g.id)}>
+          <span class="e">{g.emoji}</span>
+          <span class="n">{g.name}</span>
+          <span class="b">{g.blurb}</span>
+        </button>
+      {/each}
+    </div>
+    <h3 class="ach-h">Casino achievements <span class="count">{economy.achievements.filter((a) => a.unlocked).length}/{economy.achievements.length}</span></h3>
+    <div class="ach">
+      {#each economy.achievements as a (a.id)}
+        <div class="card a" class:on={a.unlocked} title={a.description}>
+          <span class="ae" aria-hidden="true">{a.unlocked ? a.emoji : '🔒'}</span>
+          <span class="an">{a.name}</span>
+          <span class="ad">{a.description} · {a.chips} chips</span>
+        </div>
+      {/each}
+    </div>
+    <p class="muted">
+      Play chips only: no real money, and chips never turn back into coins. Every game shows its odds. A reminder pops up after {store.settings.casinoBreakMin || 'no'} minutes of play
+      (Settings → Economy).
+    </p>
+  {/if}
 {/if}
 
 <style>
+  .ach-h {
+    font-size: 15px;
+    margin: 18px 0 8px;
+  }
+  .count {
+    color: var(--text-muted);
+    font-weight: 400;
+  }
+  .ach {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+    gap: 6px;
+  }
+  .a {
+    display: grid;
+    gap: 2px;
+    padding: 10px;
+  }
+  .a:not(.on) {
+    border-style: dashed;
+  }
+  .a:not(.on) .ae {
+    filter: grayscale(1);
+    opacity: 0.6;
+  }
+  .ae {
+    font-size: 22px;
+  }
+  .an {
+    font-weight: 700;
+    font-size: 13px;
+  }
+  .ad {
+    font-size: 11px;
+    color: var(--text-muted);
+  }
   .lobby {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));

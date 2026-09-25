@@ -3,6 +3,7 @@
   import { store } from '../../lib/store.svelte';
   import { SECTION_LABEL, SHOP, TITLE_TEXT, type ShopItem, type ShopSection } from '../../lib/economy';
   import { toasts } from '../../lib/toast.svelte';
+  import QuestsCard from '../QuestsCard.svelte';
 
   const sections: ShopSection[] = ['currency', 'boosts', 'cosmetics', 'prizes'];
   const s = $derived(store.settings);
@@ -23,6 +24,34 @@
   }
   const ownedCount = (id: string) => economy.wallet.items[id] ?? 0;
 </script>
+
+<QuestsCard />
+
+{#if economy.deal}
+  {@const d = economy.deal}
+  <section class="card deal" aria-label="Deal of the day">
+    <span class="tag">Deal of the day · 30% off</span>
+    <div class="dl">
+      <span class="emoji" aria-hidden="true">{d.item.emoji}</span>
+      <div>
+        <div class="name">{d.item.name}</div>
+        <div class="desc">{d.item.description}</div>
+      </div>
+      {#if d.bought}
+        <span class="got">Bought today</span>
+      {:else}
+        <button
+          class="btn primary sm"
+          onclick={() => economy.buy(d.item.id, { deal: true }) && toasts.push({ message: `Bought ${d.item.name} on sale`, kind: 'success', emoji: d.item.emoji, timeout: 1800 })}
+          disabled={!economy.check(d.item, d.price).ok}
+        >
+          <s>{d.item.price}</s>
+          {d.price} 🪙
+        </button>
+      {/if}
+    </div>
+  </section>
+{/if}
 
 {#each sections as sec (sec)}
   {@const items = SHOP.filter((i) => i.section === sec && (sec !== 'prizes' || s.casinoEnabled))}
@@ -67,6 +96,30 @@
 <p class="muted">Coins only come from schoolwork: tasks, the daily ring, streaks, grades, notecards and Pomodoros. Chips can't be turned back into coins.</p>
 
 <style>
+  .deal {
+    margin-bottom: 14px;
+    border-color: color-mix(in srgb, var(--warn) 60%, var(--border));
+    background: color-mix(in srgb, var(--warn) 8%, var(--bg-elev));
+  }
+  .tag {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    font-weight: 800;
+    color: var(--warn-text);
+  }
+  .dl {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    margin-top: 6px;
+  }
+  .dl > div {
+    flex: 1;
+  }
+  .dl s {
+    opacity: 0.7;
+  }
   .sec {
     font-size: 15px;
     margin: 18px 0 8px;
