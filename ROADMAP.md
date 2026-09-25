@@ -233,7 +233,7 @@ Each ships as a standalone HTML file in `public/games/`, so they double as examp
 - [ ] Widgets for the phone home screen (via Capacitor).
 - [ ] Voice commands ("Hey, add read chapter four for tomorrow").
 - [ ] Wearable timer (smartwatch notification when a Pomodoro ends).
-- [ ] Printable weekly planner PDF.
+- [x] Printable weekly planner PDF. (Upcoming → Print week; save as PDF from the print dialog.)
 - [ ] "Study buddy" matching within a class code.
 
 ## 📱 Platform and polish

@@ -147,3 +147,20 @@ test('course board: move a task through To do → Doing → Done', async ({ page
   await expect(page.getByRole('radio', { name: /Board/ })).toHaveAttribute('aria-checked', 'true');
   await expect(page.getByRole('region', { name: /Done/ })).toContainText('Titration lab');
 });
+
+test('print a weekly planner', async ({ page }) => {
+  await openApp(page, { autoDescribe: false });
+  await addTask(page, 'Spanish vocab quiz today');
+  await goKey(page, '2');
+  await page.getByRole('button', { name: /Print week/ }).click();
+  const dlg = page.getByRole('dialog', { name: /Print a weekly planner/ });
+  await expect(dlg.locator('#print-planner')).toContainText('Spanish vocab quiz');
+  await dlg.getByRole('radio', { name: 'Next week' }).click();
+  await expect(dlg.locator('#print-planner')).not.toContainText('Spanish vocab quiz');
+  await dlg.getByRole('radio', { name: 'This week' }).click();
+  await page.emulateMedia({ media: 'print' });
+  await expect(page.locator('#print-planner')).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Print', exact: true })).toBeHidden();
+  const pdf = await page.pdf({ landscape: true });
+  expect(pdf.byteLength).toBeGreaterThan(5000);
+});

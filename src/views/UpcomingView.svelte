@@ -1,5 +1,7 @@
 <script lang="ts">
   import MonthCalendar from '../components/MonthCalendar.svelte';
+  const loadPrint = () => import('../components/PrintPlanner.svelte');
+  let printing = $state(false);
   const LAYOUT_KEY = 'homework-todo:upcoming-layout';
   let layout = $state<'list' | 'month'>(
     (() => {
@@ -79,7 +81,11 @@
       <button role="radio" aria-checked={layout === 'month'} class:on={layout === 'month'} onclick={() => setLayout('month')}>Month</button>
     </div>
     {#if layout === 'list'}<label class="toggle"><input type="checkbox" bind:checked={showEmptyDays} /> Show empty days</label>{/if}
+    <button class="btn sm" onclick={() => (printing = true)}>🖨️ Print week</button>
   </header>
+  {#if printing}
+    {#await loadPrint() then m}<m.default onclose={() => (printing = false)} />{/await}
+  {/if}
 
   {#if layout === 'month'}
     <MonthCalendar />
