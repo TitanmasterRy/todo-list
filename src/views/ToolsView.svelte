@@ -14,6 +14,7 @@
   type Tab =
     | 'grades'
     | 'timetable'
+    | 'syllabus'
     | 'planner'
     | 'calendar'
     | 'reading'
@@ -39,6 +40,7 @@
   const tabs: { id: Tab; label: string; icon: string; group: Group }[] = [
     { id: 'planner', label: 'Plan my day', icon: '🗓️', group: 'plan' },
     { id: 'timetable', label: 'Timetable', icon: '🏫', group: 'plan' },
+    { id: 'syllabus', label: 'Syllabus box', icon: '📋', group: 'plan' },
     { id: 'reading', label: 'Reading time', icon: '📖', group: 'plan' },
     { id: 'calendar', label: 'Calendar export', icon: '📆', group: 'plan' },
     { id: 'grades', label: 'Grade calculator', icon: '🎯', group: 'grades' },
@@ -115,6 +117,12 @@
     {/await}
   {:else if tab === 'timetable'}
     {#await import('../components/tools/TimetableTool.svelte')}
+      <div class="card muted">Loading…</div>
+    {:then m}
+      <m.default />
+    {/await}
+  {:else if tab === 'syllabus'}
+    {#await import('../components/tools/SyllabusTool.svelte')}
       <div class="card muted">Loading…</div>
     {:then m}
       <m.default />

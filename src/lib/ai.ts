@@ -1,6 +1,7 @@
 // AI helper. Anthropic goes through the official SDK; every other provider speaks the OpenAI-compatible chat API.
 import type Anthropic from '@anthropic-ai/sdk';
 import { store } from './store.svelte';
+import type { Found } from './syllabus';
 import type { AiProvider, TaskType } from './types';
 import { chatOpenAICompatible, cleanKey, listModelsOpenAICompatible, ModelNotFoundError, providerInfo, type ChatImage, type ChatRequest } from './ai-providers';
 
@@ -309,4 +310,25 @@ export async function generateQuiz(o: QuizGenOptions): Promise<GeneratedQuestion
   const arr = parseJSON<GeneratedQuestion[]>(text);
   if (!Array.isArray(arr)) throw new Error('Unexpected response');
   return arr.filter((q) => q && typeof q.prompt === 'string');
+}
+
+/** Syllabus box with AI: pull dated work and breaks out of messy syllabus text (or a transcribed photo). */
+export async function extractSyllabusAI(text: string, today: string): Promise<Found[]> {
+  const system =
+    'You read school syllabi and course schedules. Output ONLY a JSON array. For each assignment, test, quiz, project, reading or deadline with a date, output ' +
+    '{"kind":"task","title": short title without the date,"date":"YYYY-MM-DD","type": one of "homework","reading","exam","project","quiz","other"}. ' +
+    'For breaks, holidays or days without class output {"kind":"break","name": string,"from":"YYYY-MM-DD","to":"YYYY-MM-DD"}. ' +
+    `Dates without a year belong to the school year around ${today}. Skip anything without a date. No markdown fences, no commentary.`;
+  const out = await ask(system, text.slice(0, 20000), 8192);
+  const rows = parseJSON<Record<string, unknown>[]>(out);
+  if (!Array.isArray(rows)) throw new Error('Unexpected response');
+  const types: TaskType[] = ['homework', 'reading', 'exam', 'project', 'quiz', 'other'];
+  const isKey = (x: unknown): x is string => typeof x === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(x);
+  const found: Found[] = [];
+  for (const r of rows) {
+    if (r?.kind === 'break' && isKey(r.from) && isKey(r.to)) found.push({ kind: 'break', name: String(r.name ?? 'Break').slice(0, 60), from: r.from, to: r.to, line: '' });
+    else if (typeof r?.title === 'string' && isKey(r.date))
+      found.push({ kind: 'task', title: r.title.slice(0, 140), dateKey: r.date, type: types.includes(r.type as TaskType) ? (r.type as TaskType) : 'homework', line: '' });
+  }
+  return found.sort((a, b) => ((a.kind === 'task' ? a.dateKey : a.from) < (b.kind === 'task' ? b.dateKey : b.from) ? -1 : 1));
 }

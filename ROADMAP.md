@@ -82,7 +82,7 @@ Everything we could improve or add to Homework To-Do, grouped by area. Checked i
 - [x] Grade trend charts per course with what-if scenarios. (Tools → Grade calculator → Trend / What if.)
 - [x] Per-class letter-grade scales. (Presets or a custom scale per course.)
 - [ ] Attendance tracking.
-- [ ] Syllabus box that extracts due dates (AI optional).
+- [x] Syllabus box that extracts due dates (AI optional). (Tools → Syllabus box; breaks become Break mode days.)
 - [ ] Group projects: share a task list by link.
 - [x] Summer / break mode that pauses streaks. (Settings → Break mode.)
 
