@@ -1,14 +1,41 @@
-// Leitner-box spaced repetition for notecards.
+// Notecards: review scheduling (FSRS, see fsrs.ts), pasted-card parsing, cloze notes and mastery.
 import type { Card } from './types';
-import { addDaysKey } from './dates';
+import { schedule, type Rating } from './fsrs';
 
-export const BOX_INTERVALS = [0, 1, 3, 7, 14]; // days until next review for boxes 1..5
 export const MAX_BOX = 5;
 
-export function review(card: Card, correct: boolean, today: string, now: string = new Date().toISOString()): Card {
-  const box = correct ? Math.min(MAX_BOX, card.box + 1) : 1;
-  const due = correct ? addDaysKey(today, BOX_INTERVALS[box - 1]) : today;
-  return { ...card, box, due, reps: card.reps + 1, lapses: card.lapses + (correct ? 0 : 1), updatedAt: now };
+/** Record an answer. `correct` true/false maps to Good/Again; pass a Rating for Hard/Easy. */
+export function review(card: Card, answer: boolean | Rating, today: string, now: string = new Date().toISOString()): Card {
+  const rating: Rating = typeof answer === 'number' ? answer : answer ? 3 : 1;
+  return { ...schedule(card, rating, today), updatedAt: now };
+}
+
+/**
+ * Cloze deletions: "The {{c1::mitochondria}} makes {{c2::ATP}}" becomes one card per number (Anki style),
+ * and plain "{{word}}" blanks each become their own card. Optional hints: {{c1::answer::hint}}.
+ */
+export function parseCloze(text: string): { front: string; back: string }[] {
+  const re = /\{\{(?:c(\d+)::)?([^{}]+?)(?:::([^{}]+))?\}\}/g;
+  const matches = [...text.matchAll(re)];
+  if (!matches.length) return [];
+  let auto = 1000;
+  const groups = new Map<string, number[]>();
+  matches.forEach((m, i) => {
+    const key = m[1] ?? String(auto++);
+    groups.set(key, [...(groups.get(key) ?? []), i]);
+  });
+  const answerOf = (m: RegExpMatchArray) => m[2].trim();
+  const full = text.replace(re, (_all, _n, ans) => ans.trim());
+  return [...groups.entries()]
+    .sort((a, b) => Number(a[0]) - Number(b[0]))
+    .map(([, idxs]) => {
+      let i = -1;
+      const front = text.replace(re, (_all, _n, ans: string, hint?: string) => {
+        i++;
+        return idxs.includes(i) ? `[${hint ? hint.trim() : '…'}]` : ans.trim();
+      });
+      return { front, back: `${idxs.map((k) => answerOf(matches[k])).join(', ')}\n\n${full}` };
+    });
 }
 
 export function dueCards(cards: Card[], today: string): Card[] {

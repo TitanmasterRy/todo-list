@@ -1,9 +1,11 @@
 // Import tasks from CSV: this app's own export, Todoist's CSV export, or any spreadsheet with a header row.
 import type { Priority, TaskType } from './types';
 
+const stripBom = (s: string) => (s.charCodeAt(0) === 0xfeff ? s.slice(1) : s);
+
 /** RFC 4180 CSV parser (quotes, escaped quotes, newlines inside quotes). Also handles ; and tab separated files. */
 export function parseCSV(text: string): string[][] {
-  const src = text.replace(/^\uFEFF/, '');
+  const src = stripBom(text);
   const firstLine = src.split(/\r?\n/, 1)[0] ?? '';
   const sep = [',', ';', '\t'].map((c) => ({ c, n: firstLine.split(c).length })).sort((a, b) => b.n - a.n)[0].c;
   const rows: string[][] = [];

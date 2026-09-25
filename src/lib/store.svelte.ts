@@ -1062,11 +1062,25 @@ class Store {
       { kind: 'warn' },
     );
   }
-  addCards(deckId: string, items: { front: string; back: string }[]): Card[] {
+  addCards(deckId: string, items: { front: string; back: string; frontImage?: string; backImage?: string; noteId?: string }[]): Card[] {
     const now = isoNow();
     const cards: Card[] = items
-      .filter((i) => i.front.trim() && i.back.trim())
-      .map((i) => ({ id: uid('card'), deckId, front: i.front.trim(), back: i.back.trim(), box: 1, due: this.today, reps: 0, lapses: 0, createdAt: now, updatedAt: now }));
+      .filter((i) => (i.front.trim() || i.frontImage) && (i.back.trim() || i.backImage))
+      .map((i) => ({
+        id: uid('card'),
+        deckId,
+        front: i.front.trim(),
+        back: i.back.trim(),
+        box: 1,
+        due: this.today,
+        reps: 0,
+        lapses: 0,
+        createdAt: now,
+        updatedAt: now,
+        ...(i.frontImage ? { frontImage: i.frontImage } : {}),
+        ...(i.backImage ? { backImage: i.backImage } : {}),
+        ...(i.noteId ? { noteId: i.noteId } : {}),
+      }));
     if (!cards.length) return [];
     this.cards = [...this.cards, ...cards];
     this.persistCards(cards);
@@ -1098,7 +1112,8 @@ class Store {
     });
   }
   /** Record one answer during a study session. */
-  answerCard(id: string, correct: boolean): void {
+  /** Record one answer: true/false (Good/Again) or an FSRS rating 1–4. */
+  answerCard(id: string, correct: boolean | 1 | 2 | 3 | 4): void {
     const card = this.cards.find((c) => c.id === id);
     if (!card) return;
     const next = reviewCard($state.snapshot(card) as Card, correct, this.today);

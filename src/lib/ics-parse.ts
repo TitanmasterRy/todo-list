@@ -1,4 +1,6 @@
 // Generic, tolerant iCalendar (RFC 5545) parser. Only VEVENT components are
+
+const stripBom = (s: string) => (s.charCodeAt(0) === 0xfeff ? s.slice(1) : s);
 // returned; VALARM and other nested components are skipped. Designed for
 // calendar feeds (Schoology, Google, etc.) which are not always spec-perfect.
 
@@ -25,7 +27,7 @@ interface Property {
 
 /** Unfold RFC 5545 folded lines (CRLF followed by a space or tab). Tolerates LF-only files and a BOM. */
 export function unfoldLines(text: string): string[] {
-  const clean = text.replace(/^\uFEFF/, '').replace(/\r\n?/g, '\n');
+  const clean = stripBom(text).replace(/\r\n?/g, '\n');
   const out: string[] = [];
   for (const line of clean.split('\n')) {
     if ((line.startsWith(' ') || line.startsWith('\t')) && out.length) {

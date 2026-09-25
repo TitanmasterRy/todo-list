@@ -116,12 +116,19 @@ export interface Card {
   deckId: string;
   front: string;
   back: string;
-  box: number; // Leitner box 1–5
+  box: number; // 1–5, derived from FSRS stability (kept for older versions and the mastery bar)
   due: string; // YYYY-MM-DD
   reps: number;
   lapses: number;
   createdAt: string;
   updatedAt: string;
+  // FSRS memory state (missing on cards from before FSRS: derived from the box on first review)
+  stability?: number; // days until recall probability falls to 90%
+  difficulty?: number; // 1–10
+  lastReview?: string; // YYYY-MM-DD
+  frontImage?: string; // data URL (downscaled JPEG/PNG)
+  backImage?: string;
+  noteId?: string; // cards made from one cloze note share it
 }
 
 /** A deletion record, so sync can tell "deleted on another device" from "never seen". */
