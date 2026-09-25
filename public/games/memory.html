@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Memory match</title>
+<style>
+  :root { --bg: #fff0f6; --fg: #5a2a45; --accent: #ff6fae; }
+  html, body { margin: 0; height: 100%; background: var(--bg); color: var(--fg); font: 15px system-ui, sans-serif; display: grid; place-items: center; }
+  .wrap { display: grid; gap: 10px; justify-items: center; }
+  .hud { display: flex; gap: 16px; font-weight: 700; align-items: center; }
+  .grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; width: min(380px, 92vw); }
+  .card { aspect-ratio: 1; border-radius: 14px; border: 0; font-size: clamp(26px, 9vw, 40px); background: var(--accent); cursor: pointer; transition: transform 200ms; box-shadow: 0 4px 0 rgba(0,0,0,.12); }
+  .card.up, .card.done { background: #fff; transform: rotateY(180deg); }
+  .card.done { opacity: .55; }
+  .card span { display: inline-block; transform: rotateY(180deg); }
+  button.new { font: inherit; padding: 6px 14px; border-radius: 999px; border: 0; background: var(--accent); color: #fff; font-weight: 700; cursor: pointer; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="hud"><span>Moves <b id="moves">0</b></span><span>Time <b id="time">0</b>s</span><button class="new" id="new">Shuffle</button></div>
+  <div class="grid" id="g"></div>
+  <div id="msg"></div>
+</div>
+<script>
+  const q = new URLSearchParams(location.search);
+  if (q.get('accent')) document.documentElement.style.setProperty('--accent', q.get('accent'));
+  if (q.get('dark') === '1') { document.documentElement.style.setProperty('--bg', '#2a1523'); document.documentElement.style.setProperty('--fg', '#ffd6e7'); }
+  const report = (score) => parent.postMessage({ type: 'hwtodo:score', score }, '*');
+  const ANIMALS = ['🐱', '🐶', '🐰', '🦊', '🐼', '🐨', '🐸', '🐥'];
+  const $ = (id) => document.getElementById(id);
+  let cards, open, moves, matched, t0, clock, lock;
+  function start() {
+    cards = [...ANIMALS, ...ANIMALS].sort(() => Math.random() - 0.5).map((e) => ({ e, up: false, done: false }));
+    open = []; moves = 0; matched = 0; t0 = 0; lock = false; clearInterval(clock); $('time').textContent = 0; $('moves').textContent = 0; $('msg').textContent = 'Find all the pairs.'; render();
+  }
+  function render() { $('g').innerHTML = cards.map((c, i) => `<button class="card ${c.up ? 'up' : ''} ${c.done ? 'done' : ''}" data-i="${i}" aria-label="${c.up || c.done ? c.e : 'hidden card'}"><span>${c.up || c.done ? c.e : ''}</span></button>`).join(''); }
+  $('g').addEventListener('click', (ev) => {
+    const b = ev.target.closest('.card'); if (!b || lock) return;
+    const c = cards[+b.dataset.i]; if (c.up || c.done) return;
+    if (!t0) { t0 = Date.now(); clock = setInterval(() => ($('time').textContent = Math.floor((Date.now() - t0) / 1000)), 500); }
+    c.up = true; open.push(c); render();
+    if (open.length === 2) {
+      moves++; $('moves').textContent = moves;
+      if (open[0].e === open[1].e) { open.forEach((x) => (x.done = true)); open = []; matched++; render(); if (matched === ANIMALS.length) win(); }
+      else { lock = true; setTimeout(() => { open.forEach((x) => (x.up = false)); open = []; lock = false; render(); }, 700); }
+    }
+  });
+  function win() { clearInterval(clock); const secs = Math.floor((Date.now() - t0) / 1000); const score = Math.max(10, 1000 - moves * 20 - secs * 5); $('msg').textContent = `All pairs in ${moves} moves and ${secs}s! Score ${score}.`; report(score); }
+  $('new').onclick = start; start();
+</script>
+</body>
+</html>

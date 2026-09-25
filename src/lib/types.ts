@@ -235,7 +235,6 @@ export interface Settings {
   equippedTitle?: string; // shop cosmetic ids
   equippedFrame?: string;
   equippedConfetti?: string;
-  lastChipBonusDate?: string;
   onboarded: boolean;
   demoSeeded: boolean;
   lastFrogPromptDate?: string;

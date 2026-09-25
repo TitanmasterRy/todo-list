@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Minesweeper</title>
+<style>
+  :root { --bg: #0f1115; --fg: #e8eaf0; --accent: #6c5ce7; }
+  html, body { margin: 0; height: 100%; background: var(--bg); color: var(--fg); font: 15px system-ui, sans-serif; display: grid; place-items: center; user-select: none; }
+  .wrap { display: grid; gap: 10px; justify-items: center; }
+  .hud { display: flex; gap: 14px; font-weight: 700; align-items: center; }
+  .grid { display: grid; gap: 2px; background: #2a2f3a; padding: 4px; border-radius: 8px; }
+  .c { width: min(34px, 9vw); height: min(34px, 9vw); border: 0; border-radius: 4px; background: #3a4150; color: #fff; font-weight: 800; font-size: 15px; cursor: pointer; padding: 0; }
+  .c.o { background: #1f232c; cursor: default; }
+  .c.b { background: #ef4444; }
+  .n1 { color: #74b9ff; } .n2 { color: #55efc4; } .n3 { color: #ff7675; } .n4 { color: #a29bfe; } .n5 { color: #fdcb6e; } .n6 { color: #81ecec; }
+  button.t { font: inherit; padding: 6px 12px; border-radius: 8px; border: 0; background: var(--accent); color: #fff; font-weight: 700; cursor: pointer; }
+  button.t.off { background: #3a4150; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="hud"><span>💣 <b id="left">10</b></span><span>⏱ <b id="time">0</b></span><button class="t off" id="flag">🚩 Flag mode</button><button class="t" id="new">New</button></div>
+  <div class="grid" id="g"></div>
+  <div id="msg">Right-click (or Flag mode) to flag.</div>
+</div>
+<script>
+  const q = new URLSearchParams(location.search);
+  if (q.get('accent')) document.documentElement.style.setProperty('--accent', q.get('accent'));
+  if (q.get('dark') === '0') { document.documentElement.style.setProperty('--bg', '#f6f7fb'); document.documentElement.style.setProperty('--fg', '#171923'); }
+  const report = (score) => parent.postMessage({ type: 'hwtodo:score', score }, '*');
+  const W = 9, H = 9, M = 10, $ = (id) => document.getElementById(id);
+  let cells, first, over, t0, clock, flagMode = false;
+  function start() { cells = Array.from({ length: W * H }, () => ({ m: false, o: false, f: false, n: 0 })); first = true; over = false; t0 = 0; clearInterval(clock); $('time').textContent = 0; $('msg').textContent = 'Right-click (or Flag mode) to flag.'; render(); }
+  const nb = (i) => { const x = i % W, y = (i / W) | 0, out = []; for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) { const a = x + dx, b = y + dy; if ((dx || dy) && a >= 0 && b >= 0 && a < W && b < H) out.push(b * W + a); } return out; };
+  function seed(safe) { const ban = new Set([safe, ...nb(safe)]); let k = 0; while (k < M) { const i = Math.floor(Math.random() * W * H); if (!cells[i].m && !ban.has(i)) { cells[i].m = true; k++; } } cells.forEach((c, i) => (c.n = nb(i).filter((j) => cells[j].m).length)); }
+  function openCell(i) {
+    const c = cells[i]; if (c.o || c.f || over) return;
+    if (first) { first = false; seed(i); t0 = Date.now(); clock = setInterval(() => ($('time').textContent = Math.floor((Date.now() - t0) / 1000)), 500); }
+    c.o = true;
+    if (c.m) { over = true; clearInterval(clock); cells.forEach((x) => x.m && (x.o = true)); $('msg').textContent = '💥 Boom. Try again!'; render(i); return; }
+    if (!c.n) nb(i).forEach(openCell);
+  }
+  function click(i, flag) {
+    if (over) return;
+    const c = cells[i];
+    if (flag) { if (!c.o) c.f = !c.f; }
+    else if (c.o && c.n) { const f = nb(i).filter((j) => cells[j].f).length; if (f === c.n) nb(i).forEach(openCell); }
+    else openCell(i);
+    render();
+    if (!over && cells.every((x) => x.m || x.o)) { over = true; clearInterval(clock); const s = Math.floor((Date.now() - t0) / 1000); const score = Math.max(50, 1000 - s * 5); $('msg').textContent = `Cleared in ${s}s! Score ${score}.`; report(score); }
+  }
+  function render(boom) {
+    $('g').style.gridTemplateColumns = `repeat(${W}, auto)`;
+    $('g').innerHTML = cells.map((c, i) => `<button class="c ${c.o ? 'o' : ''} ${boom === i ? 'b' : ''} n${c.n}" data-i="${i}" aria-label="cell">${c.o ? (c.m ? '💣' : c.n || '') : c.f ? '🚩' : ''}</button>`).join('');
+    $('left').textContent = M - cells.filter((c) => c.f).length;
+  }
+  $('g').addEventListener('click', (e) => { const b = e.target.closest('.c'); if (b) click(+b.dataset.i, flagMode); });
+  $('g').addEventListener('contextmenu', (e) => { const b = e.target.closest('.c'); if (b) { e.preventDefault(); click(+b.dataset.i, true); } });
+  $('flag').onclick = () => { flagMode = !flagMode; $('flag').classList.toggle('off', !flagMode); };
+  $('new').onclick = start; start();
+</script>
+</body>
+</html>

@@ -1,0 +1,11 @@
+{
+  "games": [
+    { "id": "snake", "title": "Snake", "emoji": "🐍", "description": "Arcade classic. Eat, grow, don't bite yourself.", "src": "snake.html", "cost": 1, "minutes": 10, "theme": "arcade", "tags": ["arcade"], "builtIn": true },
+    { "id": "2048", "title": "2048", "emoji": "🔢", "description": "Slide and merge tiles to reach 2048.", "src": "2048.html", "cost": 1, "minutes": 15, "theme": "sleek", "tags": ["puzzle"], "builtIn": true },
+    { "id": "memory", "title": "Memory match", "emoji": "🐰", "description": "Flip cards and find the animal pairs.", "src": "memory.html", "cost": 1, "minutes": 10, "theme": "cute", "tags": ["memory"], "builtIn": true },
+    { "id": "minesweeper", "title": "Minesweeper", "emoji": "💣", "description": "Clear the field without hitting a mine.", "src": "minesweeper.html", "cost": 1, "minutes": 15, "theme": "classic", "tags": ["puzzle"], "builtIn": true },
+    { "id": "catcher", "title": "Leaf catcher", "emoji": "🍃", "description": "Catch leaves and fruit, dodge the bugs.", "src": "catcher.html", "cost": 1, "minutes": 10, "theme": "nature", "tags": ["arcade"], "builtIn": true },
+    { "id": "asteroids", "title": "Asteroids", "emoji": "🚀", "description": "Blast space rocks into smaller space rocks.", "src": "asteroids.html", "cost": 2, "minutes": 10, "theme": "space", "tags": ["arcade"], "builtIn": true },
+    { "id": "wordsearch", "title": "Word search", "emoji": "✏️", "description": "Find the hidden words. Uses words from your notecards when it can.", "src": "wordsearch.html", "cost": 1, "minutes": 15, "theme": "paper", "tags": ["words", "study"], "builtIn": true }
+  ]
+}

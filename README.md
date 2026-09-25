@@ -139,7 +139,7 @@ Press `?` in the app for the sheet.
 | `/` | Search (Inbox) |
 | `Ctrl/⌘ K` | Command palette |
 | `Ctrl/⌘ Z` | Undo last action |
-| `1` – `8` | Today, Upcoming, Courses, Inbox, Focus, Stats, Tools, Schoology |
+| `1` – `9` | Today, Upcoming, Courses, Inbox, Focus, Stats, Tools, Schoology, Play |
 | `?` | Shortcut sheet |
 | `Esc` | Close dialog / clear selection |
 | `j` / `k` (or arrows) | Move selection down / up |
@@ -168,7 +168,9 @@ Press `?` in the app for the sheet.
 ```
 src/lib/         types, storage (IndexedDB), store, dates, parser, recurrence, gamification, backup, gist sync, sounds
 src/components/  task item, checkbox, quick add, editor, sortable list, toasts, feedback layer, palette, dialogs
-src/views/       Today, Upcoming, Courses, Inbox, Focus, Stats, Settings
+src/views/       Today, Upcoming, Courses, Inbox, Focus, Stats, Tools, Schoology, Play, Settings
+src/lib/casino/  casino game rules (slots, blackjack, roulette, poker, baccarat, craps, quick games)
+public/games/    built-in arcade games + games.json manifest (add your own here)
 public/sounds/   sounds are synthesized with WebAudio; drop files here to swap in samples
 ```
 

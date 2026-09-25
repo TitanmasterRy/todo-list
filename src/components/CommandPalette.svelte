@@ -27,7 +27,7 @@
 
   const commands = $derived.by((): Cmd[] => {
     const list: Cmd[] = [];
-    for (const v of VIEWS) list.push({ id: `view:${v.id}`, label: `Go to ${v.label}`, icon: v.icon, hint: v.key, run: () => store.go(v.id) });
+    for (const v of VIEWS.filter((x) => x.id !== 'play' || store.settings.economyEnabled)) list.push({ id: `view:${v.id}`, label: `Go to ${v.label}`, icon: v.icon, hint: v.key, run: () => store.go(v.id) });
     for (const c of store.activeCourses) {
       list.push({ id: `course:${c.id}`, label: `Open course: ${c.name}`, icon: c.emoji ?? '📚', keywords: 'course', run: () => store.go('courses', { courseId: c.id }) });
     }

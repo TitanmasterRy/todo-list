@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Snake</title>
+<style>
+  :root { --bg: #0b0f1a; --fg: #e8eaf0; --accent: #00e676; }
+  html, body { margin: 0; height: 100%; background: var(--bg); color: var(--fg); font: 15px system-ui, sans-serif; display: grid; place-items: center; touch-action: none; }
+  .wrap { display: grid; gap: 8px; justify-items: center; }
+  canvas { background: #111827; border-radius: 10px; image-rendering: pixelated; max-width: 96vw; max-height: 78vh; }
+  .hud { display: flex; gap: 16px; font-weight: 700; }
+  button { font: inherit; padding: 8px 16px; border-radius: 8px; border: 0; background: var(--accent); color: #062; font-weight: 700; cursor: pointer; }
+  .pad { display: grid; grid-template-columns: repeat(3, 48px); gap: 6px; }
+  .pad button { padding: 10px 0; background: #1f2937; color: var(--fg); }
+  @media (hover: hover) { .pad { display: none; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="hud"><span>Score <b id="score">0</b></span><span>Best <b id="best">0</b></span></div>
+  <canvas id="c" width="400" height="400"></canvas>
+  <button id="go">Start</button>
+  <div class="pad"><span></span><button data-d="up">▲</button><span></span><button data-d="left">◀</button><button data-d="down">▼</button><button data-d="right">▶</button></div>
+</div>
+<script>
+  // Homework To-Do arcade game. Report scores with parent.postMessage({ type: 'hwtodo:score', score }, '*').
+  const q = new URLSearchParams(location.search);
+  if (q.get('accent')) document.documentElement.style.setProperty('--accent', q.get('accent'));
+  if (q.get('dark') === '0') { document.documentElement.style.setProperty('--bg', '#f4f6fb'); document.documentElement.style.setProperty('--fg', '#111'); }
+  const report = (score) => parent.postMessage({ type: 'hwtodo:score', score }, '*');
+  const N = 20, S = 20, c = document.getElementById('c'), x = c.getContext('2d');
+  let snake, dir, next, food, score, best = 0, timer, speed;
+  const $ = (id) => document.getElementById(id);
+  function place() { do { food = { x: Math.floor(Math.random() * N), y: Math.floor(Math.random() * N) }; } while (snake.some((p) => p.x === food.x && p.y === food.y)); }
+  function start() {
+    snake = [{ x: 10, y: 10 }, { x: 9, y: 10 }, { x: 8, y: 10 }]; dir = next = { x: 1, y: 0 }; score = 0; speed = 130; place();
+    $('score').textContent = 0; $('go').style.visibility = 'hidden'; clearTimeout(timer); tick();
+  }
+  function tick() {
+    dir = next;
+    const head = { x: (snake[0].x + dir.x + N) % N, y: (snake[0].y + dir.y + N) % N };
+    if (snake.some((p) => p.x === head.x && p.y === head.y)) return over();
+    snake.unshift(head);
+    if (head.x === food.x && head.y === food.y) { score += 10; $('score').textContent = score; place(); speed = Math.max(55, speed - 3); } else snake.pop();
+    draw(); timer = setTimeout(tick, speed);
+  }
+  function draw() {
+    x.fillStyle = '#111827'; x.fillRect(0, 0, 400, 400);
+    x.fillStyle = '#ff5c8a'; x.beginPath(); x.arc(food.x * S + S / 2, food.y * S + S / 2, S / 2.6, 0, 7); x.fill();
+    const accent = getComputedStyle(document.documentElement).getPropertyValue('--accent');
+    snake.forEach((p, i) => { x.fillStyle = i ? accent : '#fff'; x.fillRect(p.x * S + 1, p.y * S + 1, S - 2, S - 2); });
+  }
+  function over() { best = Math.max(best, score); $('best').textContent = best; report(score); $('go').textContent = 'Play again'; $('go').style.visibility = 'visible'; }
+  function turn(d) { const m = { up: [0, -1], down: [0, 1], left: [-1, 0], right: [1, 0] }[d]; if (!m || (m[0] === -dir.x && m[1] === -dir.y)) return; next = { x: m[0], y: m[1] }; }
+  addEventListener('keydown', (e) => { const k = { ArrowUp: 'up', w: 'up', ArrowDown: 'down', s: 'down', ArrowLeft: 'left', a: 'left', ArrowRight: 'right', d: 'right' }[e.key]; if (k) { e.preventDefault(); turn(k); } if (e.key === ' ' && $('go').style.visibility !== 'hidden') start(); });
+  document.querySelectorAll('.pad button').forEach((b) => b.addEventListener('click', () => turn(b.dataset.d)));
+  let t0; c.addEventListener('touchstart', (e) => (t0 = e.touches[0]), { passive: true });
+  c.addEventListener('touchend', (e) => { const t = e.changedTouches[0], dx = t.clientX - t0.clientX, dy = t.clientY - t0.clientY; turn(Math.abs(dx) > Math.abs(dy) ? (dx > 0 ? 'right' : 'left') : dy > 0 ? 'down' : 'up'); });
+  $('go').onclick = start;
+  snake = [{ x: 10, y: 10 }]; food = { x: 14, y: 10 }; draw();
+</script>
+</body>
+</html>

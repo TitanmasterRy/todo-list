@@ -28,9 +28,12 @@
   import { ui } from './lib/ui.svelte';
   import { startSync } from './lib/gist.svelte';
   import { startAccount } from './lib/account.svelte';
+  import { startEconomy } from './lib/economy.svelte';
+  import CoinPops from './components/CoinPops.svelte';
 
   onMount(() => {
     void store.init().then(() => {
+      startEconomy();
       startSync();
       void startAccount();
       startSchoologySync();
@@ -72,6 +75,13 @@
   onMount(() => {
     // PWA share target / deep link: ?title=… (&text=…&url=…) prefills quick add.
     const params = new URLSearchParams(window.location.search);
+    // home-screen shortcuts: ?view=today|focus|play (&new=1 focuses quick add)
+    const view = params.get('view');
+    if (view && VIEWS.some((v) => v.id === view)) {
+      store.go(view as (typeof VIEWS)[number]['id']);
+      if (params.get('new')) setTimeout(fab, 300);
+      window.history.replaceState({}, '', window.location.pathname);
+    }
     const shared = [params.get('title'), params.get('text'), params.get('url')].filter(Boolean).join(' ').trim();
     if (shared) {
       ui.quickAddPrefill = shared;
@@ -111,6 +121,12 @@
         <ToolsView />
       {:else if store.view === 'schoology'}
         <SchoologyView />
+      {:else if store.view === 'play' && store.settings.economyEnabled}
+        {#await import('./views/PlayView.svelte')}
+          <div class="page"><p class="muted">Loading…</p></div>
+        {:then m}
+          <m.default />
+        {/await}
       {:else if store.view === 'settings'}
         <SettingsView />
       {/if}
@@ -121,6 +137,7 @@
   <BulkBar />
   <Toasts />
   <FeedbackLayer />
+  <CoinPops />
   <Keyboard />
   {#if store.editingTaskId}
     <TaskEditor taskId={store.editingTaskId} onclose={() => (store.editingTaskId = null)} />

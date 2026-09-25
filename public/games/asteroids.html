@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Asteroids</title>
+<style>
+  :root { --accent: #7c9cff; }
+  html, body { margin: 0; height: 100%; background: #05060f; color: #dfe6ff; font: 15px system-ui, sans-serif; overflow: hidden; touch-action: none; }
+  canvas { display: block; width: 100vw; height: 100vh; }
+  .hud { position: fixed; top: 10px; left: 12px; font-weight: 700; }
+  .center { position: fixed; inset: 0; display: grid; place-items: center; pointer-events: none; text-align: center; }
+  .center button { pointer-events: auto; font: inherit; padding: 10px 20px; border-radius: 10px; border: 0; background: var(--accent); color: #05060f; font-weight: 800; cursor: pointer; }
+  .pad { position: fixed; bottom: 14px; left: 0; right: 0; display: flex; justify-content: space-between; padding: 0 14px; }
+  .pad div { display: flex; gap: 10px; }
+  .pad button { width: 60px; height: 60px; border-radius: 50%; border: 0; background: rgba(255,255,255,.14); color: #fff; font-size: 22px; }
+  @media (hover: hover) { .pad { display: none; } }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div class="hud">Score <span id="score">0</span> · Lives <span id="lives">3</span></div>
+<div class="center" id="menu"><div><h2>🚀 Asteroids</h2><p>← → rotate · ↑ thrust · Space shoot</p><button id="go">Launch</button></div></div>
+<div class="pad"><div><button data-k="left">⟲</button><button data-k="right">⟳</button></div><div><button data-k="up">▲</button><button data-k="fire">●</button></div></div>
+<script>
+  const q = new URLSearchParams(location.search);
+  if (q.get('accent')) document.documentElement.style.setProperty('--accent', q.get('accent'));
+  const report = (score) => parent.postMessage({ type: 'hwtodo:score', score }, '*');
+  const c = document.getElementById('c'), x = c.getContext('2d'), $ = (id) => document.getElementById(id);
+  let W, H, ship, rocks, shots, score, lives, keys = {}, running = false, cool = 0, inv = 0, stars;
+  function size() { W = c.width = innerWidth; H = c.height = innerHeight; stars = Array.from({ length: 80 }, () => [Math.random() * W, Math.random() * H, Math.random()]); }
+  addEventListener('resize', size); size();
+  function rock(r, px, py) { const a = Math.random() * 6.28, s = (1.4 - r / 60) * (1 + Math.random()); return { x: px ?? Math.random() * W, y: py ?? (Math.random() < 0.5 ? 0 : H), vx: Math.cos(a) * s, vy: Math.sin(a) * s, r, pts: Array.from({ length: 10 }, () => 0.75 + Math.random() * 0.35) }; }
+  function start() { ship = { x: W / 2, y: H / 2, a: -1.57, vx: 0, vy: 0 }; rocks = Array.from({ length: 4 }, () => rock(44)); shots = []; score = 0; lives = 3; inv = 120; running = true; $('menu').style.display = 'none'; hud(); }
+  function hud() { $('score').textContent = score; $('lives').textContent = lives; }
+  const wrap = (o) => { o.x = (o.x + W) % W; o.y = (o.y + H) % H; };
+  function step() {
+    x.fillStyle = '#05060f'; x.fillRect(0, 0, W, H);
+    stars.forEach(([sx, sy, b]) => { x.fillStyle = `rgba(255,255,255,${0.3 + b * 0.6})`; x.fillRect(sx, sy, 1.5, 1.5); });
+    if (running) {
+      if (keys.left) ship.a -= 0.07; if (keys.right) ship.a += 0.07;
+      if (keys.up) { ship.vx += Math.cos(ship.a) * 0.12; ship.vy += Math.sin(ship.a) * 0.12; }
+      ship.vx *= 0.99; ship.vy *= 0.99; ship.x += ship.vx; ship.y += ship.vy; wrap(ship);
+      if (keys.fire && cool <= 0 && shots.length < 6) { shots.push({ x: ship.x, y: ship.y, vx: Math.cos(ship.a) * 7 + ship.vx, vy: Math.sin(ship.a) * 7 + ship.vy, life: 60 }); cool = 12; }
+      cool--; inv--;
+      shots.forEach((s) => { s.x += s.vx; s.y += s.vy; s.life--; wrap(s); });
+      shots = shots.filter((s) => s.life > 0);
+      rocks.forEach((r) => { r.x += r.vx; r.y += r.vy; wrap(r); });
+      for (const s of shots) for (const r of rocks) if (!r.dead && Math.hypot(s.x - r.x, s.y - r.y) < r.r) { r.dead = true; s.life = 0; score += r.r > 30 ? 20 : r.r > 15 ? 50 : 100; if (r.r > 15) rocks.push(rock(r.r / 2, r.x, r.y), rock(r.r / 2, r.x, r.y)); hud(); }
+      rocks = rocks.filter((r) => !r.dead);
+      if (!rocks.length) rocks = Array.from({ length: 5 }, () => rock(44));
+      if (inv <= 0) for (const r of rocks) if (Math.hypot(ship.x - r.x, ship.y - r.y) < r.r + 8) { lives--; hud(); inv = 120; ship = { x: W / 2, y: H / 2, a: -1.57, vx: 0, vy: 0 }; if (lives <= 0) { running = false; report(score); $('menu').style.display = 'grid'; $('menu').querySelector('h2').textContent = `Game over · ${score}`; $('go').textContent = 'Again'; } break; }
+      const accent = getComputedStyle(document.documentElement).getPropertyValue('--accent');
+      if (inv < 0 || Math.floor(inv / 6) % 2) { x.save(); x.translate(ship.x, ship.y); x.rotate(ship.a); x.strokeStyle = accent; x.lineWidth = 2; x.beginPath(); x.moveTo(14, 0); x.lineTo(-10, -9); x.lineTo(-6, 0); x.lineTo(-10, 9); x.closePath(); x.stroke(); if (keys.up) { x.strokeStyle = '#ffb347'; x.beginPath(); x.moveTo(-8, -4); x.lineTo(-16 - Math.random() * 6, 0); x.lineTo(-8, 4); x.stroke(); } x.restore(); }
+      x.fillStyle = '#fff'; shots.forEach((s) => x.fillRect(s.x - 1.5, s.y - 1.5, 3, 3));
+    }
+    x.strokeStyle = '#b8c1ec'; x.lineWidth = 1.6;
+    (rocks || []).forEach((r) => { x.beginPath(); r.pts.forEach((p, i) => { const a = (i / r.pts.length) * 6.283; x[i ? 'lineTo' : 'moveTo'](r.x + Math.cos(a) * r.r * p, r.y + Math.sin(a) * r.r * p); }); x.closePath(); x.stroke(); });
+    requestAnimationFrame(step);
+  }
+  const map = { ArrowLeft: 'left', a: 'left', ArrowRight: 'right', d: 'right', ArrowUp: 'up', w: 'up', ' ': 'fire' };
+  addEventListener('keydown', (e) => { if (map[e.key]) { keys[map[e.key]] = true; e.preventDefault(); } });
+  addEventListener('keyup', (e) => { if (map[e.key]) keys[map[e.key]] = false; });
+  document.querySelectorAll('.pad button').forEach((b) => { const k = b.dataset.k; b.addEventListener('touchstart', (e) => { e.preventDefault(); keys[k] = true; }); b.addEventListener('touchend', () => (keys[k] = false)); });
+  $('go').onclick = start; rocks = Array.from({ length: 4 }, () => rock(44)); step();
+</script>
+</body>
+</html>

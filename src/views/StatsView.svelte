@@ -2,6 +2,7 @@
   import { store } from '../lib/store.svelte';
   import { ui } from '../lib/ui.svelte';
   import { BADGES, levelProgress, xpForLevel } from '../lib/gamification';
+  import { TITLE_TEXT } from '../lib/economy';
   import { addDaysKey, endOfWeekKey, dueKey, formatMinutes, daysAgoKey } from '../lib/dates';
   import Heatmap from '../components/Heatmap.svelte';
   import GoalRing from '../components/GoalRing.svelte';
@@ -45,8 +46,8 @@
         <div class="v">🔥 {store.streak}<span class="unit">day{store.streak === 1 ? '' : 's'}</span></div>
         <div class="s">Best {store.stats.streak.best} · {store.stats.streak.freezes} freeze{store.stats.streak.freezes === 1 ? '' : 's'} banked 🧊</div>
       </div>
-      <div class="card tile">
-        <div class="k">Level {lp.level}</div>
+      <div class="card tile frame-{store.settings.equippedFrame ?? 'none'}">
+        <div class="k">Level {lp.level}{#if store.settings.equippedTitle} · {TITLE_TEXT[store.settings.equippedTitle]}{/if}</div>
         <div class="v">{store.stats.xp}<span class="unit">XP</span></div>
         <div class="bar"><div class="fill" style="width:{lp.pct * 100}%"></div></div>
         <div class="s">{lp.needed - lp.into} XP to level {lp.level + 1} ({xpForLevel(lp.level)} total)</div>
@@ -107,6 +108,15 @@
 </div>
 
 <style>
+  .frame-frame-gold {
+    box-shadow: 0 0 0 2px #f5c542, 0 0 18px rgba(245, 197, 66, 0.35);
+  }
+  .frame-frame-neon {
+    box-shadow: 0 0 0 2px var(--accent), 0 0 20px var(--accent);
+  }
+  .frame-frame-leaf {
+    box-shadow: 0 0 0 2px #2e7d32, 0 0 14px rgba(46, 125, 50, 0.4);
+  }
   .tiles {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));

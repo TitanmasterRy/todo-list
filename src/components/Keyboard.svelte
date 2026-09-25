@@ -152,9 +152,9 @@
         }
         return;
     }
-    if (/^[1-8]$/.test(e.key)) {
+    if (/^[1-9]$/.test(e.key)) {
       const v = VIEWS.find((x) => x.key === e.key);
-      if (v) {
+      if (v && (v.id !== 'play' || store.settings.economyEnabled)) {
         e.preventDefault();
         store.go(v.id);
       }

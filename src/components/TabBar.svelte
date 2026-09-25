@@ -2,7 +2,7 @@
   import { fly } from 'svelte/transition';
   import { store, VIEWS } from '../lib/store.svelte';
   const tabs = VIEWS.filter((v) => ['today', 'upcoming', 'courses', 'inbox', 'stats'].includes(v.id));
-  const more = VIEWS.filter((v) => ['focus', 'tools', 'schoology', 'settings'].includes(v.id));
+  const more = $derived(VIEWS.filter((v) => ['focus', 'tools', 'schoology', 'play', 'settings'].includes(v.id) && (v.id !== 'play' || store.settings.economyEnabled)));
   let open = $state(false);
   const moreActive = $derived(more.some((v) => v.id === store.view));
 </script>

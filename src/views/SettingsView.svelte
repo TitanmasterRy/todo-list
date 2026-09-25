@@ -14,6 +14,8 @@
   import { testKey, currentProvider, currentModel, listModels, setModel as setAiModel } from '../lib/ai';
   import { PROVIDERS, providerInfo, cleanKey } from '../lib/ai-providers';
   import AccountPanel from '../components/AccountPanel.svelte';
+  import ArcadeAdmin from '../components/ArcadeAdmin.svelte';
+  import '../components/casino/casino.css';
   import type { AiProvider } from '../lib/types';
   import ThemePicker from '../components/ThemePicker.svelte';
   import { notificationsSupported, requestNotifications } from '../lib/reminders';
@@ -286,6 +288,35 @@
       You have <strong>{store.stats.streak.freezes}</strong> banked. Current streak {store.streak}, best {store.stats.streak.best}.
     </p>
   </section>
+
+  <section class="card">
+    <h2>Economy</h2>
+    <div class="row">
+      <label for="eco">Coins, shop and Play view</label>
+      <input id="eco" type="checkbox" class="switch" checked={s.economyEnabled} onchange={(e) => set('economyEnabled', (e.target as HTMLInputElement).checked)} />
+    </div>
+    {#if s.economyEnabled}
+      <div class="row">
+        <label for="cas">Casino (play chips only)</label>
+        <input id="cas" type="checkbox" class="switch" checked={s.casinoEnabled} onchange={(e) => set('casinoEnabled', (e.target as HTMLInputElement).checked)} />
+      </div>
+      {#if s.casinoEnabled}
+        <div class="row">
+          <label for="brk">Homework-break reminder after (minutes of casino play, 0 = off)</label>
+          <input id="brk" class="input num" type="number" min="0" max="240" value={s.casinoBreakMin} onchange={(e) => set('casinoBreakMin', Math.max(0, Math.min(240, Number((e.target as HTMLInputElement).value) || 0)))} />
+        </div>
+      {/if}
+      <div class="row">
+        <label for="adm">Show arcade admin (add games)</label>
+        <input id="adm" type="checkbox" class="switch" checked={s.arcadeAdmin} onchange={(e) => set('arcadeAdmin', (e.target as HTMLInputElement).checked)} />
+      </div>
+      <p class="help">Coins come only from schoolwork (tasks, the daily ring, streaks, grades, notecards, Pomodoros). There's no real money anywhere: nothing can be bought with cash, and chips never turn back into coins.</p>
+    {/if}
+  </section>
+
+  {#if s.economyEnabled && s.arcadeAdmin}
+    <ArcadeAdmin />
+  {/if}
 
   <section class="card">
     <h2>Adding tasks</h2>

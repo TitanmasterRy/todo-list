@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Leaf catcher</title>
+<style>
+  :root { --accent: #2e7d32; }
+  html, body { margin: 0; height: 100%; background: linear-gradient(#cdebd3, #eaf6e0); color: #1b3d1f; font: 15px system-ui, sans-serif; overflow: hidden; touch-action: none; }
+  canvas { display: block; width: 100vw; height: 100vh; }
+  .hud { position: fixed; top: 10px; left: 12px; font-weight: 800; }
+  .center { position: fixed; inset: 0; display: grid; place-items: center; text-align: center; pointer-events: none; }
+  .center button { pointer-events: auto; font: inherit; padding: 10px 20px; border-radius: 999px; border: 0; background: var(--accent); color: #fff; font-weight: 800; cursor: pointer; }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div class="hud">Score <span id="score">0</span> · <span id="lives">❤️❤️❤️</span></div>
+<div class="center" id="menu"><div><h2>🍃 Leaf catcher</h2><p>Catch leaves and fruit, dodge the bugs.<br />Move with the mouse, a finger, or ← →.</p><button id="go">Start</button></div></div>
+<script>
+  const q = new URLSearchParams(location.search);
+  if (q.get('accent')) document.documentElement.style.setProperty('--accent', q.get('accent'));
+  if (q.get('dark') === '1') document.body.style.background = 'linear-gradient(#10261a, #1c3a26)';
+  const report = (score) => parent.postMessage({ type: 'hwtodo:score', score }, '*');
+  const c = document.getElementById('c'), x = c.getContext('2d'), $ = (id) => document.getElementById(id);
+  const GOOD = [['🍃', 10], ['🍂', 10], ['🍎', 25], ['🍐', 25], ['🌰', 15], ['🍄', 40]], BAD = ['🐛', '🐝', '🕷️'];
+  let W, H, bx, items, score, lives, running = false, t = 0, keys = {};
+  function size() { W = c.width = innerWidth; H = c.height = innerHeight; }
+  addEventListener('resize', size); size(); bx = W / 2;
+  function start() { items = []; score = 0; lives = 3; t = 0; running = true; $('menu').style.display = 'none'; hud(); }
+  function hud() { $('score').textContent = score; $('lives').textContent = '❤️'.repeat(Math.max(0, lives)) || '💔'; }
+  function spawn() { const bad = Math.random() < 0.18 + Math.min(0.15, t / 20000); const g = GOOD[Math.floor(Math.random() * GOOD.length)]; items.push({ x: 30 + Math.random() * (W - 60), y: -30, v: 1.6 + Math.random() * 1.4 + t / 2500, e: bad ? BAD[Math.floor(Math.random() * BAD.length)] : g[0], pts: bad ? 0 : g[1], bad, sway: Math.random() * 6 }); }
+  function step() {
+    x.clearRect(0, 0, W, H);
+    if (running) {
+      t++;
+      if (keys.left) bx -= 9; if (keys.right) bx += 9; bx = Math.max(40, Math.min(W - 40, bx));
+      if (t % Math.max(14, 40 - Math.floor(t / 300)) === 0) spawn();
+      items.forEach((it) => { it.y += it.v; it.x += Math.sin((t + it.sway * 40) / 30) * 0.8; });
+      for (const it of items) {
+        if (!it.gone && it.y > H - 80 && it.y < H - 30 && Math.abs(it.x - bx) < 50) { it.gone = true; if (it.bad) { lives--; hud(); } else { score += it.pts; hud(); } }
+        else if (!it.gone && it.y > H + 20) it.gone = true;
+      }
+      items = items.filter((it) => !it.gone);
+      if (lives <= 0) { running = false; report(score); $('menu').style.display = 'grid'; $('menu').querySelector('h2').textContent = `🍂 Score ${score}`; $('go').textContent = 'Again'; }
+    }
+    x.font = '32px system-ui'; x.textAlign = 'center';
+    (items || []).forEach((it) => x.fillText(it.e, it.x, it.y));
+    x.font = '56px system-ui'; x.fillText('🧺', bx, H - 30);
+    requestAnimationFrame(step);
+  }
+  addEventListener('pointermove', (e) => (bx = e.clientX));
+  addEventListener('keydown', (e) => { if (e.key === 'ArrowLeft' || e.key === 'a') keys.left = true; if (e.key === 'ArrowRight' || e.key === 'd') keys.right = true; });
+  addEventListener('keyup', (e) => { if (e.key === 'ArrowLeft' || e.key === 'a') keys.left = false; if (e.key === 'ArrowRight' || e.key === 'd') keys.right = false; });
+  $('go').onclick = start; step();
+</script>
+</body>
+</html>

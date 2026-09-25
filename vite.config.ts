@@ -36,6 +36,13 @@ export default defineConfig({
         start_url: base,
         scope: base,
         share_target: { action: base, method: 'GET', params: { title: 'title', text: 'text', url: 'url' } },
+        // long-press the home-screen icon
+        shortcuts: [
+          { name: 'New task', short_name: 'New', url: `${base}?view=today&new=1`, icons: [{ src: 'icons/icon-192.png', sizes: '192x192' }] },
+          { name: 'Today', url: `${base}?view=today`, icons: [{ src: 'icons/icon-192.png', sizes: '192x192' }] },
+          { name: 'Focus', url: `${base}?view=focus`, icons: [{ src: 'icons/icon-192.png', sizes: '192x192' }] },
+          { name: 'Play', url: `${base}?view=play`, icons: [{ src: 'icons/icon-192.png', sizes: '192x192' }] },
+        ],
         icons: [
           { src: 'icons/icon.svg', sizes: 'any', type: 'image/svg+xml', purpose: 'any' },
           { src: 'icons/icon-maskable.svg', sizes: 'any', type: 'image/svg+xml', purpose: 'maskable' },
@@ -44,7 +51,7 @@ export default defineConfig({
         ],
       },
       workbox: {
-        globPatterns: ['**/*.{js,css,html,svg,png,ico,woff2}'],
+        globPatterns: ['**/*.{js,css,html,svg,png,ico,woff2,json}'],
         navigateFallback: `${base}index.html`,
         navigateFallbackDenylist: [/^\/api\//],
       },

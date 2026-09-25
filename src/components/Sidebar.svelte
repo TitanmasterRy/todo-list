@@ -2,8 +2,12 @@
   import { store, VIEWS } from '../lib/store.svelte';
   import { levelProgress, levelTitle } from '../lib/gamification';
   import { ui } from '../lib/ui.svelte';
+  import { economy } from '../lib/economy.svelte';
+  import { TITLE_TEXT } from '../lib/economy';
 
   const lp = $derived(levelProgress(store.stats.xp));
+  const views = $derived(VIEWS.filter((v) => v.id !== 'play' || store.settings.economyEnabled));
+  const title = $derived(store.settings.equippedTitle ? TITLE_TEXT[store.settings.equippedTitle] : levelTitle(lp.level));
 </script>
 
 <nav class="sidebar" aria-label="Main">
@@ -12,7 +16,7 @@
     <span>Homework</span>
   </div>
   <ul>
-    {#each VIEWS as v (v.id)}
+    {#each views as v (v.id)}
       <li>
         <button class:active={store.view === v.id} onclick={() => store.go(v.id)} aria-current={store.view === v.id ? 'page' : undefined}>
           <span class="ico" aria-hidden="true">{v.icon}</span>
@@ -35,9 +39,16 @@
     </div>
   {/if}
   <div class="grow"></div>
+  {#if store.settings.economyEnabled}
+    <button class="wallet" onclick={() => store.go('play')} title="Coins, chips and vouchers">
+      <span>🪙 {economy.wallet.coins.toLocaleString()}</span>
+      {#if store.settings.casinoEnabled}<span>🎰 {economy.wallet.chips.toLocaleString()}</span>{/if}
+      <span>🎟️ {economy.wallet.vouchers}</span>
+    </button>
+  {/if}
   {#if store.settings.gamification}
-    <div class="level" title="{store.stats.xp} XP">
-      <div class="lvl-row"><span>Lv {lp.level} · {levelTitle(lp.level)}</span><span class="muted">{lp.into}/{lp.needed}</span></div>
+    <div class="level frame-{store.settings.equippedFrame ?? 'none'}" title="{store.stats.xp} XP">
+      <div class="lvl-row"><span>Lv {lp.level} · {title}</span><span class="muted">{lp.into}/{lp.needed}</span></div>
       <div class="bar"><div class="fill" style="width:{lp.pct * 100}%"></div></div>
     </div>
   {/if}
@@ -147,6 +158,33 @@
   }
   .grow {
     flex: 1;
+  }
+  .wallet {
+    display: flex;
+    justify-content: space-between;
+    gap: 6px;
+    font-size: 12px;
+    font-weight: 700;
+    padding: 6px 10px;
+    margin: 0 4px 6px;
+    border-radius: var(--radius-sm);
+    background: var(--bg-elev-2);
+    font-variant-numeric: tabular-nums;
+  }
+  .wallet:hover {
+    background: var(--bg-hover);
+  }
+  .level.frame-frame-gold {
+    box-shadow: 0 0 0 2px #f5c542, 0 0 14px rgba(245, 197, 66, 0.35);
+    border-radius: var(--radius-sm);
+  }
+  .level.frame-frame-neon {
+    box-shadow: 0 0 0 2px var(--accent), 0 0 16px var(--accent);
+    border-radius: var(--radius-sm);
+  }
+  .level.frame-frame-leaf {
+    box-shadow: 0 0 0 2px #2e7d32, 0 0 12px rgba(46, 125, 50, 0.4);
+    border-radius: var(--radius-sm);
   }
   .level {
     padding: 8px 10px;

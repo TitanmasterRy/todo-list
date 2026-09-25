@@ -15,7 +15,7 @@ import { emit } from './events';
 import { toasts } from './toast.svelte';
 import { configureSounds, playSound } from './sounds';
 
-export type View = 'today' | 'upcoming' | 'courses' | 'inbox' | 'focus' | 'stats' | 'tools' | 'schoology' | 'settings';
+export type View = 'today' | 'upcoming' | 'courses' | 'inbox' | 'focus' | 'stats' | 'tools' | 'schoology' | 'play' | 'settings';
 export const VIEWS: { id: View; label: string; icon: string; key: string }[] = [
   { id: 'today', label: 'Today', icon: '☀️', key: '1' },
   { id: 'upcoming', label: 'Upcoming', icon: '📅', key: '2' },
@@ -25,6 +25,7 @@ export const VIEWS: { id: View; label: string; icon: string; key: string }[] = [
   { id: 'stats', label: 'Stats', icon: '📈', key: '6' },
   { id: 'tools', label: 'Tools', icon: '🧰', key: '7' },
   { id: 'schoology', label: 'Schoology', icon: '🔄', key: '8' },
+  { id: 'play', label: 'Play', icon: '🎮', key: '9' },
   { id: 'settings', label: 'Settings', icon: '⚙️', key: '' },
 ];
 
