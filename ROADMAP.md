@@ -21,7 +21,7 @@ Everything we could improve or add to Homework To-Do, grouped by area. Checked i
 
 ## 🧱 Code health
 
-- [ ] Split `store.svelte.ts` (1,000 lines) into tasks, courses, stats and sync pieces.
+- [x] Split `store.svelte.ts` (1,000 lines) into tasks, courses, stats and sync pieces. Done: planning, courses/templates, notecards and imports live in `src/lib/store/`, attached to the same `store`.
 - [ ] Split `ToolsView.svelte` and `SettingsView.svelte` into one component per section.
 - [ ] Move the 2,600-line `studyhelp.ts` content into lazily loaded JSON/Markdown.
 - [x] ESLint + Prettier + a pre-commit hook.
@@ -61,16 +61,16 @@ Everything we could improve or add to Homework To-Do, grouped by area. Checked i
 
 ## ✅ Core to-do features
 
-- [ ] Task dependencies ("Outline" before "Draft essay"), blocked tasks dimmed.
+- [x] Task dependencies ("Outline" before "Draft essay"), blocked tasks dimmed.
 - [ ] Auto-split big projects into dated milestones working back from the due date.
-- [ ] Per-task reminders ("30 min before", "the night before").
+- [x] Per-task reminders ("30 min before", "the night before").
 - [ ] Attachments on tasks (photo of the worksheet, a PDF) stored in IndexedDB.
-- [ ] Saved filters / smart lists ("Exams in the next 14 days").
+- [x] Saved filters / smart lists ("Exams in the next 14 days").
 - [ ] Kanban board (To do / Doing / Done) per course or project.
 - [x] Month calendar view next to Upcoming.
-- [ ] Time tracking per task vs. estimate, with a personal "estimates are usually off by X%" note.
+- [x] Time tracking per task vs. estimate, with a personal "estimates are usually off by X%" note.
 - [x] "What should I do now?" auto-priority from due date, weight and estimate.
-- [ ] Recurrence exceptions (skip one) and "every 2nd Tuesday".
+- [x] Recurrence exceptions (skip one) and "every 2nd Tuesday".
 - [x] Trash can: deleted tasks kept 30 days and restorable (built on the tombstones).
 
 ## 🎓 School features
@@ -88,9 +88,9 @@ Everything we could improve or add to Homework To-Do, grouped by area. Checked i
 
 ## 🧠 Study tools
 
-- [ ] SM-2 / FSRS scheduling for notecards.
-- [ ] Image and cloze (fill-in-the-blank) notecards.
-- [ ] Anki `.apkg` and Quizlet import/export.
+- [x] SM-2 / FSRS scheduling for notecards. (FSRS v4.5, with Again/Hard/Good/Easy.)
+- [x] Image and cloze (fill-in-the-blank) notecards.
+- [x] Anki `.apkg` and Quizlet import/export. (Anki `.apkg` import and text export; Quizlet exports paste straight into the deck importer.)
 - [ ] Practice-test mode that plays quizzes in the app, with scores over time.
 - [ ] Shared study-room timer by link.
 - [x] Citation generator (MLA/APA/Chicago) from URL, ISBN or DOI.

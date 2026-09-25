@@ -3,18 +3,20 @@ import type { Card, Course, DayNote, Deck, ExportBundle, LedgerEntry, Priority, 
 import { buildBundle, mergeTombstones, TRASH_DAYS, type BundleData } from './backup';
 import { DEFAULT_STATS } from './types';
 import { uid } from './id';
-import { addDaysKey, dueKey, isDateOnly, isDueToday, isOverdue, isoNow, nextWeekKey, thisWeekendKey, todayKey, daysAgoKey, startOfWeekKey as startOfWeekKeyFn } from './dates';
-import { applyCompletion, applyGrade, applyStudySession, effectiveStreak, evaluateBadges, isPowerHour, rollCollectible, STREAK_MILESTONES, type ComboState } from './gamification';
+import { addDaysKey, dueKey, isDueToday, isOverdue, isoNow, todayKey, daysAgoKey, startOfWeekKey as startOfWeekKeyFn } from './dates';
+import { applyCompletion, applyGrade, effectiveStreak, isPowerHour, rollCollectible, STREAK_MILESTONES, type ComboState } from './gamification';
 import { applyThemePack } from './themes';
 import { applyFont } from './fonts';
-import { review as reviewCard } from './flashcards';
-import type { ExternalAssignment, SyncDiff } from './schoology';
 import { autoDescribe } from './autodescribe';
-import { nextOccurrenceKey, spawnNextInstance } from './recurrence';
+import { spawnNextInstance } from './recurrence';
 import { undo } from './undo.svelte';
 import { emit } from './events';
 import { toasts } from './toast.svelte';
 import { configureSounds, playSound } from './sounds';
+import { planningMethods } from './store/planning.svelte';
+import { organizeMethods } from './store/organize.svelte';
+import { notecardsMethods } from './store/notecards.svelte';
+import { externalMethods } from './store/external.svelte';
 
 export type View = 'today' | 'upcoming' | 'courses' | 'inbox' | 'focus' | 'stats' | 'tools' | 'schoology' | 'play' | 'settings';
 export const VIEWS: { id: View; label: string; icon: string; key: string }[] = [
@@ -38,7 +40,8 @@ export type NewTaskInput = Partial<Omit<Task, 'id' | 'createdAt' | 'updatedAt' |
 
 const LINGER_MS = 700;
 
-class Store {
+// eslint-disable-next-line @typescript-eslint/no-unsafe-declaration-merging -- method groups are merged in below
+export class Store {
   tasks = $state<Task[]>([]);
   courses = $state<Course[]>([]);
   templates = $state<Template[]>([]);
@@ -173,22 +176,26 @@ class Store {
   }
 
   // ---------- persistence helpers ----------
-  private persistTask(task: Task): void {
+  /** @internal */
+  persistTask(task: Task): void {
     db.putTask($state.snapshot(task) as Task).catch((e) => console.error('save failed', e));
     emit('changed', { reason: 'task' });
   }
-  private persistTasks(tasks: Task[]): void {
+  /** @internal */
+  persistTasks(tasks: Task[]): void {
     db.putTasks(tasks.map((t) => $state.snapshot(t) as Task)).catch((e) => console.error('save failed', e));
     emit('changed', { reason: 'tasks' });
   }
-  private persistStats(): void {
+  /** @internal */
+  persistStats(): void {
     db.putStats($state.snapshot(this.stats) as Stats).catch((e) => console.error('save failed', e));
     emit('changed', { reason: 'stats' });
   }
 
   // ---------- deletions (tombstones + trash) ----------
   /** Record deletions so sync removes them on other devices too. Task snapshots go to the trash. */
-  private bury(kind: TombstoneKind, ids: string[], snapshots: Task[] = []): void {
+  /** @internal */
+  bury(kind: TombstoneKind, ids: string[], snapshots: Task[] = []): void {
     if (!ids.length) return;
     const at = isoNow();
     const snap = new Map(snapshots.map((t) => [t.id, t]));
@@ -200,14 +207,16 @@ class Store {
     this.persistTombstones();
   }
   /** Forget deletions (undo / restore). The restored item also gets a fresh updatedAt so it outranks the tombstone elsewhere. */
-  private unbury(kind: TombstoneKind, ids: string[]): void {
+  /** @internal */
+  unbury(kind: TombstoneKind, ids: string[]): void {
     const set = new Set(ids);
     const next = this.tombstones.filter((t) => !(t.kind === kind && set.has(t.id)));
     if (next.length === this.tombstones.length) return;
     this.tombstones = next;
     this.persistTombstones();
   }
-  private persistTombstones(): void {
+  /** @internal */
+  persistTombstones(): void {
     db.putTombstones($state.snapshot(this.tombstones) as Tombstone[]).catch((e) => console.error('save failed', e));
     emit('changed', { reason: 'tombstones' });
   }
@@ -257,7 +266,8 @@ class Store {
   snapshotBundle(): ExportBundle {
     return buildBundle(this.snapshotData());
   }
-  private snapshotData(): BundleData {
+  /** @internal */
+  snapshotData(): BundleData {
     return {
       tasks: $state.snapshot(this.tasks) as Task[],
       courses: $state.snapshot(this.courses) as Course[],
@@ -272,7 +282,8 @@ class Store {
   }
 
   // ---------- tasks ----------
-  private nextOrder(): number {
+  /** @internal */
+  nextOrder(): number {
     return this.tasks.reduce((m, t) => Math.max(m, t.order), 0) + 1;
   }
 
@@ -344,7 +355,8 @@ class Store {
     return created;
   }
 
-  private removeTaskInternal(id: string, toTrash = false): void {
+  /** @internal */
+  removeTaskInternal(id: string, toTrash = false): void {
     const snap = toTrash ? this.tasks.find((t) => t.id === id) : undefined;
     this.tasks = this.tasks.filter((t) => t.id !== id);
     db.deleteTask(id).catch((e) => console.error(e));
@@ -352,7 +364,8 @@ class Store {
     emit('changed', { reason: 'task' });
   }
 
-  private restoreTaskInternal(task: Task): void {
+  /** @internal */
+  restoreTaskInternal(task: Task): void {
     // a fresh updatedAt makes the restored version win over older copies (and tombstones) on other devices
     task = { ...task, updatedAt: isoNow() };
     this.unbury('task', [task.id]);
@@ -475,69 +488,6 @@ class Store {
     if (milestone) emit('streakMilestone', { days: milestone });
   }
 
-  /** Add imported tasks (CSV import) in one undoable step. Course names are matched or created. Done tasks arrive completed without XP. */
-  importTasks(
-    items: {
-      title: string;
-      notes?: string;
-      dueAt?: string;
-      priority: Priority;
-      course?: string;
-      tags: string[];
-      type?: Task['type'];
-      estimateMin?: number;
-      done: boolean;
-      subtasks: string[];
-    }[],
-  ): Task[] {
-    const now = isoNow();
-    let order = this.nextOrder();
-    const courseIds = new Map<string, string>();
-    const courseFor = (name?: string): string | undefined => {
-      if (!name) return undefined;
-      const key = name.trim().toLowerCase();
-      if (!courseIds.has(key)) courseIds.set(key, (this.findCourseByName(name) ?? this.addCourse({ name: name.trim().slice(0, 40), color: '#6c5ce7' })).id);
-      return courseIds.get(key);
-    };
-    const created: Task[] = items.map((i) => {
-      const id = uid('t');
-      return {
-        id,
-        title: i.title,
-        notes: i.notes,
-        courseId: courseFor(i.course),
-        tags: i.tags,
-        priority: i.priority,
-        dueAt: i.dueAt,
-        estimateMin: i.estimateMin,
-        type: i.type,
-        subtasks: i.subtasks.map((s, k) => ({ id: `${id}_s${k}`, title: s, done: i.done })),
-        createdAt: now,
-        updatedAt: now,
-        completedAt: i.done ? now : undefined,
-        order: order++,
-        deferredCount: 0,
-      };
-    });
-    if (!created.length) return [];
-    this.tasks = [...this.tasks, ...created];
-    this.persistTasks(created);
-    undo.push(
-      {
-        label: `Imported ${created.length} tasks`,
-        undo: () => {
-          const ids = new Set(created.map((t) => t.id));
-          this.tasks = this.tasks.filter((t) => !ids.has(t.id));
-          db.deleteTasks([...ids]).catch(() => {});
-          this.bury('task', [...ids]);
-        },
-      },
-      { timeout: 8000 },
-    );
-    return created;
-  }
-
-  /** Duplicate a task (same fields, not completed, placed right after the original). */
   duplicateTask(id: string): Task | undefined {
     const t = this.tasks.find((x) => x.id === id);
     if (!t) return undefined;
@@ -671,201 +621,12 @@ class Store {
     });
   }
 
-  /** Snooze: reschedule to a day, keeping the time of day if there was one. */
-  snoozeTask(id: string, toKey: string, label = 'Snoozed'): void {
-    const task = this.tasks.find((t) => t.id === id);
-    if (!task) return;
-    const snapshot = structuredClone($state.snapshot(task)) as Task;
-    let dueAt: string = toKey;
-    if (task.dueAt && !isDateOnly(task.dueAt)) {
-      const d = new Date(task.dueAt);
-      const n = new Date(toKey + 'T00:00:00');
-      n.setHours(d.getHours(), d.getMinutes(), 0, 0);
-      dueAt = n.toISOString();
-    }
-    const next: Task = { ...task, dueAt, deferredCount: task.deferredCount + 1, updatedAt: isoNow(), pinnedDay: undefined };
-    this.tasks = this.tasks.map((t) => (t.id === id ? next : t));
-    this.persistTask(next);
-    undo.push({ label: `${label} “${task.title}”`, undo: () => this.restoreTaskInternal(snapshot) });
-  }
-
-  snoozeTomorrow(id: string): void {
-    this.snoozeTask(id, addDaysKey(this.today, 1), 'Snoozed to tomorrow');
-  }
-  snoozeWeekend(id: string): void {
-    this.snoozeTask(id, thisWeekendKey(this.now), 'Snoozed to the weekend');
-  }
-  snoozeNextWeek(id: string): void {
-    this.snoozeTask(id, nextWeekKey(this.now, this.settings.weekStart), 'Snoozed to next week');
-  }
-
-  rollOverdueToToday(): void {
-    const overdue = this.overdueTasks;
-    if (!overdue.length) return;
-    const snaps = overdue.map((t) => structuredClone($state.snapshot(t)) as Task);
-    const now = isoNow();
-    const updated = overdue.map((t) => {
-      let dueAt: string = this.today;
-      if (t.dueAt && !isDateOnly(t.dueAt)) {
-        const d = new Date(t.dueAt);
-        const n = new Date();
-        n.setHours(d.getHours(), d.getMinutes(), 0, 0);
-        dueAt = n.toISOString();
-      }
-      return { ...t, dueAt, deferredCount: t.deferredCount + 1, updatedAt: now };
-    });
-    const map = new Map(updated.map((t) => [t.id, t]));
-    this.tasks = this.tasks.map((t) => map.get(t.id) ?? t);
-    this.persistTasks(updated);
-    undo.push({
-      label: `Rolled ${updated.length} overdue to today`,
-      undo: () => {
-        const now = isoNow();
-        const back = snaps.map((t) => ({ ...t, updatedAt: now }));
-        const m = new Map(back.map((t) => [t.id, t]));
-        this.tasks = this.tasks.map((t) => m.get(t.id) ?? t);
-        this.persistTasks(back);
-      },
-    });
-  }
-
-  toggleSubtask(taskId: string, subId: string): void {
-    const task = this.tasks.find((t) => t.id === taskId);
-    if (!task) return;
-    const subtasks = task.subtasks.map((s) => (s.id === subId ? { ...s, done: !s.done } : s));
-    this.updateTask(taskId, { subtasks });
-    playSound('tick');
-  }
-
-  addSubtask(taskId: string, title: string): void {
-    const task = this.tasks.find((t) => t.id === taskId);
-    if (!task || !title.trim()) return;
-    this.updateTask(taskId, { subtasks: [...task.subtasks, { id: uid('s'), title: title.trim(), done: false }] });
-  }
-
-  removeSubtask(taskId: string, subId: string): void {
-    const task = this.tasks.find((t) => t.id === taskId);
-    if (!task) return;
-    this.updateTask(taskId, { subtasks: task.subtasks.filter((s) => s.id !== subId) }, { undoable: true, label: 'Removed subtask' });
-  }
-
-  /** Reorder: assign sequential `order` to the given ids (in new order). Other tasks keep theirs. */
-  reorder(orderedIds: string[]): void {
-    const set = new Set(orderedIds);
-    const involved = this.tasks.filter((t) => set.has(t.id));
-    if (involved.length < 2) return;
-    const orders = involved.map((t) => t.order).sort((a, b) => a - b);
-    const now = isoNow();
-    const byId = new Map(this.tasks.map((t) => [t.id, t]));
-    const updated: Task[] = [];
-    orderedIds.forEach((id, i) => {
-      const t = byId.get(id);
-      if (t) updated.push({ ...t, order: orders[i] ?? i, updatedAt: now });
-    });
-    const map = new Map(updated.map((t) => [t.id, t]));
-    this.tasks = this.tasks.map((t) => map.get(t.id) ?? t);
-    this.persistTasks(updated);
-  }
-
-  /** Move a task to a day (drag between days in Upcoming, drag into Today). */
-  moveTaskToDay(id: string, toKey: string | null): void {
-    const task = this.tasks.find((t) => t.id === id);
-    if (!task) return;
-    if (toKey === null) {
-      this.updateTask(id, { dueAt: undefined, pinnedDay: undefined }, { undoable: true, label: `Removed date from “${task.title}”` });
-      return;
-    }
-    if (task.dueAt && dueKey(task.dueAt) === toKey) return;
-    let dueAt: string = toKey;
-    if (task.dueAt && !isDateOnly(task.dueAt)) {
-      const d = new Date(task.dueAt);
-      const n = new Date(toKey + 'T00:00:00');
-      n.setHours(d.getHours(), d.getMinutes(), 0, 0);
-      dueAt = n.toISOString();
-    }
-    this.updateTask(id, { dueAt, pinnedDay: undefined }, { undoable: true, label: `Rescheduled “${task.title}”` });
-  }
-
   // ---------- dependencies ----------
   /** Map of all tasks by id (for blocker lookups). */
   byId = $derived(new Map(this.tasks.map((t) => [t.id, t])));
 
-  // ---------- recurrence ----------
-  /** Skip the current occurrence of a repeating task: move it to the next date without completing it. */
-  skipOccurrence(id: string): void {
-    const task = this.tasks.find((t) => t.id === id);
-    if (!task?.recurrence) return;
-    const from = task.dueAt ? dueKey(task.dueAt) : this.today;
-    const next = nextOccurrenceKey(task.recurrence, from, from);
-    if (!next) {
-      toasts.push({ message: 'This was the last one in the series', kind: 'info' });
-      return;
-    }
-    let dueAt: string = next;
-    if (task.dueAt && !isDateOnly(task.dueAt)) {
-      const d = new Date(task.dueAt);
-      const n = new Date(next + 'T00:00:00');
-      n.setHours(d.getHours(), d.getMinutes(), 0, 0);
-      dueAt = n.toISOString();
-    }
-    this.updateTask(
-      id,
-      { dueAt, pinnedDay: undefined, subtasks: task.subtasks.map((st) => ({ ...st, done: false })) },
-      { undoable: true, label: `Skipped “${task.title}” to ${next}` },
-    );
-  }
-
   // ---------- time tracking ----------
   runningTimer = $derived(this.tasks.find((t) => t.timerStartedAt && !t.completedAt));
-
-  startTimer(id: string): void {
-    const running = this.runningTimer;
-    if (running && running.id !== id) this.stopTimer(running.id);
-    const t = this.tasks.find((x) => x.id === id);
-    if (!t || t.timerStartedAt) return;
-    this.updateTask(id, { timerStartedAt: isoNow() });
-  }
-
-  /** Stop a task's timer and add the elapsed minutes. Returns the minutes added. */
-  stopTimer(id: string): number {
-    const t = this.tasks.find((x) => x.id === id);
-    if (!t?.timerStartedAt) return 0;
-    const min = Math.round((Date.now() - new Date(t.timerStartedAt).getTime()) / 60_000);
-    this.updateTask(id, { timerStartedAt: undefined, timeSpentMin: (t.timeSpentMin ?? 0) + Math.max(0, min) });
-    return min;
-  }
-
-  addTimeSpent(id: string, minutes: number): void {
-    const t = this.tasks.find((x) => x.id === id);
-    if (!t || minutes <= 0) return;
-    this.updateTask(id, { timeSpentMin: (t.timeSpentMin ?? 0) + Math.round(minutes) });
-  }
-
-  /** Move a task earlier or later by whole days (keyboard [ and ]). Undated tasks start from today. */
-  shiftTaskDays(id: string, delta: number): void {
-    const task = this.tasks.find((t) => t.id === id);
-    if (!task) return;
-    const from = task.dueAt ? dueKey(task.dueAt) : this.today;
-    this.moveTaskToDay(id, addDaysKey(from, delta));
-  }
-
-  pinToToday(id: string): void {
-    const task = this.tasks.find((t) => t.id === id);
-    if (!task) return;
-    this.updateTask(id, { pinnedDay: this.today }, { undoable: true, label: `Added “${task.title}” to Today` });
-  }
-
-  unpinToday(id: string): void {
-    const task = this.tasks.find((t) => t.id === id);
-    if (!task) return;
-    this.updateTask(id, { pinnedDay: undefined }, { undoable: true, label: `Removed “${task.title}” from Today` });
-  }
-
-  setFrog(id: string | null): void {
-    const prevFrog = this.frogTask;
-    if (prevFrog && prevFrog.id !== id) this.updateTask(prevFrog.id, { frog: false, frogDate: undefined });
-    if (id) this.updateTask(id, { frog: true, frogDate: this.today });
-  }
 
   // ---------- selection ----------
   toggleSelect(id: string): void {
@@ -890,320 +651,8 @@ class Store {
     this.bulkMode = false;
   }
 
-  // ---------- courses ----------
-  addCourse(input: { name: string; color: string; emoji?: string }): Course {
-    const c: Course = { id: uid('c'), name: input.name.trim(), color: input.color, emoji: input.emoji, archived: false, updatedAt: isoNow() };
-    this.courses = [...this.courses, c];
-    db.putCourse(c).catch((e) => console.error(e));
-    emit('changed', { reason: 'course' });
-    return c;
-  }
-  updateCourse(id: string, patch: Partial<Course>): void {
-    const prev = this.courses.find((c) => c.id === id);
-    if (!prev) return;
-    const next = { ...prev, ...patch, updatedAt: isoNow() };
-    this.courses = this.courses.map((c) => (c.id === id ? next : c));
-    db.putCourse(next).catch((e) => console.error(e));
-    emit('changed', { reason: 'course' });
-  }
-  deleteCourse(id: string): void {
-    const course = this.courses.find((c) => c.id === id);
-    if (!course) return;
-    const affected = this.tasks.filter((t) => t.courseId === id).map((t) => structuredClone($state.snapshot(t)) as Task);
-    this.courses = this.courses.filter((c) => c.id !== id);
-    db.deleteCourse(id).catch((e) => console.error(e));
-    this.bury('course', [id]);
-    const now = isoNow();
-    const updated = affected.map((t) => ({ ...t, courseId: undefined, updatedAt: now }));
-    const map = new Map(updated.map((t) => [t.id, t]));
-    this.tasks = this.tasks.map((t) => map.get(t.id) ?? t);
-    if (updated.length) this.persistTasks(updated);
-    emit('changed', { reason: 'course' });
-    if (this.courseFilter === id) this.courseFilter = null;
-    undo.push(
-      {
-        label: `Deleted course “${course.name}”`,
-        undo: () => {
-          const back = { ...course, updatedAt: isoNow() };
-          this.unbury('course', [id]);
-          this.courses = [...this.courses, back];
-          db.putCourse(back).catch(() => {});
-          const restored = affected.map((t) => ({ ...t, updatedAt: back.updatedAt! }));
-          const m = new Map(restored.map((t) => [t.id, t]));
-          this.tasks = this.tasks.map((t) => m.get(t.id) ?? t);
-          if (restored.length) this.persistTasks(restored);
-        },
-      },
-      { kind: 'warn' },
-    );
-  }
-  findCourseByName(name: string): Course | undefined {
-    const n = name.toLowerCase().replace(/[^a-z0-9]/g, '');
-    return (
-      this.activeCourses.find((c) => c.name.toLowerCase().replace(/[^a-z0-9]/g, '') === n) ??
-      this.activeCourses.find(
-        (c) =>
-          c.name
-            .toLowerCase()
-            .replace(/[^a-z0-9]/g, '')
-            .startsWith(n) && n.length >= 3,
-      )
-    );
-  }
-
-  // ---------- templates ----------
-  saveTemplate(task: Task, name: string): Template {
-    const t: Template = {
-      id: uid('tpl'),
-      name: name.trim().replace(/\s+/g, '-').toLowerCase(),
-      task: {
-        title: task.title,
-        notes: task.notes,
-        courseId: task.courseId,
-        tags: [...task.tags],
-        priority: task.priority,
-        estimateMin: task.estimateMin,
-        type: task.type,
-        weight: task.weight,
-        subtasks: task.subtasks.map((s) => s.title),
-      },
-    };
-    const replaced = this.templates.filter((x) => x.name === t.name);
-    for (const r of replaced) db.deleteTemplate(r.id).catch(() => {});
-    this.bury(
-      'template',
-      replaced.map((r) => r.id),
-    );
-    this.templates = [...this.templates.filter((x) => x.name !== t.name), t];
-    db.putTemplate(t).catch((e) => console.error(e));
-    emit('changed', { reason: 'template' });
-    return t;
-  }
-  deleteTemplate(id: string): void {
-    const t = this.templates.find((x) => x.id === id);
-    if (!t) return;
-    this.templates = this.templates.filter((x) => x.id !== id);
-    db.deleteTemplate(id).catch((e) => console.error(e));
-    this.bury('template', [id]);
-    undo.push({
-      label: `Deleted template @${t.name}`,
-      undo: () => {
-        this.unbury('template', [id]);
-        this.templates = [...this.templates, t];
-        db.putTemplate(t).catch(() => {});
-      },
-    });
-  }
-  findTemplate(name: string): Template | undefined {
-    const n = name.toLowerCase();
-    return this.templates.find((t) => t.name === n) ?? this.templates.find((t) => t.name.startsWith(n));
-  }
-
-  // ---------- day notes ----------
-  saveDayNote(date: string, note: string): void {
-    const n: DayNote = { date, note };
-    this.dayNotes = [...this.dayNotes.filter((x) => x.date !== date), n];
-    db.putDayNote(n).catch((e) => console.error(e));
-    emit('changed', { reason: 'note' });
-  }
-  dayNote(date: string): string {
-    return this.dayNotes.find((n) => n.date === date)?.note ?? '';
-  }
-
-  markRingCelebrated(day: string): void {
-    this.stats = { ...this.stats, ringCelebratedDate: day };
-    this.persistStats();
-  }
-
-  // ---------- notecards ----------
-  private persistCards(cards: Card[]): void {
-    db.putCards(cards.map((c) => $state.snapshot(c) as Card)).catch((e) => console.error(e));
-    emit('changed', { reason: 'cards' });
-  }
-  addDeck(name: string, courseId?: string): Deck {
-    const now = isoNow();
-    const d: Deck = { id: uid('deck'), name: name.trim() || 'Untitled deck', courseId, createdAt: now, updatedAt: now };
-    this.decks = [...this.decks, d];
-    db.putDeck(d).catch((e) => console.error(e));
-    emit('changed', { reason: 'deck' });
-    return d;
-  }
-  updateDeck(id: string, patch: Partial<Deck>): void {
-    const prev = this.decks.find((d) => d.id === id);
-    if (!prev) return;
-    const next = { ...prev, ...patch, updatedAt: isoNow() };
-    this.decks = this.decks.map((d) => (d.id === id ? next : d));
-    db.putDeck(next).catch((e) => console.error(e));
-    emit('changed', { reason: 'deck' });
-  }
-  deleteDeck(id: string): void {
-    const deck = this.decks.find((d) => d.id === id);
-    if (!deck) return;
-    const cards = this.cards.filter((c) => c.deckId === id).map((c) => structuredClone($state.snapshot(c)) as Card);
-    this.decks = this.decks.filter((d) => d.id !== id);
-    this.cards = this.cards.filter((c) => c.deckId !== id);
-    db.deleteDeck(id).catch((e) => console.error(e));
-    this.bury('deck', [id]);
-    emit('changed', { reason: 'deck' });
-    undo.push(
-      {
-        label: `Deleted deck “${deck.name}”`,
-        undo: () => {
-          const now = isoNow();
-          const d = { ...deck, updatedAt: now };
-          const back = cards.map((c) => ({ ...c, updatedAt: now }));
-          this.unbury('deck', [id]);
-          this.decks = [...this.decks, d];
-          this.cards = [...this.cards, ...back];
-          db.putDeck(d).catch(() => {});
-          this.persistCards(back);
-        },
-      },
-      { kind: 'warn' },
-    );
-  }
-  addCards(deckId: string, items: { front: string; back: string; frontImage?: string; backImage?: string; noteId?: string }[]): Card[] {
-    const now = isoNow();
-    const cards: Card[] = items
-      .filter((i) => (i.front.trim() || i.frontImage) && (i.back.trim() || i.backImage))
-      .map((i) => ({
-        id: uid('card'),
-        deckId,
-        front: i.front.trim(),
-        back: i.back.trim(),
-        box: 1,
-        due: this.today,
-        reps: 0,
-        lapses: 0,
-        createdAt: now,
-        updatedAt: now,
-        ...(i.frontImage ? { frontImage: i.frontImage } : {}),
-        ...(i.backImage ? { backImage: i.backImage } : {}),
-        ...(i.noteId ? { noteId: i.noteId } : {}),
-      }));
-    if (!cards.length) return [];
-    this.cards = [...this.cards, ...cards];
-    this.persistCards(cards);
-    this.updateDeck(deckId, {});
-    return cards;
-  }
-  updateCard(id: string, patch: Partial<Card>): void {
-    const prev = this.cards.find((c) => c.id === id);
-    if (!prev) return;
-    const next = { ...prev, ...patch, updatedAt: isoNow() };
-    this.cards = this.cards.map((c) => (c.id === id ? next : c));
-    this.persistCards([next]);
-  }
-  deleteCard(id: string): void {
-    const card = this.cards.find((c) => c.id === id);
-    if (!card) return;
-    const snap = structuredClone($state.snapshot(card)) as Card;
-    this.cards = this.cards.filter((c) => c.id !== id);
-    db.deleteCard(id).catch((e) => console.error(e));
-    this.bury('card', [id]);
-    undo.push({
-      label: 'Deleted card',
-      undo: () => {
-        const back = { ...snap, updatedAt: isoNow() };
-        this.unbury('card', [id]);
-        this.cards = [...this.cards, back];
-        this.persistCards([back]);
-      },
-    });
-  }
-  /** Record one answer during a study session. */
-  /** Record one answer: true/false (Good/Again) or an FSRS rating 1–4. */
-  answerCard(id: string, correct: boolean | 1 | 2 | 3 | 4): void {
-    const card = this.cards.find((c) => c.id === id);
-    if (!card) return;
-    const next = reviewCard($state.snapshot(card) as Card, correct, this.today);
-    this.cards = this.cards.map((c) => (c.id === id ? next : c));
-    this.persistCards([next]);
-  }
-  /** Award XP at the end of a study session. */
-  finishStudySession(reviewed: number, correct: number, clearedAll: boolean): void {
-    if (!reviewed) return;
-    const r = applyStudySession($state.snapshot(this.stats) as Stats, reviewed, correct, clearedAll, this.today, this.openTasks.length);
-    this.stats = r.stats;
-    this.persistStats();
-    emit('studied', { reviewed, correct, xp: r.xp.xp, clearedAll, leveledUp: r.leveledUp, newLevel: r.newLevel, newBadges: r.newBadges });
-    if (r.leveledUp) emit('levelup', { level: r.newLevel });
-    for (const b of r.newBadges) emit('badge', { id: b });
-  }
-
   // ---------- external sync (Schoology) ----------
   syncedTasks = $derived(this.tasks.filter((t) => t.source === 'schoology'));
-
-  /** Apply a sync diff: create new assignment tasks, update changed ones. Returns counts. */
-  applySyncDiff(
-    diff: SyncDiff,
-    resolveCourse: (a: ExternalAssignment) => string | undefined,
-    describe?: (a: ExternalAssignment) => Partial<Task>,
-  ): { created: number; updated: number } {
-    const now = isoNow();
-    const created: Task[] = [];
-    let order = this.nextOrder();
-    for (const a of diff.create) {
-      const id = uid('t');
-      const extra = describe?.(a) ?? {};
-      const task: Task = {
-        id,
-        title: a.title,
-        notes: a.notes || extra.notes,
-        courseId: resolveCourse(a),
-        tags: extra.tags ?? [],
-        priority: a.type === 'exam' ? 'high' : 'normal',
-        dueAt: a.dueAt,
-        estimateMin: extra.estimateMin,
-        type: a.type,
-        subtasks: (extra.subtasks ?? []).map((s, i) => ({ id: `${id}_s${i}`, title: s.title, done: false })),
-        createdAt: now,
-        updatedAt: now,
-        order: order++,
-        deferredCount: 0,
-        source: 'schoology',
-        externalId: a.externalId,
-        url: a.url,
-        syncedAt: now,
-        autoDescribed: !!extra.notes,
-      };
-      created.push(task);
-    }
-    const byExt = new Map(this.tasks.filter((t) => t.externalId).map((t) => [t.externalId!, t]));
-    const updated: Task[] = [];
-    for (const u of diff.update) {
-      const t = byExt.get(u.externalId);
-      if (!t) continue;
-      updated.push({ ...t, ...u.patch, syncedAt: now, updatedAt: now });
-    }
-    const map = new Map(updated.map((t) => [t.id, t]));
-    this.tasks = [...this.tasks.map((t) => map.get(t.id) ?? t), ...created];
-    const all = [...created, ...updated];
-    if (all.length) this.persistTasks(all);
-    if (created.length || updated.length) {
-      const stats = structuredClone($state.snapshot(this.stats)) as Stats;
-      stats.syncedCount = (stats.syncedCount ?? 0) + created.length;
-      const newBadges = evaluateBadges(stats, { openTasksRemaining: this.openTasks.length, today: this.today });
-      stats.badges = [...stats.badges, ...newBadges];
-      this.stats = stats;
-      this.persistStats();
-      for (const b of newBadges) emit('badge', { id: b });
-    }
-    emit('synced', { created: created.length, updated: updated.length });
-    return { created: created.length, updated: updated.length };
-  }
-
-  // ---------- pomodoro ----------
-  recordPomodoro(): void {
-    const stats = structuredClone($state.snapshot(this.stats)) as Stats;
-    stats.pomodorosByDay[this.today] = (stats.pomodorosByDay[this.today] ?? 0) + 1;
-    const newBadges = evaluateBadges(stats, { openTasksRemaining: this.openTasks.length, today: this.today });
-    stats.badges = [...stats.badges, ...newBadges];
-    this.stats = stats;
-    this.persistStats();
-    emit('pomodoroDone', { day: this.today, count: stats.pomodorosByDay[this.today] });
-    for (const b of newBadges) emit('badge', { id: b });
-  }
 
   // ---------- data management ----------
   async archiveOldCompleted(): Promise<void> {
@@ -1288,5 +737,14 @@ export function byFrogThenOrder(a: Task, b: Task): number {
 }
 
 export const PRIORITY_LABEL: Record<Priority, string> = { low: 'Low', normal: 'Normal', high: 'High', urgent: 'Urgent' };
+
+type PlanningMethods = typeof planningMethods;
+type OrganizeMethods = typeof organizeMethods;
+type NotecardMethods = typeof notecardsMethods;
+type ExternalMethods = typeof externalMethods;
+// The method groups live in ./store/*; merging them into the class type keeps store.method(...) typed.
+// eslint-disable-next-line @typescript-eslint/no-unsafe-declaration-merging
+export interface Store extends PlanningMethods, OrganizeMethods, NotecardMethods, ExternalMethods {}
+Object.assign(Store.prototype, planningMethods, organizeMethods, notecardsMethods, externalMethods);
 
 export const store = new Store();

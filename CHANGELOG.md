@@ -1,5 +1,12 @@
 # Changelog
 
+## Roadmap pass 3: task planning, smarter notecards, store split
+
+- **Tasks:** "waiting on" dependencies (blocked tasks are dimmed and can be hidden), per-task reminders (minutes before, the night before, the morning of, or a set time), a start/stop timer with tracked time next to the estimate and an "estimates are usually off by X%" note, repeat every n weeks / monthly / "2nd Tuesday", and "Skip this one" for a single occurrence.
+- **Saved lists:** save any Inbox filter as a sidebar list, with presets like "Exams in the next 14 days"; new due-window, priority and waiting filters.
+- **Notecards:** FSRS scheduling with Again/Hard/Good/Easy and next-interval previews, picture cards, fill-in-the-blank cards (`{{c1::answer}}`), Anki `.apkg` import and Anki text export.
+- **Code health:** `store.svelte.ts` is split into method groups under `src/lib/store/` (planning, courses and templates, notecards, imports) with the same `store.method(...)` API.
+
 ## Roadmap pass 2: quality, accessibility, planning, study tools, quests, more games
 
 - **Quality:** ESLint + Prettier, Playwright end-to-end tests against the production build (offline, phone layout, shop/casino/arcade, tools, economy), axe accessibility checks on every view in light and dark, a unit-tested contrast audit of every theme pack, first-load bundle budget, Dependabot. Less-used views and editor languages load on demand (first load 199 → ~114 kB gzipped).

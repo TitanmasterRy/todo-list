@@ -199,6 +199,7 @@ Press `?` in the app for the sheet.
 
 ```
 src/lib/         types, storage (IndexedDB), store, dates, parser, recurrence, gamification, backup, gist sync, sounds
+src/lib/store/   store method groups (planning, courses and templates, notecards, imports) merged into the store
 src/components/  task item, checkbox, quick add, editor, sortable list, toasts, feedback layer, palette, dialogs
 src/views/       Today, Upcoming, Courses, Inbox, Focus, Stats, Tools, Schoology, Play, Settings
 src/lib/casino/  casino game rules (slots, blackjack, roulette, poker, baccarat, craps, quick games)
