@@ -260,5 +260,6 @@ Each ships as a standalone HTML file in `public/games/`, so they double as examp
 - [ ] Dropbox / OneDrive / pick-a-file sync.
 - [ ] Per-task edit history.
 - [x] Import from Todoist (and any CSV).
-- [ ] Import from Google Tasks and Microsoft To Do.
+- [x] Import from Google Tasks. (Settings → Data → Import: the Tasks.json from Google Takeout; lists become tags, child tasks become steps.)
+- [ ] Import from Microsoft To Do (it has no export file; would need a Microsoft Graph app).
 - [x] CSV and Markdown export.

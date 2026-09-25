@@ -62,3 +62,37 @@ test('CSV export and import round-trip', async ({ page }, info) => {
   await page.keyboard.press('4'); // Inbox
   await expect(page.locator('.task', { hasText: 'Imported essay' })).toBeVisible();
 });
+
+test('import from Google Tasks (Takeout Tasks.json)', async ({ page }) => {
+  await openApp(page, { autoDescribe: false });
+  await page
+    .getByRole('button', { name: /Settings/ })
+    .first()
+    .click();
+  const takeout = {
+    kind: 'tasks#taskLists',
+    items: [
+      {
+        kind: 'tasks#taskList',
+        title: 'AP Bio',
+        items: [
+          { kind: 'tasks#task', id: 'a', title: 'Lab report 3', status: 'needsAction', due: '2099-10-09T00:00:00.000Z' },
+          { kind: 'tasks#task', id: 'b', title: 'Graph the data', status: 'needsAction', parent: 'a' },
+        ],
+      },
+    ],
+  };
+  await page.locator('input[aria-label="Import CSV file"]').setInputFiles({ name: 'Tasks.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(takeout)) });
+  await expect(page.locator('.csvprev')).toContainText('1 tasks found');
+  await expect(page.locator('.csvprev')).toContainText('Google Tasks: AP Bio');
+  await page
+    .locator('.csvprev')
+    .getByRole('button', { name: /Import/ })
+    .click();
+  await page.keyboard.press('Escape');
+  await page.locator('body').click({ position: { x: 5, y: 5 } });
+  await page.keyboard.press('4');
+  const t = page.getByRole('group', { name: 'Lab report 3' });
+  await expect(t).toContainText('#ap-bio');
+  await expect(t).toContainText('0/1');
+});

@@ -47,12 +47,24 @@
   let importMode = $state<'replace' | 'merge'>('merge');
 
   let csvInput: HTMLInputElement | undefined = $state();
-  let csvPreview = $state<ReturnType<typeof importCSV> | null>(null);
+  let csvPreview = $state<(ReturnType<typeof importCSV> & { from?: string }) | null>(null);
   async function pickCSV(e: Event) {
     const f = (e.target as HTMLInputElement).files?.[0];
     (e.target as HTMLInputElement).value = '';
     if (!f) return;
-    csvPreview = importCSV(await f.text());
+    const text = await f.text();
+    // a Google Takeout Tasks.json, or CSV (this app, Todoist, spreadsheets)
+    if (/\.json$/i.test(f.name) || text.trimStart().startsWith('{')) {
+      const { importGoogleTasks } = await import('../../lib/googletasks');
+      const g = importGoogleTasks(text);
+      if (!g) {
+        toasts.push({ message: 'That JSON isn’t a Google Tasks export', detail: 'For a Homework To-Do backup, use Import backup instead.', kind: 'warn' });
+        return;
+      }
+      csvPreview = { tasks: g.tasks, columns: {}, skipped: g.skipped, from: `Google Tasks${g.lists.length ? `: ${g.lists.join(', ')}` : ''}` };
+      return;
+    }
+    csvPreview = importCSV(text);
   }
   function confirmCSV() {
     if (!csvPreview) return;
@@ -217,18 +229,27 @@
     <button class="btn" onclick={() => downloadText(`homework-todo-${store.today}.md`, tasksToMarkdown($state.snapshot(store.tasks) as Task[], store.courses), 'text/markdown')}
       >Export Markdown</button
     >
-    <button class="btn" onclick={() => csvInput?.click()}>Import CSV…</button>
-    <input type="file" accept=".csv,text/csv,.tsv,text/tab-separated-values,.txt" bind:this={csvInput} onchange={pickCSV} class="visually-hidden" aria-label="Import CSV file" />
+    <button class="btn" onclick={() => csvInput?.click()}>Import CSV or Google Tasks…</button>
+    <input
+      type="file"
+      accept=".csv,text/csv,.tsv,text/tab-separated-values,.txt,.json,application/json"
+      bind:this={csvInput}
+      onchange={pickCSV}
+      class="visually-hidden"
+      aria-label="Import CSV file"
+    />
   </div>
   {#if csvPreview}
     <div class="csvprev card">
       <strong>{csvPreview.tasks.length} tasks found</strong>
       <span class="muted">
-        {Object.keys(csvPreview.columns).length
-          ? `Columns: ${Object.entries(csvPreview.columns)
-              .map(([k, v]) => `${v} → ${k}`)
-              .join(', ')}`
-          : 'No header row: one task per line'}{csvPreview.skipped ? ` · ${csvPreview.skipped} rows skipped` : ''}
+        {csvPreview.from
+          ? csvPreview.from
+          : Object.keys(csvPreview.columns).length
+            ? `Columns: ${Object.entries(csvPreview.columns)
+                .map(([k, v]) => `${v} → ${k}`)
+                .join(', ')}`
+            : 'No header row: one task per line'}{csvPreview.skipped ? ` · ${csvPreview.skipped} rows skipped` : ''}
       </span>
       <ul class="list">
         {#each csvPreview.tasks.slice(0, 5) as t, i (i)}<li>
