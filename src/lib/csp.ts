@@ -15,7 +15,8 @@ export const CONNECT_HOSTS: Record<string, string[]> = {
     'http://127.0.0.1:*',
   ],
   // accounts: the project URL is set per site (or per user), so any Supabase project
-  accounts: ['https://*.supabase.co'],
+  // (wss: for the optional study-room presence over Supabase Realtime)
+  accounts: ['https://*.supabase.co', 'wss://*.supabase.co'],
   gist: ['https://api.github.com', 'https://gist.githubusercontent.com'],
   // Gmail, Calendar, Classroom, Drive app data, userinfo; Google Identity Services
   google: ['https://www.googleapis.com', 'https://gmail.googleapis.com', 'https://classroom.googleapis.com', 'https://accounts.google.com'],

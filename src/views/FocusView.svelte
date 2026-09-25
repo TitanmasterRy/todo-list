@@ -7,7 +7,9 @@
   import { toasts } from '../lib/toast.svelte';
   import Checkbox from '../components/Checkbox.svelte';
   import SnoozeMenu from '../components/SnoozeMenu.svelte';
+  import { socialUi } from '../lib/social/state.svelte';
   const loadMusic = () => import('../components/MusicPanel.svelte');
+  const loadRoom = () => import('../components/social/StudyRoom.svelte');
   let customInput = $state(String(pomodoro.customMin));
   let showMusic = $state(false);
   const stop = $derived(pomodoro.mode === 'stopwatch');
@@ -142,12 +144,16 @@
         <button class="btn ghost" onclick={() => pomodoro.skip()}>Skip</button>
       {/if}
       <button class="btn ghost" onclick={() => (showMusic = !showMusic)} aria-expanded={showMusic}>🎵 Music</button>
+      <button class="btn ghost" onclick={() => (socialUi.roomOpen = !socialUi.roomOpen)} aria-expanded={socialUi.roomOpen}>👥 Study room</button>
       <span class="sessions">{pomodoro.sessions} session{pomodoro.sessions === 1 ? '' : 's'} this sitting</span>
     </div>
   </div>
 
   {#if showMusic}
     {#await loadMusic() then m}<m.default />{/await}
+  {/if}
+  {#if socialUi.roomOpen}
+    {#await loadRoom() then m}<m.default />{/await}
   {/if}
 
   {#if task}

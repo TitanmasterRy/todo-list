@@ -47,7 +47,8 @@ export function configuredAtBuild(): boolean {
 let client: SupabaseClient | null = null;
 let clientKey = '';
 
-async function getClient(): Promise<SupabaseClient> {
+/** The project's client (also used by the optional social features: friend cards, study-room presence). */
+export async function getClient(): Promise<SupabaseClient> {
   const cfg = accountConfig();
   if (!cfg) throw new Error('Accounts are not set up on this site yet. See Settings → Account → Server.');
   const key = `${cfg.url}|${cfg.anonKey}`;

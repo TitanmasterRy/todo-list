@@ -59,7 +59,7 @@ export async function requestNotifications(): Promise<boolean> {
 }
 
 /** Show a notification through the service worker when there is one (required on Android, and clicks open the task), else directly. */
-function notify(title: string, body: string, tag: string, taskId?: string): void {
+export function notify(title: string, body: string, tag: string, taskId?: string): void {
   if (!notificationsSupported() || Notification.permission !== 'granted') return;
   const opts: NotificationOptions = { body, tag, icon: './icons/icon-192.png', badge: './icons/icon-192.png', data: taskId ? { taskId } : { view: 'today' } };
   const direct = () => {

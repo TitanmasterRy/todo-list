@@ -32,7 +32,8 @@
     | 'powerschool'
     | 'essay'
     | 'citations'
-    | 'units';
+    | 'units'
+    | 'class';
   type Group = 'plan' | 'grades' | 'study' | 'compute' | 'connect';
   let tab = $state<Tab>((ui.toolsTab as Tab) || 'planner');
   $effect(() => {
@@ -60,6 +61,7 @@
     { id: 'units', label: 'Unit converter', icon: '📏', group: 'compute' },
     { id: 'code', label: 'Code editor', icon: '💻', group: 'compute' },
     { id: 'google', label: 'Google (Gmail, Classroom, Calendar, Drive)', icon: '🟢', group: 'connect' },
+    { id: 'class', label: 'Class mode', icon: '🧑‍🏫', group: 'connect' },
   ];
   const groups: { id: Group; label: string }[] = [
     { id: 'plan', label: 'Plan' },
@@ -183,6 +185,12 @@
     {/await}
   {:else if tab === 'powerschool'}
     {#await import('../components/tools/PowerSchoolTool.svelte')}
+      <div class="card muted">Loading…</div>
+    {:then m}
+      <m.default />
+    {/await}
+  {:else if tab === 'class'}
+    {#await import('../components/social/ClassMode.svelte')}
       <div class="card muted">Loading…</div>
     {:then m}
       <m.default />

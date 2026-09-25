@@ -2,11 +2,11 @@
 import type { Course, Task } from './types';
 import { isDateOnly, addDaysKey } from './dates';
 
-function esc(s: string): string {
+export function esc(s: string): string {
   return s.replace(/\\/g, '\\\\').replace(/;/g, '\\;').replace(/,/g, '\\,').replace(/\r?\n/g, '\\n');
 }
 
-function fold(line: string): string {
+export function fold(line: string): string {
   // RFC 5545: lines longer than 75 octets are folded with CRLF + space.
   const out: string[] = [];
   let cur = '';
@@ -25,7 +25,7 @@ function fold(line: string): string {
   return out.join('\r\n');
 }
 
-function utcStamp(d: Date): string {
+export function utcStamp(d: Date): string {
   return d
     .toISOString()
     .replace(/[-:]/g, '')

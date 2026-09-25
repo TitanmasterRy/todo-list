@@ -45,6 +45,8 @@ describe('content security policy', () => {
     expect(hostAllowed('https://evil.example', connect)).toBe(false);
     expect(hostAllowed('https://supabase.co.evil.example', connect)).toBe(false);
     expect(hostAllowed('http://api.github.com', connect)).toBe(false);
+    // study-room presence uses Supabase Realtime over a WebSocket
+    expect(connect).toContain('wss://*.supabase.co');
   });
 
   it('adds build-time origins: a self-hosted Supabase, an arcade manifest host, extras', () => {

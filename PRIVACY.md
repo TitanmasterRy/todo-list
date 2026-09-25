@@ -10,6 +10,7 @@ Homework To-Do is local-first. It is a static site with no server of its own, no
 | Settings, API keys and tokens | localStorage (`homework-todo:settings`). With **Lock my keys** on, keys and tokens are blanked there and kept encrypted in `homework-todo:vault` instead. |
 | Account session (only if you sign in) | localStorage (`homework-todo:auth`), managed by the Supabase client |
 | Tool drafts, arcade scores, reminder bookkeeping, UI choices | localStorage (`homework-todo:*`) |
+| Study room you're in, friends list and your friend-card name, class lists you follow or publish | localStorage (`homework-todo:study-room`, `:friends`, `:friend-profile`, `:class-subs`, `:class-published`); not part of the synced data |
 | Google and Spotify access tokens | memory only (gone when the tab closes); the Spotify refresh token is stored like the other keys |
 | The app itself (for offline use) | the service worker cache |
 
@@ -34,6 +35,20 @@ Attachments never leave the device: only their names sync. **Settings â†’ Data â
 | Python in the Code tool, on-device OCR | `cdn.jsdelivr.net` | Downloads of the Pyodide and Tesseract engines and data on first use. Your code and photos stay on the device. |
 | Java / C++ in the Code tool | `onecompiler.com` | Only a link that opens in a new tab; nothing is sent automatically. |
 | Arcade | this site; embed-link games load from their own sites | Games run in sandboxed frames that can't read your data. |
+| Study room link | nobody (you send the link yourself) | The link holds the room's name, start time and timer lengths, in the part after `#`, which browsers don't send to the web host. |
+| Study room "Show who's in" (only with an account) | the site's Supabase project (Realtime) | The name you type, to the others in the same room while you're in it. Nothing is stored. |
+| Friend code | nobody (you send the code yourself) | Your chosen name and emoji, streak, best streak, this week's XP, level and when the code was made. |
+| Live friend card (only with an account, off until you turn it on) | the site's Supabase project (`friend_cards` table) | The same card, in one row under a random id. Anyone with the id (your friends, from your code) can read that row; only your account can change it. Turning it off deletes it. Friends' live cards are read by their ids only. |
+| Class mode: subscribe | the host of the class list link (usually `gist.githubusercontent.com`) | A plain request for the file (no cookies, no referrer). Nothing about you or your tasks is sent back. |
+| Class mode: publish as a gist | `api.github.com`, with your Gist token | A **public** gist with the course name, your teacher name if you typed one, and each assignment's title, due date, type, notes (if ticked) and link. Never grades, completion, time spent or stats. |
+
+## Social features share only what they say
+
+Study rooms, friend codes and class lists were built to work without a server, so nothing is shared unless you send a link or code yourself:
+
+- **Study room links** carry the room, not you. Nobody can see who opened a link unless everyone in the room turns on "Show who's in" with an account.
+- **Friend codes** carry only your name, emoji, streak, best streak, this week's XP (and which week), level and the time you made the code (plus a random id so a fresh code replaces the old one, and the live-card id if that's on). No tasks, courses, grades, coins, badges or anything else. Your friends list stays on this device.
+- **Class lists** a teacher publishes contain only the course name and color, an optional teacher name, and each assignment's title, due date, type, notes and link. Students' devices only download them; subscribing sends nothing back. Everything in a downloaded list is checked (size, types, lengths, http(s) links only) and shown as plain text or the app's own safe markdown.
 
 ## Encryption
 

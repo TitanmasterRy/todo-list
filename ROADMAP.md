@@ -92,7 +92,7 @@ Everything we could improve or add to Homework To-Do, grouped by area. Checked i
 - [x] Image and cloze (fill-in-the-blank) notecards.
 - [x] Anki `.apkg` and Quizlet import/export. (Anki `.apkg` import and text export; Quizlet exports paste straight into the deck importer.)
 - [ ] Practice-test mode that plays quizzes in the app, with scores over time.
-- [ ] Shared study-room timer by link.
+- [x] Shared study-room timer by link. (Focus → Study room: the link holds the room and every device computes the same phase from its clock, no server; chime, notification and long breaks. "Who's in" needs a server, so it's shown only with an account, over Supabase Realtime presence.)
 - [x] Citation generator (MLA/APA/Chicago) from URL, ISBN or DOI.
 - [x] Essay tools: word/page counter, outline template, readability.
 - [x] Unit converter.
@@ -225,8 +225,8 @@ Each ships as a standalone HTML file in `public/games/`, so they double as examp
 
 ## 💡 More ideas
 
-- [ ] Friends by share code: compare streaks and weekly XP only.
-- [ ] Class mode for teachers: publish a read-only assignment list students can subscribe to.
+- [x] Friends by share code: compare streaks and weekly XP only. (Stats → Friends: a versioned code with name, emoji, streak, best, this week's XP and level; leaderboard with card age and a nudge to swap fresh codes. Optional live cards with an account: `friend_cards` in `docs/supabase.sql`.)
+- [x] Class mode for teachers: publish a read-only assignment list students can subscribe to. (Tools → Class mode: publish a course as a `.json` class list, an `.ics` feed or a public gist; students subscribe by link, assignments sync like Schoology's with `source: 'class'`, refreshed on load.)
 - [x] Daily quests ("finish 1 reading, 1 homework, 1 study session") paying bonus coins.
 - [ ] Seasonal events with themed shop items and games.
 - [ ] Focus-mode companions (a cat that sleeps while the timer runs).
@@ -234,7 +234,7 @@ Each ships as a standalone HTML file in `public/games/`, so they double as examp
 - [ ] Voice commands ("Hey, add read chapter four for tomorrow").
 - [ ] Wearable timer (smartwatch notification when a Pomodoro ends).
 - [x] Printable weekly planner PDF. (Upcoming → Print week; save as PDF from the print dialog.)
-- [ ] "Study buddy" matching within a class code.
+- [ ] "Study buddy" matching within a class code. Follow-up to class mode: matching strangers needs a server that knows who's in a class (and moderation, since students are often minors), so it isn't possible with the no-server design. A sketch: an opt-in `class_buddies` table in the account's Supabase project keyed by class list id, with only a display name and a "looking for" topic, readable by others subscribed to the same list, and a mutual accept before any contact detail is shown. Teacher-controlled (off unless the class list turns it on).
 
 ## 📱 Platform and polish
 

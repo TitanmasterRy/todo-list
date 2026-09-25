@@ -59,9 +59,16 @@ What syncs: tasks, courses, templates, notecards, day notes, stats, coins/chips/
 
 Without the build variables, anyone can still paste a project URL and anon key under **Settings → Account → Server** (useful for testing or self-hosting).
 
+### Optional: live friend cards and "who's in" for study rooms
+
+Study rooms, friend codes and class lists work with no server at all. With accounts set up, two extras use the same project:
+
+- **Live friend cards.** The second half of `docs/supabase.sql` creates a `friend_cards` table (one small row per person who turns it on, keyed by a random public id) and a `friend_cards_by_id(ids)` function. Row-level security lets only the owner write or list their row; everyone else can read a row only by asking for its id through the function, so the table can't be browsed. Re-run the whole file on an existing project; it's safe to run twice. Without it, the app says the table is missing and friend codes keep working.
+- **Who's in a study room** uses Supabase Realtime presence on a channel named after the room (no table, nothing stored). It's on by default in new projects; a self-hosted Supabase outside `*.supabase.co` also needs its `wss://` origin in `VITE_CSP_CONNECT`.
+
 ## Content-Security-Policy
 
-`npm run build` puts a `<meta http-equiv="Content-Security-Policy">` into `dist/index.html` (a small plugin in `vite.config.ts`; the host list is `src/lib/csp.ts`). It forbids inline scripts and plugins and only allows connections to the services the app uses: the AI providers, `*.supabase.co`, GitHub, Google, `*.schoology.com` and `*.workers.dev` relays, Spotify, Crossref/Open Library and `cdn.jsdelivr.net` (Python and OCR engines). `VITE_SUPABASE_URL` and `VITE_ARCADE_MANIFEST` origins are added automatically; anything else goes in `VITE_CSP_CONNECT`. If a request is blocked, the app's error message names the origin to add.
+`npm run build` puts a `<meta http-equiv="Content-Security-Policy">` into `dist/index.html` (a small plugin in `vite.config.ts`; the host list is `src/lib/csp.ts`). It forbids inline scripts and plugins and only allows connections to the services the app uses: the AI providers, `*.supabase.co` (and `wss://*.supabase.co` for Realtime), GitHub (`gist.githubusercontent.com` also serves published class lists), Google, `*.schoology.com` and `*.workers.dev` relays, Spotify, Crossref/Open Library and `cdn.jsdelivr.net` (Python and OCR engines). `VITE_SUPABASE_URL` and `VITE_ARCADE_MANIFEST` origins are added automatically; anything else goes in `VITE_CSP_CONNECT`. If a request is blocked, the app's error message names the origin to add.
 
 - The dev server (`npm run dev`) has no policy, since Vite's hot reload needs inline scripts and `ws:`.
 - The offline single-file build (`dist/lite/index.html`) has none either: all of its code is inline.
