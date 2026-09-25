@@ -88,3 +88,18 @@ test('attachments: add a file, see it on the task, remove it', async ({ page }) 
   await expect(row).not.toContainText('📎');
   expect(errors).toEqual([]);
 });
+
+test('break mode pauses the streak and shows on Today', async ({ page }) => {
+  await openApp(page);
+  await page
+    .getByRole('button', { name: /Settings/ })
+    .first()
+    .click();
+  await page.getByLabel('Break name').fill('Fall break');
+  await page.getByLabel('Break starts').fill(inDays(-1));
+  await page.getByLabel('Break ends').fill(inDays(3));
+  await page.getByRole('button', { name: 'Add break' }).click();
+  await expect(page.getByText(/Fall break · .* \(now\)/)).toBeVisible();
+  await goKey(page, '1');
+  await expect(page.getByRole('status').filter({ hasText: 'Fall break' })).toContainText('streak is paused');
+});

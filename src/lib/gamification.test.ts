@@ -1,5 +1,18 @@
 import { describe, expect, it } from 'vitest';
-import { applyCompletion, comboMultiplierFor, computeXp, effectiveStreak, evaluateBadges, levelForXp, levelProgress, updateStreak, xpForLevel } from './gamification';
+import {
+  activeBreak,
+  applyCompletion,
+  breakDaysBetween,
+  comboMultiplierFor,
+  computeXp,
+  effectiveStreak,
+  evaluateBadges,
+  levelForXp,
+  levelProgress,
+  mergeBreaks,
+  updateStreak,
+  xpForLevel,
+} from './gamification';
 import { DEFAULT_STATS, type Stats, type Task } from './types';
 import { accentUnlockedAt, applyGrade, applyStudySession, gradeXp, levelTitle } from './gamification';
 
@@ -212,5 +225,43 @@ describe('early tiers, crit, grades, study, unlocks', () => {
     expect(levelTitle(99)).toBe('Legend');
     expect(accentUnlockedAt(1).length).toBe(4);
     expect(accentUnlockedAt(4).length).toBe(6);
+  });
+});
+
+describe('break mode', () => {
+  const base = (lastDate: string, current = 5, freezes = 0) => ({ current, best: current, lastDate, freezes });
+  const breaks = [{ id: 'b1', from: '2026-12-20', to: '2027-01-03', name: 'Winter break' }];
+
+  it('break days between two dates are not missed days', () => {
+    expect(breakDaysBetween('2026-12-19', '2027-01-04', breaks)).toBe(15);
+    expect(breakDaysBetween('2026-12-01', '2026-12-05', breaks)).toBe(0);
+    expect(breakDaysBetween('2026-12-19', '2027-01-04', [{ ...breaks[0], deleted: true }])).toBe(0);
+  });
+  it('a completion right after a break continues the streak', () => {
+    const r = updateStreak(base('2026-12-19'), '2027-01-04', 0, breaks);
+    expect(r.broke).toBe(false);
+    expect(r.streak.current).toBe(6);
+    expect(r.freezesUsed).toBe(0);
+  });
+  it('without the break the same gap breaks it', () => {
+    expect(updateStreak(base('2026-12-19'), '2027-01-04', 0).broke).toBe(true);
+  });
+  it('the shown streak stays during the break', () => {
+    const stats = { ...structuredClone(DEFAULT_STATS), streak: base('2026-12-19'), breaks };
+    expect(effectiveStreak(stats, '2026-12-28')).toBe(5);
+    expect(effectiveStreak(stats, '2027-01-04')).toBe(5);
+    expect(effectiveStreak(stats, '2027-01-06')).toBe(0);
+    expect(activeBreak(breaks, '2026-12-25')?.name).toBe('Winter break');
+    expect(activeBreak(breaks, '2027-01-04')).toBeUndefined();
+  });
+  it('merges break lists from two devices; removals win', () => {
+    const a = [breaks[0], { id: 'b2', from: '2027-04-01', to: '2027-04-05' }];
+    const b = [
+      { ...breaks[0], deleted: true },
+      { id: 'b3', from: '2027-02-10', to: '2027-02-12' },
+    ];
+    const m = mergeBreaks(a, b);
+    expect(m.map((x) => x.id)).toEqual(['b1', 'b3', 'b2']);
+    expect(m[0].deleted).toBe(true);
   });
 });

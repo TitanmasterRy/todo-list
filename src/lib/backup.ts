@@ -1,5 +1,6 @@
 import type { ExportBundle, Task, Course, Template, Stats, DayNote, Deck, Card, Tombstone, LedgerEntry } from './types';
 import { DEFAULT_STATS } from './types';
+import { mergeBreaks } from './gamification';
 
 /** Tombstones older than this are forgotten (every device has synced by then). */
 export const TOMBSTONE_DAYS = 60;
@@ -183,6 +184,8 @@ export function mergeBundles(local: ExportBundle, remote: ExportBundle, now: Dat
   stats.completionsByDay = days;
   stats.badges = Array.from(new Set([...local.stats.badges, ...remote.stats.badges]));
   stats.cardsReviewed = Math.max(local.stats.cardsReviewed ?? 0, remote.stats.cardsReviewed ?? 0);
+  const breaks = mergeBreaks(local.stats.breaks, remote.stats.breaks);
+  stats.breaks = breaks.length ? breaks : undefined;
   // ledger entries are immutable, so a union by id is exact
   const ledger = new Map<string, LedgerEntry>();
   for (const e of [...(remote.ledger ?? []), ...(local.ledger ?? [])]) ledger.set(e.id, e);

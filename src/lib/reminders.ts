@@ -162,6 +162,10 @@ function check(): void {
     if (d.getHours() >= 7 && !notified.has(digestKey) && localStorage.getItem('homework-todo:digest') !== dayKey) {
       notified.add(digestKey);
       localStorage.setItem('homework-todo:digest', dayKey);
+      // tell the service worker so it doesn't send a second digest later today
+      void getMeta<Record<string, unknown>>('sw:prefs')
+        .then((p) => putMeta('sw:prefs', { ...(p ?? {}), lastDigest: dayKey }))
+        .catch(() => {});
       const n = store.todayTasks.length;
       const overdue = store.overdueTasks.length;
       if (n || overdue) {

@@ -1,10 +1,10 @@
 import * as db from './storage';
-import type { Card, Course, DayNote, Deck, ExportBundle, LedgerEntry, Priority, Settings, Stats, Subtask, Task, Template, Tombstone, TombstoneKind } from './types';
+import type { BreakRange, Card, Course, DayNote, Deck, ExportBundle, LedgerEntry, Priority, Settings, Stats, Subtask, Task, Template, Tombstone, TombstoneKind } from './types';
 import { buildBundle, mergeTombstones, TRASH_DAYS, type BundleData } from './backup';
 import { DEFAULT_STATS } from './types';
 import { uid } from './id';
 import { addDaysKey, dueKey, isDueToday, isOverdue, isoNow, todayKey, daysAgoKey, startOfWeekKey as startOfWeekKeyFn } from './dates';
-import { applyCompletion, applyGrade, effectiveStreak, isPowerHour, rollCollectible, STREAK_MILESTONES, type ComboState } from './gamification';
+import { activeBreak, applyCompletion, applyGrade, effectiveStreak, isPowerHour, rollCollectible, STREAK_MILESTONES, type ComboState } from './gamification';
 import { applyThemePack } from './themes';
 import { applyFont } from './fonts';
 import { autoDescribe } from './autodescribe';
@@ -263,6 +263,23 @@ export class Store {
     this.stats = { ...this.stats, streak: { ...this.stats.streak, freezes: this.stats.streak.freezes + 1 } };
     this.persistStats();
     return true;
+  }
+
+  // ---------- break mode ----------
+  /** The school break covering today, if any (streak paused). */
+  currentBreak = $derived(activeBreak(this.stats.breaks, this.today));
+
+  addBreak(from: string, to: string, name?: string): BreakRange | undefined {
+    if (!from || !to) return undefined;
+    const b: BreakRange = { id: uid('brk'), from: from <= to ? from : to, to: from <= to ? to : from, name: name?.trim().slice(0, 40) || undefined };
+    this.stats = { ...this.stats, breaks: [...(this.stats.breaks ?? []), b] };
+    this.persistStats();
+    return b;
+  }
+
+  removeBreak(id: string): void {
+    this.stats = { ...this.stats, breaks: (this.stats.breaks ?? []).map((b) => (b.id === id ? { ...b, deleted: true } : b)) };
+    this.persistStats();
   }
 
   // ---------- bundle ----------

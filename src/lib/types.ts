@@ -75,6 +75,15 @@ export interface Task {
   attachments?: AttachmentMeta[]; // files kept on this device (metadata syncs, the files don't)
 }
 
+/** A school break (inclusive dates). Removed ones keep `deleted` so the removal syncs. */
+export interface BreakRange {
+  id: string;
+  from: string; // YYYY-MM-DD
+  to: string; // YYYY-MM-DD
+  name?: string;
+  deleted?: boolean;
+}
+
 export interface AttachmentMeta {
   id: string;
   name: string;
@@ -105,6 +114,7 @@ export interface Stats {
   ringCelebratedDate?: string; // last date the full-screen confetti fired
   pomodorosByDay: Record<string, number>;
   freezeCreditedAt?: number; // streak length when last freeze was credited
+  breaks?: BreakRange[]; // school breaks: days inside them don't count against the streak
   acedCount: number; // scores >= 95
   early3Count: number; // completed 3+ days early
   cardsReviewed: number;

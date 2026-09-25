@@ -1,4 +1,4 @@
-import type { Priority, Stats, Task } from './types';
+import type { BreakRange, Priority, Stats, Task } from './types';
 import { addDaysKey, dateKey, diffDays, dueKey, endOfDay, isDateOnly, parseDue, todayKey } from './dates';
 
 export const CRIT_CHANCE = 0.05;
@@ -250,9 +250,32 @@ export function advanceCombo(prev: ComboState | undefined, now: number): ComboSt
 export function effectiveStreak(stats: Stats, today: string = todayKey()): number {
   const { current, lastDate, freezes } = stats.streak;
   if (!lastDate || current === 0) return 0;
-  const gap = diffDays(lastDate, today) - 1; // missed days between lastDate and today
+  const gap = diffDays(lastDate, today) - 1 - breakDaysBetween(lastDate, today, stats.breaks); // missed days between lastDate and today
   if (gap <= 0) return current;
   return gap <= freezes ? current : 0;
+}
+
+/** Days strictly between a and b (keys, a < b) that fall inside a break. */
+export function breakDaysBetween(aKey: string, bKey: string, breaks: BreakRange[] | undefined): number {
+  if (!breaks?.length) return 0;
+  let n = 0;
+  for (let k = addDaysKey(aKey, 1); k < bKey; k = addDaysKey(k, 1)) if (breaks.some((b) => !b.deleted && b.from <= k && k <= b.to)) n++;
+  return n;
+}
+
+/** The break that covers `day`, if any. */
+export function activeBreak(breaks: BreakRange[] | undefined, day: string): BreakRange | undefined {
+  return breaks?.find((b) => !b.deleted && b.from <= day && day <= b.to);
+}
+
+/** Union of two devices' break lists by id; a removal wins. */
+export function mergeBreaks(a: BreakRange[] = [], b: BreakRange[] = []): BreakRange[] {
+  const m = new Map<string, BreakRange>();
+  for (const x of [...a, ...b]) {
+    const prev = m.get(x.id);
+    m.set(x.id, prev ? { ...prev, ...x, deleted: prev.deleted || x.deleted || undefined } : x);
+  }
+  return [...m.values()].sort((x, y) => (x.from < y.from ? -1 : 1));
 }
 
 export interface StreakUpdate {
@@ -263,7 +286,7 @@ export interface StreakUpdate {
 }
 
 /** Apply a completion on `day` to the streak. Missed days consume freezes automatically. */
-export function updateStreak(prev: Stats['streak'], day: string, creditedAt?: number): StreakUpdate & { creditedAt: number } {
+export function updateStreak(prev: Stats['streak'], day: string, creditedAt?: number, breaks?: BreakRange[]): StreakUpdate & { creditedAt: number } {
   const s = { ...prev };
   let freezesUsed = 0;
   let broke = false;
@@ -275,7 +298,7 @@ export function updateStreak(prev: Stats['streak'], day: string, creditedAt?: nu
   } else if (day < s.lastDate) {
     // completing in the past (clock skew / import); ignore
   } else {
-    const gap = diffDays(s.lastDate, day) - 1;
+    const gap = diffDays(s.lastDate, day) - 1 - breakDaysBetween(s.lastDate, day, breaks);
     if (gap === 0) {
       s.current += 1;
     } else if (gap <= s.freezes) {
@@ -417,7 +440,7 @@ export function applyCompletion(
   stats.completionsByDay[day] = (stats.completionsByDay[day] ?? 0) + 1;
   if (xp.early) stats.earlyCount += 1;
   if (task.type === 'exam') stats.examCount += 1;
-  const streak = updateStreak(stats.streak, day, stats.freezeCreditedAt);
+  const streak = updateStreak(stats.streak, day, stats.freezeCreditedAt, stats.breaks);
   stats.streak = streak.streak;
   stats.freezeCreditedAt = streak.creditedAt;
   const goal = stats.dailyGoal || 3;

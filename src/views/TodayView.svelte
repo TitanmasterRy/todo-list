@@ -68,6 +68,12 @@
     {/if}
   </header>
 
+  {#if store.currentBreak}
+    <div class="card onbreak" role="status">
+      🏖️ <strong>{store.currentBreak.name || 'On break'}</strong> until {MONTH_SHORT[fromKey(store.currentBreak.to).getMonth()]}
+      {fromKey(store.currentBreak.to).getDate()}. Your streak is paused, so enjoy it.
+    </div>
+  {/if}
   <WhatNow />
   <QuestsCard />
 
@@ -287,5 +293,10 @@
   }
   .done-list {
     opacity: 0.8;
+  }
+  .onbreak {
+    font-size: 14px;
+    margin-bottom: 12px;
+    background: color-mix(in srgb, var(--accent) 8%, var(--bg-elev));
   }
 </style>

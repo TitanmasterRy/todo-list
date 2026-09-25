@@ -2,7 +2,7 @@
   // Settings → Notifications: deadline reminders and the morning digest.
   import { store } from '../../lib/store.svelte';
   import { toasts } from '../../lib/toast.svelte';
-  import { notificationsSupported, requestNotifications } from '../../lib/reminders';
+  import { backgroundSupported, notificationsSupported, remindersSettingsChanged, requestNotifications } from '../../lib/reminders';
   import { set } from './settings';
   const s = $derived(store.settings);
   async function enableNotifications() {
@@ -10,6 +10,11 @@
     toasts.push({ message: ok ? 'Notifications on' : 'Notifications blocked', kind: ok ? 'success' : 'warn' });
     if (ok) set('notifyDueSoon', true);
   }
+  function setAndSync<K extends 'appBadge' | 'backgroundReminders' | 'notifyMorningDigest'>(key: K, on: boolean) {
+    set(key, on);
+    remindersSettingsChanged();
+  }
+  const badgeSupported = typeof navigator !== 'undefined' && 'setAppBadge' in navigator;
 </script>
 
 <section class="card">
@@ -52,12 +57,25 @@
         checked={s.notifyMorningDigest}
         onchange={(e) => {
           const on = (e.target as HTMLInputElement).checked;
-          set('notifyMorningDigest', on);
+          setAndSync('notifyMorningDigest', on);
           if (on) void enableNotifications();
         }}
       />
     </div>
-    <p class="help">Notifications fire while the app is open or installed and running in the background tab.</p>
+    <p class="help">Reminders fire while the app is open, even in a background tab. Clicking one opens the task.</p>
+  {/if}
+  {#if badgeSupported}
+    <div class="row">
+      <label for="nbadge">Show today’s count on the app icon</label>
+      <input id="nbadge" type="checkbox" class="switch" checked={s.appBadge} onchange={(e) => setAndSync('appBadge', (e.target as HTMLInputElement).checked)} />
+    </div>
+  {/if}
+  {#if backgroundSupported()}
+    <div class="row">
+      <label for="nbg">Background digest and badge when the app is closed</label>
+      <input id="nbg" type="checkbox" class="switch" checked={s.backgroundReminders} onchange={(e) => setAndSync('backgroundReminders', (e.target as HTMLInputElement).checked)} />
+    </div>
+    <p class="help">For the installed app. The browser decides how often it checks (usually a few times a day), so exact-time reminders still need the app open.</p>
   {/if}
 </section>
 
