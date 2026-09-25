@@ -119,6 +119,8 @@
     </div>
   </div>
 
+  {#await import('../components/social/FriendsCard.svelte') then m}<m.default />{/await}
+
   {#if store.settings.gamification}
     <div class="card block">
       <div class="block-title">Badges <span class="muted">{earned.size}/{BADGES.length}</span></div>

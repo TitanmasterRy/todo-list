@@ -87,6 +87,14 @@ Tools → Google. Create a free Google Cloud OAuth client ID (the panel walks th
 - **PowerSchool:** Tools → Grades → PowerSchool import. Students get no API, so upload or paste your saved Grades and Attendance page; grades flow into the transcript.
 - **Scan paper:** Tools → Study → Scan paper. Photograph or upload worksheets and notes. AI transcription keeps headings, numbering, tables and math; free on-device OCR (Tesseract) gives plain text. Copy it, make an answer key, a study sheet, or notecards.
 
+## Study rooms, friends and class mode (no server needed)
+
+- **Study room** (Focus → 👥 Study room): create a shared Pomodoro (focus, break, long break every N rounds, optional number of rounds, start now or in a few minutes) and send the link. Anyone who opens it joins: the link holds the room's name, start time and lengths, and every device works out the same phase and time left from its own clock, so it needs no server and works offline. It chimes (and notifies, when the tab is in the background) at every change and counts a pomodoro for each focus round you were there for. The app can't see who else joined; with an account on a site that has one, **Show who's in** shares the name you type with the others in the room over Supabase Realtime (nothing is stored).
+- **Friends** (Stats → Friends): swap friend codes (or links) to compare streaks and this week's XP on a small leaderboard. A code holds only your name, emoji, streak, best streak, this week's XP, level and when you made it; the list shows how old each card is and nudges you to swap fresh ones. With an account, **Keep my card live** stores just that card in one row under a random id, so friends see it update.
+- **Class mode** (Tools → Connect → Class mode): a teacher picks a course and publishes its assignments (title, due date, type, notes if ticked, link; never grades or stats) as a `.json` class list, an `.ics` calendar, or, with a Gist token, a public gist that **Update** re-publishes. Students paste the link (or open the app link the teacher shares) and press **Subscribe**: the course is created if needed and the assignments arrive like Schoology's, refreshed each time the app opens. Unsubscribe keeps or removes the open ones. Gist links always work; other hosts must allow cross-site reads (CORS) and be allowed by the site's security policy (`VITE_CSP_CONNECT`), or students can import the downloaded file.
+
+Friends, subscriptions and rooms are kept on this device (localStorage), not in the synced data; the tasks a class list adds sync like any other task.
+
 ## AI providers
 
 Settings → AI helper. Pick a provider and paste its key (stored only in your browser):
@@ -221,7 +229,8 @@ Press `?` in the app for the sheet.
 ```
 src/lib/         types, storage (IndexedDB), store, dates, parser, recurrence, gamification, backup, gist sync, sounds
 src/lib/store/   store method groups (planning, courses and templates, notecards, imports) merged into the store
-src/components/  task item, checkbox, quick add, editor, sortable list, toasts, feedback layer, palette, dialogs
+src/lib/social/  study rooms, friends and class mode on this device (lazy; lib/studyroom.ts, friends.ts, classlist.ts hold the pure logic)
+src/components/  task item, checkbox, quick add, editor, sortable list, toasts, feedback layer, palette, dialogs (social/: study room, friends, class mode)
 src/views/       Today, Upcoming, Courses, Inbox, Focus, Stats, Tools, Schoology, Play, Settings
 src/lib/casino/  casino game rules (slots, blackjack, roulette, poker, baccarat, craps, quick games)
 public/games/    built-in arcade games + games.json manifest (add your own here)

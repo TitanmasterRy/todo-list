@@ -36,6 +36,7 @@
   import { startSync } from './lib/gist.svelte';
   import { startAccount } from './lib/account.svelte';
   import { startEconomy } from './lib/economy.svelte';
+  import { startSocial } from './lib/social/links';
   import CoinPops from './components/CoinPops.svelte';
 
   onMount(() => {
@@ -47,6 +48,7 @@
       startSchoologySync();
       startReminders();
       void startLocalBackup();
+      startSocial();
       // Spotify's code loads only when it's connected or we're coming back from its sign-in page
       if (hasSecret('spotifyRefreshToken') || new URLSearchParams(location.search).has('code')) void import('./lib/spotify.svelte').then((m) => m.init());
     });

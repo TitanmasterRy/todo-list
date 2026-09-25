@@ -62,7 +62,7 @@ export interface Task {
   frogDate?: string; // YYYY-MM-DD the frog pick applies to
   archived?: boolean; // archived completed tasks (kept for stats)
   templateId?: string;
-  source?: 'schoology' | 'gmail' | 'classroom' | 'scan'; // synced/imported from elsewhere
+  source?: 'schoology' | 'gmail' | 'classroom' | 'scan' | 'class'; // synced/imported from elsewhere ('class': a teacher's class list)
   externalId?: string; // stable id in the external system
   url?: string; // link back to the assignment
   syncedAt?: string;

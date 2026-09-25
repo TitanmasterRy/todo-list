@@ -75,12 +75,13 @@ export const externalMethods = {
   },
 
   /** Duplicate a task (same fields, not completed, placed right after the original). */
-  /** Apply a sync diff: create new assignment tasks, update changed ones. Returns counts. */
+  /** Apply a sync diff: create new assignment tasks, update changed ones. Returns counts. `source` marks where they came from (Schoology, a class list). */
   applySyncDiff(
     this: Store,
     diff: SyncDiff,
     resolveCourse: (a: ExternalAssignment) => string | undefined,
     describe?: (a: ExternalAssignment) => Partial<Task>,
+    source: Task['source'] = 'schoology',
   ): { created: number; updated: number } {
     const now = isoNow();
     const created: Task[] = [];
@@ -103,7 +104,7 @@ export const externalMethods = {
         updatedAt: now,
         order: order++,
         deferredCount: 0,
-        source: 'schoology',
+        source,
         externalId: a.externalId,
         url: a.url,
         syncedAt: now,
