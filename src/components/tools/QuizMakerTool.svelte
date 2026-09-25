@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { ui } from '../../lib/ui.svelte';
   import { store } from '../../lib/store.svelte';
   import { toasts } from '../../lib/toast.svelte';
   import { aiAvailable, generateQuiz } from '../../lib/ai';
@@ -252,6 +253,12 @@
           <li>
             <button class="set" onclick={() => (currentId = s.id)}
               ><strong>{s.title}</strong><span class="muted">{s.subject} · {s.questions.length} q · {s.difficulty}</span></button
+            ><button
+              class="btn ghost sm"
+              onclick={() => {
+                ui.practiceSet = s.id;
+                ui.toolsTab = 'practice';
+              }}>▶ Practice</button
             ><button class="btn ghost sm" onclick={() => deleteSet(s.id)}>Delete</button>
           </li>
         {/each}

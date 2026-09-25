@@ -91,7 +91,7 @@ Everything we could improve or add to Homework To-Do, grouped by area. Checked i
 - [x] SM-2 / FSRS scheduling for notecards. (FSRS v4.5, with Again/Hard/Good/Easy.)
 - [x] Image and cloze (fill-in-the-blank) notecards.
 - [x] Anki `.apkg` and Quizlet import/export. (Anki `.apkg` import and text export; Quizlet exports paste straight into the deck importer.)
-- [ ] Practice-test mode that plays quizzes in the app, with scores over time.
+- [x] Practice-test mode that plays quizzes in the app, with scores over time. (Tools → Practice test, or ▶ Practice on a Quiz maker set.)
 - [ ] Shared study-room timer by link.
 - [x] Citation generator (MLA/APA/Chicago) from URL, ISBN or DOI.
 - [x] Essay tools: word/page counter, outline template, readability.

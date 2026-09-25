@@ -16,6 +16,7 @@
     | 'timetable'
     | 'syllabus'
     | 'week'
+    | 'practice'
     | 'planner'
     | 'calendar'
     | 'reading'
@@ -38,6 +39,10 @@
   $effect(() => {
     ui.toolsTab = tab;
   });
+  // and follow it when another part of the app switches tools (e.g. "Study this deck")
+  $effect(() => {
+    if (ui.toolsTab && ui.toolsTab !== tab) tab = ui.toolsTab as Tab;
+  });
   const tabs: { id: Tab; label: string; icon: string; group: Group }[] = [
     { id: 'planner', label: 'Plan my day', icon: '🗓️', group: 'plan' },
     { id: 'week', label: 'Plan my week', icon: '📅', group: 'plan' },
@@ -50,6 +55,7 @@
     { id: 'powerschool', label: 'PowerSchool import', icon: '🏫', group: 'grades' },
     { id: 'notecards', label: 'Notecards', icon: '🃏', group: 'study' },
     { id: 'quiz', label: 'Quiz maker', icon: '🎮', group: 'study' },
+    { id: 'practice', label: 'Practice test', icon: '📝', group: 'study' },
     { id: 'scan', label: 'Scan paper', icon: '📷', group: 'study' },
     { id: 'reader', label: 'Book reader', icon: '📚', group: 'study' },
     { id: 'study', label: 'Study help', icon: '💡', group: 'study' },
@@ -119,6 +125,12 @@
     {/await}
   {:else if tab === 'timetable'}
     {#await import('../components/tools/TimetableTool.svelte')}
+      <div class="card muted">Loading…</div>
+    {:then m}
+      <m.default />
+    {/await}
+  {:else if tab === 'practice'}
+    {#await import('../components/tools/PracticeTestTool.svelte')}
       <div class="card muted">Loading…</div>
     {:then m}
       <m.default />
