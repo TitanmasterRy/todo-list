@@ -56,7 +56,13 @@
     font-size: 22px;
   }
   .back {
-    background: repeating-linear-gradient(45deg, var(--accent), var(--accent) 6px, color-mix(in srgb, var(--accent) 70%, #fff) 6px, color-mix(in srgb, var(--accent) 70%, #fff) 12px);
+    background: repeating-linear-gradient(
+      45deg,
+      var(--accent),
+      var(--accent) 6px,
+      color-mix(in srgb, var(--accent) 70%, #fff) 6px,
+      color-mix(in srgb, var(--accent) 70%, #fff) 12px
+    );
     border: 3px solid #fff;
   }
   .held {

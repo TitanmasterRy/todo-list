@@ -35,8 +35,34 @@ describe('TOPICS', () => {
   });
   it('includes the required topics', () => {
     const titles = TOPICS.map((t) => t.title.toLowerCase());
-    for (const needle of ['algebra', 'linear', 'logarithm', 'trigonometry', 'geometry', 'limits', 'derivatives', 'integrals', 'statistics', 'kinematics', 'momentum', 'stoichiometry', 'periodic', 'genetics', 'essay', 'citations', 'grammar', 'study techniques', 'test-taking', 'si units', 'programming', 'spanish']) {
-      expect(titles.some((t) => t.includes(needle)), needle).toBe(true);
+    for (const needle of [
+      'algebra',
+      'linear',
+      'logarithm',
+      'trigonometry',
+      'geometry',
+      'limits',
+      'derivatives',
+      'integrals',
+      'statistics',
+      'kinematics',
+      'momentum',
+      'stoichiometry',
+      'periodic',
+      'genetics',
+      'essay',
+      'citations',
+      'grammar',
+      'study techniques',
+      'test-taking',
+      'si units',
+      'programming',
+      'spanish',
+    ]) {
+      expect(
+        titles.some((t) => t.includes(needle)),
+        needle,
+      ).toBe(true);
     }
   });
 });

@@ -20,11 +20,7 @@
   let tags = $state(original?.tags.join(', ') ?? '');
   let priority = $state(original?.priority ?? 'normal');
   let dateKey = $state(original?.dueAt ? dueKey(original.dueAt) : '');
-  let time = $state(
-    original?.dueAt && !isDateOnly(original.dueAt)
-      ? `${pad(new Date(original.dueAt).getHours())}:${pad(new Date(original.dueAt).getMinutes())}`
-      : '',
-  );
+  let time = $state(original?.dueAt && !isDateOnly(original.dueAt) ? `${pad(new Date(original.dueAt).getHours())}:${pad(new Date(original.dueAt).getMinutes())}` : '');
   let estimate = $state(original?.estimateMin ? String(original.estimateMin) : '');
   let type = $state(original?.type ?? '');
   let weight = $state(original?.weight ? String(original.weight) : '');
@@ -174,7 +170,17 @@
         </div>
         <div class="field">
           <label for="ed-score">Score %</label>
-          <input id="ed-score" class="input" type="number" min="0" max="200" step="0.5" bind:value={score} placeholder="—" title="Grade earned, for the grade calculator in Tools" />
+          <input
+            id="ed-score"
+            class="input"
+            type="number"
+            min="0"
+            max="200"
+            step="0.5"
+            bind:value={score}
+            placeholder="—"
+            title="Grade earned, for the grade calculator in Tools"
+          />
         </div>
       </div>
       <div class="field">
@@ -197,7 +203,18 @@
           {/each}
         </ul>
         <div class="addsub">
-          <input id="ed-sub" class="input" bind:value={newSub} placeholder="Add subtask" onkeydown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addSub(); } }} />
+          <input
+            id="ed-sub"
+            class="input"
+            bind:value={newSub}
+            placeholder="Add subtask"
+            onkeydown={(e) => {
+              if (e.key === 'Enter') {
+                e.preventDefault();
+                addSub();
+              }
+            }}
+          />
           <button type="button" class="btn sm" onclick={addSub}>Add</button>
         </div>
       </div>
@@ -221,7 +238,14 @@
         {#if recKind === 'weekly'}
           <div class="days">
             {#each ['S', 'M', 'T', 'W', 'T', 'F', 'S'] as d, i}
-              <button type="button" class="day" class:on={recDays.includes(i)} onclick={() => toggleDay(i)} aria-pressed={recDays.includes(i)} aria-label={['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'][i]}>{d}</button>
+              <button
+                type="button"
+                class="day"
+                class:on={recDays.includes(i)}
+                onclick={() => toggleDay(i)}
+                aria-pressed={recDays.includes(i)}
+                aria-label={['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'][i]}>{d}</button
+              >
             {/each}
           </div>
         {/if}

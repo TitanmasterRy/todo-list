@@ -113,7 +113,10 @@ describe('deletions and wallets across devices', () => {
       tasks: [],
       courses: [],
       tombstones: [{ kind: 'task', id: 'a', deletedAt: 'x' }, { id: 'bad' }],
-      ledger: [{ id: 'l', at: '', currency: 'coins', amount: 3, reason: 'r' }, { id: 'n', currency: 'coins', amount: 'NaN' }],
+      ledger: [
+        { id: 'l', at: '', currency: 'coins', amount: 3, reason: 'r' },
+        { id: 'n', currency: 'coins', amount: 'NaN' },
+      ],
     });
     expect(b.tombstones).toHaveLength(1);
     expect(b.ledger).toHaveLength(1);

@@ -90,12 +90,24 @@
       }),
       on('studied', (e) => {
         if (!store.settings.gamification) return;
-        toasts.push({ message: `+${e.xp} XP · ${e.clearedAll ? 'Deck cleared!' : 'Study session'}`, detail: `${e.correct}/${e.reviewed} cards right`, kind: 'xp', combo: e.clearedAll ? 4 : 0, emoji: e.clearedAll ? '🃏' : '📚' });
+        toasts.push({
+          message: `+${e.xp} XP · ${e.clearedAll ? 'Deck cleared!' : 'Study session'}`,
+          detail: `${e.correct}/${e.reviewed} cards right`,
+          kind: 'xp',
+          combo: e.clearedAll ? 4 : 0,
+          emoji: e.clearedAll ? '🃏' : '📚',
+        });
         if (e.clearedAll) playSound('badge');
       }),
       on('collectible', (c) => {
         enqueue(() => {
-          toasts.push({ message: `Mystery reward: ${c.emoji} ${c.name}`, detail: c.kind === 'title' ? 'A new title for your profile. See Settings → Collection.' : 'A new sticker for your collection.', kind: 'badge', emoji: '🎁', timeout: 7000 });
+          toasts.push({
+            message: `Mystery reward: ${c.emoji} ${c.name}`,
+            detail: c.kind === 'title' ? 'A new title for your profile. See Settings → Collection.' : 'A new sticker for your collection.',
+            kind: 'badge',
+            emoji: '🎁',
+            timeout: 7000,
+          });
           playSound('badge');
           done(600);
         });
@@ -138,7 +150,13 @@
         enqueue(() => {
           confetti++;
           playSound('ring');
-          toasts.push({ message: 'Daily goal reached!', detail: `${store.settings.dailyGoal} tasks done today. Anything else is a bonus.`, kind: 'success', emoji: '🎯', timeout: 5000 });
+          toasts.push({
+            message: 'Daily goal reached!',
+            detail: `${store.settings.dailyGoal} tasks done today. Anything else is a bonus.`,
+            kind: 'success',
+            emoji: '🎯',
+            timeout: 5000,
+          });
           done(1200);
         });
       }),
@@ -269,7 +287,9 @@
     border: 1px solid var(--warn);
     border-radius: 16px;
     padding: 12px 18px 12px 12px;
-    box-shadow: var(--shadow), 0 0 40px color-mix(in srgb, var(--warn) 35%, transparent);
+    box-shadow:
+      var(--shadow),
+      0 0 40px color-mix(in srgb, var(--warn) 35%, transparent);
     z-index: 401;
     max-width: calc(100vw - 32px);
   }

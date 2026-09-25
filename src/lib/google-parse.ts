@@ -25,8 +25,30 @@ export interface Suggestion {
 }
 
 const KEYWORDS = [
-  'assignment', 'homework', 'hw', 'due', 'quiz', 'test', 'exam', 'midterm', 'final', 'project', 'essay', 'paper', 'lab',
-  'worksheet', 'reading', 'read', 'chapter', 'submit', 'submission', 'problem set', 'pset', 'deadline', 'turn in', 'packet',
+  'assignment',
+  'homework',
+  'hw',
+  'due',
+  'quiz',
+  'test',
+  'exam',
+  'midterm',
+  'final',
+  'project',
+  'essay',
+  'paper',
+  'lab',
+  'worksheet',
+  'reading',
+  'read',
+  'chapter',
+  'submit',
+  'submission',
+  'problem set',
+  'pset',
+  'deadline',
+  'turn in',
+  'packet',
 ];
 const NOISE = ['newsletter', 'unsubscribe', 'digest', 'sale', '% off', 'webinar', 'promo', 'receipt', 'order confirmation', 'invoice'];
 
@@ -123,11 +145,17 @@ function findCourse(texts: string[], brackets: string[], courses: { id: string; 
   }
   const normHay = hay.replace(/[^a-z0-9]+/g, ' ');
   for (const c of usable) {
-    const n = c.name.toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+    const n = c.name
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, ' ')
+      .trim();
     if (n.length >= 3 && new RegExp(`\\b${escapeRe(n)}`).test(normHay)) return { id: c.id, how: c.name };
   }
   const byFirstWord = usable.filter((c) => {
-    const w = c.name.split(/\s+/)[0].toLowerCase().replace(/[^a-z0-9]/g, '');
+    const w = c.name
+      .split(/\s+/)[0]
+      .toLowerCase()
+      .replace(/[^a-z0-9]/g, '');
     return w.length >= 4 && new RegExp(`\\b${escapeRe(w)}`).test(hay);
   });
   if (byFirstWord.length === 1) return { id: byFirstWord[0].id, how: byFirstWord[0].name };

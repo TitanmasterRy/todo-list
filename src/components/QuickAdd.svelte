@@ -18,8 +18,19 @@
   let focused = $state(false);
   let listening = $state(false);
   let describeNext = $state(true);
-  type SR = { start(): void; stop(): void; lang: string; interimResults: boolean; onresult: ((e: { results: ArrayLike<ArrayLike<{ transcript: string }>> }) => void) | null; onend: (() => void) | null; onerror: (() => void) | null };
-  const SRClass = typeof window !== 'undefined' ? ((window as unknown as { SpeechRecognition?: new () => SR }).SpeechRecognition ?? (window as unknown as { webkitSpeechRecognition?: new () => SR }).webkitSpeechRecognition) : undefined;
+  type SR = {
+    start(): void;
+    stop(): void;
+    lang: string;
+    interimResults: boolean;
+    onresult: ((e: { results: ArrayLike<ArrayLike<{ transcript: string }>> }) => void) | null;
+    onend: (() => void) | null;
+    onerror: (() => void) | null;
+  };
+  const SRClass =
+    typeof window !== 'undefined'
+      ? ((window as unknown as { SpeechRecognition?: new () => SR }).SpeechRecognition ?? (window as unknown as { webkitSpeechRecognition?: new () => SR }).webkitSpeechRecognition)
+      : undefined;
   let rec: SR | null = null;
   function toggleVoice() {
     if (!SRClass) return;
@@ -45,7 +56,10 @@
   }
   function onPaste(e: ClipboardEvent) {
     const data = e.clipboardData?.getData('text') ?? '';
-    const lines = data.split(/\r?\n/).map((l) => l.replace(/^[-*•\d.)\s]+/, '').trim()).filter(Boolean);
+    const lines = data
+      .split(/\r?\n/)
+      .map((l) => l.replace(/^[-*•\d.)\s]+/, '').trim())
+      .filter(Boolean);
     if (lines.length < 2) return;
     e.preventDefault();
     const inputs = lines.map((line) => lineToInput(line));
@@ -79,7 +93,14 @@
     const m = /(?:^|\s)#([\w-]*)$/.exec(text);
     if (!m) return [];
     const q = m[1].toLowerCase().replace(/[^a-z0-9]/g, '');
-    return store.activeCourses.filter((c) => c.name.toLowerCase().replace(/[^a-z0-9]/g, '').startsWith(q)).slice(0, 5);
+    return store.activeCourses
+      .filter((c) =>
+        c.name
+          .toLowerCase()
+          .replace(/[^a-z0-9]/g, '')
+          .startsWith(q),
+      )
+      .slice(0, 5);
   });
 
   $effect(() => {
@@ -182,7 +203,9 @@
     data-quick-add
   />
   {#if SRClass}
-    <button type="button" class="btn ghost sm icon mic" class:on={listening} onclick={toggleVoice} aria-label={listening ? 'Stop listening' : 'Add by voice'} title="Add by voice">{listening ? '🔴' : '🎤'}</button>
+    <button type="button" class="btn ghost sm icon mic" class:on={listening} onclick={toggleVoice} aria-label={listening ? 'Stop listening' : 'Add by voice'} title="Add by voice"
+      >{listening ? '🔴' : '🎤'}</button
+    >
   {/if}
   {#if text}
     <button class="btn primary sm go" type="submit">Add</button>
@@ -192,7 +215,9 @@
 </form>
 {#if text.trim()}
   <div class="preview" aria-live="polite">
-    <span class="title-preview">{parsed.template ? (template ? `${template.task.title}${parsed.title ? ' — ' + parsed.title : ''}` : `@${parsed.template}?`) : parsed.title || '…'}</span>
+    <span class="title-preview"
+      >{parsed.template ? (template ? `${template.task.title}${parsed.title ? ' — ' + parsed.title : ''}` : `@${parsed.template}?`) : parsed.title || '…'}</span
+    >
     {#each parsed.chips as chip}
       <span class="chip {chip.kind}">{chip.label}</span>
     {/each}
@@ -200,7 +225,9 @@
       <span class="chip faint">📅 Today</span>
     {/if}
     {#if store.settings.autoDescribe && !parsed.template}
-      <button type="button" class="chip auto" class:off={!describeNext} onclick={() => (describeNext = !describeNext)} title="Auto-fill a plan, steps and estimate">{describeNext ? '✨ auto plan' : 'no auto plan'}</button>
+      <button type="button" class="chip auto" class:off={!describeNext} onclick={() => (describeNext = !describeNext)} title="Auto-fill a plan, steps and estimate"
+        >{describeNext ? '✨ auto plan' : 'no auto plan'}</button
+      >
     {/if}
     {#if !parsed.courseId && defaultCourseId && store.courseById(defaultCourseId)}
       <span class="chip faint">{store.courseById(defaultCourseId)?.name}</span>
@@ -231,7 +258,9 @@
     border-radius: 12px;
     background: var(--bg-elev);
     border: 1px solid var(--border);
-    transition: border-color var(--dur), box-shadow var(--dur);
+    transition:
+      border-color var(--dur),
+      box-shadow var(--dur);
   }
   .quick.focused {
     border-color: var(--accent);

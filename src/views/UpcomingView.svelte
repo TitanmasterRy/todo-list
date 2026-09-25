@@ -83,7 +83,13 @@
           {#if exams(tasks)}<span class="chip exam">{exams(tasks)} exam{exams(tasks) > 1 ? 's' : ''}/quiz</span>{/if}
         {/if}
       </div>
-      <Sortable items={tasks} group="upcoming" onreorder={(ids) => store.reorder(ids)} ondropfrom={(id) => store.moveTaskToDay(id, k)} placeholder={tasks.length ? undefined : 'Drop here'}>
+      <Sortable
+        items={tasks}
+        group="upcoming"
+        onreorder={(ids) => store.reorder(ids)}
+        ondropfrom={(id) => store.moveTaskToDay(id, k)}
+        placeholder={tasks.length ? undefined : 'Drop here'}
+      >
         {#snippet item(task)}
           <TaskItem {task} listIds={allIds} dragHandle />
         {/snippet}

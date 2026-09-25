@@ -84,7 +84,11 @@
     try {
       const messages = await scanGmail(q, 40);
       scannedCount = messages.length;
-      suggestions = extractAssignmentsFromMail(messages, store.activeCourses.map((c) => ({ id: c.id, name: c.name })), store.now);
+      suggestions = extractAssignmentsFromMail(
+        messages,
+        store.activeCourses.map((c) => ({ id: c.id, name: c.name })),
+        store.now,
+      );
       scanned = true;
     } catch (e) {
       scanError = e instanceof Error ? e.message : String(e);
@@ -131,7 +135,10 @@
     if (created.has(norm)) return created.get(norm);
     const alias = store.courses.find((c) => c.schoologyName && c.schoologyName.toLowerCase() === norm);
     if (alias) return alias.id;
-    const matched = matchCourseName(name, store.activeCourses.map((c) => ({ id: c.id, name: c.name })));
+    const matched = matchCourseName(
+      name,
+      store.activeCourses.map((c) => ({ id: c.id, name: c.name })),
+    );
     if (matched) return matched;
     const i = store.courses.length + created.size;
     const c = store.addCourse({ name: name.trim().slice(0, 40), color: COURSE_COLORS[(i * 3) % COURSE_COLORS.length], emoji: COURSE_EMOJIS[i % COURSE_EMOJIS.length] });
@@ -246,16 +253,29 @@
       {/if}
     </div>
     {#if !s.googleClientId?.trim()}
-      <p class="muted">Add your OAuth Client ID in <button class="link" onclick={() => store.go('settings')}>Settings</button> to enable Gmail scanning, Classroom import, Calendar push and Drive sync. Everything runs in your browser; nothing is sent anywhere but Google.</p>
+      <p class="muted">
+        Add your OAuth Client ID in <button class="link" onclick={() => store.go('settings')}>Settings</button> to enable Gmail scanning, Classroom import, Calendar push and Drive sync.
+        Everything runs in your browser; nothing is sent anywhere but Google.
+      </p>
     {/if}
     <details class="help" open={!s.googleClientId?.trim()}>
       <summary>Setup (one time, about 5 minutes)</summary>
       <ol class="steps">
         <li>Open <code>console.cloud.google.com</code> and create a <strong>project</strong>.</li>
-        <li><strong>APIs &amp; Services → OAuth consent screen</strong>: choose <strong>External</strong>, fill in the app name, and add yourself under <strong>Test users</strong>.</li>
-        <li><strong>APIs &amp; Services → Library</strong>: enable the <strong>Gmail API</strong>, <strong>Google Calendar API</strong>, <strong>Google Classroom API</strong> and <strong>Google Drive API</strong> (only the ones you plan to use).</li>
-        <li><strong>Credentials → Create credentials → OAuth client ID → Web application</strong>. Under <strong>Authorized JavaScript origins</strong> add this page's origin: <code>{origin}</code>.</li>
-        <li>Copy the Client ID (ends in <code>.apps.googleusercontent.com</code>) and paste it into <button class="link" onclick={() => store.go('settings')}>Settings</button>.</li>
+        <li>
+          <strong>APIs &amp; Services → OAuth consent screen</strong>: choose <strong>External</strong>, fill in the app name, and add yourself under <strong>Test users</strong>.
+        </li>
+        <li>
+          <strong>APIs &amp; Services → Library</strong>: enable the <strong>Gmail API</strong>, <strong>Google Calendar API</strong>, <strong>Google Classroom API</strong> and
+          <strong>Google Drive API</strong> (only the ones you plan to use).
+        </li>
+        <li>
+          <strong>Credentials → Create credentials → OAuth client ID → Web application</strong>. Under <strong>Authorized JavaScript origins</strong> add this page's origin:
+          <code>{origin}</code>.
+        </li>
+        <li>
+          Copy the Client ID (ends in <code>.apps.googleusercontent.com</code>) and paste it into <button class="link" onclick={() => store.go('settings')}>Settings</button>.
+        </li>
       </ol>
     </details>
     <div class="btns">
@@ -266,14 +286,25 @@
         <button class="btn primary" onclick={doSignIn} disabled={authBusy || !s.googleClientId?.trim()}>{authBusy ? 'Opening Google…' : 'Sign in with Google'}</button>
       {/if}
     </div>
-    <label class="check"><input type="checkbox" checked={s.googleClassroomEnabled} onchange={(e) => store.updateSettings({ googleClassroomEnabled: (e.target as HTMLInputElement).checked })} /> Include Google Classroom when signing in</label>
+    <label class="check"
+      ><input type="checkbox" checked={s.googleClassroomEnabled} onchange={(e) => store.updateSettings({ googleClassroomEnabled: (e.target as HTMLInputElement).checked })} /> Include
+      Google Classroom when signing in</label
+    >
     {#if google.error}<p class="err">{google.error}</p>{/if}
   </section>
 
   <section class="card">
     <h2>Scan Gmail for assignments</h2>
-    <p class="muted">Searches your mail with a Gmail query and suggests tasks from messages that mention homework, quizzes, due dates and so on. Only subjects and short previews are read.</p>
-    <form class="scan" onsubmit={(e) => { e.preventDefault(); void scan(); }}>
+    <p class="muted">
+      Searches your mail with a Gmail query and suggests tasks from messages that mention homework, quizzes, due dates and so on. Only subjects and short previews are read.
+    </p>
+    <form
+      class="scan"
+      onsubmit={(e) => {
+        e.preventDefault();
+        void scan();
+      }}
+    >
       <input class="input" bind:value={query} placeholder={DEFAULT_GMAIL_QUERY} aria-label="Gmail search query" spellcheck="false" />
       <button class="btn primary" type="submit" disabled={scanBusy || !s.googleClientId?.trim()}>{scanBusy ? 'Scanning…' : 'Scan'}</button>
       <button class="btn ghost sm" type="button" onclick={() => (query = DEFAULT_GMAIL_QUERY)}>Reset query</button>
@@ -281,7 +312,11 @@
     {#if scanError}<p class="err">{scanError}</p>{/if}
     {#if scanned}
       <div class="result-head">
-        <span class="muted">{scannedCount} message{scannedCount === 1 ? '' : 's'} · {visible.length} suggestion{visible.length === 1 ? '' : 's'}{suggestions.length - visible.length ? ` · ${suggestions.length - visible.length} already added or ignored` : ''}</span>
+        <span class="muted"
+          >{scannedCount} message{scannedCount === 1 ? '' : 's'} · {visible.length} suggestion{visible.length === 1 ? '' : 's'}{suggestions.length - visible.length
+            ? ` · ${suggestions.length - visible.length} already added or ignored`
+            : ''}</span
+        >
         {#if highCount}<button class="btn sm" onclick={addAllHigh}>Add all high-confidence ({highCount})</button>{/if}
       </div>
       {#if !visible.length}
@@ -319,9 +354,15 @@
     <h2>Google Classroom</h2>
     <p class="muted">Imports your active classes and their assignments. Courses are matched by name or created for you; work you already turned in is marked complete.</p>
     <div class="btns">
-      <button class="btn primary" onclick={runClassroomImport} disabled={classroomBusy || !s.googleClientId?.trim()}>{classroomBusy ? 'Importing…' : 'Import from Classroom'}</button>
+      <button class="btn primary" onclick={runClassroomImport} disabled={classroomBusy || !s.googleClientId?.trim()}
+        >{classroomBusy ? 'Importing…' : 'Import from Classroom'}</button
+      >
       {#if classroomResult}
-        <span class="muted">{classroomResult.added} added · {classroomResult.done} already done · {classroomResult.skipped} skipped{classroomResult.courses ? ` · ${classroomResult.courses} new course${classroomResult.courses === 1 ? '' : 's'}` : ''} ({classroomResult.total} total)</span>
+        <span class="muted"
+          >{classroomResult.added} added · {classroomResult.done} already done · {classroomResult.skipped} skipped{classroomResult.courses
+            ? ` · ${classroomResult.courses} new course${classroomResult.courses === 1 ? '' : 's'}`
+            : ''} ({classroomResult.total} total)</span
+        >
       {/if}
     </div>
     {#if classroomError}<p class="err">{classroomError}</p>{/if}
@@ -331,7 +372,9 @@
     <h2>Google Calendar</h2>
     <p class="muted">Adds an event for each open task with a due date in the next 30 days ({upcoming.length} right now). Running it again updates the same events.</p>
     <div class="btns">
-      <button class="btn primary" onclick={pushCalendar} disabled={calBusy || !s.googleClientId?.trim()}>{calBusy ? 'Pushing…' : 'Push upcoming due dates to Google Calendar'}</button>
+      <button class="btn primary" onclick={pushCalendar} disabled={calBusy || !s.googleClientId?.trim()}
+        >{calBusy ? 'Pushing…' : 'Push upcoming due dates to Google Calendar'}</button
+      >
     </div>
   </section>
 
@@ -344,8 +387,14 @@
         </span>
       {/if}
     </div>
-    <p class="muted">Keeps a private copy of your data in your Google Drive app folder so other devices signed into the same Google account stay in sync. The copy is invisible in Drive and only this app can read it.</p>
-    <label class="check"><input type="checkbox" checked={s.googleSyncEnabled} disabled={syncBusy} onchange={(e) => void toggleSync((e.target as HTMLInputElement).checked)} /> Sync my data through Google Drive</label>
+    <p class="muted">
+      Keeps a private copy of your data in your Google Drive app folder so other devices signed into the same Google account stay in sync. The copy is invisible in Drive and only
+      this app can read it.
+    </p>
+    <label class="check"
+      ><input type="checkbox" checked={s.googleSyncEnabled} disabled={syncBusy} onchange={(e) => void toggleSync((e.target as HTMLInputElement).checked)} /> Sync my data through Google
+      Drive</label
+    >
     <div class="btns">
       <button class="btn" onclick={syncNow} disabled={syncBusy || !s.googleSyncEnabled || !s.googleClientId?.trim()}>{syncBusy ? 'Syncing…' : 'Sync now'}</button>
       <span class="muted">Last sync: {fmtWhen(s.lastGoogleSyncAt)}</span>
@@ -355,40 +404,171 @@
 </div>
 
 <style>
-  .google { display: flex; flex-direction: column; gap: 12px; }
-  .head { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 6px; }
-  h2 { font-size: 16px; margin: 0 0 6px; }
-  .head h2 { margin: 0; }
-  .status { font-size: 13px; font-weight: 600; color: var(--text-muted); }
-  .status.ok { color: var(--success); }
-  .status.error { color: var(--danger); }
-  .muted { color: var(--text-muted); font-size: 13px; font-weight: 400; margin: 0 0 8px; }
-  .err { color: var(--danger); font-size: 13px; margin: 8px 0 0; }
-  .help { font-size: 13px; color: var(--text-muted); margin: 4px 0 10px; }
-  .help summary { cursor: pointer; font-weight: 600; }
-  .steps { padding-left: 20px; margin: 8px 0 0; font-size: 13px; }
-  .steps li { margin-bottom: 6px; }
-  code { font-family: var(--mono); font-size: 12px; word-break: break-all; }
-  .btns { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin: 6px 0; }
-  .check { display: flex; align-items: center; gap: 8px; font-size: 14px; margin: 6px 0; }
-  .link { color: var(--accent); }
-  .scan { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
-  .scan .input { flex: 1 1 260px; font-family: var(--mono); font-size: 13px; }
-  .result-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; margin: 12px 0 6px; }
-  .suggestions { list-style: none; margin: 0; padding: 0; }
-  .sug { border-top: 1px solid var(--border); padding: 10px 0; display: flex; flex-direction: column; gap: 6px; }
-  .top { display: flex; gap: 8px; align-items: center; }
-  .top .title { flex: 1; font-weight: 600; }
-  .meta { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
-  .meta .course { width: auto; padding: 4px 8px; font-size: 13px; }
-  .spacer { flex: 1; }
-  .open { font-size: 12px; color: var(--accent); white-space: nowrap; }
-  .reason { font-size: 12px; color: var(--text-faint, var(--text-muted)); }
-  .chip.faint { color: var(--text-faint, var(--text-muted)); }
-  .chip.conf { text-transform: uppercase; font-size: 10px; letter-spacing: 0.06em; }
-  .chip.conf.high { color: var(--success); border-color: color-mix(in srgb, var(--success) 40%, transparent); background: color-mix(in srgb, var(--success) 12%, transparent); }
-  .chip.conf.medium { color: var(--warn); border-color: color-mix(in srgb, var(--warn) 40%, transparent); background: color-mix(in srgb, var(--warn) 12%, transparent); }
+  .google {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+  .head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-bottom: 6px;
+  }
+  h2 {
+    font-size: 16px;
+    margin: 0 0 6px;
+  }
+  .head h2 {
+    margin: 0;
+  }
+  .status {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-muted);
+  }
+  .status.ok {
+    color: var(--success);
+  }
+  .status.error {
+    color: var(--danger);
+  }
+  .muted {
+    color: var(--text-muted);
+    font-size: 13px;
+    font-weight: 400;
+    margin: 0 0 8px;
+  }
+  .err {
+    color: var(--danger);
+    font-size: 13px;
+    margin: 8px 0 0;
+  }
+  .help {
+    font-size: 13px;
+    color: var(--text-muted);
+    margin: 4px 0 10px;
+  }
+  .help summary {
+    cursor: pointer;
+    font-weight: 600;
+  }
+  .steps {
+    padding-left: 20px;
+    margin: 8px 0 0;
+    font-size: 13px;
+  }
+  .steps li {
+    margin-bottom: 6px;
+  }
+  code {
+    font-family: var(--mono);
+    font-size: 12px;
+    word-break: break-all;
+  }
+  .btns {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    flex-wrap: wrap;
+    margin: 6px 0;
+  }
+  .check {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 14px;
+    margin: 6px 0;
+  }
+  .link {
+    color: var(--accent);
+  }
+  .scan {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+  .scan .input {
+    flex: 1 1 260px;
+    font-family: var(--mono);
+    font-size: 13px;
+  }
+  .result-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin: 12px 0 6px;
+  }
+  .suggestions {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+  .sug {
+    border-top: 1px solid var(--border);
+    padding: 10px 0;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .top {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+  }
+  .top .title {
+    flex: 1;
+    font-weight: 600;
+  }
+  .meta {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+  .meta .course {
+    width: auto;
+    padding: 4px 8px;
+    font-size: 13px;
+  }
+  .spacer {
+    flex: 1;
+  }
+  .open {
+    font-size: 12px;
+    color: var(--accent);
+    white-space: nowrap;
+  }
+  .reason {
+    font-size: 12px;
+    color: var(--text-faint, var(--text-muted));
+  }
+  .chip.faint {
+    color: var(--text-faint, var(--text-muted));
+  }
+  .chip.conf {
+    text-transform: uppercase;
+    font-size: 10px;
+    letter-spacing: 0.06em;
+  }
+  .chip.conf.high {
+    color: var(--success);
+    border-color: color-mix(in srgb, var(--success) 40%, transparent);
+    background: color-mix(in srgb, var(--success) 12%, transparent);
+  }
+  .chip.conf.medium {
+    color: var(--warn);
+    border-color: color-mix(in srgb, var(--warn) 40%, transparent);
+    background: color-mix(in srgb, var(--warn) 12%, transparent);
+  }
   @media (max-width: 520px) {
-    .meta .spacer { display: none; }
+    .meta .spacer {
+      display: none;
+    }
   }
 </style>

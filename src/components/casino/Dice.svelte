@@ -38,7 +38,9 @@
     <div class="cz-result" aria-live="polite" class:win={result?.win} class:lose={result && !result.win}>{result?.text ?? ''}</div>
   </div>
   <div class="cz-actions">
-    <div class="cz-seg"><button class:on={mode === 'under'} onclick={() => (mode = 'under')}>Under</button><button class:on={mode === 'over'} onclick={() => (mode = 'over')}>Over</button></div>
+    <div class="cz-seg">
+      <button class:on={mode === 'under'} onclick={() => (mode = 'under')}>Under</button><button class:on={mode === 'over'} onclick={() => (mode = 'over')}>Over</button>
+    </div>
     <BetControl bind:value={bet} />
     <button class="btn primary" onclick={play} disabled={bet > economy.wallet.chips}>Roll</button>
   </div>

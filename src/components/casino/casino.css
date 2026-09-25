@@ -81,7 +81,9 @@
   font-size: 20px;
   display: grid;
   place-items: center;
-  transition: transform var(--dur) var(--spring), background var(--dur);
+  transition:
+    transform var(--dur) var(--spring),
+    background var(--dur);
 }
 .cz-tile:not(:disabled):hover {
   background: rgba(255, 255, 255, 0.22);

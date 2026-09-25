@@ -119,7 +119,13 @@ function courseFromDescription(desc: string | undefined): { courseName?: string;
     if (m && !courseName) courseName = m[1];
     else kept.push(line);
   }
-  return { courseName, rest: kept.join('\n').replace(/\n{3,}/g, '\n\n').trim() };
+  return {
+    courseName,
+    rest: kept
+      .join('\n')
+      .replace(/\n{3,}/g, '\n\n')
+      .trim(),
+  };
 }
 
 function clip(s: string, max: number): string {

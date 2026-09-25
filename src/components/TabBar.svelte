@@ -9,7 +9,15 @@
 
 <nav class="tabbar" aria-label="Main">
   {#each tabs as v (v.id)}
-    <button class:active={store.view === v.id} onclick={() => { open = false; store.go(v.id); }} aria-current={store.view === v.id ? 'page' : undefined} aria-label={v.label}>
+    <button
+      class:active={store.view === v.id}
+      onclick={() => {
+        open = false;
+        store.go(v.id);
+      }}
+      aria-current={store.view === v.id ? 'page' : undefined}
+      aria-label={v.label}
+    >
       <span class="ico" aria-hidden="true">{v.icon}</span>
       <span class="lbl">{v.label}</span>
     </button>
@@ -24,7 +32,14 @@
   <div class="more-backdrop" onclick={() => (open = false)}></div>
   <div class="more" role="menu" transition:fly={{ y: 20, duration: 180 }}>
     {#each more as v (v.id)}
-      <button role="menuitem" class:active={store.view === v.id} onclick={() => { open = false; store.go(v.id); }}>
+      <button
+        role="menuitem"
+        class:active={store.view === v.id}
+        onclick={() => {
+          open = false;
+          store.go(v.id);
+        }}
+      >
         <span class="ico" aria-hidden="true">{v.icon}</span>{v.label}
       </button>
     {/each}

@@ -48,7 +48,10 @@ export const KENO_PAYS: Record<number, Record<number, number>> = {
   10: { 4: 3.1, 5: 6.2, 6: 21, 7: 104, 8: 624, 9: 4159, 10: 16636 },
 };
 export function drawKeno(rng: Rng = cryptoRng): number[] {
-  return shuffle(Array.from({ length: KENO_NUMBERS }, (_, i) => i + 1), rng).slice(0, KENO_DRAWN);
+  return shuffle(
+    Array.from({ length: KENO_NUMBERS }, (_, i) => i + 1),
+    rng,
+  ).slice(0, KENO_DRAWN);
 }
 export function kenoMultiplier(picks: number[], drawn: number[]): { hits: number; multiplier: number } {
   const set = new Set(drawn);
@@ -59,7 +62,12 @@ export function kenoMultiplier(picks: number[], drawn: number[]): { hits: number
 // ---------- Mines ----------
 export const MINES_TILES = 25;
 export function placeMines(count: number, rng: Rng = cryptoRng): Set<number> {
-  return new Set(shuffle(Array.from({ length: MINES_TILES }, (_, i) => i), rng).slice(0, count));
+  return new Set(
+    shuffle(
+      Array.from({ length: MINES_TILES }, (_, i) => i),
+      rng,
+    ).slice(0, count),
+  );
 }
 function choose(n: number, k: number): number {
   if (k < 0 || k > n) return 0;
@@ -146,7 +154,10 @@ export const SCRATCH_PRIZES = [
 export const SCRATCH_SYMBOLS = ['🍀', '💎', '⭐', '🔔', '🍒', '👑', '🎁'];
 /** A 3×3 card: three matching symbols win that symbol's prize. Losing cards never show three of a kind. */
 export function makeScratchCard(rng: Rng = cryptoRng): { cells: string[]; mult: number } {
-  const tier = weighted(SCRATCH_PRIZES.map((p) => p.weight), rng);
+  const tier = weighted(
+    SCRATCH_PRIZES.map((p) => p.weight),
+    rng,
+  );
   const mult = SCRATCH_PRIZES[tier].mult;
   const cells: string[] = [];
   if (mult > 0) {
@@ -164,5 +175,5 @@ export function makeScratchCard(rng: Rng = cryptoRng): { cells: string[]; mult: 
 }
 export function scratchPrizeFor(symbol: string): number {
   const i = SCRATCH_SYMBOLS.indexOf(symbol);
-  return i >= 0 ? SCRATCH_PRIZES[i + 1]?.mult ?? 0 : 0;
+  return i >= 0 ? (SCRATCH_PRIZES[i + 1]?.mult ?? 0) : 0;
 }

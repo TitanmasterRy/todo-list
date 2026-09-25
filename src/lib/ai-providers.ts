@@ -174,7 +174,9 @@ export async function listModelsOpenAICompatible(cfg: { baseUrl: string; apiKey?
   try {
     res = await fetch(`${base}/models`, { headers });
   } catch (e) {
-    throw new Error(cfg.provider === 'ollama' ? 'Could not reach Ollama. Is it running with OLLAMA_ORIGINS="*"?' : `Network error calling ${base}: ${e instanceof Error ? e.message : String(e)}`);
+    throw new Error(
+      cfg.provider === 'ollama' ? 'Could not reach Ollama. Is it running with OLLAMA_ORIGINS="*"?' : `Network error calling ${base}: ${e instanceof Error ? e.message : String(e)}`,
+    );
   }
   if (res.status === 401 || res.status === 403) throw new Error(`API key rejected (${res.status}). Check it in Settings → AI helper.`);
   if (!res.ok) throw new Error(`Could not list models (${res.status}).`);
@@ -220,9 +222,7 @@ export async function chatOpenAICompatible(cfg: { baseUrl: string; apiKey?: stri
     });
   } catch (e) {
     throw new Error(
-      cfg.provider === 'ollama'
-        ? 'Could not reach Ollama. Is it running with OLLAMA_ORIGINS="*"?'
-        : `Network error calling ${base}: ${e instanceof Error ? e.message : String(e)}`,
+      cfg.provider === 'ollama' ? 'Could not reach Ollama. Is it running with OLLAMA_ORIGINS="*"?' : `Network error calling ${base}: ${e instanceof Error ? e.message : String(e)}`,
     );
   }
   if (!res.ok) {

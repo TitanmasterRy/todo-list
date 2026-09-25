@@ -49,6 +49,12 @@ describe('sandbox and bridge', () => {
     expect(readScoreMessage('hi')).toBeNull();
   });
   it('builds a manifest entry for a local game', () => {
-    expect(manifestEntry({ id: 'my-game', title: 'Mine', emoji: '🎯', cost: 2, html: '<p/>' })).toEqual({ id: 'my-game', title: 'Mine', emoji: '🎯', src: 'my-game.html', cost: 2 });
+    expect(manifestEntry({ id: 'my-game', title: 'Mine', emoji: '🎯', cost: 2, html: '<p/>' })).toEqual({
+      id: 'my-game',
+      title: 'Mine',
+      emoji: '🎯',
+      src: 'my-game.html',
+      cost: 2,
+    });
   });
 });

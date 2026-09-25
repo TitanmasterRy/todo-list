@@ -1,17 +1,7 @@
 import { shuffledDeck, type PlayingCard } from './cards';
 import { type Rng, cryptoRng } from './rng';
 
-export type PokerHand =
-  | 'royal'
-  | 'straightFlush'
-  | 'four'
-  | 'fullHouse'
-  | 'flush'
-  | 'straight'
-  | 'three'
-  | 'twoPair'
-  | 'jacksOrBetter'
-  | 'nothing';
+export type PokerHand = 'royal' | 'straightFlush' | 'four' | 'fullHouse' | 'flush' | 'straight' | 'three' | 'twoPair' | 'jacksOrBetter' | 'nothing';
 
 /** Jacks or Better, full-pay 9/6 (≈99.5% return with perfect play). Multipliers × bet, stake included. */
 export const VP_PAYTABLE: Record<PokerHand, number> = {

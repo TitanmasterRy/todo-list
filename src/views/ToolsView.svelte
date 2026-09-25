@@ -16,7 +16,8 @@
 
   import ScanTool from '../components/tools/ScanTool.svelte';
 
-  type Tab = 'grades' | 'planner' | 'calendar' | 'reading' | 'calculator' | 'graph' | 'notecards' | 'study' | 'transcript' | 'scan' | 'reader' | 'code' | 'google' | 'quiz' | 'powerschool';
+  type Tab =
+    'grades' | 'planner' | 'calendar' | 'reading' | 'calculator' | 'graph' | 'notecards' | 'study' | 'transcript' | 'scan' | 'reader' | 'code' | 'google' | 'quiz' | 'powerschool';
   type Group = 'plan' | 'grades' | 'study' | 'compute' | 'connect';
   let tab = $state<Tab>((ui.toolsTab as Tab) || 'planner');
   $effect(() => {
@@ -62,9 +63,7 @@
     }),
   );
   const candidates = $derived(
-    store.openTasks
-      .filter((t) => t.dueAt && dueKey(t.dueAt) > store.today && dueKey(t.dueAt) <= addDaysKey(store.today, 14) && t.pinnedDay !== store.today)
-      .sort(byDueThenOrder),
+    store.openTasks.filter((t) => t.dueAt && dueKey(t.dueAt) > store.today && dueKey(t.dueAt) <= addDaysKey(store.today, 14) && t.pinnedDay !== store.today).sort(byDueThenOrder),
   );
   const planned = $derived(store.pinnedTodayTasks.filter((t) => t.dueAt));
   const remaining = $derived(capacity - committed);
@@ -100,7 +99,10 @@
     store.activeCourses.map((c) => {
       const items = store.tasks.filter((t) => t.courseId === c.id && (t.weight ?? 0) > 0 && !t.archived).sort(byDueThenOrder);
       const summary = summarize(items.map((t) => ({ weight: t.weight!, score: t.score })));
-      const needed = neededOnRemaining(items.map((t) => ({ weight: t.weight!, score: t.score })), target);
+      const needed = neededOnRemaining(
+        items.map((t) => ({ weight: t.weight!, score: t.score })),
+        target,
+      );
       return { course: c, items, summary, needed };
     }),
   );
@@ -170,7 +172,12 @@
   );
   function exportICS() {
     downloadText('homework-todo.ics', buildICS(calTasks, store.courses), 'text/calendar');
-    toasts.push({ message: `Exported ${calTasks.length} event${calTasks.length === 1 ? '' : 's'}`, detail: 'Import homework-todo.ics into your calendar app.', kind: 'success', emoji: '📆' });
+    toasts.push({
+      message: `Exported ${calTasks.length} event${calTasks.length === 1 ? '' : 's'}`,
+      detail: 'Import homework-todo.ics into your calendar app.',
+      kind: 'success',
+      emoji: '📆',
+    });
   }
   const dayLabel = (k: string) => {
     const d = fromKey(k);
@@ -188,7 +195,16 @@
 
   <div class="groups" role="tablist" aria-label="Tool groups">
     {#each groups as g (g.id)}
-      <button role="tab" aria-selected={group === g.id} class:on={group === g.id} onclick={() => { group = g.id; const first = tabs.find((t) => t.group === g.id); if (first && tabs.find((t) => t.id === tab)?.group !== g.id) tab = first.id; }}>{g.label}</button>
+      <button
+        role="tab"
+        aria-selected={group === g.id}
+        class:on={group === g.id}
+        onclick={() => {
+          group = g.id;
+          const first = tabs.find((t) => t.group === g.id);
+          if (first && tabs.find((t) => t.id === tab)?.group !== g.id) tab = first.id;
+        }}>{g.label}</button
+      >
     {/each}
   </div>
   <div class="tabs" role="tablist" aria-label="Tools">
@@ -201,14 +217,25 @@
     <section class="card">
       <div class="row-head">
         <h2>Today’s capacity</h2>
-        <label class="cap">I can do <input class="input num" type="number" min="15" step="15" value={capacity} onchange={setCapacity} aria-label="Daily capacity in minutes" /> min of homework a day</label>
+        <label class="cap"
+          >I can do <input class="input num" type="number" min="15" step="15" value={capacity} onchange={setCapacity} aria-label="Daily capacity in minutes" /> min of homework a day</label
+        >
       </div>
       <div class="capbar" class:over={committed > capacity}>
         <div class="fill" style="width:{Math.min(100, (committed / capacity) * 100)}%"></div>
-        <span class="lbl">{formatMinutes(committed)} of {formatMinutes(capacity)}{committed > capacity ? ` · ${formatMinutes(committed - capacity)} over` : remaining > 0 ? ` · ${formatMinutes(remaining)} free` : ' · full'}</span>
+        <span class="lbl"
+          >{formatMinutes(committed)} of {formatMinutes(capacity)}{committed > capacity
+            ? ` · ${formatMinutes(committed - capacity)} over`
+            : remaining > 0
+              ? ` · ${formatMinutes(remaining)} free`
+              : ' · full'}</span
+        >
       </div>
       {#if unestimatedToday}
-        <p class="help">{unestimatedToday} task{unestimatedToday > 1 ? 's' : ''} on today’s list {unestimatedToday > 1 ? 'have' : 'has'} no estimate, so the bar is optimistic. Add <code>~30m</code> style estimates for a truer picture.</p>
+        <p class="help">
+          {unestimatedToday} task{unestimatedToday > 1 ? 's' : ''} on today’s list {unestimatedToday > 1 ? 'have' : 'has'} no estimate, so the bar is optimistic. Add
+          <code>~30m</code> style estimates for a truer picture.
+        </p>
       {/if}
       <div class="week" aria-label="Next 7 days load">
         {#each week as d (d.key)}
@@ -220,7 +247,13 @@
         {/each}
       </div>
       {#if week.some((d) => d.over)}
-        <p class="warn">⚠ {week.filter((d) => d.over).map((d) => dayLabel(d.key)).join(', ')} {week.filter((d) => d.over).length > 1 ? 'are' : 'is'} over capacity. Pull some of that work into earlier days below.</p>
+        <p class="warn">
+          ⚠ {week
+            .filter((d) => d.over)
+            .map((d) => dayLabel(d.key))
+            .join(', ')}
+          {week.filter((d) => d.over).length > 1 ? 'are' : 'is'} over capacity. Pull some of that work into earlier days below.
+        </p>
       {/if}
     </section>
 
@@ -235,7 +268,10 @@
           {#each planned as t (t.id)}
             <li>
               <span class="dot" style="background:{store.courseById(t.courseId)?.color ?? 'var(--border-strong)'}"></span>
-              <span class="grow">{t.title} <span class="muted">· due {formatDue(t.dueAt, store.now, store.settings.timeFormat)}{t.estimateMin ? ` · ${formatMinutes(t.estimateMin)}` : ''}</span></span>
+              <span class="grow"
+                >{t.title}
+                <span class="muted">· due {formatDue(t.dueAt, store.now, store.settings.timeFormat)}{t.estimateMin ? ` · ${formatMinutes(t.estimateMin)}` : ''}</span></span
+              >
               <button class="btn ghost sm" onclick={() => store.unpinToday(t.id)}>Remove</button>
             </li>
           {/each}
@@ -248,7 +284,11 @@
           {#each candidates as t (t.id)}
             <li>
               <span class="dot" style="background:{store.courseById(t.courseId)?.color ?? 'var(--border-strong)'}"></span>
-              <span class="grow">{t.title} <span class="muted">· due {formatDue(t.dueAt, store.now, store.settings.timeFormat)}{t.estimateMin ? ` · ${formatMinutes(t.estimateMin)}` : ' · no estimate'}</span></span>
+              <span class="grow"
+                >{t.title}
+                <span class="muted">· due {formatDue(t.dueAt, store.now, store.settings.timeFormat)}{t.estimateMin ? ` · ${formatMinutes(t.estimateMin)}` : ' · no estimate'}</span
+                ></span
+              >
               <button class="btn sm" onclick={() => store.pinToToday(t.id)}>+ Today</button>
             </li>
           {/each}
@@ -272,7 +312,9 @@
         <h2>Grade calculator</h2>
         <label class="cap">Target <input class="input num" type="number" min="1" max="100" value={target} onchange={setTarget} aria-label="Target grade" /> %</label>
       </div>
-      <p class="help">Give tasks a <strong>weight %</strong> (task editor, or the form below) and enter the <strong>score</strong> you got. Unweighted remainder counts as “not graded yet”.</p>
+      <p class="help">
+        Give tasks a <strong>weight %</strong> (task editor, or the form below) and enter the <strong>score</strong> you got. Unweighted remainder counts as “not graded yet”.
+      </p>
       {#if !store.activeCourses.length}
         <p class="muted">Add a course first.</p>
       {/if}
@@ -293,9 +335,25 @@
               <tbody>
                 {#each g.items as t (t.id)}
                   <tr class:done={!!t.completedAt}>
-                    <td><button class="link-title" onclick={() => (store.editingTaskId = t.id)}>{t.title}</button>{#if t.dueAt}<span class="muted"> · {formatDue(t.dueAt, store.now)}</span>{/if}</td>
+                    <td
+                      ><button class="link-title" onclick={() => (store.editingTaskId = t.id)}>{t.title}</button>{#if t.dueAt}<span class="muted">
+                          · {formatDue(t.dueAt, store.now)}</span
+                        >{/if}</td
+                    >
                     <td><input class="input num" type="number" min="0" max="100" value={t.weight ?? ''} onchange={(e) => setWeight(t, e)} aria-label="Weight" /></td>
-                    <td><input class="input num" type="number" min="0" max="200" step="0.5" value={t.score ?? ''} placeholder="—" onchange={(e) => setScore(t, e)} aria-label="Score" /></td>
+                    <td
+                      ><input
+                        class="input num"
+                        type="number"
+                        min="0"
+                        max="200"
+                        step="0.5"
+                        value={t.score ?? ''}
+                        placeholder="—"
+                        onchange={(e) => setScore(t, e)}
+                        aria-label="Score"
+                      /></td
+                    >
                   </tr>
                 {/each}
               </tbody>
@@ -385,7 +443,8 @@
           <label>From page <input class="input" type="number" min="1" bind:value={from} placeholder="112" /></label>
           <label>To page <input class="input" type="number" min="1" bind:value={to} placeholder="140" /></label>
           <label>or page count <input class="input" type="number" min="1" bind:value={pages} placeholder="28" disabled={!!(from && to)} /></label>
-          <label>Minutes per page
+          <label
+            >Minutes per page
             <select class="select" bind:value={minPerPage}>
               <option value="1.5">1.5 · novel / easy</option>
               <option value="2">2 · light textbook</option>
@@ -398,7 +457,8 @@
       {:else}
         <div class="grid2">
           <label>Words <input class="input" type="number" min="1" bind:value={words} placeholder="5000" /></label>
-          <label>Words per minute
+          <label
+            >Words per minute
             <select class="select" bind:value={wpm}>
               <option value="250">250 · skim</option>
               <option value="200">200 · normal</option>
@@ -413,7 +473,8 @@
       </div>
       <div class="grid2">
         <label>Title <input class="input" bind:value={readTitle} placeholder={suggestedTitle || 'Read chapter 4'} /></label>
-        <label>Course
+        <label
+          >Course
           <select class="select" bind:value={readCourse}>
             <option value="">None</option>
             {#each store.activeCourses as c (c.id)}<option value={c.id}>{c.emoji ?? ''} {c.name}</option>{/each}
@@ -426,9 +487,13 @@
   {:else}
     <section class="card">
       <h2>Calendar export</h2>
-      <p class="help">Download an <code>.ics</code> file of your due dates and import it into Google Calendar, Apple Calendar, or Outlook. Exams and quizzes get a reminder one day before. Re-export after changes; most calendars update events with the same id on re-import.</p>
+      <p class="help">
+        Download an <code>.ics</code> file of your due dates and import it into Google Calendar, Apple Calendar, or Outlook. Exams and quizzes get a reminder one day before. Re-export
+        after changes; most calendars update events with the same id on re-import.
+      </p>
       <div class="grid2">
-        <label>Range
+        <label
+          >Range
           <select class="select" bind:value={horizon}>
             <option value="30">Next 30 days</option>
             <option value="90">Next 90 days</option>

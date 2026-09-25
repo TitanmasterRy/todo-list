@@ -67,25 +67,92 @@
 </section>
 
 <style>
-  .head { display: flex; justify-content: space-between; gap: 10px; align-items: flex-start; flex-wrap: wrap; }
-  h2 { font-size: 16px; margin: 0 0 4px; }
-  h3 { font-size: 14px; margin: 14px 0 6px; }
-  .help, .muted { font-size: 13px; color: var(--text-muted); font-weight: 400; }
-  .btns { display: flex; gap: 6px; }
-  table { width: 100%; border-collapse: collapse; font-size: 14px; }
-  th { text-align: left; font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-faint); padding: 4px 6px; border-bottom: 1px solid var(--border); }
-  td { padding: 6px; border-bottom: 1px solid var(--border); }
-  .letter { font-weight: 700; }
-  .link { color: var(--text); text-align: left; }
-  .link:hover { color: var(--accent); }
-  .print-only { display: none; }
-  .summary { display: flex; align-items: baseline; gap: 10px; margin-top: 14px; flex-wrap: wrap; }
-  .summary strong { font-size: 24px; }
+  .head {
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+    align-items: flex-start;
+    flex-wrap: wrap;
+  }
+  h2 {
+    font-size: 16px;
+    margin: 0 0 4px;
+  }
+  h3 {
+    font-size: 14px;
+    margin: 14px 0 6px;
+  }
+  .help,
+  .muted {
+    font-size: 13px;
+    color: var(--text-muted);
+    font-weight: 400;
+  }
+  .btns {
+    display: flex;
+    gap: 6px;
+  }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 14px;
+  }
+  th {
+    text-align: left;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--text-faint);
+    padding: 4px 6px;
+    border-bottom: 1px solid var(--border);
+  }
+  td {
+    padding: 6px;
+    border-bottom: 1px solid var(--border);
+  }
+  .letter {
+    font-weight: 700;
+  }
+  .link {
+    color: var(--text);
+    text-align: left;
+  }
+  .link:hover {
+    color: var(--accent);
+  }
+  .print-only {
+    display: none;
+  }
+  .summary {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+    margin-top: 14px;
+    flex-wrap: wrap;
+  }
+  .summary strong {
+    font-size: 24px;
+  }
   @media print {
-    :global(body *) { visibility: hidden; }
-    :global(#transcript), :global(#transcript *) { visibility: visible; }
-    :global(#transcript) { position: absolute; left: 0; top: 0; width: 100%; border: none; }
-    .no-print { display: none !important; }
-    .print-only { display: inline; }
+    :global(body *) {
+      visibility: hidden;
+    }
+    :global(#transcript),
+    :global(#transcript *) {
+      visibility: visible;
+    }
+    :global(#transcript) {
+      position: absolute;
+      left: 0;
+      top: 0;
+      width: 100%;
+      border: none;
+    }
+    .no-print {
+      display: none !important;
+    }
+    .print-only {
+      display: inline;
+    }
   }
 </style>

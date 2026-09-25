@@ -30,7 +30,9 @@
     <div class="cz-hand cards">
       {#if s}
         {#each s.hand as c, i (i + c.suit + c.rank)}
-          <button class="hold" onclick={() => toggle(i)} disabled={s.phase !== 'hold'} aria-pressed={s.held[i]}><PlayingCard card={c} held={s.phase === 'hold' && s.held[i]} /></button>
+          <button class="hold" onclick={() => toggle(i)} disabled={s.phase !== 'hold'} aria-pressed={s.held[i]}
+            ><PlayingCard card={c} held={s.phase === 'hold' && s.held[i]} /></button
+          >
         {/each}
       {:else}
         {#each [0, 1, 2, 3, 4] as i (i)}<PlayingCard hidden />{/each}

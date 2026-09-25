@@ -66,17 +66,33 @@
 
   <div class="timer card" class:work={pomodoro.mode === 'work'} class:running={pomodoro.running}>
     <div class="modes" role="tablist">
-      <button role="tab" aria-selected={pomodoro.mode === 'work'} class:on={pomodoro.mode === 'work'} onclick={() => pomodoro.setMode('work')}>Focus {store.settings.pomodoroWorkMin}</button>
-      <button role="tab" aria-selected={pomodoro.mode === 'break'} class:on={pomodoro.mode === 'break'} onclick={() => pomodoro.setMode('break')}>Break {store.settings.pomodoroBreakMin}</button>
-      <button role="tab" aria-selected={pomodoro.mode === 'long'} class:on={pomodoro.mode === 'long'} onclick={() => pomodoro.setMode('long')}>Long {store.settings.pomodoroLongBreakMin}</button>
-      <button role="tab" aria-selected={pomodoro.mode === 'custom'} class:on={pomodoro.mode === 'custom'} onclick={() => pomodoro.setMode('custom')}>Custom {pomodoro.customMin}</button>
+      <button role="tab" aria-selected={pomodoro.mode === 'work'} class:on={pomodoro.mode === 'work'} onclick={() => pomodoro.setMode('work')}
+        >Focus {store.settings.pomodoroWorkMin}</button
+      >
+      <button role="tab" aria-selected={pomodoro.mode === 'break'} class:on={pomodoro.mode === 'break'} onclick={() => pomodoro.setMode('break')}
+        >Break {store.settings.pomodoroBreakMin}</button
+      >
+      <button role="tab" aria-selected={pomodoro.mode === 'long'} class:on={pomodoro.mode === 'long'} onclick={() => pomodoro.setMode('long')}
+        >Long {store.settings.pomodoroLongBreakMin}</button
+      >
+      <button role="tab" aria-selected={pomodoro.mode === 'custom'} class:on={pomodoro.mode === 'custom'} onclick={() => pomodoro.setMode('custom')}
+        >Custom {pomodoro.customMin}</button
+      >
       <button role="tab" aria-selected={stop} class:on={stop} onclick={() => pomodoro.setMode('stopwatch')}>Stopwatch</button>
     </div>
     <div class="presets">
       {#each store.settings.timerPresets as p (p.label)}
-        <button class="chip" class:on={store.settings.pomodoroWorkMin === p.work && store.settings.pomodoroBreakMin === p.brk} onclick={() => pomodoro.applyPreset(p.work, p.brk)}>{p.label}</button>
+        <button class="chip" class:on={store.settings.pomodoroWorkMin === p.work && store.settings.pomodoroBreakMin === p.brk} onclick={() => pomodoro.applyPreset(p.work, p.brk)}
+          >{p.label}</button
+        >
       {/each}
-      <form class="custom" onsubmit={(e) => { e.preventDefault(); pomodoro.setCustom(Number(customInput) || 30); }}>
+      <form
+        class="custom"
+        onsubmit={(e) => {
+          e.preventDefault();
+          pomodoro.setCustom(Number(customInput) || 30);
+        }}
+      >
         <input class="input num" type="number" min="1" max="600" bind:value={customInput} aria-label="Custom minutes" />
         <button class="btn sm" type="submit">min timer</button>
       </form>
@@ -84,15 +100,44 @@
     <div class="dial">
       <svg viewBox="0 0 200 200" width="200" height="200" aria-hidden="true">
         <circle cx="100" cy="100" r={R} fill="none" stroke="var(--border)" stroke-width="8" />
-        <circle cx="100" cy="100" r={R} fill="none" stroke="var(--accent)" stroke-width="8" stroke-linecap="round" stroke-dasharray={C} stroke-dashoffset={C * (1 - pct)} transform="rotate(-90 100 100)" class="prog" />
+        <circle
+          cx="100"
+          cy="100"
+          r={R}
+          fill="none"
+          stroke="var(--accent)"
+          stroke-width="8"
+          stroke-linecap="round"
+          stroke-dasharray={C}
+          stroke-dashoffset={C * (1 - pct)}
+          transform="rotate(-90 100 100)"
+          class="prog"
+        />
       </svg>
-      <div class="time" aria-live="off"><span class="digits">{stop ? `${elapsedMM}:${elapsedSS}` : `${mm}:${ss}`}</span><span class="mode">{stop ? 'stopwatch' : pomodoro.mode === 'work' ? 'focus' : pomodoro.mode === 'break' ? 'short break' : pomodoro.mode === 'long' ? 'long break' : 'custom timer'}</span></div>
+      <div class="time" aria-live="off">
+        <span class="digits">{stop ? `${elapsedMM}:${elapsedSS}` : `${mm}:${ss}`}</span><span class="mode"
+          >{stop ? 'stopwatch' : pomodoro.mode === 'work' ? 'focus' : pomodoro.mode === 'break' ? 'short break' : pomodoro.mode === 'long' ? 'long break' : 'custom timer'}</span
+        >
+      </div>
     </div>
     <div class="controls">
-      <button class="btn primary" onclick={() => { requestNotify(); pomodoro.toggle(); }}>{pomodoro.running ? 'Pause' : pomodoro.remaining < pomodoro.total ? 'Resume' : 'Start'}</button>
+      <button
+        class="btn primary"
+        onclick={() => {
+          requestNotify();
+          pomodoro.toggle();
+        }}>{pomodoro.running ? 'Pause' : pomodoro.remaining < pomodoro.total ? 'Resume' : 'Start'}</button
+      >
       <button class="btn" onclick={() => pomodoro.reset()}>Reset</button>
       {#if stop}
-        <button class="btn ghost" onclick={() => { const m = pomodoro.logStopwatch(); toasts.push({ message: `Logged ${m} min of work`, kind: 'success' }); }} disabled={pomodoro.elapsed < 60}>Log time</button>
+        <button
+          class="btn ghost"
+          onclick={() => {
+            const m = pomodoro.logStopwatch();
+            toasts.push({ message: `Logged ${m} min of work`, kind: 'success' });
+          }}
+          disabled={pomodoro.elapsed < 60}>Log time</button
+        >
       {:else}
         <button class="btn ghost" onclick={() => pomodoro.skip()}>Skip</button>
       {/if}
@@ -130,7 +175,13 @@
           </li>
         {/each}
         <li>
-          <form onsubmit={(e) => { e.preventDefault(); store.addSubtask(task.id, newSub); newSub = ''; }}>
+          <form
+            onsubmit={(e) => {
+              e.preventDefault();
+              store.addSubtask(task.id, newSub);
+              newSub = '';
+            }}
+          >
             <input class="sub-input" bind:value={newSub} placeholder="Add a step…" />
           </form>
         </li>

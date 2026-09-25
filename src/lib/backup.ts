@@ -59,7 +59,18 @@ export function parseBundle(raw: unknown): ExportBundle {
   const tasks: Task[] = b.tasks.map((t) => normalizeTask(t as Partial<Task>));
   const courses: Course[] = b.courses
     .filter((c): c is Course => !!c && typeof (c as Course).id === 'string' && typeof (c as Course).name === 'string')
-    .map((c) => ({ id: c.id, name: c.name, color: c.color ?? '#6c5ce7', emoji: c.emoji, archived: !!c.archived, credits: c.credits, term: c.term, finalGrade: c.finalGrade, schoologyName: c.schoologyName, updatedAt: c.updatedAt }));
+    .map((c) => ({
+      id: c.id,
+      name: c.name,
+      color: c.color ?? '#6c5ce7',
+      emoji: c.emoji,
+      archived: !!c.archived,
+      credits: c.credits,
+      term: c.term,
+      finalGrade: c.finalGrade,
+      schoologyName: c.schoologyName,
+      updatedAt: c.updatedAt,
+    }));
   const templates: Template[] = Array.isArray(b.templates) ? (b.templates as Template[]).filter((t) => t && t.id && t.name && t.task) : [];
   const stats: Stats = { ...structuredClone(DEFAULT_STATS), ...((b.stats as Partial<Stats>) ?? {}) };
   const dayNotes: DayNote[] = Array.isArray(b.dayNotes) ? (b.dayNotes as DayNote[]).filter((n) => n && n.date) : [];

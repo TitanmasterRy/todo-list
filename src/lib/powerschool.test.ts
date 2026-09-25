@@ -243,7 +243,16 @@ describe('matchToCourses', () => {
     expect(r[0].ps).toBe(ps[0]);
   });
   it('prefers exact matches over partial ones and uses each course once', () => {
-    const r = matchToCourses([{ name: 'Chem', terms: {} }, { name: 'Chemistry', terms: {} }], [{ id: 'a', name: 'Chemistry' }, { id: 'b', name: 'AP Chemistry' }]);
+    const r = matchToCourses(
+      [
+        { name: 'Chem', terms: {} },
+        { name: 'Chemistry', terms: {} },
+      ],
+      [
+        { id: 'a', name: 'Chemistry' },
+        { id: 'b', name: 'AP Chemistry' },
+      ],
+    );
     expect(r[1].courseId).toBe('a');
     expect(r[0].courseId).toBe('b');
   });

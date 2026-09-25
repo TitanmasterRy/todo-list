@@ -27,10 +27,19 @@
   const dark = $derived(document.documentElement.classList.contains('force-dark') || store.settings.theme === 'dark');
   // words from notecards (single words, 3–10 letters) for word games
   const words = $derived(
-    Array.from(new Set(store.cards.flatMap((c) => [c.front, c.back]).map((w) => w.trim().toUpperCase()).filter((w) => /^[A-Z]{3,10}$/.test(w)))).slice(0, 20),
+    Array.from(
+      new Set(
+        store.cards
+          .flatMap((c) => [c.front, c.back])
+          .map((w) => w.trim().toUpperCase())
+          .filter((w) => /^[A-Z]{3,10}$/.test(w)),
+      ),
+    ).slice(0, 20),
   );
   const src = $derived(
-    game.html ? undefined : arcade.srcFor(game, { theme: store.settings.themePack, dark: dark ? '1' : '0', accent: store.settings.accent, ...(words.length >= 4 ? { words: words.join(',') } : {}) }),
+    game.html
+      ? undefined
+      : arcade.srcFor(game, { theme: store.settings.themePack, dark: dark ? '1' : '0', accent: store.settings.accent, ...(words.length >= 4 ? { words: words.join(',') } : {}) }),
   );
   const left = $derived(endsAt ? Math.max(0, endsAt - now) : 0);
   const mmss = $derived(`${Math.floor(left / 60000)}:${String(Math.floor((left % 60000) / 1000)).padStart(2, '0')}`);

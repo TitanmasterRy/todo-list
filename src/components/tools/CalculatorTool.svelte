@@ -51,7 +51,16 @@
     </div>
   </div>
   <form onsubmit={run}>
-    <input class="input expr" bind:this={input} bind:value={expr} placeholder="2^10 / 4, sin(30), sqrt(2)x, 5!, 15% * 80" aria-label="Expression" autocomplete="off" spellcheck="false" data-calc />
+    <input
+      class="input expr"
+      bind:this={input}
+      bind:value={expr}
+      placeholder="2^10 / 4, sin(30), sqrt(2)x, 5!, 15% * 80"
+      aria-label="Expression"
+      autocomplete="off"
+      spellcheck="false"
+      data-calc
+    />
     <div class="preview" aria-live="polite">{error ? `⚠ ${error}` : preview ? `= ${preview}` : ' '}</div>
   </form>
   <div class="pad">
@@ -62,7 +71,14 @@
     <button class="k fn" onclick={() => insert('ln(')}>ln</button>
     <button class="k fn" onclick={() => insert('log(')}>log</button>
     <button class="k fn" onclick={() => insert('abs(')}>abs</button>
-    <button class="k fn" onclick={() => { expr = ''; error = ''; input?.focus(); }}>C</button>
+    <button
+      class="k fn"
+      onclick={() => {
+        expr = '';
+        error = '';
+        input?.focus();
+      }}>C</button
+    >
     <button class="k go" onclick={run}>=</button>
   </div>
   {#if history.length}
@@ -72,28 +88,122 @@
       {/each}
     </ul>
   {/if}
-  <details class="help"><summary>Functions and syntax</summary><p>{FUNCTIONS.join(', ')}. Constants: pi, e, tau. <code>ans</code> is the last result. Implicit multiplication works (<code>2pi</code>, <code>3(4+1)</code>). <code>x!</code> factorial, <code>7 % 3</code> modulo, <code>50%</code> percent, <code>^</code> power.</p></details>
+  <details class="help">
+    <summary>Functions and syntax</summary>
+    <p>
+      {FUNCTIONS.join(', ')}. Constants: pi, e, tau. <code>ans</code> is the last result. Implicit multiplication works (<code>2pi</code>, <code>3(4+1)</code>). <code>x!</code>
+      factorial, <code>7 % 3</code> modulo, <code>50%</code> percent, <code>^</code> power.
+    </p>
+  </details>
 </section>
 
 <style>
-  .head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
-  h2 { font-size: 16px; margin: 0; }
-  .modes { display: flex; gap: 2px; background: var(--bg-elev-2); border-radius: 999px; padding: 3px; }
-  .modes button { padding: 3px 10px; border-radius: 999px; font-size: 12px; font-weight: 600; color: var(--text-muted); }
-  .modes button.on { background: var(--bg-elev); color: var(--text); }
-  .expr { font-family: var(--mono); font-size: 18px; padding: 12px; }
-  .preview { min-height: 1.6em; text-align: right; font-family: var(--mono); font-size: 20px; font-weight: 700; padding: 4px 2px; }
-  .pad { display: grid; grid-template-columns: repeat(6, 1fr); gap: 6px; margin-top: 6px; }
-  .k { padding: 12px 0; border-radius: 10px; background: var(--bg-elev-2); border: 1px solid var(--border); font-family: var(--mono); font-size: 15px; font-weight: 600; }
-  .k:active { transform: scale(0.96); }
-  .k.op { color: var(--accent); }
-  .k.fn { font-size: 13px; }
-  .k.go { background: var(--accent); color: #fff; border-color: transparent; }
-  .hist { list-style: none; margin: 12px 0 0; padding: 0; max-height: 200px; overflow-y: auto; }
-  .hist button { width: 100%; display: flex; justify-content: space-between; gap: 10px; padding: 6px 8px; border-radius: 6px; font-family: var(--mono); font-size: 13px; color: var(--text-muted); }
-  .hist button:hover { background: var(--bg-hover); }
-  .hist .r { color: var(--text); font-weight: 600; }
-  .help { margin-top: 10px; font-size: 12px; color: var(--text-muted); }
-  .help code { font-family: var(--mono); }
-  @media (max-width: 480px) { .pad { grid-template-columns: repeat(4, 1fr); } }
+  .head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+  }
+  h2 {
+    font-size: 16px;
+    margin: 0;
+  }
+  .modes {
+    display: flex;
+    gap: 2px;
+    background: var(--bg-elev-2);
+    border-radius: 999px;
+    padding: 3px;
+  }
+  .modes button {
+    padding: 3px 10px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-muted);
+  }
+  .modes button.on {
+    background: var(--bg-elev);
+    color: var(--text);
+  }
+  .expr {
+    font-family: var(--mono);
+    font-size: 18px;
+    padding: 12px;
+  }
+  .preview {
+    min-height: 1.6em;
+    text-align: right;
+    font-family: var(--mono);
+    font-size: 20px;
+    font-weight: 700;
+    padding: 4px 2px;
+  }
+  .pad {
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    gap: 6px;
+    margin-top: 6px;
+  }
+  .k {
+    padding: 12px 0;
+    border-radius: 10px;
+    background: var(--bg-elev-2);
+    border: 1px solid var(--border);
+    font-family: var(--mono);
+    font-size: 15px;
+    font-weight: 600;
+  }
+  .k:active {
+    transform: scale(0.96);
+  }
+  .k.op {
+    color: var(--accent);
+  }
+  .k.fn {
+    font-size: 13px;
+  }
+  .k.go {
+    background: var(--accent);
+    color: #fff;
+    border-color: transparent;
+  }
+  .hist {
+    list-style: none;
+    margin: 12px 0 0;
+    padding: 0;
+    max-height: 200px;
+    overflow-y: auto;
+  }
+  .hist button {
+    width: 100%;
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 6px 8px;
+    border-radius: 6px;
+    font-family: var(--mono);
+    font-size: 13px;
+    color: var(--text-muted);
+  }
+  .hist button:hover {
+    background: var(--bg-hover);
+  }
+  .hist .r {
+    color: var(--text);
+    font-weight: 600;
+  }
+  .help {
+    margin-top: 10px;
+    font-size: 12px;
+    color: var(--text-muted);
+  }
+  .help code {
+    font-family: var(--mono);
+  }
+  @media (max-width: 480px) {
+    .pad {
+      grid-template-columns: repeat(4, 1fr);
+    }
+  }
 </style>

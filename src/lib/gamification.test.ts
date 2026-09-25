@@ -1,15 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import {
-  applyCompletion,
-  comboMultiplierFor,
-  computeXp,
-  effectiveStreak,
-  evaluateBadges,
-  levelForXp,
-  levelProgress,
-  updateStreak,
-  xpForLevel,
-} from './gamification';
+import { applyCompletion, comboMultiplierFor, computeXp, effectiveStreak, evaluateBadges, levelForXp, levelProgress, updateStreak, xpForLevel } from './gamification';
 import { DEFAULT_STATS, type Stats, type Task } from './types';
 import { accentUnlockedAt, applyGrade, applyStudySession, gradeXp, levelTitle } from './gamification';
 
@@ -59,7 +49,12 @@ describe('xp', () => {
     expect(computeXp(task({ priority: 'urgent' }), at, 0, noCrit).total).toBe(30);
   });
   it('adds subtask bonus', () => {
-    const t = task({ subtasks: [{ id: 'a', title: 'a', done: true }, { id: 'b', title: 'b', done: true }] });
+    const t = task({
+      subtasks: [
+        { id: 'a', title: 'a', done: true },
+        { id: 'b', title: 'b', done: true },
+      ],
+    });
     expect(computeXp(t, at, 0, noCrit).total).toBe(20);
   });
   it('applies early bonus', () => {

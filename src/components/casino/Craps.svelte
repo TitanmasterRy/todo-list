@@ -46,7 +46,9 @@
       </div>
     </div>
     <div>{s.message}</div>
-    <div class="cz-result" class:win={lastNet !== null && lastNet > 0} class:lose={lastNet !== null && lastNet < 0}>{lastNet === null ? '' : lastNet > 0 ? `+${lastNet}` : lastNet < 0 ? `${lastNet}` : 'Even'}</div>
+    <div class="cz-result" class:win={lastNet !== null && lastNet > 0} class:lose={lastNet !== null && lastNet < 0}>
+      {lastNet === null ? '' : lastNet > 0 ? `+${lastNet}` : lastNet < 0 ? `${lastNet}` : 'Even'}
+    </div>
     {#if lineOn}<div class="cz-label">On the line: {s.passBet ? `Pass ${s.passBet}` : `Don't pass ${s.dontPassBet}`}</div>{/if}
   </div>
   <div class="cz-actions">
@@ -60,9 +62,14 @@
   </div>
   <div class="cz-actions">
     <BetControl bind:value={fieldBet} min={0} label="Field (one roll)" />
-    <button class="btn primary" onclick={roll} disabled={rolling || (!lineOn && lineBet + fieldBet <= 0) || (!lineOn ? lineBet : 0) + fieldBet > economy.wallet.chips}>{lineOn ? 'Roll for the point' : 'Come-out roll'}</button>
+    <button class="btn primary" onclick={roll} disabled={rolling || (!lineOn && lineBet + fieldBet <= 0) || (!lineOn ? lineBet : 0) + fieldBet > economy.wallet.chips}
+      >{lineOn ? 'Roll for the point' : 'Come-out roll'}</button
+    >
   </div>
-  <p class="cz-edge">Pass wins on 7/11 and loses on 2/3/12 on the come-out; otherwise that number is the point, and you need it again before a 7. Don't pass is the opposite (12 pushes). Field pays 1:1 on 3, 4, 9, 10, 11, 2:1 on 2 and 3:1 on 12. House edge: pass 1.41%, don't pass 1.36%, field 2.8%.</p>
+  <p class="cz-edge">
+    Pass wins on 7/11 and loses on 2/3/12 on the come-out; otherwise that number is the point, and you need it again before a 7. Don't pass is the opposite (12 pushes). Field pays
+    1:1 on 3, 4, 9, 10, 11, 2:1 on 2 and 3:1 on 12. House edge: pass 1.41%, don't pass 1.36%, field 2.8%.
+  </p>
 </div>
 
 <style>

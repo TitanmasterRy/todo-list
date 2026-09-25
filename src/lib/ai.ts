@@ -72,8 +72,7 @@ async function askAnthropic(req: ChatRequest): Promise<string> {
     ...(req.effort && !/haiku/.test(model) ? { output_config: { effort: req.effort } } : {}),
   };
   const client = await anthropicClient();
-  const send = (withFallbacks: boolean) =>
-    client.beta.messages.create(withFallbacks ? { ...base, betas: ['server-side-fallback-2026-07-01'], fallbacks: 'default' } : base);
+  const send = (withFallbacks: boolean) => client.beta.messages.create(withFallbacks ? { ...base, betas: ['server-side-fallback-2026-07-01'], fallbacks: 'default' } : base);
   try {
     let res: Anthropic.Beta.BetaMessage;
     try {
@@ -141,7 +140,9 @@ export async function listModels(provider: AiProvider = currentProvider()): Prom
 /** Pick a sensible replacement when the chosen model id no longer exists. */
 function pickReplacement(provider: AiProvider, models: { id: string; free?: boolean }[]): string | undefined {
   const ids = models.map((m) => m.id);
-  const known = providerInfo(provider).models.map((m) => m.id).find((id) => ids.includes(id));
+  const known = providerInfo(provider)
+    .models.map((m) => m.id)
+    .find((id) => ids.includes(id));
   if (known) return known;
   if (provider === 'openrouter') return models.find((m) => m.free)?.id ?? ids[0];
   if (provider === 'gemini') return ids.find((id) => /gemini-.*flash/.test(id) && !/image|tts|audio|live|embedding/.test(id)) ?? ids[0];
@@ -249,7 +250,10 @@ export async function testKey(): Promise<string> {
     await ask('Reply with the single word OK.', 'ping', 64, undefined, 'low');
   } catch (e) {
     if (!(e instanceof ModelNotFoundError) || !models.length) throw e;
-    const next = pickReplacement(provider, models.filter((m) => m.id !== currentModel(provider)));
+    const next = pickReplacement(
+      provider,
+      models.filter((m) => m.id !== currentModel(provider)),
+    );
     if (!next) throw e;
     setModel(provider, next);
     note = `${e.message} Switched to ${next}.`;
@@ -294,7 +298,9 @@ export async function generateQuiz(o: QuizGenOptions): Promise<GeneratedQuestion
     `Count: ${o.count}`,
     `Difficulty: ${o.difficulty}`,
     `Question types to use: ${o.types.join(', ')}`,
-    o.audience === 'teacher' ? 'Audience: teacher building a graded quiz; questions should be assessment quality with clear, defensible answers.' : 'Audience: student studying; questions should teach the key ideas.',
+    o.audience === 'teacher'
+      ? 'Audience: teacher building a graded quiz; questions should be assessment quality with clear, defensible answers.'
+      : 'Audience: student studying; questions should teach the key ideas.',
     o.source ? `Base the questions on this material:\n${o.source.slice(0, 12000)}` : '',
   ]
     .filter(Boolean)

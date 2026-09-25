@@ -42,9 +42,7 @@ export async function fetchFeed(url: string, proxy: string): Promise<string> {
   }
   const msg = lastErr instanceof Error ? lastErr.message : String(lastErr);
   throw new Error(
-    /Failed to fetch|NetworkError|Load failed/i.test(msg)
-      ? 'The browser blocked the request (CORS). Add a CORS proxy in the setup panel, or upload the .ics file instead.'
-      : msg,
+    /Failed to fetch|NetworkError|Load failed/i.test(msg) ? 'The browser blocked the request (CORS). Add a CORS proxy in the setup panel, or upload the .ics file instead.' : msg,
   );
 }
 
@@ -54,7 +52,10 @@ function resolveCourse(a: ExternalAssignment, autoCreate: boolean, created: Map<
   const norm = name.toLowerCase();
   const byAlias = store.courses.find((c) => c.schoologyName && c.schoologyName.toLowerCase() === norm);
   if (byAlias) return byAlias.id;
-  const matched = matchCourseName(name, store.activeCourses.map((c) => ({ id: c.id, name: c.name })));
+  const matched = matchCourseName(
+    name,
+    store.activeCourses.map((c) => ({ id: c.id, name: c.name })),
+  );
   if (matched) return matched;
   if (created.has(norm)) return created.get(norm);
   if (autoCreate) {
@@ -69,7 +70,12 @@ function resolveCourse(a: ExternalAssignment, autoCreate: boolean, created: Map<
 
 /** "AP Calculus BC - Period 3 - Smith" → "AP Calculus BC" */
 export function shortenCourseName(name: string): string {
-  return name.split(/\s+[-–:]\s+|\s*\(|\s+section\s+/i)[0].trim().slice(0, 40) || name;
+  return (
+    name
+      .split(/\s+[-–:]\s+|\s*\(|\s+section\s+/i)[0]
+      .trim()
+      .slice(0, 40) || name
+  );
 }
 
 /** Sync from raw iCalendar text (feed, upload, or paste). */
@@ -88,9 +94,7 @@ export function applyAssignments(assignments: ExternalAssignment[]): { created: 
     if (!id && a.courseName) unmatched.add(a.courseName);
     return id;
   };
-  const existing = store.tasks
-    .filter((t) => t.externalId)
-    .map((t) => ({ externalId: t.externalId!, title: t.title, dueAt: t.dueAt, notes: t.notes, completedAt: t.completedAt }));
+  const existing = store.tasks.filter((t) => t.externalId).map((t) => ({ externalId: t.externalId!, title: t.title, dueAt: t.dueAt, notes: t.notes, completedAt: t.completedAt }));
   const diff = diffAssignments(existing, assignments, settings.schoologyIgnored);
   const describe = (a: ExternalAssignment) => {
     if (!settings.autoDescribe) return {};
@@ -163,7 +167,13 @@ export async function syncNow(opts: { quiet?: boolean } = {}): Promise<void> {
       if (!opts.quiet || r.created > 0 || (r.graded ?? 0) > 0) {
         toasts.push({
           message: r.created ? `${r.created} new assignment${r.created > 1 ? 's' : ''} from Schoology` : 'Schoology is up to date',
-          detail: [r.updated ? `${r.updated} updated` : '', r.graded ? `${r.graded} new grade${r.graded > 1 ? 's' : ''}` : '', `${r.total} in ${mode === 'api' ? 'Schoology' : 'feed'}`].filter(Boolean).join(' · '),
+          detail: [
+            r.updated ? `${r.updated} updated` : '',
+            r.graded ? `${r.graded} new grade${r.graded > 1 ? 's' : ''}` : '',
+            `${r.total} in ${mode === 'api' ? 'Schoology' : 'feed'}`,
+          ]
+            .filter(Boolean)
+            .join(' · '),
           kind: r.created || r.graded ? 'success' : 'info',
           emoji: '🔄',
         });

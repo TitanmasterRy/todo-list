@@ -19,7 +19,7 @@
 
 <div class="bet" aria-label="{label} amount">
   <span class="lbl">{label}</span>
-  <input class="input num" type="number" {min} step="1" {disabled} value={value} onchange={(e) => set(Number((e.target as HTMLInputElement).value))} aria-label="{label} in chips" />
+  <input class="input num" type="number" {min} step="1" {disabled} {value} onchange={(e) => set(Number((e.target as HTMLInputElement).value))} aria-label="{label} in chips" />
   <button class="btn sm ghost" {disabled} onclick={() => set(value / 2)}>½</button>
   <button class="btn sm ghost" {disabled} onclick={() => set(value * 2)}>×2</button>
   {#each DENOMS.filter((d) => d <= Math.max(chips, min)) as d (d)}

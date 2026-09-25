@@ -53,7 +53,11 @@ describe('quizmaker exports', () => {
     expect(w).toContain('1. B (Mitochondria) — ATP is made there.');
   });
   it('cards → questions with distractors', () => {
-    const qs = fromCards([{ front: 'a', back: '1' }, { front: 'b', back: '2' }, { front: 'c', back: '3' }]);
+    const qs = fromCards([
+      { front: 'a', back: '1' },
+      { front: 'b', back: '2' },
+      { front: 'c', back: '3' },
+    ]);
     expect(qs.length).toBe(3);
     expect([...qs[0].options].sort()).toEqual(['1', '2', '3']);
     expect(qs[0].options[qs[0].correct[0]]).toBe('1');

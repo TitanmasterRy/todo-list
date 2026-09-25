@@ -42,6 +42,11 @@ describe('flashcards', () => {
   });
   it('computes mastery', () => {
     expect(mastery([])).toBe(0);
-    expect(mastery([{ ...card, box: 1 }, { ...card, box: 5 }])).toBe(0.5);
+    expect(
+      mastery([
+        { ...card, box: 1 },
+        { ...card, box: 5 },
+      ]),
+    ).toBe(0.5);
   });
 });

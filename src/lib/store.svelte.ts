@@ -71,23 +71,17 @@ class Store {
   streak = $derived(effectiveStreak(this.stats, this.today));
   completedToday = $derived(this.stats.completionsByDay[this.today] ?? 0);
   ringClosedToday = $derived(this.completedToday >= (this.settings.dailyGoal || 3));
-  overdueTasks = $derived(
-    this.openTasks.filter((t) => isOverdue(t.dueAt, this.now) && !isDueToday(t.dueAt, this.now)).sort(byDueThenOrder),
-  );
+  overdueTasks = $derived(this.openTasks.filter((t) => isOverdue(t.dueAt, this.now) && !isDueToday(t.dueAt, this.now)).sort(byDueThenOrder));
   dueTodayTasks = $derived(this.openTasks.filter((t) => isDueToday(t.dueAt, this.now)).sort(byFrogThenOrder));
   /** No-date tasks dragged into Today, plus dated tasks planned for today via the planner (deadline untouched). */
   pinnedTodayTasks = $derived(
-    this.openTasks
-      .filter((t) => t.pinnedDay === this.today && (!t.dueAt || (!isDueToday(t.dueAt, this.now) && !isOverdue(t.dueAt, this.now))))
-      .sort(byOrder),
+    this.openTasks.filter((t) => t.pinnedDay === this.today && (!t.dueAt || (!isDueToday(t.dueAt, this.now) && !isOverdue(t.dueAt, this.now)))).sort(byOrder),
   );
   todayTasks = $derived([...this.overdueTasks, ...this.dueTodayTasks, ...this.pinnedTodayTasks]);
   noDateTasks = $derived(this.openTasks.filter((t) => !t.dueAt && t.pinnedDay !== this.today).sort(byOrder));
   todayEstimateMin = $derived(this.todayTasks.reduce((a, t) => a + (t.estimateMin ?? 0), 0));
   weekEstimateMin = $derived(
-    this.openTasks
-      .filter((t) => t.dueAt && dueKey(t.dueAt) >= this.today && dueKey(t.dueAt) <= addDaysKey(this.today, 6))
-      .reduce((a, t) => a + (t.estimateMin ?? 0), 0),
+    this.openTasks.filter((t) => t.dueAt && dueKey(t.dueAt) >= this.today && dueKey(t.dueAt) <= addDaysKey(this.today, 6)).reduce((a, t) => a + (t.estimateMin ?? 0), 0),
   );
   frogTask = $derived(this.openTasks.find((t) => t.frog && t.frogDate === this.today));
   allTags = $derived(Array.from(new Set(this.tasks.flatMap((t) => t.tags))).sort());
@@ -281,14 +275,19 @@ class Store {
     const id = uid('t');
     // Auto-describe: fill in a plan, steps and an estimate when the task arrives bare.
     let described = false;
-    if ((opts.describe ?? this.settings.autoDescribe) && !input.notes && !(input.subtasks?.length) && !input.templateId && input.title.trim()) {
+    if ((opts.describe ?? this.settings.autoDescribe) && !input.notes && !input.subtasks?.length && !input.templateId && input.title.trim()) {
       const d = autoDescribe(input.title, { courseName: this.courseById(input.courseId)?.name, type: input.type, estimateMin: input.estimateMin });
-      input = { ...input, notes: d.notes, subtasks: d.subtasks, estimateMin: input.estimateMin ?? d.estimateMin, type: input.type ?? d.type, tags: Array.from(new Set([...(input.tags ?? []), ...d.tags])) };
+      input = {
+        ...input,
+        notes: d.notes,
+        subtasks: d.subtasks,
+        estimateMin: input.estimateMin ?? d.estimateMin,
+        type: input.type ?? d.type,
+        tags: Array.from(new Set([...(input.tags ?? []), ...d.tags])),
+      };
       described = true;
     }
-    const subtasks: Subtask[] = (input.subtasks ?? []).map((s, i) =>
-      typeof s === 'string' ? { id: `${id}_s${i}`, title: s, done: false } : s,
-    );
+    const subtasks: Subtask[] = (input.subtasks ?? []).map((s, i) => (typeof s === 'string' ? { id: `${id}_s${i}`, title: s, done: false } : s));
     const task: Task = {
       id,
       title: input.title.trim(),
@@ -535,7 +534,11 @@ class Store {
     if (!snaps.length) return;
     this.tasks = this.tasks.filter((t) => !ids.includes(t.id));
     db.deleteTasks(ids).catch((e) => console.error(e));
-    this.bury('task', snaps.map((t) => t.id), snaps);
+    this.bury(
+      'task',
+      snaps.map((t) => t.id),
+      snaps,
+    );
     emit('changed', { reason: 'tasks' });
     this.clearSelection();
     undo.push(
@@ -544,7 +547,10 @@ class Store {
         undo: () => {
           const now = isoNow();
           const back = snaps.map((t) => ({ ...t, updatedAt: now }));
-          this.unbury('task', back.map((t) => t.id));
+          this.unbury(
+            'task',
+            back.map((t) => t.id),
+          );
           this.tasks = [...this.tasks, ...back];
           this.persistTasks(back);
         },
@@ -801,8 +807,16 @@ class Store {
   }
   findCourseByName(name: string): Course | undefined {
     const n = name.toLowerCase().replace(/[^a-z0-9]/g, '');
-    return this.activeCourses.find((c) => c.name.toLowerCase().replace(/[^a-z0-9]/g, '') === n) ??
-      this.activeCourses.find((c) => c.name.toLowerCase().replace(/[^a-z0-9]/g, '').startsWith(n) && n.length >= 3);
+    return (
+      this.activeCourses.find((c) => c.name.toLowerCase().replace(/[^a-z0-9]/g, '') === n) ??
+      this.activeCourses.find(
+        (c) =>
+          c.name
+            .toLowerCase()
+            .replace(/[^a-z0-9]/g, '')
+            .startsWith(n) && n.length >= 3,
+      )
+    );
   }
 
   // ---------- templates ----------
@@ -824,7 +838,10 @@ class Store {
     };
     const replaced = this.templates.filter((x) => x.name === t.name);
     for (const r of replaced) db.deleteTemplate(r.id).catch(() => {});
-    this.bury('template', replaced.map((r) => r.id));
+    this.bury(
+      'template',
+      replaced.map((r) => r.id),
+    );
     this.templates = [...this.templates.filter((x) => x.name !== t.name), t];
     db.putTemplate(t).catch((e) => console.error(e));
     emit('changed', { reason: 'template' });
@@ -971,7 +988,11 @@ class Store {
   syncedTasks = $derived(this.tasks.filter((t) => t.source === 'schoology'));
 
   /** Apply a sync diff: create new assignment tasks, update changed ones. Returns counts. */
-  applySyncDiff(diff: SyncDiff, resolveCourse: (a: ExternalAssignment) => string | undefined, describe?: (a: ExternalAssignment) => Partial<Task>): { created: number; updated: number } {
+  applySyncDiff(
+    diff: SyncDiff,
+    resolveCourse: (a: ExternalAssignment) => string | undefined,
+    describe?: (a: ExternalAssignment) => Partial<Task>,
+  ): { created: number; updated: number } {
     const now = isoNow();
     const created: Task[] = [];
     let order = this.nextOrder();

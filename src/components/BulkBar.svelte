@@ -53,7 +53,12 @@
           <button class="btn ghost sm" onclick={() => reschedule(addDaysKey(store.today, 1), 'Rescheduled')}>Tomorrow</button>
           <button class="btn ghost sm" onclick={() => reschedule(nextWeekKey(store.now, store.settings.weekStart), 'Rescheduled')}>Next week</button>
           <button class="btn ghost sm" onclick={() => reschedule(null, 'Cleared date on')}>No date</button>
-          <form onsubmit={(e) => { e.preventDefault(); if (date) reschedule(date, 'Rescheduled'); }}>
+          <form
+            onsubmit={(e) => {
+              e.preventDefault();
+              if (date) reschedule(date, 'Rescheduled');
+            }}
+          >
             <input class="input" type="date" bind:value={date} aria-label="Date" />
             <button class="btn primary sm" type="submit">Go</button>
           </form>

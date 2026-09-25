@@ -3,7 +3,11 @@
   import { compile, formatNumber, MathError } from '../../lib/mathparser';
 
   const COLORS = ['#6c5ce7', '#ef4444', '#10b981', '#f59e0b', '#0ea5e9', '#ec4899'];
-  let fns = $state<{ expr: string; on: boolean }[]>([{ expr: 'x^2', on: true }, { expr: 'sin(x)', on: true }, { expr: '', on: true }]);
+  let fns = $state<{ expr: string; on: boolean }[]>([
+    { expr: 'x^2', on: true },
+    { expr: 'sin(x)', on: true },
+    { expr: '', on: true },
+  ]);
   let angle = $state<'rad' | 'deg'>('rad');
   let xmin = $state(-10);
   let xmax = $state(10);
@@ -129,7 +133,11 @@
 
   $effect(() => {
     void compiled;
-    void xmin; void xmax; void ymin; void ymax; void trace;
+    void xmin;
+    void xmax;
+    void ymin;
+    void ymax;
+    void trace;
     draw();
   });
   onMount(() => {
@@ -149,15 +157,24 @@
     const cy = (ymin + ymax) / 2;
     const hw = ((xmax - xmin) / 2) * factor;
     const hh = ((ymax - ymin) / 2) * factor;
-    xmin = cx - hw; xmax = cx + hw; ymin = cy - hh; ymax = cy + hh;
+    xmin = cx - hw;
+    xmax = cx + hw;
+    ymin = cy - hh;
+    ymax = cy + hh;
   }
   function pan(dx: number, dy: number) {
     const w = (xmax - xmin) * dx;
     const h = (ymax - ymin) * dy;
-    xmin += w; xmax += w; ymin += h; ymax += h;
+    xmin += w;
+    xmax += w;
+    ymin += h;
+    ymax += h;
   }
   function reset() {
-    xmin = -10; xmax = 10; ymin = -10; ymax = 10;
+    xmin = -10;
+    xmax = 10;
+    ymin = -10;
+    ymax = 10;
   }
   function onWheel(e: WheelEvent) {
     e.preventDefault();
@@ -199,7 +216,19 @@
     {/each}
     {#if fns.length < 6}<button class="btn ghost sm" onclick={() => (fns = [...fns, { expr: '', on: true }])}>+ Add function</button>{/if}
   </div>
-  <canvas bind:this={canvas} class="plot" aria-label="Graph" onpointermove={dragMove} onpointerdown={down} onpointerup={up} onpointerleave={() => { up(); trace = null; }} onwheel={onWheel}></canvas>
+  <canvas
+    bind:this={canvas}
+    class="plot"
+    aria-label="Graph"
+    onpointermove={dragMove}
+    onpointerdown={down}
+    onpointerup={up}
+    onpointerleave={() => {
+      up();
+      trace = null;
+    }}
+    onwheel={onWheel}
+  ></canvas>
   <div class="readout" aria-live="polite">
     {#if trace}
       x = {formatNumber(trace.x, 5)}
@@ -218,20 +247,93 @@
 </section>
 
 <style>
-  .head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
-  h2 { font-size: 16px; margin: 0; }
-  .modes { display: flex; gap: 2px; background: var(--bg-elev-2); border-radius: 999px; padding: 3px; }
-  .modes button { padding: 3px 10px; border-radius: 999px; font-size: 12px; font-weight: 600; color: var(--text-muted); }
-  .modes button.on { background: var(--bg-elev); color: var(--text); }
-  .fns { display: flex; flex-direction: column; gap: 6px; margin-bottom: 8px; }
-  .fn { display: flex; align-items: center; gap: 6px; border-left: 4px solid var(--c); padding-left: 8px; }
-  .fn input[type='checkbox'] { accent-color: var(--c); }
-  .y { font-family: var(--mono); color: var(--text-muted); font-size: 13px; }
-  .fn .input { font-family: var(--mono); padding: 6px 10px; }
-  .err { color: var(--warn); }
-  .plot { width: 100%; display: block; border-radius: 10px; background: var(--bg-elev-2); touch-action: none; cursor: crosshair; }
-  .readout { font-family: var(--mono); font-size: 12px; color: var(--text-muted); min-height: 1.5em; margin: 6px 0; }
-  .ctrls { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; font-size: 12px; color: var(--text-muted); }
-  .ctrls label { display: flex; align-items: center; gap: 4px; }
-  .input.num { width: 64px; padding: 4px 6px; font-size: 12px; }
+  .head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+  }
+  h2 {
+    font-size: 16px;
+    margin: 0;
+  }
+  .modes {
+    display: flex;
+    gap: 2px;
+    background: var(--bg-elev-2);
+    border-radius: 999px;
+    padding: 3px;
+  }
+  .modes button {
+    padding: 3px 10px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-muted);
+  }
+  .modes button.on {
+    background: var(--bg-elev);
+    color: var(--text);
+  }
+  .fns {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-bottom: 8px;
+  }
+  .fn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    border-left: 4px solid var(--c);
+    padding-left: 8px;
+  }
+  .fn input[type='checkbox'] {
+    accent-color: var(--c);
+  }
+  .y {
+    font-family: var(--mono);
+    color: var(--text-muted);
+    font-size: 13px;
+  }
+  .fn .input {
+    font-family: var(--mono);
+    padding: 6px 10px;
+  }
+  .err {
+    color: var(--warn);
+  }
+  .plot {
+    width: 100%;
+    display: block;
+    border-radius: 10px;
+    background: var(--bg-elev-2);
+    touch-action: none;
+    cursor: crosshair;
+  }
+  .readout {
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--text-muted);
+    min-height: 1.5em;
+    margin: 6px 0;
+  }
+  .ctrls {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: center;
+    font-size: 12px;
+    color: var(--text-muted);
+  }
+  .ctrls label {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+  .input.num {
+    width: 64px;
+    padding: 4px 6px;
+    font-size: 12px;
+  }
 </style>

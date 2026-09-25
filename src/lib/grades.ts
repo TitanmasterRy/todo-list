@@ -38,7 +38,7 @@ export function summarize(items: GradeItem[]): GradeSummary {
 export function neededOnRemaining(items: GradeItem[], target: number): number | null {
   const s = summarize(items);
   if (s.remainingWeight <= 0) return null;
-  return ((target / 100) * s.totalWeight - s.earned) / s.remainingWeight * 100;
+  return (((target / 100) * s.totalWeight - s.earned) / s.remainingWeight) * 100;
 }
 
 export function letterGrade(pct: number): string {

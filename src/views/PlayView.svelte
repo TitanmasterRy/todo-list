@@ -8,20 +8,24 @@
 
   type Tab = 'shop' | 'casino' | 'arcade' | 'wallet';
   const TAB_KEY = 'homework-todo:play-tab';
-  let tab = $state<Tab>(((): Tab => {
-    try {
-      return (localStorage.getItem(TAB_KEY) as Tab) || 'shop';
-    } catch {
-      return 'shop';
-    }
-  })());
+  let tab = $state<Tab>(
+    ((): Tab => {
+      try {
+        return (localStorage.getItem(TAB_KEY) as Tab) || 'shop';
+      } catch {
+        return 'shop';
+      }
+    })(),
+  );
   const tabs = $derived(
-    ([
-      { id: 'shop', label: 'Shop', icon: '🛍️' },
-      { id: 'casino', label: 'Casino', icon: '🎰' },
-      { id: 'arcade', label: 'Arcade', icon: '🕹️' },
-      { id: 'wallet', label: 'Wallet', icon: '👛' },
-    ] as { id: Tab; label: string; icon: string }[]).filter((t) => t.id !== 'casino' || store.settings.casinoEnabled),
+    (
+      [
+        { id: 'shop', label: 'Shop', icon: '🛍️' },
+        { id: 'casino', label: 'Casino', icon: '🎰' },
+        { id: 'arcade', label: 'Arcade', icon: '🕹️' },
+        { id: 'wallet', label: 'Wallet', icon: '👛' },
+      ] as { id: Tab; label: string; icon: string }[]
+    ).filter((t) => t.id !== 'casino' || store.settings.casinoEnabled),
   );
   function pick(t: Tab) {
     tab = t;

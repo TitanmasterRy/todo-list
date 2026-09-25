@@ -18,7 +18,9 @@
     { name: 'Language', emoji: '🗣️', color: COURSE_COLORS[8] },
     { name: 'CS', emoji: '💻', color: COURSE_COLORS[0] },
   ];
-  let rows = $state<Row[]>(Array.from({ length: 4 }, (_, i) => ({ name: '', emoji: COURSE_EMOJIS[i % COURSE_EMOJIS.length], color: COURSE_COLORS[(i * 3) % COURSE_COLORS.length] })));
+  let rows = $state<Row[]>(
+    Array.from({ length: 4 }, (_, i) => ({ name: '', emoji: COURSE_EMOJIS[i % COURSE_EMOJIS.length], color: COURSE_COLORS[(i * 3) % COURSE_COLORS.length] })),
+  );
   let paste = $state('');
   let first: HTMLInputElement | undefined = $state();
   $effect(() => first?.focus());
@@ -88,7 +90,9 @@
     </details>
     <div class="actions">
       <button type="button" class="btn" onclick={close}>Cancel</button>
-      <button type="submit" class="btn primary" disabled={!rows.some((r) => r.name.trim())}>Create {rows.filter((r) => r.name.trim()).length || ''} course{rows.filter((r) => r.name.trim()).length === 1 ? '' : 's'}</button>
+      <button type="submit" class="btn primary" disabled={!rows.some((r) => r.name.trim())}
+        >Create {rows.filter((r) => r.name.trim()).length || ''} course{rows.filter((r) => r.name.trim()).length === 1 ? '' : 's'}</button
+      >
     </div>
   </form>
 </div>

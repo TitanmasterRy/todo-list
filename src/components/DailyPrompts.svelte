@@ -28,7 +28,17 @@
     const dow = new Date().getDay();
     if (dow === 0 && s.lastWeeklyReviewDate !== store.today) {
       store.updateSettings({ lastWeeklyReviewDate: store.today });
-      setTimeout(() => toasts.push({ message: 'It’s Sunday. Run your weekly review?', kind: 'info', emoji: '📋', timeout: 10000, action: { label: 'Review', onClick: () => (ui.weeklyReview = true) } }), 3000);
+      setTimeout(
+        () =>
+          toasts.push({
+            message: 'It’s Sunday. Run your weekly review?',
+            kind: 'info',
+            emoji: '📋',
+            timeout: 10000,
+            action: { label: 'Review', onClick: () => (ui.weeklyReview = true) },
+          }),
+        3000,
+      );
     }
     // Backup reminder if no export in 14 days.
     const last = s.lastExportAt ? new Date(s.lastExportAt).getTime() : 0;
@@ -101,13 +111,26 @@
 {#if ui.recap}
   <div class="modal-backdrop" onclick={() => (ui.recap = false)} role="presentation">
     <!-- svelte-ignore a11y_click_events_have_key_events -->
-    <div use:focusTrap class="modal recap" role="dialog" aria-modal="true" aria-label="End of day recap" tabindex="-1" onclick={(e) => e.stopPropagation()} in:fly={{ y: 20, duration: 250 }}>
+    <div
+      use:focusTrap
+      class="modal recap"
+      role="dialog"
+      aria-modal="true"
+      aria-label="End of day recap"
+      tabindex="-1"
+      onclick={(e) => e.stopPropagation()}
+      in:fly={{ y: 20, duration: 250 }}
+    >
       <h2>🌙 Today’s recap</h2>
       <div class="stats">
         <div><span class="big">{doneToday.length}</span><span class="lbl">done</span></div>
         {#if store.settings.gamification}
           <div><span class="big">{store.stats.xp}</span><span class="lbl">total XP</span></div>
-          <div><span class="big">🔥 {store.streak}</span><span class="lbl">streak{store.streak > 0 && store.stats.streak.lastDate === store.today ? ' · kept' : store.streak > 0 ? ' · at risk' : ''}</span></div>
+          <div>
+            <span class="big">🔥 {store.streak}</span><span class="lbl"
+              >streak{store.streak > 0 && store.stats.streak.lastDate === store.today ? ' · kept' : store.streak > 0 ? ' · at risk' : ''}</span
+            >
+          </div>
         {/if}
         <div><span class="big">{openLeft}</span><span class="lbl">left today</span></div>
       </div>

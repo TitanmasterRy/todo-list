@@ -81,7 +81,9 @@
       <div class="sub">Everything, with filters.</div>
     </div>
     <div class="grow"></div>
-    <button class="btn sm" class:primary={store.bulkMode} onclick={() => (store.bulkMode ? store.clearSelection() : (store.bulkMode = true))}>{store.bulkMode ? 'Done selecting' : 'Select'}</button>
+    <button class="btn sm" class:primary={store.bulkMode} onclick={() => (store.bulkMode ? store.clearSelection() : (store.bulkMode = true))}
+      >{store.bulkMode ? 'Done selecting' : 'Select'}</button
+    >
   </header>
 
   <QuickAdd />

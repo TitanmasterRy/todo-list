@@ -82,12 +82,60 @@ export async function apiGet<T>(creds: SchoologyCreds, path: string, query: Reco
 }
 
 // ---------- typed slices of the API we use ----------
-export interface SgyUser { uid: string; name_display: string; primary_email?: string; school_id?: string }
-export interface SgySection { id: string; course_title: string; section_title: string; course_code?: string; active?: number | string; grading_periods?: number[] }
-export interface SgyAssignment { id: string; title: string; description?: string; due?: string; grading_category?: string; max_points?: string; type?: string; completed?: string; web_url?: string; grading_period?: string; assignment_type?: string; dropbox_locked?: string; completion_status?: string }
-export interface SgyGradeItem { assignment_id: string; grade: string | null; max_points?: string; comment?: string; exception?: number | string }
-export interface SgyGradesResponse { section: { section_id: string; period: { period_id: string; period_title?: string; assignment: SgyGradeItem[] }[]; final_grade?: { period_id: string; grade: string | number | null }[] }[] }
-export interface SgyEvent { id: string; title: string; description?: string; start?: string; end?: string; type?: string; assignment_id?: string; realm?: string; section_id?: string }
+export interface SgyUser {
+  uid: string;
+  name_display: string;
+  primary_email?: string;
+  school_id?: string;
+}
+export interface SgySection {
+  id: string;
+  course_title: string;
+  section_title: string;
+  course_code?: string;
+  active?: number | string;
+  grading_periods?: number[];
+}
+export interface SgyAssignment {
+  id: string;
+  title: string;
+  description?: string;
+  due?: string;
+  grading_category?: string;
+  max_points?: string;
+  type?: string;
+  completed?: string;
+  web_url?: string;
+  grading_period?: string;
+  assignment_type?: string;
+  dropbox_locked?: string;
+  completion_status?: string;
+}
+export interface SgyGradeItem {
+  assignment_id: string;
+  grade: string | null;
+  max_points?: string;
+  comment?: string;
+  exception?: number | string;
+}
+export interface SgyGradesResponse {
+  section: {
+    section_id: string;
+    period: { period_id: string; period_title?: string; assignment: SgyGradeItem[] }[];
+    final_grade?: { period_id: string; grade: string | number | null }[];
+  }[];
+}
+export interface SgyEvent {
+  id: string;
+  title: string;
+  description?: string;
+  start?: string;
+  end?: string;
+  type?: string;
+  assignment_id?: string;
+  realm?: string;
+  section_id?: string;
+}
 
 export async function getMe(creds: SchoologyCreds): Promise<SgyUser> {
   return apiGet<SgyUser>(creds, '/users/me');

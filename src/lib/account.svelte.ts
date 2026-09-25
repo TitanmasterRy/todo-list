@@ -204,7 +204,12 @@ export async function syncNow(_opts: { pull?: boolean } = { pull: true }): Promi
           if (/duplicate|unique|conflict/i.test(error.message)) continue; // another device created it first
           throw new Error(friendly(error));
         }
-        const { data, error } = await c.from(TABLE).update({ data: local, version: version + 1, updated_at: now }).eq('user_id', userId).eq('version', version).select('version');
+        const { data, error } = await c
+          .from(TABLE)
+          .update({ data: local, version: version + 1, updated_at: now })
+          .eq('user_id', userId)
+          .eq('version', version)
+          .select('version');
         if (error) throw new Error(friendly(error));
         if (data && data.length) break;
         // version moved on: someone else wrote in between; loop to re-merge

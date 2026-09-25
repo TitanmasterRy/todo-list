@@ -80,7 +80,20 @@ export function computeXp(task: Task, completedAt: Date, comboCount: number, rng
   const crit = rng() < CRIT_CHANCE;
   if (crit) total *= 2;
   if (powerHour) total *= 1.5;
-  return { base, subtaskBonus, early, earlyDays: e.earlyDays, earlyMultiplier: e.multiplier, longTask, frog, crit, powerHour, comboCount, comboMultiplier, total: Math.round(total) };
+  return {
+    base,
+    subtaskBonus,
+    early,
+    earlyDays: e.earlyDays,
+    earlyMultiplier: e.multiplier,
+    longTask,
+    frog,
+    crit,
+    powerHour,
+    comboCount,
+    comboMultiplier,
+    total: Math.round(total),
+  };
 }
 
 // ---------- Grades ----------
@@ -132,7 +145,13 @@ export function applyStudySession(prev: Stats, reviewed: number, correct: number
   stats.cardsReviewed = (stats.cardsReviewed ?? 0) + reviewed;
   const newBadges = evaluateBadges(stats, { openTasksRemaining, today });
   stats.badges = [...stats.badges, ...newBadges];
-  return { stats, xp: { xp: gained, tier: clearedAll ? 'great' : 'ok', label: clearedAll ? 'Deck cleared' : 'Study session' }, leveledUp: stats.level > prevLevel, newLevel: stats.level, newBadges };
+  return {
+    stats,
+    xp: { xp: gained, tier: clearedAll ? 'great' : 'ok', label: clearedAll ? 'Deck cleared' : 'Study session' },
+    leveledUp: stats.level > prevLevel,
+    newLevel: stats.level,
+    newBadges,
+  };
 }
 
 // ---------- Power hour ----------
@@ -174,7 +193,19 @@ export function rollCollectible(owned: string[], seed: number): (typeof COLLECTI
 }
 
 // ---------- Levels: titles and unlocks ----------
-export const LEVEL_TITLES = ['Freshman', 'Note Taker', 'Deadline Dodger', 'Page Turner', 'Problem Solver', 'Study Machine', 'Honor Roll', 'Dean’s List', 'Scholar', 'Valedictorian', 'Legend'];
+export const LEVEL_TITLES = [
+  'Freshman',
+  'Note Taker',
+  'Deadline Dodger',
+  'Page Turner',
+  'Problem Solver',
+  'Study Machine',
+  'Honor Roll',
+  'Dean’s List',
+  'Scholar',
+  'Valedictorian',
+  'Legend',
+];
 
 export function levelTitle(level: number): string {
   return LEVEL_TITLES[Math.min(LEVEL_TITLES.length - 1, Math.max(0, level - 1))];

@@ -239,7 +239,10 @@ export function logout(): void {
 // ---------- API ----------
 async function api<T>(path: string, init: RequestInit = {}): Promise<T | null> {
   const token = await ensureToken();
-  const res = await fetch(`${API}${path}`, { ...init, headers: { Authorization: `Bearer ${token}`, ...(init.body ? { 'Content-Type': 'application/json' } : {}), ...(init.headers ?? {}) } });
+  const res = await fetch(`${API}${path}`, {
+    ...init,
+    headers: { Authorization: `Bearer ${token}`, ...(init.body ? { 'Content-Type': 'application/json' } : {}), ...(init.headers ?? {}) },
+  });
   if (res.status === 204 || res.status === 202) return null;
   const json = (await res.json().catch(() => null)) as (T & { error?: { status?: number; message?: string; reason?: string } }) | null;
   if (!res.ok) {
@@ -305,7 +308,15 @@ export async function getPlayback(): Promise<SpotifyPlayback | null> {
   const pb: SpotifyPlayback = {
     isPlaying: p.is_playing,
     track: it
-      ? { name: it.name, artists: it.artists?.map((a) => a.name).join(', ') ?? coll?.name ?? '', album: coll?.name ?? '', image: coll?.images?.[0]?.url, durationMs: it.duration_ms, progressMs: p.progress_ms ?? 0, uri: it.uri }
+      ? {
+          name: it.name,
+          artists: it.artists?.map((a) => a.name).join(', ') ?? coll?.name ?? '',
+          album: coll?.name ?? '',
+          image: coll?.images?.[0]?.url,
+          durationMs: it.duration_ms,
+          progressMs: p.progress_ms ?? 0,
+          uri: it.uri,
+        }
       : undefined,
     device: p.device?.id ? { id: p.device.id, name: p.device.name, type: p.device.type, volume: p.device.volume_percent ?? undefined } : undefined,
   };

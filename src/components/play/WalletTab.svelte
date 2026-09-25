@@ -4,15 +4,33 @@
   import { lifetimeEarned, reasonLabel } from '../../lib/economy';
 
   let limit = $state(50);
-  const rows = $derived(store.ledger.slice(-limit).reverse().filter((e) => !e.currency.startsWith('item:') || e.reason.startsWith('shop:')));
+  const rows = $derived(
+    store.ledger
+      .slice(-limit)
+      .reverse()
+      .filter((e) => !e.currency.startsWith('item:') || e.reason.startsWith('shop:')),
+  );
   const EMOJI: Record<string, string> = { coins: '🪙', chips: '🎰', vouchers: '🎟️' };
-  const earnedToday = $derived(store.ledger.filter((e) => e.currency === 'coins' && e.amount > 0 && !e.reason.startsWith('shop:') && e.at.slice(0, 10) === new Date().toISOString().slice(0, 10)).reduce((a, e) => a + e.amount, 0));
+  const earnedToday = $derived(
+    store.ledger
+      .filter((e) => e.currency === 'coins' && e.amount > 0 && !e.reason.startsWith('shop:') && e.at.slice(0, 10) === new Date().toISOString().slice(0, 10))
+      .reduce((a, e) => a + e.amount, 0),
+  );
 </script>
 
 <div class="summary">
-  <div class="card stat"><div class="n">{lifetimeEarned(store.ledger).toLocaleString()}</div><div class="l">coins earned, all time</div></div>
-  <div class="card stat"><div class="n">{earnedToday.toLocaleString()}</div><div class="l">coins earned today</div></div>
-  <div class="card stat"><div class="n">{Object.keys(economy.wallet.items).length}</div><div class="l">items owned</div></div>
+  <div class="card stat">
+    <div class="n">{lifetimeEarned(store.ledger).toLocaleString()}</div>
+    <div class="l">coins earned, all time</div>
+  </div>
+  <div class="card stat">
+    <div class="n">{earnedToday.toLocaleString()}</div>
+    <div class="l">coins earned today</div>
+  </div>
+  <div class="card stat">
+    <div class="n">{Object.keys(economy.wallet.items).length}</div>
+    <div class="l">items owned</div>
+  </div>
 </div>
 
 <h2 class="sec">History</h2>

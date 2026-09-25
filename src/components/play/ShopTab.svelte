@@ -11,7 +11,11 @@
     if (economy.buy(item.id)) toasts.push({ message: `Bought ${item.name}`, kind: 'success', emoji: item.emoji, timeout: 1800 });
   }
   function equipped(item: ShopItem): boolean {
-    return (item.kind === 'title' && s.equippedTitle === item.id) || (item.kind === 'frame' && s.equippedFrame === item.id) || (item.kind === 'confetti' && s.equippedConfetti === item.id);
+    return (
+      (item.kind === 'title' && s.equippedTitle === item.id) ||
+      (item.kind === 'frame' && s.equippedFrame === item.id) ||
+      (item.kind === 'confetti' && s.equippedConfetti === item.id)
+    );
   }
   function toggleEquip(item: ShopItem) {
     if (item.kind !== 'title' && item.kind !== 'frame' && item.kind !== 'confetti') return;
@@ -31,7 +35,9 @@
         <div class="item card" class:owned={item.unique && own > 0}>
           <div class="emoji" aria-hidden="true">{item.emoji}</div>
           <div class="info">
-            <div class="name">{item.name}{#if !item.unique && own > 0}<span class="own">×{own}</span>{/if}</div>
+            <div class="name">
+              {item.name}{#if !item.unique && own > 0}<span class="own">×{own}</span>{/if}
+            </div>
             <div class="desc">{item.description}</div>
           </div>
           <div class="act">
@@ -43,7 +49,8 @@
               {/if}
             {:else}
               <button class="btn sm primary" onclick={() => buy(item)} disabled={!check.ok} title={check.ok ? '' : check.reason}>
-                {item.price.toLocaleString()} {item.pay === 'coins' ? '🪙' : '🎰'}
+                {item.price.toLocaleString()}
+                {item.pay === 'coins' ? '🪙' : '🎰'}
               </button>
               {#if !check.ok}<span class="why">{check.reason}</span>{/if}
             {/if}

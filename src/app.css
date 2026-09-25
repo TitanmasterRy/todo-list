@@ -164,7 +164,10 @@ a {
   color: var(--text);
   font-weight: 500;
   font-size: 14px;
-  transition: background var(--dur) var(--ease), transform var(--dur) var(--ease), border-color var(--dur);
+  transition:
+    background var(--dur) var(--ease),
+    transform var(--dur) var(--ease),
+    border-color var(--dur);
   white-space: nowrap;
 }
 .btn:hover {

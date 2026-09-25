@@ -54,7 +54,9 @@
           <dl>
             {#each g.keys as [k, d]}
               <div>
-                <dt>{#each k.split(' ') as part}<span class="kbd">{part}</span>{/each}</dt>
+                <dt>
+                  {#each k.split(' ') as part}<span class="kbd">{part}</span>{/each}
+                </dt>
                 <dd>{d}</dd>
               </div>
             {/each}

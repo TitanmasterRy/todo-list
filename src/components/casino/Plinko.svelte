@@ -55,10 +55,14 @@
         </g>
       {/each}
     </svg>
-    <div class="cz-result" aria-live="polite" class:win={lastWin && lastWin.mult >= 1} class:lose={lastWin && lastWin.mult < 1}>{lastWin ? `×${lastWin.mult} · ${lastWin.amount.toLocaleString()} chips` : ''}</div>
+    <div class="cz-result" aria-live="polite" class:win={lastWin && lastWin.mult >= 1} class:lose={lastWin && lastWin.mult < 1}>
+      {lastWin ? `×${lastWin.mult} · ${lastWin.amount.toLocaleString()} chips` : ''}
+    </div>
   </div>
   <div class="cz-actions">
-    <div class="cz-seg">{#each ['low', 'medium', 'high'] as const as r (r)}<button class:on={risk === r} onclick={() => (risk = r)}>{r}</button>{/each}</div>
+    <div class="cz-seg">
+      {#each ['low', 'medium', 'high'] as const as r (r)}<button class:on={risk === r} onclick={() => (risk = r)}>{r}</button>{/each}
+    </div>
     <BetControl bind:value={bet} />
     <button class="btn primary" onclick={drop} disabled={bet > economy.wallet.chips}>Drop ball</button>
   </div>

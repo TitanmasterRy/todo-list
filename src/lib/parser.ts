@@ -35,17 +35,40 @@ export interface ParsedQuickAdd {
 }
 
 const DAYS: Record<string, number> = {
-  sun: 0, sunday: 0,
-  mon: 1, monday: 1,
-  tue: 2, tues: 2, tuesday: 2,
-  wed: 3, weds: 3, wednesday: 3,
-  thu: 4, thur: 4, thurs: 4, thursday: 4,
-  fri: 5, friday: 5,
-  sat: 6, saturday: 6,
+  sun: 0,
+  sunday: 0,
+  mon: 1,
+  monday: 1,
+  tue: 2,
+  tues: 2,
+  tuesday: 2,
+  wed: 3,
+  weds: 3,
+  wednesday: 3,
+  thu: 4,
+  thur: 4,
+  thurs: 4,
+  thursday: 4,
+  fri: 5,
+  friday: 5,
+  sat: 6,
+  saturday: 6,
 };
 const DAY_RE = 'sun(?:day)?|mon(?:day)?|tue(?:s|sday)?|wed(?:s|nesday)?|thu(?:r|rs|rsday)?|fri(?:day)?|sat(?:urday)?';
 const MONTHS: Record<string, number> = {
-  jan: 0, feb: 1, mar: 2, apr: 3, may: 4, jun: 5, jul: 6, aug: 7, sep: 8, sept: 8, oct: 9, nov: 10, dec: 11,
+  jan: 0,
+  feb: 1,
+  mar: 2,
+  apr: 3,
+  may: 4,
+  jun: 5,
+  jul: 6,
+  aug: 7,
+  sep: 8,
+  sept: 8,
+  oct: 9,
+  nov: 10,
+  dec: 11,
 };
 const MONTH_RE = 'jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:t|tember)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?';
 const DAY_LABEL = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
@@ -104,7 +127,18 @@ export function parseQuickAdd(input: string, ctx: ParserContext = {}): ParsedQui
   // priority: !high
   take(/(?:^|\s)!(low|normal|med|medium|high|urgent|p[1-4])(?=\s)/i, (m) => {
     const v = m[1].toLowerCase();
-    const map: Record<string, Priority> = { low: 'low', normal: 'normal', med: 'normal', medium: 'normal', high: 'high', urgent: 'urgent', p4: 'low', p3: 'normal', p2: 'high', p1: 'urgent' };
+    const map: Record<string, Priority> = {
+      low: 'low',
+      normal: 'normal',
+      med: 'normal',
+      medium: 'normal',
+      high: 'high',
+      urgent: 'urgent',
+      p4: 'low',
+      p3: 'normal',
+      p2: 'high',
+      p1: 'urgent',
+    };
     out.priority = map[v];
     chips.push({ kind: 'priority', label: `!${out.priority}` });
   });

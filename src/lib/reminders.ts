@@ -52,7 +52,10 @@ function check(): void {
       const n = store.todayTasks.length;
       const overdue = store.overdueTasks.length;
       if (n || overdue) {
-        const first = store.todayTasks.slice(0, 3).map((t) => `• ${t.title}`).join('\n');
+        const first = store.todayTasks
+          .slice(0, 3)
+          .map((t) => `• ${t.title}`)
+          .join('\n');
         notify(`${n} task${n === 1 ? '' : 's'} today${overdue ? `, ${overdue} overdue` : ''}`, first, digestKey);
       }
     }

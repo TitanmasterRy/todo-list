@@ -67,7 +67,11 @@
         <h3>Biggest wins</h3>
         <ul class="wins">
           {#each wins as t (t.id)}
-            <li>🏆 <strong>{t.title}</strong>{#if store.courseById(t.courseId)} <span class="muted">· {store.courseById(t.courseId)?.name}</span>{/if}{#if t.estimateMin} <span class="muted">· {formatMinutes(t.estimateMin)}</span>{/if}</li>
+            <li>
+              🏆 <strong>{t.title}</strong>{#if store.courseById(t.courseId)}
+                <span class="muted">· {store.courseById(t.courseId)?.name}</span>{/if}{#if t.estimateMin}
+                <span class="muted">· {formatMinutes(t.estimateMin)}</span>{/if}
+            </li>
           {/each}
         </ul>
       </section>
@@ -93,9 +97,21 @@
 
     <section>
       <h3>Next week</h3>
-      {#if overdue}<p class="warn">⚠ {overdue} overdue task{overdue > 1 ? 's' : ''} to deal with first. <button class="link" onclick={() => { store.rollOverdueToToday(); }}>Roll to today</button></p>{/if}
+      {#if overdue}<p class="warn">
+          ⚠ {overdue} overdue task{overdue > 1 ? 's' : ''} to deal with first.
+          <button
+            class="link"
+            onclick={() => {
+              store.rollOverdueToToday();
+            }}>Roll to today</button
+          >
+        </p>{/if}
       {#if heaviest && heaviest.n}
-        <p>Heaviest day: <strong>{dayLabel(heaviest.key)}</strong> with {heaviest.n} task{heaviest.n > 1 ? 's' : ''}{heaviest.min ? ` (${formatMinutes(heaviest.min)})` : ''}{heaviest.exams ? ` including ${heaviest.exams} exam/quiz` : ''}.</p>
+        <p>
+          Heaviest day: <strong>{dayLabel(heaviest.key)}</strong> with {heaviest.n} task{heaviest.n > 1 ? 's' : ''}{heaviest.min
+            ? ` (${formatMinutes(heaviest.min)})`
+            : ''}{heaviest.exams ? ` including ${heaviest.exams} exam/quiz` : ''}.
+        </p>
       {:else}
         <p class="muted">Nothing scheduled for the next 7 days.</p>
       {/if}

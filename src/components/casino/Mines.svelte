@@ -60,7 +60,11 @@
     {#if active}
       <button class="btn primary" onclick={cashOut} disabled={!open.size}>Cash out {Math.floor(bet * mult).toLocaleString()}</button>
     {:else}
-      <label class="mc">Mines <select class="select" bind:value={count}>{#each [1, 3, 5, 8, 12, 20, 24] as n (n)}<option value={n}>{n}</option>{/each}</select></label>
+      <label class="mc"
+        >Mines <select class="select" bind:value={count}
+          >{#each [1, 3, 5, 8, 12, 20, 24] as n (n)}<option value={n}>{n}</option>{/each}</select
+        ></label
+      >
       <BetControl bind:value={bet} />
       <button class="btn primary" onclick={start} disabled={bet > economy.wallet.chips}>Start</button>
     {/if}

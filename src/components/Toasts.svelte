@@ -6,7 +6,15 @@
 
 <div class="toasts" aria-live="polite" aria-relevant="additions">
   {#each toasts.items as t (t.id)}
-    <div class="toast {t.kind}" class:combo={(t.combo ?? 0) > 0} style="--combo:{Math.min(10, t.combo ?? 0)}" in:fly={{ y: 20, duration: 220 }} out:fly={{ y: 10, duration: 160 }} animate:flip={{ duration: 200 }} role="status">
+    <div
+      class="toast {t.kind}"
+      class:combo={(t.combo ?? 0) > 0}
+      style="--combo:{Math.min(10, t.combo ?? 0)}"
+      in:fly={{ y: 20, duration: 220 }}
+      out:fly={{ y: 10, duration: 160 }}
+      animate:flip={{ duration: 200 }}
+      role="status"
+    >
       {#if t.emoji}<span class="emoji">{t.emoji}</span>{/if}
       <div class="body">
         <div class="msg">{t.message}</div>

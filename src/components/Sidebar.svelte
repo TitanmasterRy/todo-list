@@ -109,7 +109,9 @@
     color: var(--text-muted);
     font-weight: 500;
     text-align: left;
-    transition: background var(--dur), color var(--dur);
+    transition:
+      background var(--dur),
+      color var(--dur);
   }
   li button:hover,
   .course:hover {
@@ -175,15 +177,21 @@
     background: var(--bg-hover);
   }
   .level.frame-frame-gold {
-    box-shadow: 0 0 0 2px #f5c542, 0 0 14px rgba(245, 197, 66, 0.35);
+    box-shadow:
+      0 0 0 2px #f5c542,
+      0 0 14px rgba(245, 197, 66, 0.35);
     border-radius: var(--radius-sm);
   }
   .level.frame-frame-neon {
-    box-shadow: 0 0 0 2px var(--accent), 0 0 16px var(--accent);
+    box-shadow:
+      0 0 0 2px var(--accent),
+      0 0 16px var(--accent);
     border-radius: var(--radius-sm);
   }
   .level.frame-frame-leaf {
-    box-shadow: 0 0 0 2px #2e7d32, 0 0 12px rgba(46, 125, 50, 0.4);
+    box-shadow:
+      0 0 0 2px #2e7d32,
+      0 0 12px rgba(46, 125, 50, 0.4);
     border-radius: var(--radius-sm);
   }
   .level {

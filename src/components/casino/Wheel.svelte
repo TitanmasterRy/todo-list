@@ -46,11 +46,25 @@
 <div class="cz-game">
   <div class="cz-table wheelwrap">
     <div class="pointer" aria-hidden="true">▼</div>
-    <svg viewBox="0 0 300 300" role="img" aria-label="Big Six wheel" style="transform: rotate({angle}deg); transition: transform {spinning ? '2.5s' : '0s'} cubic-bezier(0.15, 0.85, 0.2, 1)">
+    <svg
+      viewBox="0 0 300 300"
+      role="img"
+      aria-label="Big Six wheel"
+      style="transform: rotate({angle}deg); transition: transform {spinning ? '2.5s' : '0s'} cubic-bezier(0.15, 0.85, 0.2, 1)"
+    >
       {#each WHEEL_LAYOUT as id, i (i)}
         {@const p = labelPos(i)}
         <path d={arc(i)} fill={COLORS[id]} stroke="#fff" stroke-width="0.6" />
-        <text x={p.x} y={p.y} font-size="9" font-weight="800" text-anchor="middle" dominant-baseline="middle" fill={id === 'joker' || id === 'star' ? '#fff' : '#222'} transform="rotate({p.rot} {p.x} {p.y})">{seg(id).label}</text>
+        <text
+          x={p.x}
+          y={p.y}
+          font-size="9"
+          font-weight="800"
+          text-anchor="middle"
+          dominant-baseline="middle"
+          fill={id === 'joker' || id === 'star' ? '#fff' : '#222'}
+          transform="rotate({p.rot} {p.x} {p.y})">{seg(id).label}</text
+        >
       {/each}
       <circle cx="150" cy="150" r="30" fill="#fff" />
     </svg>
@@ -58,7 +72,9 @@
   </div>
   <div class="cz-actions">
     <div class="cz-seg" role="radiogroup" aria-label="Bet on">
-      {#each WHEEL_SEGMENTS as s (s.id)}<button role="radio" aria-checked={pick === s.id} class:on={pick === s.id} onclick={() => (pick = s.id)}>{s.label} <small>{s.pays}:1</small></button>{/each}
+      {#each WHEEL_SEGMENTS as s (s.id)}<button role="radio" aria-checked={pick === s.id} class:on={pick === s.id} onclick={() => (pick = s.id)}
+          >{s.label} <small>{s.pays}:1</small></button
+        >{/each}
     </div>
     <BetControl bind:value={bet} disabled={spinning} />
     <button class="btn primary" onclick={spin} disabled={spinning || bet > economy.wallet.chips}>Spin</button>

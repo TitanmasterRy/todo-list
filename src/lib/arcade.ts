@@ -17,7 +17,8 @@ export function validateGame(raw: unknown): { game: ArcadeGame | null; error?: s
   if (typeof g.src === 'string' && g.src.trim()) {
     src = g.src.trim();
     // a file next to games.json: no scheme, no parent directories, no absolute paths
-    if (/^[a-z]+:/i.test(src) || src.startsWith('/') || src.split(/[\\/]/).includes('..') || !/\.html?$/i.test(src)) return { game: null, error: `${id}: src must be an .html file inside games/` };
+    if (/^[a-z]+:/i.test(src) || src.startsWith('/') || src.split(/[\\/]/).includes('..') || !/\.html?$/i.test(src))
+      return { game: null, error: `${id}: src must be an .html file inside games/` };
   } else if (typeof g.url === 'string' && g.url.trim()) {
     url = g.url.trim();
     try {

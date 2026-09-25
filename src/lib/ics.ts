@@ -26,7 +26,10 @@ function fold(line: string): string {
 }
 
 function utcStamp(d: Date): string {
-  return d.toISOString().replace(/[-:]/g, '').replace(/\.\d{3}Z$/, 'Z');
+  return d
+    .toISOString()
+    .replace(/[-:]/g, '')
+    .replace(/\.\d{3}Z$/, 'Z');
 }
 
 export function buildICS(tasks: Task[], courses: Course[], now: Date = new Date()): string {

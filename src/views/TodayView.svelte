@@ -28,9 +28,7 @@
   const overdue = $derived(store.tasks.filter((t) => live(t) && byCourse(t) && isOverdue(t.dueAt, store.now) && !isDueToday(t.dueAt, store.now)).sort(byDueThenOrder));
   const dueToday = $derived(store.tasks.filter((t) => live(t) && byCourse(t) && isDueToday(t.dueAt, store.now)).sort(byFrogThenOrder));
   const pinned = $derived(
-    store.tasks
-      .filter((t) => live(t) && t.pinnedDay === store.today && (!t.dueAt || (!isDueToday(t.dueAt, store.now) && !isOverdue(t.dueAt, store.now))))
-      .sort(byOrder),
+    store.tasks.filter((t) => live(t) && t.pinnedDay === store.today && (!t.dueAt || (!isDueToday(t.dueAt, store.now) && !isOverdue(t.dueAt, store.now)))).sort(byOrder),
   );
   const allIds = $derived([...overdue, ...dueToday, ...pinned].map((t) => t.id));
   const d = $derived(fromKey(store.today));
@@ -98,7 +96,9 @@
     <div class="course-chips">
       <button class="chip" class:on={courseChip === null} onclick={() => (courseChip = null)}>All</button>
       {#each chipCourses as c (c.id)}
-        <button class="chip" class:on={courseChip === c.id} style="--cc:{c.color}" onclick={() => (courseChip = courseChip === c.id ? null : c.id)}><span class="dot"></span>{c.emoji ?? ''} {c.name}</button>
+        <button class="chip" class:on={courseChip === c.id} style="--cc:{c.color}" onclick={() => (courseChip = courseChip === c.id ? null : c.id)}
+          ><span class="dot"></span>{c.emoji ?? ''} {c.name}</button
+        >
       {/each}
     </div>
   {/if}
@@ -127,7 +127,8 @@
 
   {#if pinned.length || showNoDate}
     <div class="section-title">
-      <span>Planned for today</span><span class="count">{pinned.length}</span><span class="spacer"></span><button class="link" onclick={() => store.go('tools')}>Plan my day</button>
+      <span>Planned for today</span><span class="count">{pinned.length}</span><span class="spacer"></span><button class="link" onclick={() => store.go('tools')}>Plan my day</button
+      >
     </div>
     <Sortable items={pinned} onreorder={(ids) => store.reorder(ids)} ondropfrom={(id) => onDrop(id, 'pinned')} group="today" placeholder="Drag a task without a date here">
       {#snippet item(task)}
@@ -185,7 +186,10 @@
   .flame {
     filter: grayscale(1);
     opacity: 0.5;
-    transition: filter 300ms, opacity 300ms, transform 300ms var(--spring);
+    transition:
+      filter 300ms,
+      opacity 300ms,
+      transform 300ms var(--spring);
   }
   .flame.hot {
     filter: none;

@@ -26,7 +26,35 @@ export interface PSImport {
 // ───────────────────────── helpers ─────────────────────────
 
 const ENTITIES: Record<string, string> = {
-  amp: '&', lt: '<', gt: '>', quot: '"', apos: "'", nbsp: ' ', ndash: '–', mdash: '—', hellip: '…', copy: '©', reg: '®', trade: '™', laquo: '«', raquo: '»', middot: '·', bull: '•', eacute: 'é', egrave: 'è', ecirc: 'ê', aacute: 'á', agrave: 'à', iacute: 'í', oacute: 'ó', uacute: 'ú', ntilde: 'ñ', ccedil: 'ç', uuml: 'ü', ouml: 'ö', auml: 'ä',
+  amp: '&',
+  lt: '<',
+  gt: '>',
+  quot: '"',
+  apos: "'",
+  nbsp: ' ',
+  ndash: '–',
+  mdash: '—',
+  hellip: '…',
+  copy: '©',
+  reg: '®',
+  trade: '™',
+  laquo: '«',
+  raquo: '»',
+  middot: '·',
+  bull: '•',
+  eacute: 'é',
+  egrave: 'è',
+  ecirc: 'ê',
+  aacute: 'á',
+  agrave: 'à',
+  iacute: 'í',
+  oacute: 'ó',
+  uacute: 'ú',
+  ntilde: 'ñ',
+  ccedil: 'ç',
+  uuml: 'ü',
+  ouml: 'ö',
+  auml: 'ä',
 };
 
 export function decodeEntities(s: string): string {
@@ -101,7 +129,11 @@ function parseIntCell(text: string): number | undefined {
 function parseCourseCellHtml(html: string): { name: string; teacher?: string } | null {
   let teacher: string | undefined;
   const stripped = html.replace(/<a\b[^>]*href=["']mailto:[^"']*["'][^>]*>([\s\S]*?)<\/a>/gi, (_m, inner: string) => {
-    const t = collapse(htmlToText(inner).replace(/\n/g, ' ').replace(/^\s*email\s+/i, ''));
+    const t = collapse(
+      htmlToText(inner)
+        .replace(/\n/g, ' ')
+        .replace(/^\s*email\s+/i, ''),
+    );
     if (t && !teacher) teacher = t;
     return '';
   });
@@ -309,7 +341,10 @@ export function parsePowerSchoolHTML(html: string): PSImport {
 const INLINE_TERM_RE = /(?:^|\s)((?:Q[1-9]|S[1-4]|T[1-6]|Y1|F[1-2]|E[1-4]|MP[1-9]|HEX[1-6]|SEM\s?[1-4]|TRI\s?[1-4]))\b\s*[:=-]?\s*/gi;
 
 function splitColumns(line: string): string[] {
-  return line.split(/\t+|\s{2,}/).map(collapse).filter(Boolean);
+  return line
+    .split(/\t+|\s{2,}/)
+    .map(collapse)
+    .filter(Boolean);
 }
 
 const HEADER_WORD_RE = /^(?:exp|expression|course|courses|teacher|period|per\.?|grade|grades|term|terms|absences|abs\.?|tardies|tardy|last week|this week|attendance|[MTWHF])$/i;

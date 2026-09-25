@@ -37,7 +37,11 @@
   const max = $derived(Math.max(1, ...Object.values(data)));
   const level = (n: number) => (n === 0 ? 0 : n >= max * 0.75 ? 4 : n >= max * 0.5 ? 3 : n >= max * 0.25 ? 2 : 1);
   let hover = $state<{ key: string; count: number } | null>(null);
-  const total = $derived(Object.entries(data).filter(([k]) => k > addDaysKey(endKey, -365)).reduce((a, [, v]) => a + v, 0));
+  const total = $derived(
+    Object.entries(data)
+      .filter(([k]) => k > addDaysKey(endKey, -365))
+      .reduce((a, [, v]) => a + v, 0),
+  );
   const rowLabels = $derived(Array.from({ length: 7 }, (_, r) => DAY_SHORT[(r + weekStart) % 7]));
 
   function label(key: string): string {

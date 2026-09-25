@@ -13,7 +13,12 @@ describe('economy', () => {
     expect(coinsForXp(60)).toBe(12);
   });
   it('balances sum per currency and items', () => {
-    const l = [entry({ currency: 'coins', amount: 50, reason: 'task' }), entry({ currency: 'coins', amount: -20, reason: 'shop:x' }), entry({ currency: 'item:booster', amount: 3, reason: 'shop:booster' }), entry({ currency: 'item:booster', amount: -1, reason: 'booster' })];
+    const l = [
+      entry({ currency: 'coins', amount: 50, reason: 'task' }),
+      entry({ currency: 'coins', amount: -20, reason: 'shop:x' }),
+      entry({ currency: 'item:booster', amount: 3, reason: 'shop:booster' }),
+      entry({ currency: 'item:booster', amount: -1, reason: 'booster' }),
+    ];
     const b = balances(l);
     expect(b.coins).toBe(30);
     expect(b.items.booster).toBe(2);

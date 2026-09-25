@@ -87,7 +87,10 @@
       </button>
     {/each}
   </div>
-  <p class="muted">Play chips only: no real money, and chips never turn back into coins. Every game shows its odds. A reminder pops up after {store.settings.casinoBreakMin || 'no'} minutes of play (Settings → Economy).</p>
+  <p class="muted">
+    Play chips only: no real money, and chips never turn back into coins. Every game shows its odds. A reminder pops up after {store.settings.casinoBreakMin || 'no'} minutes of play
+    (Settings → Economy).
+  </p>
 {/if}
 
 <style>
@@ -102,7 +105,9 @@
     justify-items: start;
     text-align: left;
     padding: 14px;
-    transition: transform var(--dur) var(--spring), border-color var(--dur);
+    transition:
+      transform var(--dur) var(--spring),
+      border-color var(--dur);
   }
   .tile:hover {
     transform: translateY(-2px);

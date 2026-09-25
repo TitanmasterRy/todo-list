@@ -30,7 +30,6 @@
   }
   let parts: P[] = [];
 
-
   function fire() {
     if (!canvas || store.settings.reducedMotion || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
     const W = (canvas.width = window.innerWidth);
@@ -53,7 +52,19 @@
         vr: (Math.random() - 0.5) * 0.3,
         color: colors[i % colors.length],
         life: 1,
-        shape: style ? (i % 3 ? 4 : 1) : theme.flourish === 'pixels' ? 0 : theme.flourish === 'stars' ? 3 : theme.flourish === 'hearts' || theme.flourish === 'leaves' ? (i % 2 ? 4 : 1) : i % 3,
+        shape: style
+          ? i % 3
+            ? 4
+            : 1
+          : theme.flourish === 'pixels'
+            ? 0
+            : theme.flourish === 'stars'
+              ? 3
+              : theme.flourish === 'hearts' || theme.flourish === 'leaves'
+                ? i % 2
+                  ? 4
+                  : 1
+                : i % 3,
         emoji: emojiShapes.length ? emojiShapes[i % emojiShapes.length] : '',
       });
     }

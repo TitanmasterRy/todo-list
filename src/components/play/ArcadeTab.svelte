@@ -47,10 +47,14 @@
       <div class="card game" class:match={g.theme === store.settings.themePack}>
         <div class="e">{g.emoji ?? '🎮'}</div>
         <div class="info">
-          <div class="n">{g.title}{#if g.local}<span class="chip">local</span>{/if}</div>
+          <div class="n">
+            {g.title}{#if g.local}<span class="chip">local</span>{/if}
+          </div>
           {#if g.description}<div class="d">{g.description}</div>{/if}
           <div class="meta">
-            {g.cost ? `${g.cost} 🎟️` : 'Free'}{g.minutes ? ` · ${g.minutes} min` : ''}{g.theme ? ` · ${g.theme}` : ''}{arcade.scores[g.id] ? ` · 🏆 ${arcade.scores[g.id].toLocaleString()}` : ''}
+            {g.cost ? `${g.cost} 🎟️` : 'Free'}{g.minutes ? ` · ${g.minutes} min` : ''}{g.theme ? ` · ${g.theme}` : ''}{arcade.scores[g.id]
+              ? ` · 🏆 ${arcade.scores[g.id].toLocaleString()}`
+              : ''}
           </div>
         </div>
         <button class="btn primary sm" onclick={() => play(g)} disabled={g.cost > economy.wallet.vouchers}>Play</button>
@@ -59,7 +63,12 @@
   </div>
 {/if}
 {#if arcade.errors.length && store.settings.arcadeAdmin}
-  <div class="card errs"><strong>games.json problems</strong><ul>{#each arcade.errors as e, i (i)}<li>{e}</li>{/each}</ul></div>
+  <div class="card errs">
+    <strong>games.json problems</strong>
+    <ul>
+      {#each arcade.errors as e, i (i)}<li>{e}</li>{/each}
+    </ul>
+  </div>
 {/if}
 <p class="muted">Vouchers: {economy.wallet.vouchers}. Buy more in the Shop. Games run in a sandbox and can't see your tasks or data.</p>
 

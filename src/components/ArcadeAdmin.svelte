@@ -37,7 +37,16 @@
   function build(): ArcadeGame | null {
     error = '';
     const id = slugify(title);
-    const raw = { id, title, emoji, description: description || undefined, cost, minutes: minutes || undefined, theme: theme || undefined, ...(kind === 'url' ? { url } : { html }) };
+    const raw = {
+      id,
+      title,
+      emoji,
+      description: description || undefined,
+      cost,
+      minutes: minutes || undefined,
+      theme: theme || undefined,
+      ...(kind === 'url' ? { url } : { html }),
+    };
     const { game, error: err } = validateGame(raw);
     if (!game) {
       error = err ?? 'Check the fields.';
@@ -63,7 +72,12 @@
     const text = JSON.stringify(manifestEntry(g), null, 2);
     try {
       await navigator.clipboard.writeText(text);
-      toasts.push({ message: 'Copied games.json entry', detail: g.url ? 'Paste it into public/games/games.json.' : `Paste it into public/games/games.json and save the file as public/games/${g.id}.html.`, kind: 'success', timeout: 8000 });
+      toasts.push({
+        message: 'Copied games.json entry',
+        detail: g.url ? 'Paste it into public/games/games.json.' : `Paste it into public/games/games.json and save the file as public/games/${g.id}.html.`,
+        kind: 'success',
+        timeout: 8000,
+      });
     } catch {
       prompt('Copy this entry into public/games/games.json', text);
     }
@@ -82,7 +96,8 @@
 <section class="card">
   <h2>Arcade admin</h2>
   <p class="help">
-    <strong>For everyone on your site:</strong> put game files in <code>public/games/</code> and list them in <code>public/games/games.json</code>, then redeploy (see <code>public/games/README.md</code>).
+    <strong>For everyone on your site:</strong> put game files in <code>public/games/</code> and list them in <code>public/games/games.json</code>, then redeploy (see
+    <code>public/games/README.md</code>).
     <strong>Try one here first:</strong> games you add below live only in this browser. Preview, then copy the entry to publish.
   </p>
 
@@ -101,12 +116,20 @@
       <input class="input em" bind:value={emoji} aria-label="Emoji" maxlength="4" />
       <label>Cost <input class="input num" type="number" min="0" max="99" bind:value={cost} /> 🎟️</label>
       <label>Minutes <input class="input num" type="number" min="0" max="240" bind:value={minutes} /></label>
-      <select class="select" bind:value={theme} aria-label="Theme"><option value="">Any theme</option>{#each THEME_PACKS as t (t)}<option value={t}>{t}</option>{/each}</select>
+      <select class="select" bind:value={theme} aria-label="Theme"
+        ><option value="">Any theme</option>{#each THEME_PACKS as t (t)}<option value={t}>{t}</option>{/each}</select
+      >
     </div>
     <input class="input" bind:value={description} placeholder="One-line description (optional)" aria-label="Description" />
     {#if error}<p class="err">{error}</p>{/if}
     <div class="btns">
-      <button class="btn" onclick={() => { const g = build(); if (g) preview = g; }}>Preview</button>
+      <button
+        class="btn"
+        onclick={() => {
+          const g = build();
+          if (g) preview = g;
+        }}>Preview</button
+      >
       <button class="btn primary" onclick={() => void save()}>Add to this browser</button>
     </div>
   </div>
@@ -126,10 +149,17 @@
     </ul>
   {/if}
   <h3>On this site <span class="muted">({arcade.siteGames.length} from {arcade.manifestUrl()})</span></h3>
-  {#if arcade.errors.length}<ul class="err">{#each arcade.errors as e, i (i)}<li>{e}</li>{/each}</ul>{/if}
+  {#if arcade.errors.length}<ul class="err">
+      {#each arcade.errors as e, i (i)}<li>{e}</li>{/each}
+    </ul>{/if}
   <ul class="list">
     {#each arcade.siteGames as g (g.id)}
-      <li><span class="grow">{g.emoji} {g.title} <span class="muted">· {g.cost} 🎟️{g.minutes ? ` · ${g.minutes} min` : ''}</span></span><button class="btn ghost sm" onclick={() => (preview = g)}>Preview</button></li>
+      <li>
+        <span class="grow">{g.emoji} {g.title} <span class="muted">· {g.cost} 🎟️{g.minutes ? ` · ${g.minutes} min` : ''}</span></span><button
+          class="btn ghost sm"
+          onclick={() => (preview = g)}>Preview</button
+        >
+      </li>
     {/each}
   </ul>
   <button class="btn ghost sm" onclick={() => void arcade.load(true)}>Reload games.json</button>

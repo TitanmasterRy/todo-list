@@ -29,7 +29,9 @@
 
 <div class="modal-backdrop" role="presentation">
   <div use:focusTrap class="modal ob" role="dialog" aria-modal="true" aria-label="Welcome" tabindex="-1">
-    <div class="dots" aria-hidden="true">{#each [0, 1, 2] as i}<span class:on={i === step}></span>{/each}</div>
+    <div class="dots" aria-hidden="true">
+      {#each [0, 1, 2] as i}<span class:on={i === step}></span>{/each}
+    </div>
     {#key step}
       <div class="body" in:fly={{ x: 30, duration: 220 }}>
         {#if step === 0}

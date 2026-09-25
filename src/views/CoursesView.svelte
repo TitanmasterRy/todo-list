@@ -25,7 +25,9 @@
     return store.openTasks.filter((t) => t.courseId === c.id && t.dueAt && dueKey(t.dueAt) < store.today).length;
   }
   const courseTasks = $derived(course ? tasksFor(course) : []);
-  const courseDone = $derived(course ? store.tasks.filter((t) => t.courseId === course.id && t.completedAt && !store.lingering.has(t.id)).sort((a, b) => (a.completedAt! < b.completedAt! ? 1 : -1)) : []);
+  const courseDone = $derived(
+    course ? store.tasks.filter((t) => t.courseId === course.id && t.completedAt && !store.lingering.has(t.id)).sort((a, b) => (a.completedAt! < b.completedAt! ? 1 : -1)) : [],
+  );
   let showDone = $state(false);
   const archivedCourses = $derived(store.courses.filter((c) => c.archived));
   let showArchived = $state(false);
@@ -61,7 +63,11 @@
       {/snippet}
     </Sortable>
     {#if !courseTasks.length}
-      <div class="empty"><div class="big">🎓</div><h3>All clear</h3><p>No open tasks for this course.</p></div>
+      <div class="empty">
+        <div class="big">🎓</div>
+        <h3>All clear</h3>
+        <p>No open tasks for this course.</p>
+      </div>
     {/if}
     {#if courseDone.length}
       <button class="section-title toggle" onclick={() => (showDone = !showDone)} aria-expanded={showDone}>

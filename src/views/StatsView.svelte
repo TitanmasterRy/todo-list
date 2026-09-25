@@ -13,10 +13,21 @@
   const byCourse = $derived.by(() => {
     const rows = store.activeCourses.map((c) => {
       const tasks = store.openTasks.filter((t) => t.courseId === c.id && t.dueAt && dueKey(t.dueAt) <= weekEnd);
-      return { course: c, count: tasks.length, minutes: tasks.reduce((a, t) => a + (t.estimateMin ?? 0), 0), exams: tasks.filter((t) => t.type === 'exam' || t.type === 'quiz').length };
+      return {
+        course: c,
+        count: tasks.length,
+        minutes: tasks.reduce((a, t) => a + (t.estimateMin ?? 0), 0),
+        exams: tasks.filter((t) => t.type === 'exam' || t.type === 'quiz').length,
+      };
     });
     const none = store.openTasks.filter((t) => !t.courseId && t.dueAt && dueKey(t.dueAt) <= weekEnd);
-    if (none.length) rows.push({ course: { id: '', name: 'No course', color: 'var(--text-faint)', archived: false }, count: none.length, minutes: none.reduce((a, t) => a + (t.estimateMin ?? 0), 0), exams: 0 });
+    if (none.length)
+      rows.push({
+        course: { id: '', name: 'No course', color: 'var(--text-faint)', archived: false },
+        count: none.length,
+        minutes: none.reduce((a, t) => a + (t.estimateMin ?? 0), 0),
+        exams: 0,
+      });
     return rows.filter((r) => r.count > 0).sort((a, b) => b.minutes - a.minutes);
   });
   const maxMinutes = $derived(Math.max(1, ...byCourse.map((r) => r.minutes)));
@@ -47,7 +58,10 @@
         <div class="s">Best {store.stats.streak.best} · {store.stats.streak.freezes} freeze{store.stats.streak.freezes === 1 ? '' : 's'} banked 🧊</div>
       </div>
       <div class="card tile frame-{store.settings.equippedFrame ?? 'none'}">
-        <div class="k">Level {lp.level}{#if store.settings.equippedTitle} · {TITLE_TEXT[store.settings.equippedTitle]}{/if}</div>
+        <div class="k">
+          Level {lp.level}{#if store.settings.equippedTitle}
+            · {TITLE_TEXT[store.settings.equippedTitle]}{/if}
+        </div>
         <div class="v">{store.stats.xp}<span class="unit">XP</span></div>
         <div class="bar"><div class="fill" style="width:{lp.pct * 100}%"></div></div>
         <div class="s">{lp.needed - lp.into} XP to level {lp.level + 1} ({xpForLevel(lp.level)} total)</div>
@@ -109,13 +123,19 @@
 
 <style>
   .frame-frame-gold {
-    box-shadow: 0 0 0 2px #f5c542, 0 0 18px rgba(245, 197, 66, 0.35);
+    box-shadow:
+      0 0 0 2px #f5c542,
+      0 0 18px rgba(245, 197, 66, 0.35);
   }
   .frame-frame-neon {
-    box-shadow: 0 0 0 2px var(--accent), 0 0 20px var(--accent);
+    box-shadow:
+      0 0 0 2px var(--accent),
+      0 0 20px var(--accent);
   }
   .frame-frame-leaf {
-    box-shadow: 0 0 0 2px #2e7d32, 0 0 14px rgba(46, 125, 50, 0.4);
+    box-shadow:
+      0 0 0 2px #2e7d32,
+      0 0 14px rgba(46, 125, 50, 0.4);
   }
   .tiles {
     display: grid;

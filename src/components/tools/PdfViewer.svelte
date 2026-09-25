@@ -208,10 +208,39 @@
 </div>
 
 <style>
-  .viewer { position: relative; width: 100%; overflow-x: auto; }
-  .status { position: absolute; top: 8px; left: 50%; transform: translateX(-50%); z-index: 2; padding: 4px 10px; border-radius: 999px; font-size: 12px; background: var(--bg-elev-2); color: var(--text-muted); border: 1px solid var(--border); pointer-events: none; }
-  .err { padding: 20px; border-radius: var(--radius-sm); background: color-mix(in srgb, var(--danger) 12%, var(--bg-elev-2)); color: var(--text); display: flex; flex-direction: column; gap: 4px; font-size: 13px; }
-  .err span { color: var(--text-muted); word-break: break-word; }
+  .viewer {
+    position: relative;
+    width: 100%;
+    overflow-x: auto;
+  }
+  .status {
+    position: absolute;
+    top: 8px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 2;
+    padding: 4px 10px;
+    border-radius: 999px;
+    font-size: 12px;
+    background: var(--bg-elev-2);
+    color: var(--text-muted);
+    border: 1px solid var(--border);
+    pointer-events: none;
+  }
+  .err {
+    padding: 20px;
+    border-radius: var(--radius-sm);
+    background: color-mix(in srgb, var(--danger) 12%, var(--bg-elev-2));
+    color: var(--text);
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    font-size: 13px;
+  }
+  .err span {
+    color: var(--text-muted);
+    word-break: break-word;
+  }
   .page {
     --user-unit: 1;
     --total-scale-factor: calc(var(--scale-factor) * var(--user-unit));
@@ -224,7 +253,10 @@
     box-shadow: 0 2px 12px rgba(0, 0, 0, 0.25);
     direction: ltr;
   }
-  canvas { display: block; max-width: 100%; }
+  canvas {
+    display: block;
+    max-width: 100%;
+  }
   /* Minimal port of pdf.js's textLayer rules (the spans are created by pdf.js, so they're :global). */
   .textLayer {
     color-scheme: only light;
@@ -263,8 +295,23 @@
     --rotate: 0deg;
     transform: rotate(var(--rotate)) scaleX(var(--scale-x)) scale(var(--min-font-size-inv));
   }
-  .textLayer :global(.markedContent) { display: contents; }
-  .textLayer :global(span[role='img']) { user-select: none; cursor: default; }
-  .textLayer :global(span::selection) { background: color-mix(in srgb, var(--accent) 35%, transparent); color: transparent; }
-  .textLayer :global(.endOfContent) { display: block; position: absolute; inset: 100% 0 0; z-index: 0; cursor: default; user-select: none; }
+  .textLayer :global(.markedContent) {
+    display: contents;
+  }
+  .textLayer :global(span[role='img']) {
+    user-select: none;
+    cursor: default;
+  }
+  .textLayer :global(span::selection) {
+    background: color-mix(in srgb, var(--accent) 35%, transparent);
+    color: transparent;
+  }
+  .textLayer :global(.endOfContent) {
+    display: block;
+    position: absolute;
+    inset: 100% 0 0;
+    z-index: 0;
+    cursor: default;
+    user-select: none;
+  }
 </style>

@@ -25,14 +25,25 @@
   async function pickFolder() {
     try {
       backupFolder = await chooseFolder();
-      toasts.push({ message: `Backups will be written to “${backupFolder}”`, detail: 'A JSON copy is saved a few seconds after every change, plus one dated file per day.', kind: 'success', emoji: '💾' });
+      toasts.push({
+        message: `Backups will be written to “${backupFolder}”`,
+        detail: 'A JSON copy is saved a few seconds after every change, plus one dated file per day.',
+        kind: 'success',
+        emoji: '💾',
+      });
     } catch (e) {
       if ((e as Error).name !== 'AbortError') toasts.push({ message: 'Could not use that folder', detail: String(e), kind: 'warn' });
     }
   }
   async function persistNow() {
     persisted = await requestPersistence();
-    toasts.push({ message: persisted ? 'Storage marked persistent' : 'Browser declined persistence', detail: persisted ? 'The browser will not evict this app’s data under storage pressure.' : 'Install the app or use it more; browsers grant this to sites you use often. Folder backups still protect you.', kind: persisted ? 'success' : 'info' });
+    toasts.push({
+      message: persisted ? 'Storage marked persistent' : 'Browser declined persistence',
+      detail: persisted
+        ? 'The browser will not evict this app’s data under storage pressure.'
+        : 'Install the app or use it more; browsers grant this to sites you use often. Folder backups still protect you.',
+      kind: persisted ? 'success' : 'info',
+    });
   }
   async function enableNotifications() {
     const ok = await requestNotifications();
@@ -210,7 +221,18 @@
       <div class="swatches" role="radiogroup" aria-labelledby="accent-l">
         {#each ACCENT_UNLOCKS as a}
           {@const locked = s.gamification && store.stats.level < a.level}
-          <button class="sw" class:on={s.accent === a.color} class:locked style="background:{a.color}" role="radio" aria-checked={s.accent === a.color} aria-label="{a.name}{locked ? ` (unlocks at level ${a.level})` : ''}" title="{a.name}{locked ? ` · unlocks at level ${a.level}` : ''}" disabled={locked} onclick={() => set('accent', a.color)}>{locked ? '🔒' : ''}</button>
+          <button
+            class="sw"
+            class:on={s.accent === a.color}
+            class:locked
+            style="background:{a.color}"
+            role="radio"
+            aria-checked={s.accent === a.color}
+            aria-label="{a.name}{locked ? ` (unlocks at level ${a.level})` : ''}"
+            title="{a.name}{locked ? ` · unlocks at level ${a.level}` : ''}"
+            disabled={locked}
+            onclick={() => set('accent', a.color)}>{locked ? '🔒' : ''}</button
+          >
         {/each}
         <input type="color" value={s.accent} onchange={(e) => set('accent', (e.target as HTMLInputElement).value)} aria-label="Custom accent" class="custom" />
       </div>
@@ -239,13 +261,31 @@
     <h2>Sounds</h2>
     <div class="row">
       <label for="snd">Sounds</label>
-      <input id="snd" type="checkbox" class="switch" checked={s.soundsEnabled} onchange={(e) => { set('soundsEnabled', (e.target as HTMLInputElement).checked); if ((e.target as HTMLInputElement).checked) playSound('pop'); }} />
+      <input
+        id="snd"
+        type="checkbox"
+        class="switch"
+        checked={s.soundsEnabled}
+        onchange={(e) => {
+          set('soundsEnabled', (e.target as HTMLInputElement).checked);
+          if ((e.target as HTMLInputElement).checked) playSound('pop');
+        }}
+      />
     </div>
     <div class="row">
       <span id="pack-l">Sound pack</span>
       <div class="packs" role="radiogroup" aria-labelledby="pack-l">
         {#each ['soft', 'click', 'arcade'] as p}
-          <button class="btn sm" class:primary={s.soundPack === p} role="radio" aria-checked={s.soundPack === p} onclick={() => { set('soundPack', p as SoundPack); previewPack(p as SoundPack); }}>{p}</button>
+          <button
+            class="btn sm"
+            class:primary={s.soundPack === p}
+            role="radio"
+            aria-checked={s.soundPack === p}
+            onclick={() => {
+              set('soundPack', p as SoundPack);
+              previewPack(p as SoundPack);
+            }}>{p}</button
+          >
         {/each}
       </div>
     </div>
@@ -255,19 +295,51 @@
     <h2>Goals and timer</h2>
     <div class="row">
       <label for="goal">Daily goal (tasks)</label>
-      <input id="goal" class="input num" type="number" min="1" max="20" value={s.dailyGoal} onchange={(e) => set('dailyGoal', Math.max(1, Math.min(20, Number((e.target as HTMLInputElement).value) || 3)))} />
+      <input
+        id="goal"
+        class="input num"
+        type="number"
+        min="1"
+        max="20"
+        value={s.dailyGoal}
+        onchange={(e) => set('dailyGoal', Math.max(1, Math.min(20, Number((e.target as HTMLInputElement).value) || 3)))}
+      />
     </div>
     <div class="row">
       <label for="pw">Pomodoro focus (min)</label>
-      <input id="pw" class="input num" type="number" min="1" max="120" value={s.pomodoroWorkMin} onchange={(e) => set('pomodoroWorkMin', Math.max(1, Number((e.target as HTMLInputElement).value) || 25))} />
+      <input
+        id="pw"
+        class="input num"
+        type="number"
+        min="1"
+        max="120"
+        value={s.pomodoroWorkMin}
+        onchange={(e) => set('pomodoroWorkMin', Math.max(1, Number((e.target as HTMLInputElement).value) || 25))}
+      />
     </div>
     <div class="row">
       <label for="pb">Short break (min)</label>
-      <input id="pb" class="input num" type="number" min="1" max="60" value={s.pomodoroBreakMin} onchange={(e) => set('pomodoroBreakMin', Math.max(1, Number((e.target as HTMLInputElement).value) || 5))} />
+      <input
+        id="pb"
+        class="input num"
+        type="number"
+        min="1"
+        max="60"
+        value={s.pomodoroBreakMin}
+        onchange={(e) => set('pomodoroBreakMin', Math.max(1, Number((e.target as HTMLInputElement).value) || 5))}
+      />
     </div>
     <div class="row">
       <label for="pl">Long break (min)</label>
-      <input id="pl" class="input num" type="number" min="1" max="90" value={s.pomodoroLongBreakMin} onchange={(e) => set('pomodoroLongBreakMin', Math.max(1, Number((e.target as HTMLInputElement).value) || 15))} />
+      <input
+        id="pl"
+        class="input num"
+        type="number"
+        min="1"
+        max="90"
+        value={s.pomodoroLongBreakMin}
+        onchange={(e) => set('pomodoroLongBreakMin', Math.max(1, Number((e.target as HTMLInputElement).value) || 15))}
+      />
     </div>
   </section>
 
@@ -279,12 +351,24 @@
     </div>
     <div class="row">
       <label for="wxp">Weekly XP goal</label>
-      <input id="wxp" class="input num" type="number" min="50" step="50" value={s.weeklyXpGoal} onchange={(e) => set('weeklyXpGoal', Math.max(50, Number((e.target as HTMLInputElement).value) || 500))} />
+      <input
+        id="wxp"
+        class="input num"
+        type="number"
+        min="50"
+        step="50"
+        value={s.weeklyXpGoal}
+        onchange={(e) => set('weeklyXpGoal', Math.max(50, Number((e.target as HTMLInputElement).value) || 500))}
+      />
     </div>
-    <p class="help">Level {store.stats.level}: <strong>{levelTitle(store.stats.level)}</strong>. New accent colors unlock as you level up. Critical hits (5% chance, double XP), tiered early bonuses (up to ×1.5 for 3+ days early), grade XP for scores you enter, and notecard study XP all count.</p>
     <p class="help">
-      Streak freezes: you earn one per 7-day streak (max {MAX_FREEZES} banked). A missed day uses one automatically instead of breaking your streak.
-      You have <strong>{store.stats.streak.freezes}</strong> banked. Current streak {store.streak}, best {store.stats.streak.best}.
+      Level {store.stats.level}: <strong>{levelTitle(store.stats.level)}</strong>. New accent colors unlock as you level up. Critical hits (5% chance, double XP), tiered early
+      bonuses (up to ×1.5 for 3+ days early), grade XP for scores you enter, and notecard study XP all count.
+    </p>
+    <p class="help">
+      Streak freezes: you earn one per 7-day streak (max {MAX_FREEZES} banked). A missed day uses one automatically instead of breaking your streak. You have
+      <strong>{store.stats.streak.freezes}</strong>
+      banked. Current streak {store.streak}, best {store.stats.streak.best}.
     </p>
   </section>
 
@@ -302,14 +386,25 @@
       {#if s.casinoEnabled}
         <div class="row">
           <label for="brk">Homework-break reminder after (minutes of casino play, 0 = off)</label>
-          <input id="brk" class="input num" type="number" min="0" max="240" value={s.casinoBreakMin} onchange={(e) => set('casinoBreakMin', Math.max(0, Math.min(240, Number((e.target as HTMLInputElement).value) || 0)))} />
+          <input
+            id="brk"
+            class="input num"
+            type="number"
+            min="0"
+            max="240"
+            value={s.casinoBreakMin}
+            onchange={(e) => set('casinoBreakMin', Math.max(0, Math.min(240, Number((e.target as HTMLInputElement).value) || 0)))}
+          />
         </div>
       {/if}
       <div class="row">
         <label for="adm">Show arcade admin (add games)</label>
         <input id="adm" type="checkbox" class="switch" checked={s.arcadeAdmin} onchange={(e) => set('arcadeAdmin', (e.target as HTMLInputElement).checked)} />
       </div>
-      <p class="help">Coins come only from schoolwork (tasks, the daily ring, streaks, grades, notecards, Pomodoros). There's no real money anywhere: nothing can be bought with cash, and chips never turn back into coins.</p>
+      <p class="help">
+        Coins come only from schoolwork (tasks, the daily ring, streaks, grades, notecards, Pomodoros). There's no real money anywhere: nothing can be bought with cash, and chips
+        never turn back into coins.
+      </p>
     {/if}
   </section>
 
@@ -323,12 +418,19 @@
       <label for="autod">Auto-describe new tasks (plan, steps, estimate)</label>
       <input id="autod" type="checkbox" class="switch" checked={s.autoDescribe} onchange={(e) => set('autoDescribe', (e.target as HTMLInputElement).checked)} />
     </div>
-    <p class="help">Works offline from the task title and course. Toggle it per task with the “auto plan” chip under quick add. Paste several lines into quick add to create one task per line; tap 🎤 to dictate.</p>
+    <p class="help">
+      Works offline from the task title and course. Toggle it per task with the “auto plan” chip under quick add. Paste several lines into quick add to create one task per line;
+      tap 🎤 to dictate.
+    </p>
   </section>
 
   <section class="card">
     <h2>AI helper <span class="chip optional">optional</span></h2>
-    <p class="help">Powers “Ask the tutor”, notecard generation, photo transcription and answer keys. Keys stay in this browser and go only to the provider you pick. <strong>Free options:</strong> Google Gemini and Groq have free tiers, OpenRouter has free models, and Ollama runs on your own computer.</p>
+    <p class="help">
+      Powers “Ask the tutor”, notecard generation, photo transcription and answer keys. Keys stay in this browser and go only to the provider you pick. <strong
+        >Free options:</strong
+      > Google Gemini and Groq have free tiers, OpenRouter has free models, and Ollama runs on your own computer.
+    </p>
     <div class="providers" role="radiogroup" aria-label="AI provider">
       {#each PROVIDERS as p (p.id)}
         <button class="prov" class:on={provider === p.id} role="radio" aria-checked={provider === p.id} onclick={() => setProvider(p.id)}>
@@ -338,11 +440,20 @@
         </button>
       {/each}
     </div>
-    <p class="help">{pInfo.note}{#if pInfo.keyUrl} <a href={pInfo.keyUrl} target="_blank" rel="noopener noreferrer">Get a key ↗</a>{/if}</p>
+    <p class="help">
+      {pInfo.note}{#if pInfo.keyUrl}
+        <a href={pInfo.keyUrl} target="_blank" rel="noopener noreferrer">Get a key ↗</a>{/if}
+    </p>
     {#if provider === 'custom' || provider === 'ollama'}
       <div class="row">
         <label for="aibase">Endpoint URL</label>
-        <input id="aibase" class="input" value={s.aiBaseUrl || (provider === 'ollama' ? 'http://localhost:11434/v1' : '')} placeholder="https://host/v1" onchange={(e) => set('aiBaseUrl', (e.target as HTMLInputElement).value.trim())} />
+        <input
+          id="aibase"
+          class="input"
+          value={s.aiBaseUrl || (provider === 'ollama' ? 'http://localhost:11434/v1' : '')}
+          placeholder="https://host/v1"
+          onchange={(e) => set('aiBaseUrl', (e.target as HTMLInputElement).value.trim())}
+        />
       </div>
     {/if}
     <div class="row">
@@ -354,7 +465,12 @@
           <select id="aimodel" class="select" value={currentModel()} onchange={(e) => setModel((e.target as HTMLSelectElement).value)}>
             {#each modelOptions as m (m.id)}<option value={m.id}>{m.label}</option>{/each}
           </select>
-          <button class="btn ghost sm" onclick={() => void loadModels()} disabled={modelsBusy || (pInfo.needsKey && !store.settings.aiKeys[provider] && !(provider === 'anthropic' && s.aiApiKey))} title="Fetch the current model list from the provider">{modelsBusy ? '…' : '↻ Load models'}</button>
+          <button
+            class="btn ghost sm"
+            onclick={() => void loadModels()}
+            disabled={modelsBusy || (pInfo.needsKey && !store.settings.aiKeys[provider] && !(provider === 'anthropic' && s.aiApiKey))}
+            title="Fetch the current model list from the provider">{modelsBusy ? '…' : '↻ Load models'}</button
+          >
         </span>
       {/if}
     </div>
@@ -366,7 +482,13 @@
           <button class="btn danger sm" onclick={removeKey}>Remove key</button>
         </div>
       {:else}
-        <form class="btns" onsubmit={(e) => { e.preventDefault(); saveKey(); }}>
+        <form
+          class="btns"
+          onsubmit={(e) => {
+            e.preventDefault();
+            saveKey();
+          }}
+        >
           <input class="input" type="password" bind:value={providerKey} placeholder="Paste API key" aria-label="API key" autocomplete="off" />
           <button class="btn primary" type="submit" disabled={aiBusy || !providerKey.trim()}>{aiBusy ? 'Checking…' : 'Save and test'}</button>
         </form>
@@ -383,15 +505,43 @@
     {:else}
       <div class="row">
         <label for="ndue">Remind me before timed deadlines</label>
-        <input id="ndue" type="checkbox" class="switch" checked={s.notifyDueSoon} onchange={(e) => { const on = (e.target as HTMLInputElement).checked; if (on) void enableNotifications(); else set('notifyDueSoon', false); }} />
+        <input
+          id="ndue"
+          type="checkbox"
+          class="switch"
+          checked={s.notifyDueSoon}
+          onchange={(e) => {
+            const on = (e.target as HTMLInputElement).checked;
+            if (on) void enableNotifications();
+            else set('notifyDueSoon', false);
+          }}
+        />
       </div>
       <div class="row">
         <label for="nlead">Lead time (minutes)</label>
-        <input id="nlead" class="input num" type="number" min="5" max="1440" value={s.notifyLeadMin} onchange={(e) => set('notifyLeadMin', Math.max(5, Number((e.target as HTMLInputElement).value) || 60))} />
+        <input
+          id="nlead"
+          class="input num"
+          type="number"
+          min="5"
+          max="1440"
+          value={s.notifyLeadMin}
+          onchange={(e) => set('notifyLeadMin', Math.max(5, Number((e.target as HTMLInputElement).value) || 60))}
+        />
       </div>
       <div class="row">
         <label for="ndig">Morning digest (what’s due today, after 7 am)</label>
-        <input id="ndig" type="checkbox" class="switch" checked={s.notifyMorningDigest} onchange={(e) => { const on = (e.target as HTMLInputElement).checked; set('notifyMorningDigest', on); if (on) void enableNotifications(); }} />
+        <input
+          id="ndig"
+          type="checkbox"
+          class="switch"
+          checked={s.notifyMorningDigest}
+          onchange={(e) => {
+            const on = (e.target as HTMLInputElement).checked;
+            set('notifyMorningDigest', on);
+            if (on) void enableNotifications();
+          }}
+        />
       </div>
       <p class="help">Notifications fire while the app is open or installed and running in the background tab.</p>
     {/if}
@@ -401,34 +551,79 @@
     <h2>Music &amp; accounts</h2>
     <div class="row">
       <label for="spid">Spotify Client ID</label>
-      <input id="spid" class="input" value={s.spotifyClientId} placeholder="from developer.spotify.com/dashboard" onchange={(e) => set('spotifyClientId', (e.target as HTMLInputElement).value.trim())} />
+      <input
+        id="spid"
+        class="input"
+        value={s.spotifyClientId}
+        placeholder="from developer.spotify.com/dashboard"
+        onchange={(e) => set('spotifyClientId', (e.target as HTMLInputElement).value.trim())}
+      />
     </div>
-    <p class="help">Create a free app at developer.spotify.com/dashboard, add <code>{typeof location !== 'undefined' ? location.origin + location.pathname : ''}</code> as a Redirect URI, paste the Client ID, then connect from Focus → Music. Playback control (devices, play/pause) needs Spotify Premium; the embedded player works for everyone.</p>
+    <p class="help">
+      Create a free app at developer.spotify.com/dashboard, add <code>{typeof location !== 'undefined' ? location.origin + location.pathname : ''}</code> as a Redirect URI, paste the
+      Client ID, then connect from Focus → Music. Playback control (devices, play/pause) needs Spotify Premium; the embedded player works for everyone.
+    </p>
     <div class="row">
       <label for="gcid">Google Client ID</label>
-      <input id="gcid" class="input" value={s.googleClientId} placeholder="….apps.googleusercontent.com" onchange={(e) => set('googleClientId', (e.target as HTMLInputElement).value.trim())} />
+      <input
+        id="gcid"
+        class="input"
+        value={s.googleClientId}
+        placeholder="….apps.googleusercontent.com"
+        onchange={(e) => set('googleClientId', (e.target as HTMLInputElement).value.trim())}
+      />
     </div>
     <p class="help">Enables Gmail scanning, Google Classroom import, Google Calendar push and Drive sync (sign in on any device to sync). Setup is in Tools → Google.</p>
   </section>
 
   <section class="card">
     <h2>Schoology sync <span class="chip optional">optional</span></h2>
-    <p class="help">Mode: <strong>{s.schoologyMode === 'api' ? 'API sign-in (assignments + grades)' : 'calendar feed (assignments)'}</strong>, syncing every {s.schoologyIntervalMin} min. Full setup (API key sign-in, proxy, manual import) lives in the <button class="link" onclick={() => store.go('schoology')}>Schoology view</button>.</p>
-    <form class="btns" onsubmit={(e) => { e.preventDefault(); store.updateSettings({ schoologyFeedUrl: schoologyUrl.trim(), schoologyProxy: schoologyProxy.trim() }); if (schoologyUrl.trim()) void syncSchoology(); }}>
+    <p class="help">
+      Mode: <strong>{s.schoologyMode === 'api' ? 'API sign-in (assignments + grades)' : 'calendar feed (assignments)'}</strong>, syncing every {s.schoologyIntervalMin} min. Full setup
+      (API key sign-in, proxy, manual import) lives in the <button class="link" onclick={() => store.go('schoology')}>Schoology view</button>.
+    </p>
+    <form
+      class="btns"
+      onsubmit={(e) => {
+        e.preventDefault();
+        store.updateSettings({ schoologyFeedUrl: schoologyUrl.trim(), schoologyProxy: schoologyProxy.trim() });
+        if (schoologyUrl.trim()) void syncSchoology();
+      }}
+    >
       <input class="input" bind:value={schoologyUrl} placeholder="https://app.schoology.com/calendar/feed/ical/…/schoology.ics" aria-label="Schoology feed URL" />
       <input class="input" bind:value={schoologyProxy} placeholder="CORS proxy prefix (optional)" aria-label="CORS proxy" />
       <button class="btn primary" type="submit">Save</button>
     </form>
     {#if s.schoologyFeedUrl}
-      <div class="row"><span>Status</span><span class="status {schoology.status}">{schoology.status === 'error' ? `Error: ${schoology.lastError}` : schoology.status}{#if s.lastSchoologySync}<span class="muted"> · last {new Date(s.lastSchoologySync).toLocaleString()}</span>{/if}</span></div>
+      <div class="row">
+        <span>Status</span><span class="status {schoology.status}"
+          >{schoology.status === 'error' ? `Error: ${schoology.lastError}` : schoology.status}{#if s.lastSchoologySync}<span class="muted">
+              · last {new Date(s.lastSchoologySync).toLocaleString()}</span
+            >{/if}</span
+        >
+      </div>
       <div class="row">
         <label for="sauto">Create courses for new class names</label>
-        <input id="sauto" type="checkbox" class="switch" checked={s.schoologyAutoCreateCourses} onchange={(e) => set('schoologyAutoCreateCourses', (e.target as HTMLInputElement).checked)} />
+        <input
+          id="sauto"
+          type="checkbox"
+          class="switch"
+          checked={s.schoologyAutoCreateCourses}
+          onchange={(e) => set('schoologyAutoCreateCourses', (e.target as HTMLInputElement).checked)}
+        />
       </div>
       <div class="btns">
         <button class="btn" onclick={() => void syncSchoology()}>Sync now</button>
-        <button class="btn danger" onclick={() => { set('schoologyFeedUrl', ''); schoologyUrl = ''; }}>Disconnect</button>
-        {#if s.schoologyIgnored.length}<button class="btn ghost sm" onclick={() => set('schoologyIgnored', [])}>Forget {s.schoologyIgnored.length} deleted assignment{s.schoologyIgnored.length > 1 ? 's' : ''}</button>{/if}
+        <button
+          class="btn danger"
+          onclick={() => {
+            set('schoologyFeedUrl', '');
+            schoologyUrl = '';
+          }}>Disconnect</button
+        >
+        {#if s.schoologyIgnored.length}<button class="btn ghost sm" onclick={() => set('schoologyIgnored', [])}
+            >Forget {s.schoologyIgnored.length} deleted assignment{s.schoologyIgnored.length > 1 ? 's' : ''}</button
+          >{/if}
       </div>
     {/if}
   </section>
@@ -443,7 +638,24 @@
         <li>
           <span class="mono">@{t.name}</span>
           <span class="muted grow">{t.task.title}{t.task.subtasks.length ? ` · ${t.task.subtasks.length} subtasks` : ''}</span>
-          <button class="btn ghost sm" onclick={() => { store.addTask({ title: t.task.title, notes: t.task.notes, courseId: t.task.courseId, tags: [...t.task.tags], priority: t.task.priority, estimateMin: t.task.estimateMin, type: t.task.type, weight: t.task.weight, subtasks: [...t.task.subtasks], templateId: t.id }); store.go('inbox'); }}>Use</button>
+          <button
+            class="btn ghost sm"
+            onclick={() => {
+              store.addTask({
+                title: t.task.title,
+                notes: t.task.notes,
+                courseId: t.task.courseId,
+                tags: [...t.task.tags],
+                priority: t.task.priority,
+                estimateMin: t.task.estimateMin,
+                type: t.task.type,
+                weight: t.task.weight,
+                subtasks: [...t.task.subtasks],
+                templateId: t.id,
+              });
+              store.go('inbox');
+            }}>Use</button
+          >
           <button class="btn ghost sm" onclick={() => store.deleteTemplate(t.id)}>Delete</button>
         </li>
       {/each}
@@ -463,20 +675,36 @@
       <div class="row">
         <span>Status</span>
         <span class="status {sync.status}">
-          {sync.status === 'syncing' ? 'Syncing…' : sync.status === 'error' ? `Error: ${sync.lastError}` : sync.status === 'ok' ? 'Up to date' : sync.pending ? 'Changes pending' : 'Connected'}
+          {sync.status === 'syncing'
+            ? 'Syncing…'
+            : sync.status === 'error'
+              ? `Error: ${sync.lastError}`
+              : sync.status === 'ok'
+                ? 'Up to date'
+                : sync.pending
+                  ? 'Changes pending'
+                  : 'Connected'}
           {#if s.lastSyncAt}<span class="muted"> · last {new Date(s.lastSyncAt).toLocaleString()}</span>{/if}
         </span>
       </div>
       <div class="row">
         <span>Gist</span>
-        {#if s.gistId}<a href="https://gist.github.com/{s.gistId}" target="_blank" rel="noopener noreferrer" class="mono">{s.gistId.slice(0, 10)}…</a>{:else}<span class="muted">created on first sync</span>{/if}
+        {#if s.gistId}<a href="https://gist.github.com/{s.gistId}" target="_blank" rel="noopener noreferrer" class="mono">{s.gistId.slice(0, 10)}…</a>{:else}<span class="muted"
+            >created on first sync</span
+          >{/if}
       </div>
       <div class="btns">
         <button class="btn" onclick={() => void syncNow({ pull: true })} disabled={sync.status === 'syncing'}>Sync now</button>
         <button class="btn danger" onclick={disconnect}>Disconnect</button>
       </div>
     {:else}
-      <form class="btns" onsubmit={(e) => { e.preventDefault(); void connectGist(); }}>
+      <form
+        class="btns"
+        onsubmit={(e) => {
+          e.preventDefault();
+          void connectGist();
+        }}
+      >
         <input class="input" type="password" bind:value={token} placeholder="ghp_… token with gist scope" aria-label="GitHub token" autocomplete="off" />
         <button class="btn primary" type="submit" disabled={tokenBusy || !token.trim()}>{tokenBusy ? 'Connecting…' : 'Connect'}</button>
       </form>
@@ -505,10 +733,19 @@
         <span>Auto-backup to a folder{backupFolder ? ` · ${backupFolder}` : ''}{s.lastLocalBackupAt ? ` · last ${new Date(s.lastLocalBackupAt).toLocaleTimeString()}` : ''}</span>
         <span class="btns">
           <button class="btn sm" onclick={pickFolder}>{backupFolder ? 'Change folder' : 'Choose folder'}</button>
-          {#if backupFolder}<button class="btn ghost sm" onclick={() => void writeBackup()}>Back up now</button><button class="btn ghost sm" onclick={() => { void forgetFolder(); backupFolder = null; }}>Stop</button>{/if}
+          {#if backupFolder}<button class="btn ghost sm" onclick={() => void writeBackup()}>Back up now</button><button
+              class="btn ghost sm"
+              onclick={() => {
+                void forgetFolder();
+                backupFolder = null;
+              }}>Stop</button
+            >{/if}
         </span>
       </div>
-      <p class="help">Writes <code>homework-todo-backup.json</code> (and a dated copy each day) into a folder on this device a few seconds after every change. Works in Chrome and Edge; pick a folder that syncs to the cloud (Drive, iCloud, OneDrive) for off-device safety.</p>
+      <p class="help">
+        Writes <code>homework-todo-backup.json</code> (and a dated copy each day) into a folder on this device a few seconds after every change. Works in Chrome and Edge; pick a folder
+        that syncs to the cloud (Drive, iCloud, OneDrive) for off-device safety.
+      </p>
     {:else}
       <p class="help">Folder auto-backup needs Chrome or Edge on desktop. On this browser, use Download backup, Gist sync, or Google Drive sync.</p>
     {/if}
@@ -516,10 +753,21 @@
       <span>Offline copy of the app</span>
       <a class="btn sm" href="./lite/index.html" download="homework-todo-offline.html">Download offline version</a>
     </div>
-    <p class="help">A single HTML file you can keep on a USB stick or your desktop. It runs from a double-click with no internet: tasks, courses, notecards, calculator, timers and stats work; sync, AI and Schoology need the online app. Its data lives in that browser profile separately from the online app, so export/import to move between them.</p>
+    <p class="help">
+      A single HTML file you can keep on a USB stick or your desktop. It runs from a double-click with no internet: tasks, courses, notecards, calculator, timers and stats work;
+      sync, AI and Schoology need the online app. Its data lives in that browser profile separately from the online app, so export/import to move between them.
+    </p>
     <div class="row">
       <label for="arch">Archive completed older than (days, 0 = never)</label>
-      <input id="arch" class="input num" type="number" min="0" max="3650" value={s.archiveAfterDays} onchange={(e) => set('archiveAfterDays', Math.max(0, Number((e.target as HTMLInputElement).value) || 0))} />
+      <input
+        id="arch"
+        class="input num"
+        type="number"
+        min="0"
+        max="3650"
+        value={s.archiveAfterDays}
+        onchange={(e) => set('archiveAfterDays', Math.max(0, Number((e.target as HTMLInputElement).value) || 0))}
+      />
     </div>
     <div class="btns">
       <button class="btn" onclick={archiveNow} disabled={!s.archiveAfterDays}>Archive now</button>

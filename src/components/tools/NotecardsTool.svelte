@@ -60,7 +60,11 @@
     if (!deck) return;
     const items = parseCards(paste);
     const added = store.addCards(deck.id, items);
-    toasts.push({ message: added.length ? `Added ${added.length} cards` : 'No cards found', detail: added.length ? undefined : 'Use one card per line like "term :: definition" or "Q: … / A: …".', kind: added.length ? 'success' : 'warn' });
+    toasts.push({
+      message: added.length ? `Added ${added.length} cards` : 'No cards found',
+      detail: added.length ? undefined : 'Use one card per line like "term :: definition" or "Q: … / A: …".',
+      kind: added.length ? 'success' : 'warn',
+    });
     if (added.length) paste = '';
   }
   async function generate() {
@@ -130,7 +134,10 @@
 {#if !deck}
   <section class="card">
     <h2>Notecards</h2>
-    <p class="help">Make a deck per unit or course, add cards by typing, pasting, or generating from notes, then study with spaced repetition. Every correct answer earns XP; clearing all due cards earns a bonus.</p>
+    <p class="help">
+      Make a deck per unit or course, add cards by typing, pasting, or generating from notes, then study with spaced repetition. Every correct answer earns XP; clearing all due
+      cards earns a bonus.
+    </p>
     <form class="newdeck" onsubmit={createDeck}>
       <input class="input" bind:value={newDeckName} placeholder="New deck, e.g. Chem unit 3 vocab" aria-label="Deck name" data-deck-name />
       <select class="select" bind:value={newDeckCourse} aria-label="Course">
@@ -143,7 +150,13 @@
       <ul class="decks">
         {#each decksInfo as d (d.deck.id)}
           <li>
-            <button class="deck" onclick={() => { deckId = d.deck.id; mode = 'edit'; }}>
+            <button
+              class="deck"
+              onclick={() => {
+                deckId = d.deck.id;
+                mode = 'edit';
+              }}
+            >
               <span class="dot" style="background:{store.courseById(d.deck.courseId)?.color ?? 'var(--border-strong)'}"></span>
               <span class="name">{d.deck.name}</span>
               <span class="meta">{d.count} card{d.count === 1 ? '' : 's'}{d.due ? ` · ${d.due} due` : ''}</span>
@@ -188,7 +201,13 @@
       <button class="btn ghost sm" onclick={() => (deckId = null)}>← Decks</button>
       <h2 class="grow">{deck.name} <span class="muted">{cards.length} cards</span></h2>
       <button class="btn ghost sm" onclick={renameDeck}>Rename</button>
-      <button class="btn ghost sm" onclick={() => { store.deleteDeck(deck.id); deckId = null; }}>Delete</button>
+      <button
+        class="btn ghost sm"
+        onclick={() => {
+          store.deleteDeck(deck.id);
+          deckId = null;
+        }}>Delete</button
+      >
     </div>
     <div class="studybar">
       <button class="btn primary" onclick={() => startStudy(false)} disabled={!due.length}>Study {due.length} due</button>
@@ -202,12 +221,18 @@
     </form>
     <details class="more">
       <summary>Paste many at once</summary>
-      <textarea class="textarea" bind:value={paste} placeholder={'mitosis :: cell division\nosmosis - diffusion of water\nQ: What is ATP?\nA: The cell’s energy currency'}></textarea>
+      <textarea class="textarea" bind:value={paste} placeholder={'mitosis :: cell division\nosmosis - diffusion of water\nQ: What is ATP?\nA: The cell’s energy currency'}
+      ></textarea>
       <button class="btn sm" onclick={addPasted} disabled={!paste.trim()}>Add cards</button>
     </details>
     <details class="more">
       <summary>Generate from notes {aiAvailable() ? '✨' : '(needs an API key in Settings → AI helper)'}</summary>
-      <textarea class="textarea" bind:value={aiSource} placeholder="Paste your notes, a chapter summary, or just a topic like “photosynthesis light reactions”" disabled={!aiAvailable()}></textarea>
+      <textarea
+        class="textarea"
+        bind:value={aiSource}
+        placeholder="Paste your notes, a chapter summary, or just a topic like “photosynthesis light reactions”"
+        disabled={!aiAvailable()}
+      ></textarea>
       <button class="btn sm" onclick={generate} disabled={!aiAvailable() || !aiSource.trim() || aiBusy}>{aiBusy ? 'Generating…' : 'Generate 12 cards'}</button>
     </details>
     {#if cards.length}
@@ -228,48 +253,243 @@
 {/if}
 
 <style>
-  h2 { font-size: 16px; margin: 0 0 8px; }
-  .help, .muted { font-size: 13px; color: var(--text-muted); font-weight: 400; }
-  .newdeck, .addcard { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 10px; }
-  .newdeck .input, .addcard .input { flex: 1; min-width: 160px; }
-  .newdeck .select { width: auto; }
-  .decks { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
-  .deck { width: 100%; display: grid; grid-template-columns: 12px 1fr auto; gap: 6px 10px; align-items: center; padding: 10px 12px; border-radius: 10px; background: var(--bg-elev-2); text-align: left; color: var(--text); }
-  .deck:hover { background: var(--bg-hover); }
-  .dot { width: 10px; height: 10px; border-radius: 50%; }
-  .name { font-weight: 600; }
-  .meta { font-size: 12px; color: var(--text-muted); }
-  .mastery { grid-column: 2 / 4; height: 4px; background: var(--border); border-radius: 2px; overflow: hidden; }
-  .mastery .fill { display: block; height: 100%; background: var(--success); }
-  .head { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; flex-wrap: wrap; }
-  .grow { flex: 1; margin: 0; }
-  .studybar { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-bottom: 12px; }
-  .more { margin: 8px 0; font-size: 13px; color: var(--text-muted); }
-  .more .textarea { margin: 8px 0 6px; min-height: 70px; }
-  .cards { list-style: none; margin: 12px 0 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
-  .cards li { display: grid; grid-template-columns: 1fr 1fr auto auto; gap: 8px; align-items: center; padding: 6px 8px; border-radius: 8px; background: var(--bg-elev-2); font-size: 13px; border-left: 3px solid var(--border); }
-  .cards li.b3 { border-left-color: var(--warn); }
-  .cards li.b4 { border-left-color: var(--info); }
-  .cards li.b5 { border-left-color: var(--success); }
-  .f { font-weight: 600; }
-  .bk { color: var(--text-muted); }
-  .boxn { font-size: 11px; color: var(--text-faint); }
-  .progress { margin-left: auto; font-size: 13px; color: var(--text-muted); font-variant-numeric: tabular-nums; }
-  .flashcard { position: relative; display: block; width: 100%; height: 240px; perspective: 1000px; cursor: pointer; margin: 8px 0; }
-  .face { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; padding: 20px; border-radius: 16px; background: var(--bg-elev-2); border: 1px solid var(--border); backface-visibility: hidden; transition: transform 400ms var(--ease); text-align: center; }
-  .face.back { transform: rotateY(180deg); background: color-mix(in srgb, var(--accent) 12%, var(--bg-elev-2)); border-color: var(--accent); }
-  .flipped .face.front { transform: rotateY(180deg); }
-  .flipped .face.back { transform: rotateY(360deg); }
-  .face .lbl { font-size: 11px; text-transform: uppercase; letter-spacing: 0.1em; color: var(--text-faint); }
-  .face .txt { font-size: 20px; font-weight: 600; line-height: 1.35; color: var(--text); }
-  .face .hint { font-size: 12px; color: var(--text-faint); }
-  .answers { display: flex; gap: 10px; justify-content: center; opacity: 0.4; transition: opacity var(--dur); }
-  .answers.show { opacity: 1; }
-  .answers .btn { padding: 12px 22px; font-size: 15px; }
-  .box { text-align: center; font-size: 12px; color: var(--text-faint); margin-top: 8px; }
-  .done { text-align: center; padding: 20px 0; }
-  .done .big { font-size: 44px; }
-  .done h3 { margin: 4px 0; }
-  .btns { display: flex; gap: 8px; justify-content: center; margin-top: 12px; }
-  @media (max-width: 600px) { .cards li { grid-template-columns: 1fr auto auto; } .bk { grid-column: 1 / 4; } }
+  h2 {
+    font-size: 16px;
+    margin: 0 0 8px;
+  }
+  .help,
+  .muted {
+    font-size: 13px;
+    color: var(--text-muted);
+    font-weight: 400;
+  }
+  .newdeck,
+  .addcard {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+    margin-bottom: 10px;
+  }
+  .newdeck .input,
+  .addcard .input {
+    flex: 1;
+    min-width: 160px;
+  }
+  .newdeck .select {
+    width: auto;
+  }
+  .decks {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .deck {
+    width: 100%;
+    display: grid;
+    grid-template-columns: 12px 1fr auto;
+    gap: 6px 10px;
+    align-items: center;
+    padding: 10px 12px;
+    border-radius: 10px;
+    background: var(--bg-elev-2);
+    text-align: left;
+    color: var(--text);
+  }
+  .deck:hover {
+    background: var(--bg-hover);
+  }
+  .dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+  }
+  .name {
+    font-weight: 600;
+  }
+  .meta {
+    font-size: 12px;
+    color: var(--text-muted);
+  }
+  .mastery {
+    grid-column: 2 / 4;
+    height: 4px;
+    background: var(--border);
+    border-radius: 2px;
+    overflow: hidden;
+  }
+  .mastery .fill {
+    display: block;
+    height: 100%;
+    background: var(--success);
+  }
+  .head {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 8px;
+    flex-wrap: wrap;
+  }
+  .grow {
+    flex: 1;
+    margin: 0;
+  }
+  .studybar {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    flex-wrap: wrap;
+    margin-bottom: 12px;
+  }
+  .more {
+    margin: 8px 0;
+    font-size: 13px;
+    color: var(--text-muted);
+  }
+  .more .textarea {
+    margin: 8px 0 6px;
+    min-height: 70px;
+  }
+  .cards {
+    list-style: none;
+    margin: 12px 0 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .cards li {
+    display: grid;
+    grid-template-columns: 1fr 1fr auto auto;
+    gap: 8px;
+    align-items: center;
+    padding: 6px 8px;
+    border-radius: 8px;
+    background: var(--bg-elev-2);
+    font-size: 13px;
+    border-left: 3px solid var(--border);
+  }
+  .cards li.b3 {
+    border-left-color: var(--warn);
+  }
+  .cards li.b4 {
+    border-left-color: var(--info);
+  }
+  .cards li.b5 {
+    border-left-color: var(--success);
+  }
+  .f {
+    font-weight: 600;
+  }
+  .bk {
+    color: var(--text-muted);
+  }
+  .boxn {
+    font-size: 11px;
+    color: var(--text-faint);
+  }
+  .progress {
+    margin-left: auto;
+    font-size: 13px;
+    color: var(--text-muted);
+    font-variant-numeric: tabular-nums;
+  }
+  .flashcard {
+    position: relative;
+    display: block;
+    width: 100%;
+    height: 240px;
+    perspective: 1000px;
+    cursor: pointer;
+    margin: 8px 0;
+  }
+  .face {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 20px;
+    border-radius: 16px;
+    background: var(--bg-elev-2);
+    border: 1px solid var(--border);
+    backface-visibility: hidden;
+    transition: transform 400ms var(--ease);
+    text-align: center;
+  }
+  .face.back {
+    transform: rotateY(180deg);
+    background: color-mix(in srgb, var(--accent) 12%, var(--bg-elev-2));
+    border-color: var(--accent);
+  }
+  .flipped .face.front {
+    transform: rotateY(180deg);
+  }
+  .flipped .face.back {
+    transform: rotateY(360deg);
+  }
+  .face .lbl {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--text-faint);
+  }
+  .face .txt {
+    font-size: 20px;
+    font-weight: 600;
+    line-height: 1.35;
+    color: var(--text);
+  }
+  .face .hint {
+    font-size: 12px;
+    color: var(--text-faint);
+  }
+  .answers {
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+    opacity: 0.4;
+    transition: opacity var(--dur);
+  }
+  .answers.show {
+    opacity: 1;
+  }
+  .answers .btn {
+    padding: 12px 22px;
+    font-size: 15px;
+  }
+  .box {
+    text-align: center;
+    font-size: 12px;
+    color: var(--text-faint);
+    margin-top: 8px;
+  }
+  .done {
+    text-align: center;
+    padding: 20px 0;
+  }
+  .done .big {
+    font-size: 44px;
+  }
+  .done h3 {
+    margin: 4px 0;
+  }
+  .btns {
+    display: flex;
+    gap: 8px;
+    justify-content: center;
+    margin-top: 12px;
+  }
+  @media (max-width: 600px) {
+    .cards li {
+      grid-template-columns: 1fr auto auto;
+    }
+    .bk {
+      grid-column: 1 / 4;
+    }
+  }
 </style>

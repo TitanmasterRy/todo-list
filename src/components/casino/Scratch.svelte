@@ -51,14 +51,18 @@
     <div class="cz-result" aria-live="polite" class:win={result?.win} class:lose={result && !result.win}>{result?.text ?? ''}</div>
   </div>
   <div class="cz-actions">
-    <div class="cz-seg">{#each PRICES as p (p)}<button class:on={price === p} onclick={() => (price = p)} disabled={!!card && !paid}>{p}</button>{/each}</div>
+    <div class="cz-seg">
+      {#each PRICES as p (p)}<button class:on={price === p} onclick={() => (price = p)} disabled={!!card && !paid}>{p}</button>{/each}
+    </div>
     {#if card && !paid}
       <button class="btn" onclick={revealAll}>Reveal all</button>
     {:else}
       <button class="btn primary" onclick={buy} disabled={price > economy.wallet.chips}>Buy card ({price})</button>
     {/if}
   </div>
-  <div class="cz-paytable">{#each SCRATCH_SYMBOLS.slice(0, 6) as s (s)}<span>{s}{s}{s}</span><span>×{scratchPrizeFor(s)}</span>{/each}</div>
+  <div class="cz-paytable">
+    {#each SCRATCH_SYMBOLS.slice(0, 6) as s (s)}<span>{s}{s}{s}</span><span>×{scratchPrizeFor(s)}</span>{/each}
+  </div>
   <p class="cz-edge">About 90% return.</p>
 </div>
 

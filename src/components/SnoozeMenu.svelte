@@ -34,7 +34,13 @@
   <button role="menuitem" onclick={() => pick(weekend, 'Snoozed to the weekend')}>This weekend <span>{dayName(weekend)}</span></button>
   <button role="menuitem" onclick={() => pick(nextWeek, 'Snoozed to next week')}>Next week <span>{dayName(nextWeek)}</span></button>
   {#if picking}
-    <form class="pick" onsubmit={(e) => { e.preventDefault(); if (date) pick(date, 'Rescheduled'); }}>
+    <form
+      class="pick"
+      onsubmit={(e) => {
+        e.preventDefault();
+        if (date) pick(date, 'Rescheduled');
+      }}
+    >
       <input class="input" type="date" bind:value={date} min={store.today} />
       <button class="btn primary sm" type="submit">Go</button>
     </form>

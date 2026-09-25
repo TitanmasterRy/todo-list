@@ -45,7 +45,14 @@
   <div class="cz-table">
     <div class="cz-grid" style="grid-template-columns: repeat(10, 1fr)">
       {#each Array.from({ length: KENO_NUMBERS }, (_, i) => i + 1) as n (n)}
-        <button class="cz-tile num" class:on={picks.includes(n) && !drawn.includes(n)} class:hit={picks.includes(n) && drawn.includes(n)} class:drawn={drawn.includes(n) && !picks.includes(n)} onclick={() => toggle(n)} aria-pressed={picks.includes(n)}>{n}</button>
+        <button
+          class="cz-tile num"
+          class:on={picks.includes(n) && !drawn.includes(n)}
+          class:hit={picks.includes(n) && drawn.includes(n)}
+          class:drawn={drawn.includes(n) && !picks.includes(n)}
+          onclick={() => toggle(n)}
+          aria-pressed={picks.includes(n)}>{n}</button
+        >
       {/each}
     </div>
     <div class="cz-result" aria-live="polite" class:win={result?.win} class:lose={result && !result.win}>{result?.text ?? `${picks.length}/10 picked`}</div>
@@ -57,7 +64,9 @@
     <button class="btn primary" onclick={play} disabled={!picks.length || drawing || bet > economy.wallet.chips}>Draw 10</button>
   </div>
   {#if picks.length}
-    <div class="cz-paytable">{#each Object.entries(table) as [h, m] (h)}<span>{h} hits</span><span>×{m}</span>{/each}</div>
+    <div class="cz-paytable">
+      {#each Object.entries(table) as [h, m] (h)}<span>{h} hits</span><span>×{m}</span>{/each}
+    </div>
   {/if}
   <p class="cz-edge">Pick 1–10 numbers from 40; 10 are drawn. About 94% return at every pick count.</p>
 </div>

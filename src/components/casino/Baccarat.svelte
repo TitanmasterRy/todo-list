@@ -25,20 +25,29 @@
     <div class="sides">
       <div>
         <div class="cz-label">Player {round ? `· ${bacTotal(round.player)}` : ''}</div>
-        <div class="cz-hand">{#if round}{#each round.player as c, i (i)}<PlayingCard card={c} />{/each}{/if}</div>
+        <div class="cz-hand">
+          {#if round}{#each round.player as c, i (i)}<PlayingCard card={c} />{/each}{/if}
+        </div>
       </div>
       <div>
         <div class="cz-label">Banker {round ? `· ${bacTotal(round.banker)}` : ''}</div>
-        <div class="cz-hand">{#if round}{#each round.banker as c, i (i)}<PlayingCard card={c} />{/each}{/if}</div>
+        <div class="cz-hand">
+          {#if round}{#each round.banker as c, i (i)}<PlayingCard card={c} />{/each}{/if}
+        </div>
       </div>
     </div>
     <div class="cz-result" aria-live="polite" class:win={round && returned > bet} class:lose={round && returned === 0}>
-      {#if round}{LABEL[round.winner]}{round.winner === 'tie' ? '' : ' wins'} · {returned > bet ? `+${(returned - bet).toLocaleString()}` : returned === bet ? 'push' : 'you lose'}{/if}
+      {#if round}{LABEL[round.winner]}{round.winner === 'tie' ? '' : ' wins'} · {returned > bet
+          ? `+${(returned - bet).toLocaleString()}`
+          : returned === bet
+            ? 'push'
+            : 'you lose'}{/if}
     </div>
   </div>
   <div class="cz-actions">
     <div class="cz-seg" role="radiogroup" aria-label="Bet on">
-      {#each ['player', 'banker', 'tie'] as const as b (b)}<button role="radio" aria-checked={side === b} class:on={side === b} onclick={() => (side = b)}>{LABEL[b]}</button>{/each}
+      {#each ['player', 'banker', 'tie'] as const as b (b)}<button role="radio" aria-checked={side === b} class:on={side === b} onclick={() => (side = b)}>{LABEL[b]}</button
+        >{/each}
     </div>
     <BetControl bind:value={bet} />
     <button class="btn primary" onclick={deal} disabled={bet > economy.wallet.chips}>Deal</button>

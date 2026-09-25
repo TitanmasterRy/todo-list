@@ -100,14 +100,28 @@
 
   {#if !configured}
     <p class="help">
-      Sign up with an email and password to keep your tasks, courses, notecards, stats and coins in sync on every device.
-      Accounts need a free <a href="https://supabase.com" target="_blank" rel="noopener noreferrer">Supabase</a> project, which the site admin sets up once (see <code>DEPLOY.md → Accounts</code>).
+      Sign up with an email and password to keep your tasks, courses, notecards, stats and coins in sync on every device. Accounts need a free <a
+        href="https://supabase.com"
+        target="_blank"
+        rel="noopener noreferrer">Supabase</a
+      >
+      project, which the site admin sets up once (see <code>DEPLOY.md → Accounts</code>).
     </p>
   {:else if account.userId}
     <div class="row"><span>Signed in as</span><strong class="grow-r">{account.email}</strong></div>
     <div class="row"><span>Status</span><span class="status {account.status}">{statusText}</span></div>
     {#if account.recovering}
-      <form class="btns" onsubmit={(e) => { e.preventDefault(); void run(async () => { await changePassword(newPassword); newPassword = ''; return 'Password updated.'; }); }}>
+      <form
+        class="btns"
+        onsubmit={(e) => {
+          e.preventDefault();
+          void run(async () => {
+            await changePassword(newPassword);
+            newPassword = '';
+            return 'Password updated.';
+          });
+        }}
+      >
         <input class="input" type="password" bind:value={newPassword} placeholder="New password (min {MIN_PASSWORD})" autocomplete="new-password" aria-label="New password" />
         <button class="btn primary" type="submit" disabled={busy}>Set new password</button>
       </form>
@@ -115,19 +129,50 @@
     <div class="btns">
       <button class="btn" onclick={() => void syncNow({ pull: true })} disabled={account.status === 'syncing'}>Sync now</button>
       {#if !account.recovering}<button class="btn ghost sm" onclick={() => (account.recovering = true)}>Change password</button>{/if}
-      <button class="btn ghost sm" onclick={() => void run(async () => { await signOut(); return 'Signed out. Your data stays on this device.'; })}>Sign out</button>
+      <button
+        class="btn ghost sm"
+        onclick={() =>
+          void run(async () => {
+            await signOut();
+            return 'Signed out. Your data stays on this device.';
+          })}>Sign out</button
+      >
       {#if !confirmDelete}
         <button class="btn ghost sm" onclick={() => (confirmDelete = true)}>Delete synced copy…</button>
       {:else}
-        <button class="btn danger sm" onclick={() => void run(async () => { await deleteServerData(); confirmDelete = false; return 'Synced copy deleted from the server. This device keeps its data.'; })}>Really delete server copy</button>
+        <button
+          class="btn danger sm"
+          onclick={() =>
+            void run(async () => {
+              await deleteServerData();
+              confirmDelete = false;
+              return 'Synced copy deleted from the server. This device keeps its data.';
+            })}>Really delete server copy</button
+        >
         <button class="btn ghost sm" onclick={() => (confirmDelete = false)}>Cancel</button>
       {/if}
     </div>
     <p class="help">Syncs on load and a few seconds after every change. Settings and API keys stay on each device; everything else syncs.</p>
   {:else}
     <div class="tabs" role="tablist" aria-label="Account">
-      <button role="tab" aria-selected={mode === 'signin'} class:on={mode === 'signin'} onclick={() => { mode = 'signin'; message = null; }}>Sign in</button>
-      <button role="tab" aria-selected={mode === 'signup'} class:on={mode === 'signup'} onclick={() => { mode = 'signup'; message = null; }}>Create account</button>
+      <button
+        role="tab"
+        aria-selected={mode === 'signin'}
+        class:on={mode === 'signin'}
+        onclick={() => {
+          mode = 'signin';
+          message = null;
+        }}>Sign in</button
+      >
+      <button
+        role="tab"
+        aria-selected={mode === 'signup'}
+        class:on={mode === 'signup'}
+        onclick={() => {
+          mode = 'signup';
+          message = null;
+        }}>Create account</button
+      >
     </div>
     <form class="auth" onsubmit={submit}>
       <label>
@@ -137,7 +182,15 @@
       {#if mode !== 'forgot'}
         <label>
           <span>Password</span>
-          <input class="input" type="password" bind:value={password} autocomplete={mode === 'signup' ? 'new-password' : 'current-password'} required minlength={mode === 'signup' ? MIN_PASSWORD : undefined} placeholder={mode === 'signup' ? `At least ${MIN_PASSWORD} characters` : ''} />
+          <input
+            class="input"
+            type="password"
+            bind:value={password}
+            autocomplete={mode === 'signup' ? 'new-password' : 'current-password'}
+            required
+            minlength={mode === 'signup' ? MIN_PASSWORD : undefined}
+            placeholder={mode === 'signup' ? `At least ${MIN_PASSWORD} characters` : ''}
+          />
         </label>
       {/if}
       {#if mode === 'signup'}
@@ -151,9 +204,23 @@
           {busy ? 'Working…' : mode === 'signup' ? 'Create account' : mode === 'forgot' ? 'Send reset link' : 'Sign in'}
         </button>
         {#if mode === 'signin'}
-          <button type="button" class="link" onclick={() => { mode = 'forgot'; message = null; }}>Forgot password?</button>
+          <button
+            type="button"
+            class="link"
+            onclick={() => {
+              mode = 'forgot';
+              message = null;
+            }}>Forgot password?</button
+          >
         {:else if mode === 'forgot'}
-          <button type="button" class="link" onclick={() => { mode = 'signin'; message = null; }}>Back to sign in</button>
+          <button
+            type="button"
+            class="link"
+            onclick={() => {
+              mode = 'signin';
+              message = null;
+            }}>Back to sign in</button
+          >
         {/if}
       </div>
     </form>

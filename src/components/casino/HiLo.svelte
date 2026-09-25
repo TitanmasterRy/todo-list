@@ -51,22 +51,30 @@
   <div class="cz-table">
     <div class="cz-row">
       <PlayingCard card={{ rank, suit: SUITS[suit] }} />
-      <div class="trail">{#each trail.slice(-10) as r, i (i)}<span>{rankLabel(r)}</span>{/each}</div>
+      <div class="trail">
+        {#each trail.slice(-10) as r, i (i)}<span>{rankLabel(r)}</span>{/each}
+      </div>
     </div>
     {#if active}<div class="mult">×{mult} · cash out now for {Math.floor(bet * mult).toLocaleString()}</div>{/if}
     <div class="cz-result" aria-live="polite" class:win={result?.win} class:lose={result && !result.win}>{result?.text ?? ''}</div>
   </div>
   <div class="cz-actions">
     {#if active}
-      <button class="btn primary" onclick={() => guess('higher')} disabled={rank === 14}>Higher ×{hiloMultiplier(rank, 'higher')} <span class="p">{Math.round(hiloChance(rank, 'higher') * 100)}%</span></button>
-      <button class="btn primary" onclick={() => guess('lower')} disabled={rank === 2}>Lower ×{hiloMultiplier(rank, 'lower')} <span class="p">{Math.round(hiloChance(rank, 'lower') * 100)}%</span></button>
+      <button class="btn primary" onclick={() => guess('higher')} disabled={rank === 14}
+        >Higher ×{hiloMultiplier(rank, 'higher')} <span class="p">{Math.round(hiloChance(rank, 'higher') * 100)}%</span></button
+      >
+      <button class="btn primary" onclick={() => guess('lower')} disabled={rank === 2}
+        >Lower ×{hiloMultiplier(rank, 'lower')} <span class="p">{Math.round(hiloChance(rank, 'lower') * 100)}%</span></button
+      >
       <button class="btn" onclick={cashOut} disabled={mult <= 1}>Cash out</button>
     {:else}
       <BetControl bind:value={bet} />
       <button class="btn primary" onclick={start} disabled={bet > economy.wallet.chips}>Start</button>
     {/if}
   </div>
-  <p class="cz-edge">Guess whether the next card is strictly higher or lower (aces high, ties lose). Each correct call multiplies your winnings; cash out any time. 3% house edge per call.</p>
+  <p class="cz-edge">
+    Guess whether the next card is strictly higher or lower (aces high, ties lose). Each correct call multiplies your winnings; cash out any time. 3% house edge per call.
+  </p>
 </div>
 
 <style>

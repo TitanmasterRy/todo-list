@@ -43,39 +43,55 @@
   <div class="cz-table">
     <div class="cz-row">
       <div class="ball {last === null ? '' : color(last)}" class:spin={spinning} aria-live="polite">{spinning ? '…' : (last ?? '?')}</div>
-      <div class="hist">{#each history as h, i (i)}<span class="h {color(h)}">{h}</span>{/each}</div>
+      <div class="hist">
+        {#each history as h, i (i)}<span class="h {color(h)}">{h}</span>{/each}
+      </div>
     </div>
     <div class="board" role="group" aria-label="Roulette table">
-      <button class="n green zero" onclick={() => place({ kind: 'straight', n: 0 })}>0{#if on({ kind: 'straight', n: 0 })}<i>{on({ kind: 'straight', n: 0 })}</i>{/if}</button>
+      <button class="n green zero" onclick={() => place({ kind: 'straight', n: 0 })}
+        >0{#if on({ kind: 'straight', n: 0 })}<i>{on({ kind: 'straight', n: 0 })}</i>{/if}</button
+      >
       <div class="nums">
         {#each rows as row, r (r)}
           {#each row as n (n)}
-            <button class="n {color(n)}" onclick={() => place({ kind: 'straight', n })}>{n}{#if on({ kind: 'straight', n })}<i>{on({ kind: 'straight', n })}</i>{/if}</button>
+            <button class="n {color(n)}" onclick={() => place({ kind: 'straight', n })}
+              >{n}{#if on({ kind: 'straight', n })}<i>{on({ kind: 'straight', n })}</i>{/if}</button
+            >
           {/each}
-          <button class="n col" onclick={() => place({ kind: 'column', c: (3 - r) as 1 | 2 | 3 })}>2:1{#if on({ kind: 'column', c: (3 - r) as 1 | 2 | 3 })}<i>{on({ kind: 'column', c: (3 - r) as 1 | 2 | 3 })}</i>{/if}</button>
+          <button class="n col" onclick={() => place({ kind: 'column', c: (3 - r) as 1 | 2 | 3 })}
+            >2:1{#if on({ kind: 'column', c: (3 - r) as 1 | 2 | 3 })}<i>{on({ kind: 'column', c: (3 - r) as 1 | 2 | 3 })}</i>{/if}</button
+          >
         {/each}
       </div>
     </div>
     <div class="outs">
       {#each [1, 2, 3] as d (d)}
-        <button class="o" onclick={() => place({ kind: 'dozen', d: d as 1 | 2 | 3 })}>{betLabel({ kind: 'dozen', d: d as 1 | 2 | 3 })}{#if on({ kind: 'dozen', d: d as 1 | 2 | 3 })}<i>{on({ kind: 'dozen', d: d as 1 | 2 | 3 })}</i>{/if}</button>
+        <button class="o" onclick={() => place({ kind: 'dozen', d: d as 1 | 2 | 3 })}
+          >{betLabel({ kind: 'dozen', d: d as 1 | 2 | 3 })}{#if on({ kind: 'dozen', d: d as 1 | 2 | 3 })}<i>{on({ kind: 'dozen', d: d as 1 | 2 | 3 })}</i>{/if}</button
+        >
       {/each}
     </div>
     <div class="outs six">
       {#each outside as b (b.kind)}
-        <button class="o {b.kind}" onclick={() => place(b)}>{betLabel(b)}{#if on(b)}<i>{on(b)}</i>{/if}</button>
+        <button class="o {b.kind}" onclick={() => place(b)}
+          >{betLabel(b)}{#if on(b)}<i>{on(b)}</i>{/if}</button
+        >
       {/each}
     </div>
     <div class="cz-result" class:win={result?.win} class:lose={result && !result.win}>{result?.text ?? ''}</div>
   </div>
   <div class="cz-actions">
     <span class="muted">Chip</span>
-    <div class="cz-seg">{#each [5, 10, 25, 100, 500] as c (c)}<button class:on={chip === c} onclick={() => (chip = c)}>{c}</button>{/each}</div>
+    <div class="cz-seg">
+      {#each [5, 10, 25, 100, 500] as c (c)}<button class:on={chip === c} onclick={() => (chip = c)}>{c}</button>{/each}
+    </div>
     <span class="muted">On the table: <strong>{total.toLocaleString()}</strong></span>
     <button class="btn ghost sm" onclick={() => (bets = [])} disabled={!bets.length || spinning}>Clear</button>
     <button class="btn primary" onclick={spin} disabled={!bets.length || spinning || total > economy.wallet.chips}>Spin</button>
   </div>
-  <p class="cz-edge">European wheel (single zero): numbers pay 35:1, dozens and columns 2:1, even-money bets 1:1. House edge 2.7%. Tap a spot to place a chip; bets stay on for the next spin.</p>
+  <p class="cz-edge">
+    European wheel (single zero): numbers pay 35:1, dozens and columns 2:1, even-money bets 1:1. House edge 2.7%. Tap a spot to place a chip; bets stay on for the next spin.
+  </p>
 </div>
 
 <style>

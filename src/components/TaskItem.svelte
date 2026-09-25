@@ -77,18 +77,42 @@
     <span class="handle" aria-hidden="true" title="Drag to reorder">⋮⋮</span>
   {/if}
   {#if store.bulkMode}
-    <input type="checkbox" class="sel" checked={checked} aria-label="Select task" onclick={(e) => { e.stopPropagation(); store.toggleSelect(task.id); }} />
+    <input
+      type="checkbox"
+      class="sel"
+      {checked}
+      aria-label="Select task"
+      onclick={(e) => {
+        e.stopPropagation();
+        store.toggleSelect(task.id);
+      }}
+    />
   {/if}
   <Checkbox checked={done} color={course?.color} onchange={onComplete} label={done ? `Reopen ${task.title}` : `Complete ${task.title}`} />
   <div class="body">
     <div class="title-row">
       {#if isFrog}<span class="frog-ico" title="Eat the frog: double XP">🐸</span>{/if}
-      <button class="title" onclick={(e) => { e.stopPropagation(); open(); }}>
+      <button
+        class="title"
+        onclick={(e) => {
+          e.stopPropagation();
+          open();
+        }}
+      >
         <span class="strike">{task.title}</span>
       </button>
       {#if task.subtasks.length}
-        <button class="sub-toggle" onclick={(e) => { e.stopPropagation(); expanded = !expanded; }} aria-expanded={expanded} aria-label="Toggle subtasks">
-          {subDone}/{task.subtasks.length} {expanded ? '▾' : '▸'}
+        <button
+          class="sub-toggle"
+          onclick={(e) => {
+            e.stopPropagation();
+            expanded = !expanded;
+          }}
+          aria-expanded={expanded}
+          aria-label="Toggle subtasks"
+        >
+          {subDone}/{task.subtasks.length}
+          {expanded ? '▾' : '▸'}
         </button>
       {/if}
     </div>
@@ -98,7 +122,10 @@
           <span class="chip course"><span class="dot"></span>{course.emoji ? course.emoji + ' ' : ''}{course.name}</span>
         {/if}
         {#if task.type === 'exam' || task.type === 'quiz'}
-          <span class="chip {task.type}">{task.type === 'exam' ? '📝 Exam' : '❓ Quiz'}{#if daysUntil !== null && daysUntil >= 0 && !done} · {daysUntil === 0 ? 'today' : daysUntil === 1 ? '1 day' : `${daysUntil} days`}{/if}</span>
+          <span class="chip {task.type}"
+            >{task.type === 'exam' ? '📝 Exam' : '❓ Quiz'}{#if daysUntil !== null && daysUntil >= 0 && !done}
+              · {daysUntil === 0 ? 'today' : daysUntil === 1 ? '1 day' : `${daysUntil} days`}{/if}</span
+          >
         {:else if task.type && task.type !== 'homework' && task.type !== 'other'}
           <span class="chip">{task.type}</span>
         {/if}
@@ -115,7 +142,9 @@
           <span class="chip planned" title="Planned for today (deadline unchanged)">📌 today</span>
         {/if}
         {#if task.source === 'schoology'}
-          {#if task.url}<a class="chip synced" href={task.url} target="_blank" rel="noopener noreferrer" title="Open in Schoology" onclick={(e) => e.stopPropagation()}>🔄 Schoology ↗</a>{:else}<span class="chip synced" title="Synced from Schoology">🔄</span>{/if}
+          {#if task.url}<a class="chip synced" href={task.url} target="_blank" rel="noopener noreferrer" title="Open in Schoology" onclick={(e) => e.stopPropagation()}
+              >🔄 Schoology ↗</a
+            >{:else}<span class="chip synced" title="Synced from Schoology">🔄</span>{/if}
         {/if}
         {#if typeof task.score === 'number'}
           <span class="chip score" class:aced={task.score >= 95}>{task.score}%</span>
