@@ -36,6 +36,7 @@ import { organizeMethods } from './store/organize.svelte';
 import { notecardsMethods } from './store/notecards.svelte';
 import { externalMethods } from './store/external.svelte';
 import { attachmentMethods } from './store/attachments.svelte';
+import { afterSettingsChange, resetVault, settingsForDisk } from './secrets.svelte';
 
 export type View = 'today' | 'upcoming' | 'courses' | 'inbox' | 'focus' | 'stats' | 'tools' | 'schoology' | 'play' | 'settings';
 export const VIEWS: { id: View; label: string; icon: string; key: string }[] = [
@@ -171,7 +172,9 @@ export class Store {
   // ---------- settings ----------
   updateSettings(patch: Partial<Settings>): void {
     this.settings = { ...this.settings, ...patch };
-    db.saveSettings(this.settings);
+    // with the key lock on, secrets are blanked here and kept encrypted in the vault instead
+    db.saveSettings(settingsForDisk(this.settings));
+    afterSettingsChange(patch);
     if ('dailyGoal' in patch) {
       this.stats = { ...this.stats, dailyGoal: this.settings.dailyGoal };
       void db.putStats($state.snapshot(this.stats));
@@ -736,6 +739,7 @@ export class Store {
   async resetAll(): Promise<void> {
     await db.clearAllData();
     db.clearSettings();
+    resetVault();
     this.tasks = [];
     this.courses = [];
     this.templates = [];

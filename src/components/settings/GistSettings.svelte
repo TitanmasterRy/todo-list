@@ -3,6 +3,7 @@
   import { store } from '../../lib/store.svelte';
   import { toasts } from '../../lib/toast.svelte';
   import { sync, syncNow, checkToken, disconnect } from '../../lib/gist.svelte';
+  import { hasSecret, isLocked, requestUnlock, setSecrets } from '../../lib/secrets.svelte';
   const s = $derived(store.settings);
   let token = $state('');
   let tokenLogin = $state('');
@@ -13,9 +14,9 @@
     tokenBusy = true;
     try {
       tokenLogin = await checkToken(token.trim());
-      store.updateSettings({ gistToken: token.trim() });
+      setSecrets({ gistToken: token.trim() });
       token = '';
-      await syncNow({ pull: true });
+      await syncNow({ pull: true, interactive: true });
       toasts.push({ message: `Gist sync on for ${tokenLogin}`, kind: 'success', emoji: '☁️' });
     } catch (err) {
       toasts.push({ message: 'Could not connect', detail: err instanceof Error ? err.message : String(err), kind: 'warn' });
@@ -30,21 +31,24 @@
   <p class="help">
     Keep your data in a <strong>private GitHub Gist</strong> so it follows you across devices. Create a
     <a href="https://github.com/settings/tokens/new?scopes=gist&description=Homework%20To-Do" target="_blank" rel="noopener noreferrer">personal access token</a>
-    with only the <code>gist</code> scope. The token is stored only in this browser’s localStorage and sent only to api.github.com.
+    with only the <code>gist</code> scope. The token is stored only in this browser (encrypted if you lock your keys) and sent only to api.github.com. Turn on end-to-end encryption in
+    Privacy &amp; security so GitHub only ever stores an encrypted copy.
   </p>
-  {#if s.gistToken}
+  {#if hasSecret('gistToken')}
     <div class="row">
       <span>Status</span>
       <span class="status {sync.status}">
-        {sync.status === 'syncing'
-          ? 'Syncing…'
-          : sync.status === 'error'
-            ? `Error: ${sync.lastError}`
-            : sync.status === 'ok'
-              ? 'Up to date'
-              : sync.pending
-                ? 'Changes pending'
-                : 'Connected'}
+        {isLocked('gistToken')
+          ? 'Locked: enter your passphrase to sync'
+          : sync.status === 'syncing'
+            ? 'Syncing…'
+            : sync.status === 'error'
+              ? `Error: ${sync.lastError}`
+              : sync.status === 'ok'
+                ? 'Up to date'
+                : sync.pending
+                  ? 'Changes pending'
+                  : 'Connected'}
         {#if s.lastSyncAt}<span class="muted"> · last {new Date(s.lastSyncAt).toLocaleString()}</span>{/if}
       </span>
     </div>
@@ -55,7 +59,8 @@
         >{/if}
     </div>
     <div class="btns">
-      <button class="btn" onclick={() => void syncNow({ pull: true })} disabled={sync.status === 'syncing'}>Sync now</button>
+      {#if isLocked('gistToken')}<button class="btn" onclick={() => void requestUnlock()}>Unlock</button>{/if}
+      <button class="btn" onclick={() => void syncNow({ pull: true, interactive: true })} disabled={sync.status === 'syncing'}>Sync now</button>
       <button class="btn danger" onclick={disconnect}>Disconnect</button>
     </div>
   {:else}

@@ -9,6 +9,11 @@
 - **Syllabus box** (Tools → Syllabus box): paste a syllabus and it finds the dates, titles and types (and breaks), ready to add as tasks. AI is optional.
 - **Math:** LaTeX in task notes, notecards and boss battle (`$x^2$`, `$$…$$`), rendered by KaTeX, which loads only when there's math ("$5" stays money).
 - **Study games:** a crossword built from a deck, and Quiz race against the ghost of your best run. **Star map** (Play) lights a star for every day you finished something.
+- **Lock my keys** (Settings → Privacy & security): API keys and tokens are stored encrypted with a passphrase you enter once per session.
+- **End-to-end encrypted sync:** with a sync passphrase, the Gist, Google Drive and account copies (and backups, if you like) are encrypted in your browser before upload.
+- **Delete everything** (Settings → Data) lists what will go and can also delete the gist, the Drive file and your account's server copy.
+- **What goes where:** a plain-language list of what each optional feature sends to which service (also in PRIVACY.md).
+- **Content-Security-Policy** on the site; uploaded games and code previews run in a separate sandbox page. The Schoology relay can be locked to your own site and rate-limited.
 
 ## Roadmap pass 4: plan it out, attachments, course boards, background reminders, more games
 

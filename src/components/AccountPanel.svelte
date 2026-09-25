@@ -127,7 +127,7 @@
       </form>
     {/if}
     <div class="btns">
-      <button class="btn" onclick={() => void syncNow({ pull: true })} disabled={account.status === 'syncing'}>Sync now</button>
+      <button class="btn" onclick={() => void syncNow({ pull: true, interactive: true })} disabled={account.status === 'syncing'}>Sync now</button>
       {#if !account.recovering}<button class="btn ghost sm" onclick={() => (account.recovering = true)}>Change password</button>{/if}
       <button
         class="btn ghost sm"

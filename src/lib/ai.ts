@@ -4,14 +4,29 @@ import { store } from './store.svelte';
 import type { Found } from './syllabus';
 import type { AiProvider, TaskType } from './types';
 import { chatOpenAICompatible, cleanKey, listModelsOpenAICompatible, ModelNotFoundError, providerInfo, type ChatImage, type ChatRequest } from './ai-providers';
+import { hasSecret, secret, useSecret, type SecretSlot } from './secrets.svelte';
 
 export function currentProvider(): AiProvider {
   return store.settings.aiProvider || 'anthropic';
 }
 
+/** The provider's key slots (the old single Anthropic key field still counts). */
+function keySlots(provider: AiProvider): SecretSlot[] {
+  return provider === 'anthropic' ? ['aiKeys.anthropic', 'aiApiKey'] : [`aiKeys.${provider}`];
+}
+
 export function currentKey(provider: AiProvider = currentProvider()): string {
-  if (provider === 'anthropic') return cleanKey(store.settings.aiKeys.anthropic || store.settings.aiApiKey || '');
-  return cleanKey(store.settings.aiKeys[provider] || '');
+  return cleanKey(keySlots(provider).map(secret).find(Boolean) ?? '');
+}
+
+/** A key is saved for this provider (it may still be locked behind the passphrase). */
+export function hasKey(provider: AiProvider = currentProvider()): boolean {
+  return keySlots(provider).some(hasSecret);
+}
+
+/** Ask for the passphrase first if this provider's key is locked. */
+async function unlockKey(provider: AiProvider): Promise<void> {
+  for (const slot of keySlots(provider)) await useSecret(slot, { reason: 'Enter your passphrase to use your AI key.' });
 }
 
 export function currentModel(provider: AiProvider = currentProvider()): string {
@@ -25,7 +40,7 @@ export function aiAvailable(): boolean {
   const p = currentProvider();
   if (p === 'ollama') return true;
   if (p === 'custom') return !!store.settings.aiBaseUrl;
-  return !!currentKey(p);
+  return hasKey(p);
 }
 
 export function aiSupportsVision(): boolean {
@@ -42,6 +57,7 @@ function loadSdk(): Promise<typeof import('@anthropic-ai/sdk')> {
 }
 
 async function anthropicClient(): Promise<Anthropic> {
+  await unlockKey('anthropic');
   const apiKey = currentKey('anthropic');
   if (!apiKey) throw new Error('Add an Anthropic API key in Settings → AI helper first.');
   const { default: AnthropicClient } = await loadSdk();
@@ -107,6 +123,7 @@ export async function ask(system: string, user: string, maxTokens = 2048, images
   const req: ChatRequest = { system, user, maxTokens, images, effort };
   if (provider === 'anthropic') return askAnthropic(req);
   const info = providerInfo(provider);
+  await unlockKey(provider);
   if (info.needsKey && !currentKey(provider)) throw new Error(`Add a ${info.name} API key in Settings → AI helper first.`);
   return chatOpenAICompatible({ baseUrl: baseUrlFor(provider), apiKey: currentKey(provider) || undefined, model: currentModel(provider), provider }, req);
 }
@@ -132,6 +149,7 @@ export async function listModels(provider: AiProvider = currentProvider()): Prom
       throw e;
     }
   } else {
+    await unlockKey(provider);
     models = await listModelsOpenAICompatible({ baseUrl: baseUrlFor(provider), apiKey: currentKey(provider) || undefined, provider });
   }
   if (models.length) store.updateSettings({ aiModelCache: { ...store.settings.aiModelCache, [provider]: models.map((m) => (m.free ? `${m.id}|free` : m.id)) } });

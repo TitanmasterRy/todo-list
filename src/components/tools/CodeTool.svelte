@@ -10,6 +10,7 @@
   import { LANGUAGES, deleteSnippet, languageExt, languageLabel, listSnippets, newSnippet, saveSnippet, type Snippet, type SnippetLanguage } from '../../lib/snippets';
   import { CSS_SAMPLE_HTML, ONECOMPILER_URLS, canRun, runHTML, runJavaScript, runPython } from '../../lib/coderunner';
   import { downloadText } from '../../lib/download';
+  import SandboxFrame from '../SandboxFrame.svelte';
   import { toasts } from '../../lib/toast.svelte';
 
   // ---------- snippets ----------
@@ -433,7 +434,7 @@
             {#if ms !== null && !previewDoc}<span class="muted">{ms} ms</span>{/if}
           </div>
           {#if previewDoc}
-            <iframe class="preview" sandbox="allow-scripts" srcdoc={previewDoc} title="HTML preview"></iframe>
+            {#key previewDoc}<SandboxFrame class="preview" sandbox="allow-scripts" html={previewDoc} title="HTML preview" />{/key}
           {:else}
             <pre class="console" aria-live="polite">{#if !output.length && !error}<span class="muted">(no output)</span>{/if}{#each output as line, i (i)}<span
                   class="line"
@@ -658,7 +659,7 @@
   .line.val {
     color: var(--text-muted);
   }
-  .preview {
+  .out :global(.preview) {
     display: block;
     width: 100%;
     height: 320px;

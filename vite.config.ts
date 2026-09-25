@@ -2,6 +2,8 @@ import { defineConfig } from 'vitest/config';
 import { svelte } from '@sveltejs/vite-plugin-svelte';
 import { VitePWA } from 'vite-plugin-pwa';
 import { readFileSync } from 'node:fs';
+import type { Plugin } from 'vite';
+import { buildCsp } from './src/lib/csp';
 
 // Where the site is served from. Most hosts (Vercel, Netlify, Render, Replit,
 // Cloudflare Pages, Firebase, Surge, Docker) serve from the domain root: "/".
@@ -13,6 +15,26 @@ const base = process.env.VITE_BASE ?? (process.env.GITHUB_PAGES === 'true' ? `/$
 
 // "What's new" compares this with the last heading the user saw (the notes themselves load on demand).
 const changelogHead = (readFileSync(new URL('./CHANGELOG.md', import.meta.url), 'utf8').match(/^## (.+)$/m)?.[1] ?? '').trim();
+
+// Content-Security-Policy as a <meta> in the production index.html (dev needs inline HMR scripts and ws:, so it
+// has none; the offline single-file build in vite.lite.config.ts inlines its scripts and has none either).
+// The host list lives in src/lib/csp.ts. VITE_CSP=off leaves it out; VITE_CSP_CONNECT adds origins.
+function cspMeta(): Plugin {
+  let policy = '';
+  return {
+    name: 'csp-meta',
+    apply: 'build',
+    configResolved(config) {
+      const env = { ...config.env, ...process.env } as Record<string, string | undefined>;
+      policy = env.VITE_CSP === 'off' ? '' : buildCsp({ supabaseUrl: env.VITE_SUPABASE_URL, arcadeManifest: env.VITE_ARCADE_MANIFEST, extraConnect: env.VITE_CSP_CONNECT });
+    },
+    transformIndexHtml(html) {
+      if (!policy) return html;
+      // right after <meta charset> so it applies before any script or stylesheet
+      return html.replace(/(<meta charset="UTF-8" \/>)/i, `$1\n    <meta http-equiv="Content-Security-Policy" content="${policy}" />`);
+    },
+  };
+}
 
 export default defineConfig({
   base,
@@ -28,6 +50,7 @@ export default defineConfig({
   },
   plugins: [
     svelte(),
+    cspMeta(),
     VitePWA({
       registerType: 'autoUpdate',
       includeAssets: ['icons/icon.svg', 'icons/favicon.svg'],

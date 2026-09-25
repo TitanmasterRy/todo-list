@@ -27,6 +27,8 @@
   const loadPalette = () => import('./components/CommandPalette.svelte');
   const loadShortcuts = () => import('./components/ShortcutSheet.svelte');
   const loadOnboarding = () => import('./components/Onboarding.svelte');
+  const loadUnlock = () => import('./components/UnlockDialog.svelte');
+  import { promptAtStartup, vault } from './lib/secrets.svelte';
   import DailyPrompts from './components/DailyPrompts.svelte';
   import BulkBar from './components/BulkBar.svelte';
   import { ui } from './lib/ui.svelte';
@@ -37,6 +39,7 @@
 
   onMount(() => {
     void store.init().then(() => {
+      promptAtStartup();
       startEconomy();
       startSync();
       void startAccount();
@@ -153,6 +156,9 @@
   <DailyPrompts />
   {#if !store.settings.onboarded}
     {#await loadOnboarding() then m}<m.default />{/await}
+  {/if}
+  {#if vault.prompt}
+    {#await loadUnlock() then m}<m.default />{/await}
   {/if}
 {/if}
 

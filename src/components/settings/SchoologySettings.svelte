@@ -2,9 +2,10 @@
   // Settings → Schoology sync: feed URL, status and quick actions (full setup lives in the Schoology view).
   import { store } from '../../lib/store.svelte';
   import { schoology, syncNow as syncSchoology } from '../../lib/schoologySync.svelte';
+  import { forgetSecret, hasSecret, secret } from '../../lib/secrets.svelte';
   import { set } from './settings';
   const s = $derived(store.settings);
-  let schoologyUrl = $state(store.settings.schoologyFeedUrl);
+  let schoologyUrl = $state(secret('schoologyFeedUrl'));
   let schoologyProxy = $state(store.settings.schoologyProxy);
 </script>
 
@@ -26,7 +27,7 @@
     <input class="input" bind:value={schoologyProxy} placeholder="CORS proxy prefix (optional)" aria-label="CORS proxy" />
     <button class="btn primary" type="submit">Save</button>
   </form>
-  {#if s.schoologyFeedUrl}
+  {#if hasSecret('schoologyFeedUrl')}
     <div class="row">
       <span>Status</span><span class="status {schoology.status}"
         >{schoology.status === 'error' ? `Error: ${schoology.lastError}` : schoology.status}{#if s.lastSchoologySync}<span class="muted">
@@ -49,7 +50,7 @@
       <button
         class="btn danger"
         onclick={() => {
-          set('schoologyFeedUrl', '');
+          forgetSecret('schoologyFeedUrl');
           schoologyUrl = '';
         }}>Disconnect</button
       >

@@ -7,7 +7,9 @@
 import type { SupabaseClient, Session } from '@supabase/supabase-js';
 import { store } from './store.svelte';
 import { on } from './events';
-import { bundlesDiffer, mergeBundles, parseBundle } from './backup';
+import { bundlesDiffer, mergeBundles } from './backup';
+import { isLocked } from './secrets.svelte';
+import { decodeFromSync, encodeForSync, isEncryptedEnvelope, syncEncryptionOn } from './syncCrypto';
 import { toasts } from './toast.svelte';
 import type { ExportBundle } from './types';
 
@@ -173,8 +175,13 @@ async function readRow(c: SupabaseClient, userId: string): Promise<Row | null> {
  * then write it back. Writes are conditional on the version read, so two devices syncing at the same
  * moment can't overwrite each other: the loser re-reads, re-merges and tries again.
  */
-export async function syncNow(_opts: { pull?: boolean } = { pull: true }): Promise<void> {
+export async function syncNow(opts: { pull?: boolean; interactive?: boolean } = { pull: true }): Promise<void> {
   if (!accountConfig() || !account.userId) return;
+  // an encrypted copy needs the sync passphrase: background syncs wait for the key lock to open
+  if (!opts.interactive && isLocked('syncPassphrase')) {
+    account.pending = true;
+    return;
+  }
   if (inFlight) return inFlight;
   inFlight = (async () => {
     account.status = 'syncing';
@@ -188,25 +195,27 @@ export async function syncNow(_opts: { pull?: boolean } = { pull: true }): Promi
         let version = 0;
         if (row) {
           version = row.version;
-          const remote = parseBundle(row.data);
+          const remote = await decodeFromSync(row.data, { interactive: opts.interactive });
           const { merged, conflicts } = mergeBundles(local, remote);
           if (bundlesDiffer(merged, local)) {
             await store.loadBundle(merged);
             local = store.snapshotBundle();
           }
           if (conflicts.length) toasts.push({ message: `Sync kept the newer copy of ${conflicts.length} task${conflicts.length > 1 ? 's' : ''}`, kind: 'warn', emoji: '⚠️' });
-          if (!bundlesDiffer(local, remote)) break; // server already has everything
+          // server already has everything (and is encrypted, or not, as this device wants)
+          if (!bundlesDiffer(local, remote) && isEncryptedEnvelope(row.data) === syncEncryptionOn()) break;
         }
         const now = new Date().toISOString();
+        const payload = await encodeForSync(local, { interactive: opts.interactive });
         if (!row) {
-          const { error } = await c.from(TABLE).insert({ user_id: userId, data: local, version: 1, updated_at: now });
+          const { error } = await c.from(TABLE).insert({ user_id: userId, data: payload, version: 1, updated_at: now });
           if (!error) break;
           if (/duplicate|unique|conflict/i.test(error.message)) continue; // another device created it first
           throw new Error(friendly(error));
         }
         const { data, error } = await c
           .from(TABLE)
-          .update({ data: local, version: version + 1, updated_at: now })
+          .update({ data: payload, version: version + 1, updated_at: now })
           .eq('user_id', userId)
           .eq('version', version)
           .select('version');
@@ -245,6 +254,7 @@ export async function startAccount(): Promise<void> {
   on('changed', (e) => {
     if (e.reason !== 'reset') scheduleSync();
   });
+  on('unlocked', () => void syncNow({ pull: true }));
   window.addEventListener('online', () => {
     if (account.pending || account.status === 'error') void syncNow({ pull: true });
   });

@@ -36,12 +36,12 @@ Everything we could improve or add to Homework To-Do, grouped by area. Checked i
 
 ## 🔐 Security and privacy
 
-- [ ] Content-Security-Policy `<meta>` listing the hosts the app talks to.
-- [ ] Optional passphrase encryption for API keys and tokens in localStorage.
-- [ ] End-to-end encryption of the sync file (Gist / Drive).
-- [ ] "Delete everything" that also removes the gist and the Drive file.
-- [ ] A privacy page: what goes to which service.
-- [ ] Lock the CORS relay Worker to your own site and rate-limit it.
+- [x] Content-Security-Policy `<meta>` listing the hosts the app talks to. (Production build only; hosts in `src/lib/csp.ts`, extras via `VITE_CSP_CONNECT`. Not mirrored as a header: see DEPLOY.md.)
+- [x] Optional passphrase encryption for API keys and tokens in localStorage. (Settings → Privacy & security. The Supabase sign-in session is still stored by its own client, unencrypted.)
+- [x] End-to-end encryption of the sync file (Gist / Drive). (Also the account copy and backup files.)
+- [x] "Delete everything" that also removes the gist and the Drive file. (And the account's server copy.)
+- [x] A privacy page: what goes to which service. (`PRIVACY.md` and Settings → Privacy & security.)
+- [x] Lock the CORS relay Worker to your own site and rate-limit it. (`ALLOWED_ORIGINS`, `RATE_LIMIT_PER_MIN` or a `RATE_LIMITER` binding; DEPLOY.md.)
 - [x] Arcade games run in sandboxed iframes with no access to the app's storage.
 
 ## ♿ Accessibility
