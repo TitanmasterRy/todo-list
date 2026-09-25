@@ -27,19 +27,42 @@ export async function addTask(page: Page, text: string): Promise<void> {
   await box.press('Enter');
 }
 
-/** Put coins in the wallet directly (IndexedDB ledger), then reload. */
-export async function seedCoins(page: Page, amount: number): Promise<void> {
+/** Put coins (or vouchers) in the wallet directly (IndexedDB ledger), then reload. */
+export async function seedCoins(page: Page, amount: number, currency: 'coins' | 'vouchers' = 'coins'): Promise<void> {
   await page.evaluate(
-    (n) =>
+    ([n, cur]) =>
       new Promise<void>((resolve) => {
         const r = indexedDB.open('homework-todo');
         r.onsuccess = () => {
           const tx = r.result.transaction('ledger', 'readwrite');
-          tx.objectStore('ledger').put({ id: `seed-${Date.now()}`, at: new Date().toISOString(), currency: 'coins', amount: n, reason: 'task' });
+          tx.objectStore('ledger').put({ id: `seed-${Date.now()}`, at: new Date().toISOString(), currency: cur, amount: n, reason: 'task' });
           tx.oncomplete = () => resolve();
         };
       }),
-    amount,
+    [amount, currency] as const,
+  );
+  await page.reload();
+  await expect(page.locator('.shell')).toBeVisible();
+}
+
+/** Add a notecard deck straight to IndexedDB, then reload. */
+export async function seedDeck(page: Page, name: string, cards: [string, string][]): Promise<void> {
+  await page.evaluate(
+    ([deckName, pairs]) =>
+      new Promise<void>((resolve) => {
+        const r = indexedDB.open('homework-todo');
+        r.onsuccess = () => {
+          const now = new Date().toISOString();
+          const deckId = `deck-${deckName.replace(/\W+/g, '-')}`;
+          const tx = r.result.transaction(['decks', 'cards'], 'readwrite');
+          tx.objectStore('decks').put({ id: deckId, name: deckName, createdAt: now, updatedAt: now });
+          pairs.forEach(([front, back], i) =>
+            tx.objectStore('cards').put({ id: `${deckId}-${i}`, deckId, front, back, box: 1, due: now.slice(0, 10), reps: 0, lapses: 0, createdAt: now, updatedAt: now }),
+          );
+          tx.oncomplete = () => resolve();
+        };
+      }),
+    [name, cards] as const,
   );
   await page.reload();
   await expect(page.locator('.shell')).toBeVisible();

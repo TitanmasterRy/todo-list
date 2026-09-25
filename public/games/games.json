@@ -170,6 +170,62 @@
         "study"
       ],
       "builtIn": true
+    },
+    {
+      "id": "solitaire",
+      "title": "Solitaire",
+      "emoji": "🃏",
+      "description": "Klondike, draw 1 or 3. Drag or click, double-click to a foundation, undo. Windows-style scoring.",
+      "src": "solitaire.html",
+      "cost": 1,
+      "minutes": 20,
+      "theme": "classic",
+      "tags": [
+        "cards"
+      ],
+      "builtIn": true
+    },
+    {
+      "id": "invaders",
+      "title": "Invaders",
+      "emoji": "👾",
+      "description": "Rows of invaders, crumbling shields, faster every wave.",
+      "src": "invaders.html",
+      "cost": 1,
+      "minutes": 10,
+      "theme": "arcade",
+      "tags": [
+        "arcade"
+      ],
+      "builtIn": true
+    },
+    {
+      "id": "lander",
+      "title": "Lunar lander",
+      "emoji": "🌙",
+      "description": "Thrust and rotate down onto a landing pad. Small pads pay more.",
+      "src": "lander.html",
+      "cost": 1,
+      "minutes": 10,
+      "theme": "space",
+      "tags": [
+        "arcade"
+      ],
+      "builtIn": true
+    },
+    {
+      "id": "glider",
+      "title": "Paper-plane glider",
+      "emoji": "✈️",
+      "description": "Tap to lift your paper plane through the gaps between the pencils.",
+      "src": "glider.html",
+      "cost": 1,
+      "minutes": 10,
+      "theme": "paper",
+      "tags": [
+        "arcade"
+      ],
+      "builtIn": true
     }
   ]
 }

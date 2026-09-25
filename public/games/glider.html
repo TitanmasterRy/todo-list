@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Paper-plane glider</title>
+<style>
+  :root { --bg: #fdfbf3; --fg: #2b2f3a; --accent: #3b5bdb; }
+  html, body { margin: 0; height: 100%; background: var(--bg); color: var(--fg); font: 15px system-ui, sans-serif; overflow: hidden; touch-action: none; user-select: none; }
+  body { display: grid; place-items: center; }
+  canvas { display: block; border-radius: 6px; box-shadow: 0 2px 14px rgba(0,0,0,.18); }
+  .hud { position: fixed; top: 8px; left: 12px; font-weight: 800; font-variant-numeric: tabular-nums; pointer-events: none; }
+  #pause { position: fixed; top: 6px; right: 10px; width: 38px; height: 34px; border: 1px solid currentColor; border-radius: 8px; background: transparent; color: var(--fg); font-size: 16px; cursor: pointer; }
+  .center { position: fixed; inset: 0; display: grid; place-items: center; pointer-events: none; text-align: center; }
+  .center > div { background: color-mix(in srgb, var(--bg) 85%, transparent); padding: 6px 22px 18px; border-radius: 14px; }
+  .center button { pointer-events: auto; font: inherit; padding: 10px 22px; border: 0; border-radius: 10px; background: var(--accent); color: #fff; font-weight: 800; cursor: pointer; }
+</style>
+</head>
+<body>
+<canvas id="c" width="480" height="640" role="img" aria-label="Paper plane gliding between pencils"></canvas>
+<div class="hud" aria-live="polite">Score <span id="score">0</span> · Best <span id="best">0</span></div>
+<button id="pause" aria-label="Pause">⏸</button>
+<div class="center" id="menu"><div><h2>✈️ Paper-plane glider</h2><p id="tip">Tap, click or press Space to lift.<br />Glide through the gaps between the pencils. P pauses.</p><button id="go">Fly</button></div></div>
+<script>
+  // Homework To-Do arcade game. Report scores with parent.postMessage({ type: 'hwtodo:score', score }, '*').
+  const q = new URLSearchParams(location.search), root = document.documentElement.style;
+  if (q.get('accent')) root.setProperty('--accent', q.get('accent'));
+  const dark = q.get('dark') === '1';
+  if (dark) { root.setProperty('--bg', '#141925'); root.setProperty('--fg', '#e6e9f2'); }
+  const calm = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const report = (score) => parent.postMessage({ type: 'hwtodo:score', score }, '*');
+  const c = document.getElementById('c'), x = c.getContext('2d'), $ = (id) => document.getElementById(id);
+  const W = 480, H = 640, PX = 120, PW = 56, FLOOR = H - 26;
+  // lined notebook paper: light by default, a dark "night notebook" when the app is dark
+  const P = dark ? { paper: '#1b2233', line: '#2e3b58', margin: '#7a3346', plane: '#eef1f8', ink: '#c9d2e8', desk: '#3a2f28' } : { paper: '#fffef8', line: '#c9d8f0', margin: '#f0a3a3', plane: '#ffffff', ink: '#2b2f3a', desk: '#c8a27a' };
+  const PENCILS = ['#f7c948', '#ff8a65', '#81c784', '#64b5f6', '#ba68c8'];
+  let plane, cols, doodles, score = 0, best = 0, speed, state = 'menu', paused = false, last = 0, acc = 0, scroll = 0, trail = [], overAt = 0;
+  function fit() { const s = Math.min(innerWidth / W, innerHeight / H); c.style.width = W * s + 'px'; c.style.height = H * s + 'px'; }
+  addEventListener('resize', fit); fit();
+  function gapSize() { return Math.max(150, 200 - score * 2); }
+  function addCol(px) { const prev = cols.length ? cols[cols.length - 1].gy : H / 2, g = gapSize(); const gy = Math.max(90 + g / 2, Math.min(FLOOR - 50 - g / 2, prev + (Math.random() - 0.5) * 260)); cols.push({ x: px, gy, g, c: PENCILS[Math.floor(Math.random() * PENCILS.length)], passed: false }); }
+  function start() { plane = { y: H / 2, vy: 0 }; cols = []; for (let i = 0; i < 3; i++) addCol(W + 80 + i * 220); score = 0; speed = 2.3; trail = []; state = 'flying'; paused = false; $('menu').style.display = 'none'; hud(); }
+  function hud() { $('score').textContent = score; $('best').textContent = best; }
+  function lift() { if (state === 'flying' && !paused) plane.vy = -5.4; else if (state === 'menu' || (state === 'over' && performance.now() - overAt > 700)) start(); }
+  function over() { state = 'over'; overAt = performance.now(); best = Math.max(best, score); hud(); report(score); $('menu').style.display = 'grid'; $('menu').querySelector('h2').textContent = `Score ${score}`; $('tip').textContent = score >= best && score > 0 ? 'New best this session!' : 'Crumpled. Try again?'; $('go').textContent = 'Again'; }
+  function tick() {
+    scroll += state === 'flying' ? speed : 0.6;
+    if (state !== 'flying') return;
+    plane.vy = Math.min(6, plane.vy + 0.24); plane.y += plane.vy;
+    if (plane.y < 14) { plane.y = 14; plane.vy = 0; }
+    if (!calm) { trail.push({ x: PX, y: plane.y }); trail.forEach((t) => (t.x -= speed)); trail = trail.filter((t) => t.x > -10); }
+    for (const col of cols) {
+      col.x -= speed;
+      if (!col.passed && col.x + PW < PX - 14) { col.passed = true; score++; speed = Math.min(3.8, speed + 0.05); hud(); }
+      // hit box: the pencil body, with the sharpened tip counting as a narrower block
+      const inX = PX + 14 > col.x && PX - 14 < col.x + PW, inTipX = PX + 10 > col.x + PW * 0.25 && PX - 10 < col.x + PW * 0.75;
+      const top = col.gy - col.g / 2, bot = col.gy + col.g / 2;
+      if ((inX && (plane.y - 8 < top - 30 || plane.y + 8 > bot + 30)) || (inTipX && (plane.y - 8 < top || plane.y + 8 > bot))) return over();
+    }
+    if (cols[0].x < -PW - 10) cols.shift();
+    if (cols[cols.length - 1].x < W - 160) addCol(cols[cols.length - 1].x + 220);
+    if (plane.y + 10 >= FLOOR) { plane.y = FLOOR - 10; return over(); }
+  }
+  function pencil(px, y0, y1, color, down) {
+    // body from y0 to y1, the tip (30px) at the gap end
+    const tipY = down ? y1 : y0, bodyA = down ? y0 : y0 + 30, bodyB = down ? y1 - 30 : y1;
+    x.fillStyle = color; x.fillRect(px, bodyA, PW, bodyB - bodyA);
+    x.fillStyle = 'rgba(0,0,0,.12)'; x.fillRect(px + PW / 3, bodyA, PW / 3, bodyB - bodyA);
+    x.fillStyle = '#e8c9a0'; x.beginPath(); x.moveTo(px, down ? bodyB : bodyA); x.lineTo(px + PW, down ? bodyB : bodyA); x.lineTo(px + PW / 2, tipY); x.closePath(); x.fill();
+    x.fillStyle = '#333'; x.beginPath(); x.moveTo(px + PW * 0.38, down ? tipY - 11 : tipY + 11); x.lineTo(px + PW * 0.62, down ? tipY - 11 : tipY + 11); x.lineTo(px + PW / 2, tipY); x.closePath(); x.fill();
+    x.strokeStyle = P.ink; x.lineWidth = 1.5; x.strokeRect(px, bodyA, PW, bodyB - bodyA);
+  }
+  function draw() {
+    x.fillStyle = P.paper; x.fillRect(0, 0, W, H);
+    x.strokeStyle = P.line; x.lineWidth = 1; for (let y = 70; y < H; y += 32) { x.beginPath(); x.moveTo(0, y); x.lineTo(W, y); x.stroke(); }
+    const mx = (((44 - scroll * 0.2) % (W + 60)) + W + 60) % (W + 60); x.strokeStyle = P.margin; x.lineWidth = 2; x.beginPath(); x.moveTo(mx, 0); x.lineTo(mx, H); x.stroke();
+    // pencil-sketch doodles drifting behind
+    x.strokeStyle = P.line; x.lineWidth = 2;
+    for (const d of doodles) { const dx = ((d.x - scroll * 0.35) % (W + 120) + W + 120) % (W + 120) - 60; x.beginPath(); if (d.k) { for (let a = 0; a <= 10; a++) { const r = a % 2 ? 7 : 16, t = (a / 10) * Math.PI * 2 - 1.57; x.lineTo(dx + Math.cos(t) * r, d.y + Math.sin(t) * r); } } else { x.arc(dx, d.y, 12, Math.PI, 0); x.arc(dx + 18, d.y, 9, Math.PI, 0); } x.stroke(); }
+    for (const col of cols || []) { const top = col.gy - col.g / 2, bot = col.gy + col.g / 2; pencil(col.x, -10, top, col.c, true); pencil(col.x, bot, FLOOR, col.c, false); }
+    x.fillStyle = P.desk; x.fillRect(0, FLOOR, W, H - FLOOR);
+    if (plane) {
+      x.strokeStyle = P.ink; x.setLineDash([4, 6]); x.lineWidth = 1.5; x.beginPath(); trail.forEach((t, i) => x[i ? 'lineTo' : 'moveTo'](t.x - 16, t.y + 2)); x.stroke(); x.setLineDash([]);
+      x.save(); x.translate(PX, plane.y); x.rotate(Math.max(-0.45, Math.min(0.8, plane.vy * 0.08)));
+      x.fillStyle = P.plane; x.strokeStyle = P.ink; x.lineWidth = 1.6; x.lineJoin = 'round';
+      x.beginPath(); x.moveTo(18, 0); x.lineTo(-16, -11); x.lineTo(-8, 1); x.closePath(); x.fill(); x.stroke();
+      x.beginPath(); x.moveTo(18, 0); x.lineTo(-8, 1); x.lineTo(-12, 9); x.closePath(); x.fillStyle = dark ? '#c7cfe3' : '#e7ebf3'; x.fill(); x.stroke();
+      x.restore();
+    }
+    if (paused) { x.fillStyle = P.ink; x.font = '800 30px system-ui, sans-serif'; x.textAlign = 'center'; x.fillText('Paused · press P', W / 2, H / 2); x.textAlign = 'start'; }
+  }
+  // fixed 60 Hz physics so the plane glides the same on any refresh rate
+  function loop(now) { const dt = Math.min(100, now - (last || now)); last = now; if (!paused) { acc += dt; while (acc >= 1000 / 60) { tick(); acc -= 1000 / 60; } } draw(); requestAnimationFrame(loop); }
+  function pause(on = !paused) { if (state !== 'flying') return; paused = on; acc = 0; $('pause').textContent = paused ? '▶' : '⏸'; $('pause').setAttribute('aria-label', paused ? 'Resume' : 'Pause'); }
+  addEventListener('keydown', (e) => {
+    if (e.key === ' ' || e.key === 'ArrowUp' || e.key === 'w') { e.preventDefault(); if (!e.repeat) lift(); }
+    if (e.key === 'p' || e.key === 'P') pause();
+  });
+  c.addEventListener('pointerdown', (e) => { e.preventDefault(); lift(); });
+  addEventListener('blur', () => pause(true));
+  document.addEventListener('visibilitychange', () => { if (document.hidden) pause(true); });
+  $('pause').onclick = () => pause();
+  $('go').onclick = start;
+  doodles = Array.from({ length: 6 }, (_, i) => ({ x: i * 110 + Math.random() * 40, y: 100 + Math.random() * (H - 260), k: i % 2 }));
+  requestAnimationFrame(loop);
+</script>
+</body>
+</html>

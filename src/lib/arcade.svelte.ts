@@ -4,10 +4,11 @@ import { parseManifest } from './arcade';
 import type { ArcadeGame } from './types';
 
 const SCORES_KEY = 'homework-todo:arcade-scores';
+const TIMES_KEY = 'homework-todo:arcade-times'; // best (lowest) times in ms, e.g. match rush per deck
 
-function loadScores(): Record<string, number> {
+function loadScores(key = SCORES_KEY): Record<string, number> {
   try {
-    return JSON.parse(localStorage.getItem(SCORES_KEY) ?? '{}') as Record<string, number>;
+    return JSON.parse(localStorage.getItem(key) ?? '{}') as Record<string, number>;
   } catch {
     return {};
   }
@@ -20,6 +21,7 @@ class Arcade {
   loaded = $state(false);
   loading = $state(false);
   scores = $state<Record<string, number>>(loadScores());
+  times = $state<Record<string, number>>(loadScores(TIMES_KEY));
   games = $derived([...this.siteGames, ...this.localGames]);
 
   manifestUrl(): string {
@@ -65,6 +67,19 @@ class Arcade {
     this.scores = { ...this.scores, [id]: score };
     try {
       localStorage.setItem(SCORES_KEY, JSON.stringify(this.scores));
+    } catch {
+      /* ignore */
+    }
+    return true;
+  }
+
+  /** Keep the fastest time for a timed game. Returns true for a new best. */
+  recordTime(id: string, ms: number): boolean {
+    const best = this.times[id];
+    if (best !== undefined && ms >= best) return false;
+    this.times = { ...this.times, [id]: ms };
+    try {
+      localStorage.setItem(TIMES_KEY, JSON.stringify(this.times));
     } catch {
       /* ignore */
     }
