@@ -1,6 +1,7 @@
 import { defineConfig } from 'vitest/config';
 import { svelte } from '@sveltejs/vite-plugin-svelte';
 import { VitePWA } from 'vite-plugin-pwa';
+import { readFileSync } from 'node:fs';
 
 // Where the site is served from. Most hosts (Vercel, Netlify, Render, Replit,
 // Cloudflare Pages, Firebase, Surge, Docker) serve from the domain root: "/".
@@ -10,8 +11,12 @@ import { VitePWA } from 'vite-plugin-pwa';
 const repoName = process.env.GITHUB_REPOSITORY?.split('/')[1] ?? 'todo-list';
 const base = process.env.VITE_BASE ?? (process.env.GITHUB_PAGES === 'true' ? `/${repoName}/` : '/');
 
+// "What's new" compares this with the last heading the user saw (the notes themselves load on demand).
+const changelogHead = (readFileSync(new URL('./CHANGELOG.md', import.meta.url), 'utf8').match(/^## (.+)$/m)?.[1] ?? '').trim();
+
 export default defineConfig({
   base,
+  define: { __CHANGELOG_HEAD__: JSON.stringify(changelogHead) },
   server: {
     // Replit, Codespaces and Gitpod proxy the dev server through their own hostnames.
     host: process.env.REPL_ID || process.env.CODESPACES || process.env.GITPOD_WORKSPACE_ID ? true : undefined,

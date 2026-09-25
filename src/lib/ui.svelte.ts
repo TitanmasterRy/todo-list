@@ -12,6 +12,7 @@ class UIState {
   quickAddFocus = $state(0); // bump to focus quick add
   frogPrompt = $state(false);
   recap = $state(false);
+  whatsNew = $state(false);
   whatNow = $state(false);
   inboxList = $state<string | null>(null); // saved list opened from the sidebar
   inboxListNonce = $state(0); // "What should I do now?" card on Today

@@ -2,6 +2,9 @@
 /// <reference types="vite/client" />
 /// <reference types="vite-plugin-pwa/client" />
 
+/** The newest CHANGELOG.md section heading, baked in at build time. */
+declare const __CHANGELOG_HEAD__: string;
+
 interface ImportMetaEnv {
   readonly LITE?: boolean;
   /** Supabase project URL for email/password accounts (optional). */

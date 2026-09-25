@@ -8,14 +8,32 @@
   import { toasts } from '../lib/toast.svelte';
   import { formatMinutes, dueKey } from '../lib/dates';
   import { backupFilename, downloadJSON } from '../lib/backup';
+  import { whatsNewAction } from '../lib/whatsnew';
   const loadReview = () => import('./WeeklyReview.svelte');
   const loadSetup = () => import('./SemesterSetup.svelte');
+  const loadWhatsNew = () => import('./WhatsNew.svelte');
 
   let note = $state('');
 
   onMount(() => {
     const hour = new Date().getHours();
     const s = store.settings;
+    // What's new after an update (once per changelog heading; skipped on a fresh install)
+    const wn = whatsNewAction(__CHANGELOG_HEAD__, s.lastSeenChangelog);
+    if (wn !== 'none') store.updateSettings({ lastSeenChangelog: __CHANGELOG_HEAD__ });
+    if (wn === 'show')
+      setTimeout(
+        () =>
+          toasts.push({
+            message: 'Updated: see what’s new',
+            detail: __CHANGELOG_HEAD__,
+            kind: 'info',
+            emoji: '✨',
+            timeout: 10000,
+            action: { label: 'What’s new', onClick: () => (ui.whatsNew = true) },
+          }),
+        2000,
+      );
     // Frog prompt: first open of the day, morning-ish, and there is something to pick.
     if (s.lastFrogPromptDate !== store.today && hour < 14 && store.todayTasks.length >= 2 && !store.frogTask) {
       store.updateSettings({ lastFrogPromptDate: store.today });
@@ -155,6 +173,9 @@
 
 {#if ui.weeklyReview}
   {#await loadReview() then m}<m.default />{/await}
+{/if}
+{#if ui.whatsNew}
+  {#await loadWhatsNew() then m}<m.default />{/await}
 {/if}
 {#if ui.semesterSetup}
   {#await loadSetup() then m}<m.default />{/await}

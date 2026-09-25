@@ -294,6 +294,7 @@ export interface Settings {
   onboarded: boolean;
   lastFrogPromptDate?: string;
   lastRecapDate?: string;
+  lastSeenChangelog?: string; // newest changelog heading already shown in What's new
   lastWeeklyReviewDate?: string;
   lastBackupReminderAt?: string;
 }

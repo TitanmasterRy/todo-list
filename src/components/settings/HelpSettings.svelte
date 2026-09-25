@@ -1,5 +1,5 @@
 <script lang="ts">
-  // Settings → Help: shortcuts and the welcome tour.
+  // Settings → Help: shortcuts, the welcome tour and what's new.
   import { store } from '../../lib/store.svelte';
   import { ui } from '../../lib/ui.svelte';
 </script>
@@ -9,6 +9,7 @@
   <div class="btns">
     <button class="btn" onclick={() => (ui.shortcuts = true)}>Keyboard shortcuts <span class="kbd">?</span></button>
     <button class="btn" onclick={() => store.updateSettings({ onboarded: false })}>Show welcome tour</button>
+    <button class="btn" onclick={() => (ui.whatsNew = true)}>✨ What’s new</button>
   </div>
 </section>
 

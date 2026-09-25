@@ -246,7 +246,7 @@ Each ships as a standalone HTML file in `public/games/`, so they double as examp
 - [ ] Capacitor wrap for iOS/Android.
 - [ ] Browser extension: add the current page as a task.
 - [ ] Skeleton loading and virtual scrolling for large lists.
-- [ ] "What's new" after updates, from the changelog.
+- [x] "What's new" after updates, from the changelog.
 - [ ] Shareable weekly review and stats cards.
 
 ## 🔄 Data and sync

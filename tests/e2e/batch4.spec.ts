@@ -103,3 +103,21 @@ test('break mode pauses the streak and shows on Today', async ({ page }) => {
   await goKey(page, '1');
   await expect(page.getByRole('status').filter({ hasText: 'Fall break' })).toContainText('streak is paused');
 });
+
+test("what's new shows once after an update, and from Settings → Help", async ({ page }) => {
+  await openApp(page, { lastSeenChangelog: 'An older version' });
+  await page.getByRole('button', { name: 'What’s new' }).click();
+  const dlg = page.getByRole('dialog', { name: /What’s new/ });
+  await expect(dlg).toBeVisible();
+  await expect(dlg.locator('li').first()).toBeVisible();
+  await dlg.getByRole('button', { name: 'Nice' }).click();
+  await page.reload();
+  await page.waitForTimeout(2500);
+  await expect(page.getByText('Updated: see what’s new')).toHaveCount(0);
+  await page
+    .getByRole('button', { name: /Settings/ })
+    .first()
+    .click();
+  await page.getByRole('button', { name: '✨ What’s new' }).click();
+  await expect(page.getByRole('dialog', { name: /What’s new/ })).toBeVisible();
+});
