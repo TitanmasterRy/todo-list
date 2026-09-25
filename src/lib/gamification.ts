@@ -1,4 +1,4 @@
-import type { Priority, Stats, Task } from './types';
+import type { BreakRange, Priority, Stats, Task } from './types';
 import { addDaysKey, dateKey, diffDays, dueKey, endOfDay, isDateOnly, parseDue, todayKey } from './dates';
 
 export const CRIT_CHANCE = 0.05;
@@ -80,7 +80,20 @@ export function computeXp(task: Task, completedAt: Date, comboCount: number, rng
   const crit = rng() < CRIT_CHANCE;
   if (crit) total *= 2;
   if (powerHour) total *= 1.5;
-  return { base, subtaskBonus, early, earlyDays: e.earlyDays, earlyMultiplier: e.multiplier, longTask, frog, crit, powerHour, comboCount, comboMultiplier, total: Math.round(total) };
+  return {
+    base,
+    subtaskBonus,
+    early,
+    earlyDays: e.earlyDays,
+    earlyMultiplier: e.multiplier,
+    longTask,
+    frog,
+    crit,
+    powerHour,
+    comboCount,
+    comboMultiplier,
+    total: Math.round(total),
+  };
 }
 
 // ---------- Grades ----------
@@ -132,7 +145,13 @@ export function applyStudySession(prev: Stats, reviewed: number, correct: number
   stats.cardsReviewed = (stats.cardsReviewed ?? 0) + reviewed;
   const newBadges = evaluateBadges(stats, { openTasksRemaining, today });
   stats.badges = [...stats.badges, ...newBadges];
-  return { stats, xp: { xp: gained, tier: clearedAll ? 'great' : 'ok', label: clearedAll ? 'Deck cleared' : 'Study session' }, leveledUp: stats.level > prevLevel, newLevel: stats.level, newBadges };
+  return {
+    stats,
+    xp: { xp: gained, tier: clearedAll ? 'great' : 'ok', label: clearedAll ? 'Deck cleared' : 'Study session' },
+    leveledUp: stats.level > prevLevel,
+    newLevel: stats.level,
+    newBadges,
+  };
 }
 
 // ---------- Power hour ----------
@@ -174,7 +193,19 @@ export function rollCollectible(owned: string[], seed: number): (typeof COLLECTI
 }
 
 // ---------- Levels: titles and unlocks ----------
-export const LEVEL_TITLES = ['Freshman', 'Note Taker', 'Deadline Dodger', 'Page Turner', 'Problem Solver', 'Study Machine', 'Honor Roll', 'Dean’s List', 'Scholar', 'Valedictorian', 'Legend'];
+export const LEVEL_TITLES = [
+  'Freshman',
+  'Note Taker',
+  'Deadline Dodger',
+  'Page Turner',
+  'Problem Solver',
+  'Study Machine',
+  'Honor Roll',
+  'Dean’s List',
+  'Scholar',
+  'Valedictorian',
+  'Legend',
+];
 
 export function levelTitle(level: number): string {
   return LEVEL_TITLES[Math.min(LEVEL_TITLES.length - 1, Math.max(0, level - 1))];
@@ -219,9 +250,32 @@ export function advanceCombo(prev: ComboState | undefined, now: number): ComboSt
 export function effectiveStreak(stats: Stats, today: string = todayKey()): number {
   const { current, lastDate, freezes } = stats.streak;
   if (!lastDate || current === 0) return 0;
-  const gap = diffDays(lastDate, today) - 1; // missed days between lastDate and today
+  const gap = diffDays(lastDate, today) - 1 - breakDaysBetween(lastDate, today, stats.breaks); // missed days between lastDate and today
   if (gap <= 0) return current;
   return gap <= freezes ? current : 0;
+}
+
+/** Days strictly between a and b (keys, a < b) that fall inside a break. */
+export function breakDaysBetween(aKey: string, bKey: string, breaks: BreakRange[] | undefined): number {
+  if (!breaks?.length) return 0;
+  let n = 0;
+  for (let k = addDaysKey(aKey, 1); k < bKey; k = addDaysKey(k, 1)) if (breaks.some((b) => !b.deleted && b.from <= k && k <= b.to)) n++;
+  return n;
+}
+
+/** The break that covers `day`, if any. */
+export function activeBreak(breaks: BreakRange[] | undefined, day: string): BreakRange | undefined {
+  return breaks?.find((b) => !b.deleted && b.from <= day && day <= b.to);
+}
+
+/** Union of two devices' break lists by id; a removal wins. */
+export function mergeBreaks(a: BreakRange[] = [], b: BreakRange[] = []): BreakRange[] {
+  const m = new Map<string, BreakRange>();
+  for (const x of [...a, ...b]) {
+    const prev = m.get(x.id);
+    m.set(x.id, prev ? { ...prev, ...x, deleted: prev.deleted || x.deleted || undefined } : x);
+  }
+  return [...m.values()].sort((x, y) => (x.from < y.from ? -1 : 1));
 }
 
 export interface StreakUpdate {
@@ -232,7 +286,7 @@ export interface StreakUpdate {
 }
 
 /** Apply a completion on `day` to the streak. Missed days consume freezes automatically. */
-export function updateStreak(prev: Stats['streak'], day: string, creditedAt?: number): StreakUpdate & { creditedAt: number } {
+export function updateStreak(prev: Stats['streak'], day: string, creditedAt?: number, breaks?: BreakRange[]): StreakUpdate & { creditedAt: number } {
   const s = { ...prev };
   let freezesUsed = 0;
   let broke = false;
@@ -244,7 +298,7 @@ export function updateStreak(prev: Stats['streak'], day: string, creditedAt?: nu
   } else if (day < s.lastDate) {
     // completing in the past (clock skew / import); ignore
   } else {
-    const gap = diffDays(s.lastDate, day) - 1;
+    const gap = diffDays(s.lastDate, day) - 1 - breakDaysBetween(s.lastDate, day, breaks);
     if (gap === 0) {
       s.current += 1;
     } else if (gap <= s.freezes) {
@@ -386,7 +440,7 @@ export function applyCompletion(
   stats.completionsByDay[day] = (stats.completionsByDay[day] ?? 0) + 1;
   if (xp.early) stats.earlyCount += 1;
   if (task.type === 'exam') stats.examCount += 1;
-  const streak = updateStreak(stats.streak, day, stats.freezeCreditedAt);
+  const streak = updateStreak(stats.streak, day, stats.freezeCreditedAt, stats.breaks);
   stats.streak = streak.streak;
   stats.freezeCreditedAt = streak.creditedAt;
   const goal = stats.dailyGoal || 3;

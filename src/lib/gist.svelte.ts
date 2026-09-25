@@ -1,8 +1,11 @@
-// Optional GitHub Gist sync. Token (gist scope) lives only in localStorage via settings.
+// Optional GitHub Gist sync. Token (gist scope) lives only in localStorage via settings (or the key vault).
+// With a sync passphrase, the gist holds an encrypted envelope instead of the plain bundle (syncCrypto.ts).
 import { store } from './store.svelte';
 import { on } from './events';
 import { toasts } from './toast.svelte';
-import { buildBundle, mergeBundles, parseBundle } from './backup';
+import { bundlesDiffer, mergeBundles } from './backup';
+import { forgetSecret, hasSecret, isLocked, useSecret } from './secrets.svelte';
+import { decodeFromSync, encodeForSync, SyncLockedError } from './syncCrypto';
 import type { ExportBundle } from './types';
 
 const GIST_FILE = 'homework-todo.json';
@@ -20,24 +23,18 @@ export const sync = new SyncState();
 let timer: ReturnType<typeof setTimeout> | undefined;
 let inFlight: Promise<void> | null = null;
 let started = false;
+/** Set when the gist is encrypted and this device can't open it: pushing would overwrite it, so don't. */
+let blocked: string | null = null;
 
 function headers(token: string): HeadersInit {
   return { Authorization: `Bearer ${token}`, Accept: 'application/vnd.github+json', 'Content-Type': 'application/json' };
 }
 
 function localBundle(): ExportBundle {
-  return buildBundle({
-    tasks: $state.snapshot(store.tasks),
-    courses: $state.snapshot(store.courses),
-    templates: $state.snapshot(store.templates),
-    stats: $state.snapshot(store.stats),
-    dayNotes: $state.snapshot(store.dayNotes),
-    decks: $state.snapshot(store.decks),
-    cards: $state.snapshot(store.cards),
-  });
+  return store.snapshotBundle();
 }
 
-async function fetchRemote(token: string, gistId: string): Promise<ExportBundle | null> {
+async function fetchRemote(token: string, gistId: string, interactive: boolean): Promise<ExportBundle | null> {
   const res = await fetch(`${API}/gists/${gistId}`, { headers: headers(token) });
   if (res.status === 404) return null;
   if (!res.ok) throw new Error(`GitHub ${res.status}: ${await safeText(res)}`);
@@ -50,14 +47,15 @@ async function fetchRemote(token: string, gistId: string): Promise<ExportBundle 
     content = await raw.text();
   }
   if (!content.trim()) return null;
-  return parseBundle(JSON.parse(content));
+  return decodeFromSync(JSON.parse(content), { interactive });
 }
 
-async function writeRemote(token: string, gistId: string | '', bundle: ExportBundle): Promise<string> {
+async function writeRemote(token: string, gistId: string | '', bundle: ExportBundle, interactive: boolean): Promise<string> {
+  const payload = await encodeForSync(bundle, { interactive });
   const body = JSON.stringify({
     description: 'Homework To-Do data (private sync)',
     public: false,
-    files: { [GIST_FILE]: { content: JSON.stringify(bundle) } },
+    files: { [GIST_FILE]: { content: JSON.stringify(payload) } },
   });
   const res = gistId
     ? await fetch(`${API}/gists/${gistId}`, { method: 'PATCH', headers: headers(token), body })
@@ -77,12 +75,22 @@ async function safeText(res: Response): Promise<string> {
 }
 
 /** Pull remote, merge (last-write-wins per task), apply locally, then push the merged result. */
-export async function syncNow(opts: { pull?: boolean } = { pull: true }): Promise<void> {
-  const { gistToken: token, gistId } = store.settings;
-  if (!token) {
+export async function syncNow(opts: { pull?: boolean; interactive?: boolean } = { pull: true }): Promise<void> {
+  const interactive = !!opts.interactive;
+  if (!hasSecret('gistToken')) {
     sync.status = 'off';
     return;
   }
+  // background syncs wait quietly for the key lock; "Sync now" asks for the passphrase
+  if (!interactive && isLocked('gistToken')) {
+    sync.status = 'idle';
+    sync.pending = true;
+    return;
+  }
+  if (inFlight) return inFlight;
+  const token = await useSecret('gistToken');
+  const { gistId } = store.settings;
+  if (!token) return;
   if (inFlight) return inFlight;
   inFlight = (async () => {
     sync.status = 'syncing';
@@ -90,12 +98,13 @@ export async function syncNow(opts: { pull?: boolean } = { pull: true }): Promis
     try {
       let local = localBundle();
       let id = gistId;
+      if (!opts.pull && blocked) throw new SyncLockedError(blocked);
       if (opts.pull && id) {
-        const remote = await fetchRemote(token, id);
+        const remote = await fetchRemote(token, id, interactive);
+        blocked = null;
         if (remote) {
           const { merged, conflicts } = mergeBundles(local, remote);
-          const changed = JSON.stringify({ t: merged.tasks, c: merged.courses, tp: merged.templates, n: merged.dayNotes, s: merged.stats, d: merged.decks, k: merged.cards }) !==
-            JSON.stringify({ t: local.tasks, c: local.courses, tp: local.templates, n: local.dayNotes, s: local.stats, d: local.decks, k: local.cards });
+          const changed = bundlesDiffer(merged, local);
           if (changed) {
             await store.loadBundle(merged);
             local = localBundle();
@@ -112,7 +121,7 @@ export async function syncNow(opts: { pull?: boolean } = { pull: true }): Promis
           }
         }
       }
-      id = await writeRemote(token, id, local);
+      id = await writeRemote(token, id, local, interactive);
       if (id !== gistId) store.updateSettings({ gistId: id });
       sync.lastSyncAt = new Date().toISOString();
       store.updateSettings({ lastSyncAt: sync.lastSyncAt });
@@ -121,6 +130,7 @@ export async function syncNow(opts: { pull?: boolean } = { pull: true }): Promis
     } catch (e) {
       sync.status = 'error';
       sync.lastError = e instanceof Error ? e.message : String(e);
+      if (e instanceof SyncLockedError && opts.pull) blocked = e.message;
       console.warn('gist sync failed', e);
     } finally {
       inFlight = null;
@@ -130,7 +140,7 @@ export async function syncNow(opts: { pull?: boolean } = { pull: true }): Promis
 }
 
 export function scheduleSync(): void {
-  if (!store.settings.gistToken) return;
+  if (!hasSecret('gistToken')) return;
   sync.pending = true;
   if (timer) clearTimeout(timer);
   timer = setTimeout(() => void syncNow({ pull: false }), DEBOUNCE_MS);
@@ -141,7 +151,10 @@ export function startSync(): void {
   if (started) return;
   started = true;
   on('changed', () => scheduleSync());
-  if (store.settings.gistToken) {
+  on('unlocked', () => {
+    if (hasSecret('gistToken')) void syncNow({ pull: true });
+  });
+  if (hasSecret('gistToken')) {
     sync.status = 'idle';
     void syncNow({ pull: true });
   }
@@ -159,8 +172,22 @@ export async function checkToken(token: string): Promise<string> {
 }
 
 export function disconnect(): void {
-  store.updateSettings({ gistToken: '', gistId: '', lastSyncAt: undefined });
+  forgetSecret('gistToken');
+  store.updateSettings({ gistId: '', lastSyncAt: undefined });
+  blocked = null;
   sync.status = 'off';
   sync.lastError = null;
   sync.pending = false;
+}
+
+/** Delete the sync gist on GitHub (for "Delete everything"). Resolves false when there was none. */
+export async function deleteGist(): Promise<boolean> {
+  const token = await useSecret('gistToken', { reason: 'Enter your passphrase to delete your gist.' });
+  const { gistId } = store.settings;
+  if (!token && isLocked('gistToken')) throw new Error('Your keys are locked, so the gist was not deleted.');
+  if (!token || !gistId) return false;
+  const res = await fetch(`${API}/gists/${gistId}`, { method: 'DELETE', headers: headers(token) });
+  if (res.status === 404) return false;
+  if (!res.ok) throw new Error(`GitHub ${res.status}: ${await safeText(res)}`);
+  return true;
 }

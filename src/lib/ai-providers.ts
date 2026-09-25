@@ -1,5 +1,6 @@
 // Provider catalog + an OpenAI-compatible chat client (fetch, browser-side). Anthropic goes through the official SDK in ai.ts.
 import type { AiProvider } from './types';
+import { cspHint } from './csp';
 
 export interface ProviderInfo {
   id: AiProvider;
@@ -37,8 +38,8 @@ export const PROVIDERS: ProviderInfo[] = [
     baseUrl: 'https://generativelanguage.googleapis.com/v1beta/openai',
     models: [
       { id: 'gemini-2.5-flash', label: 'Gemini 2.5 Flash (free tier)', vision: true, free: true },
+      { id: 'gemini-2.5-flash-lite', label: 'Gemini 2.5 Flash-Lite (free tier, fastest)', vision: true, free: true },
       { id: 'gemini-2.5-pro', label: 'Gemini 2.5 Pro', vision: true },
-      { id: 'gemini-2.0-flash', label: 'Gemini 2.0 Flash (free tier)', vision: true, free: true },
     ],
     note: 'Free tier with daily limits from Google AI Studio. Reads photos well.',
     needsKey: true,
@@ -66,13 +67,12 @@ export const PROVIDERS: ProviderInfo[] = [
     keyUrl: 'https://openrouter.ai/keys',
     baseUrl: 'https://openrouter.ai/api/v1',
     models: [
-      { id: 'google/gemini-2.0-flash-exp:free', label: 'Gemini 2.0 Flash (free)', vision: true, free: true },
-      { id: 'meta-llama/llama-4-maverick:free', label: 'Llama 4 Maverick (free, vision)', vision: true, free: true },
-      { id: 'qwen/qwen2.5-vl-72b-instruct:free', label: 'Qwen 2.5 VL 72B (free, vision)', vision: true, free: true },
-      { id: 'anthropic/claude-sonnet-4.6', label: 'Claude Sonnet 4.6 (paid)', vision: true },
+      { id: 'openrouter/auto', label: 'Auto (OpenRouter picks)', vision: true },
+      { id: 'meta-llama/llama-3.3-70b-instruct:free', label: 'Llama 3.3 70B (free)', vision: false, free: true },
+      { id: 'anthropic/claude-sonnet-5', label: 'Claude Sonnet 5 (paid)', vision: true },
       { id: 'openai/gpt-4o-mini', label: 'GPT-4o mini (paid)', vision: true },
     ],
-    note: 'One key for many models; the “:free” models cost nothing (rate limited).',
+    note: 'One key for many models; the “:free” models cost nothing (rate limited). Free models change often, so press “Load models” for the current list.',
     needsKey: true,
     cors: 'yes',
   },
@@ -133,6 +133,65 @@ export interface ChatRequest {
   images?: ChatImage[];
   maxTokens?: number;
   temperature?: number;
+  /** How hard the model should think. Short, simple tasks use 'low'. */
+  effort?: 'low' | 'medium' | 'high';
+}
+
+/** Clean up a pasted API key: whitespace, surrounding quotes, a leading "Bearer ". */
+export function cleanKey(raw: string): string {
+  return raw
+    .trim()
+    .replace(/^["'`]+|["'`]+$/g, '')
+    .replace(/^Bearer\s+/i, '')
+    .replace(/\s+/g, '');
+}
+
+/** Error for a model id the provider doesn't know (retired, renamed, or not available to this key). */
+export class ModelNotFoundError extends Error {}
+
+/** Reasoning models on OpenAI's API take max_completion_tokens and no temperature. */
+function isOpenAIReasoning(provider: AiProvider, model: string): boolean {
+  return provider === 'openai' && /^(o\d|gpt-5)/.test(model);
+}
+
+/** Thinking models spend output tokens on reasoning first, so a tiny max_tokens returns nothing. */
+function minTokens(provider: AiProvider): number {
+  if (provider === 'gemini' || provider === 'openrouter') return 8192;
+  if (provider === 'ollama' || provider === 'custom') return 1024;
+  return 4096;
+}
+
+/** Strip <think>…</think> reasoning some models (Qwen3, DeepSeek R1) put inline. */
+export function stripThinking(text: string): string {
+  return text.replace(/<think>[\s\S]*?<\/think>/gi, '').trim();
+}
+
+/** List model ids from an OpenAI-compatible /models endpoint. `free` marks zero-priced OpenRouter models. */
+export async function listModelsOpenAICompatible(cfg: { baseUrl: string; apiKey?: string; provider: AiProvider }): Promise<{ id: string; free?: boolean }[]> {
+  const base = cfg.baseUrl.replace(/\/+$/, '');
+  const headers: Record<string, string> = {};
+  if (cfg.apiKey) headers.Authorization = `Bearer ${cfg.apiKey}`;
+  let res: Response;
+  try {
+    res = await fetch(`${base}/models`, { headers });
+  } catch (e) {
+    throw new Error(
+      (cfg.provider === 'ollama'
+        ? 'Could not reach Ollama. Is it running with OLLAMA_ORIGINS="*"?'
+        : `Network error calling ${base}: ${e instanceof Error ? e.message : String(e)}`) + cspHint(base),
+    );
+  }
+  if (res.status === 401 || res.status === 403) throw new Error(`API key rejected (${res.status}). Check it in Settings → AI helper.`);
+  if (!res.ok) throw new Error(`Could not list models (${res.status}).`);
+  const json = (await res.json()) as { data?: { id: string; pricing?: { prompt?: string; completion?: string } }[]; models?: { name: string }[] };
+  type Row = { id: string; pricing?: { prompt?: string; completion?: string } };
+  const list: Row[] = json.data ?? json.models?.map((m) => ({ id: m.name })) ?? [];
+  return list
+    .filter((m) => m && typeof m.id === 'string')
+    .map((m) => ({
+      id: m.id.replace(/^models\//, ''),
+      free: cfg.provider === 'openrouter' ? m.id.endsWith(':free') || (m.pricing?.prompt === '0' && m.pricing?.completion === '0') : undefined,
+    }));
 }
 
 /** OpenAI-compatible /chat/completions call. */
@@ -143,6 +202,8 @@ export async function chatOpenAICompatible(cfg: { baseUrl: string; apiKey?: stri
   content.push({ type: 'text', text: req.user });
   const headers: Record<string, string> = { 'Content-Type': 'application/json' };
   if (cfg.apiKey) headers.Authorization = `Bearer ${cfg.apiKey}`;
+  const reasoning = isOpenAIReasoning(cfg.provider, cfg.model);
+  const maxTokens = Math.max(req.maxTokens ?? 2048, minTokens(cfg.provider));
   if (cfg.provider === 'openrouter') {
     headers['HTTP-Referer'] = typeof location !== 'undefined' ? location.origin : 'https://homework-todo';
     headers['X-Title'] = 'Homework To-Do';
@@ -154,8 +215,8 @@ export async function chatOpenAICompatible(cfg: { baseUrl: string; apiKey?: stri
       headers,
       body: JSON.stringify({
         model: cfg.model,
-        max_tokens: req.maxTokens ?? 2048,
-        temperature: req.temperature ?? 0.3,
+        ...(reasoning ? { max_completion_tokens: maxTokens } : { max_tokens: maxTokens, temperature: req.temperature ?? 0.3 }),
+        ...(reasoning && req.effort ? { reasoning_effort: req.effort } : {}),
         messages: [
           { role: 'system', content: req.system },
           { role: 'user', content: req.images?.length ? content : req.user },
@@ -164,9 +225,9 @@ export async function chatOpenAICompatible(cfg: { baseUrl: string; apiKey?: stri
     });
   } catch (e) {
     throw new Error(
-      cfg.provider === 'ollama'
+      (cfg.provider === 'ollama'
         ? 'Could not reach Ollama. Is it running with OLLAMA_ORIGINS="*"?'
-        : `Network error calling ${base}: ${e instanceof Error ? e.message : String(e)}`,
+        : `Network error calling ${base}: ${e instanceof Error ? e.message : String(e)}`) + cspHint(base),
     );
   }
   if (!res.ok) {
@@ -177,15 +238,21 @@ export async function chatOpenAICompatible(cfg: { baseUrl: string; apiKey?: stri
     } catch {
       /* ignore */
     }
-    if (res.status === 401) throw new Error('API key rejected (401). Check it in Settings → AI helper.');
+    if (res.status === 401 || res.status === 403) throw new Error(`API key rejected (${res.status}). Check it in Settings → AI helper.`);
+    if (res.status === 404 || /model.*(not[ _]found|does not exist|not supported|invalid|decommissioned|no endpoints)/i.test(msg)) {
+      throw new ModelNotFoundError(`Model “${cfg.model}” isn't available: ${msg}`);
+    }
     if (res.status === 429) throw new Error('Rate limited (429). Free tiers have per-minute limits; try again in a bit.');
     throw new Error(`API error ${res.status}: ${msg}`);
   }
-  const json = (await res.json()) as { choices?: { message?: { content?: string | { type: string; text?: string }[] } }[] };
-  const c = json.choices?.[0]?.message?.content;
-  if (typeof c === 'string') return c.trim();
-  if (Array.isArray(c)) return c.map((p) => p.text ?? '').join('\n').trim();
-  throw new Error('Empty response');
+  const json = (await res.json()) as { choices?: { finish_reason?: string; message?: { content?: string | { type: string; text?: string }[] | null } }[] };
+  const choice = json.choices?.[0];
+  const c = choice?.message?.content;
+  const text = typeof c === 'string' ? stripThinking(c) : Array.isArray(c) ? stripThinking(c.map((p) => p.text ?? '').join('\n')) : '';
+  if (text) return text;
+  if (choice?.finish_reason === 'length') throw new Error('The model used up its token budget before answering. Try a non-thinking model or a shorter request.');
+  if (choice?.finish_reason === 'content_filter') throw new Error('The provider filtered this response.');
+  throw new Error('The model returned an empty response.');
 }
 
 /** Downscale an image file to a JPEG data URL (max side px) for vision requests. */

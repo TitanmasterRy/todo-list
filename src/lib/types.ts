@@ -1,3 +1,5 @@
+import type { SavedList } from './filters';
+
 export type Priority = 'low' | 'normal' | 'high' | 'urgent';
 
 export type TaskType = 'homework' | 'reading' | 'exam' | 'project' | 'quiz' | 'other';
@@ -13,6 +15,9 @@ export interface Course {
   term?: string; // e.g. "Fall 2026"
   finalGrade?: number; // override for the transcript, 0–100
   schoologyName?: string; // course name as it appears in the Schoology feed
+  gradeScale?: string; // letter scale preset id (lib/grades.ts GRADE_SCALES) or 'custom'
+  customScale?: { letter: string; min: number }[]; // highest first
+  updatedAt?: string; // last-write-wins sync (missing on courses from older versions)
 }
 
 export interface Subtask {
@@ -22,11 +27,16 @@ export interface Subtask {
 }
 
 export interface Recurrence {
-  kind: 'daily' | 'weekly' | 'everyNDays' | 'weekdays';
-  n?: number; // everyNDays
+  kind: 'daily' | 'weekly' | 'everyNDays' | 'weekdays' | 'monthly' | 'monthlyNth';
+  n?: number; // everyNDays: days; weekly: every n weeks (default 1)
   days?: number[]; // 0–6 for weekly
+  nth?: number; // monthlyNth: 1–4, or -1 for the last
+  weekday?: number; // monthlyNth: 0–6
   until?: string;
 }
+
+/** When to remind about a task: minutes before it's due, the night before, the morning of, or a fixed time. */
+export type ReminderRule = { before: number } | { nightBefore: true } | { morningOf: true } | { at: string };
 
 export interface Task {
   id: string;
@@ -52,12 +62,46 @@ export interface Task {
   frogDate?: string; // YYYY-MM-DD the frog pick applies to
   archived?: boolean; // archived completed tasks (kept for stats)
   templateId?: string;
-  source?: 'schoology' | 'gmail' | 'classroom' | 'scan'; // synced/imported from elsewhere
+  source?: 'schoology' | 'gmail' | 'classroom' | 'scan' | 'class' | 'canvas'; // synced/imported from elsewhere ('class': a teacher's class list)
   externalId?: string; // stable id in the external system
   url?: string; // link back to the assignment
   syncedAt?: string;
   gradedXpAt?: string; // when grade XP was awarded (once per task)
   autoDescribed?: boolean;
+  blockedBy?: string[]; // ids of tasks that must be done first
+  reminders?: ReminderRule[];
+  timeSpentMin?: number; // tracked time
+  timerStartedAt?: string; // a running timer (ISO)
+  doing?: boolean; // in progress (the Doing column on a course board)
+  deckId?: string; // notecard deck to study for this task (exam prep sessions)
+  parentId?: string; // milestone or study session of this bigger task
+  attachments?: AttachmentMeta[]; // files kept on this device (metadata syncs, the files don't)
+  fieldAt?: Record<string, string>; // when each field last changed (field-level sync merge)
+  fieldBase?: string; // fields without a fieldAt entry date from this
+}
+
+/** A school break (inclusive dates). Removed ones keep `deleted` so the removal syncs. */
+export interface BreakRange {
+  id: string;
+  from: string; // YYYY-MM-DD
+  to: string; // YYYY-MM-DD
+  name?: string;
+  deleted?: boolean;
+}
+
+export interface AttachmentMeta {
+  id: string;
+  name: string;
+  type: string; // MIME type
+  size: number; // bytes
+  addedAt: string;
+}
+
+/** A stored attachment file (IndexedDB only; never synced or exported). */
+export interface AttachmentBlob {
+  id: string;
+  taskId: string;
+  blob: Blob;
 }
 
 export interface Stats {
@@ -75,6 +119,7 @@ export interface Stats {
   ringCelebratedDate?: string; // last date the full-screen confetti fired
   pomodorosByDay: Record<string, number>;
   freezeCreditedAt?: number; // streak length when last freeze was credited
+  breaks?: BreakRange[]; // school breaks: days inside them don't count against the streak
   acedCount: number; // scores >= 95
   early3Count: number; // completed 3+ days early
   cardsReviewed: number;
@@ -104,12 +149,57 @@ export interface Card {
   deckId: string;
   front: string;
   back: string;
-  box: number; // Leitner box 1–5
+  box: number; // 1–5, derived from FSRS stability (kept for older versions and the mastery bar)
   due: string; // YYYY-MM-DD
   reps: number;
   lapses: number;
   createdAt: string;
   updatedAt: string;
+  // FSRS memory state (missing on cards from before FSRS: derived from the box on first review)
+  stability?: number; // days until recall probability falls to 90%
+  difficulty?: number; // 1–10
+  lastReview?: string; // YYYY-MM-DD
+  frontImage?: string; // data URL (downscaled JPEG/PNG)
+  backImage?: string;
+  noteId?: string; // cards made from one cloze note share it
+}
+
+/** A deletion record, so sync can tell "deleted on another device" from "never seen". */
+export type TombstoneKind = 'task' | 'course' | 'template' | 'deck' | 'card';
+export interface Tombstone {
+  kind: TombstoneKind;
+  id: string;
+  deletedAt: string;
+  task?: Task; // snapshot kept for the trash can (tasks only, dropped after TRASH_DAYS)
+}
+
+/** Economy: every earn and spend is an append-only ledger entry, so wallets merge across devices by id. */
+export type Currency = 'coins' | 'chips' | 'vouchers';
+export type LedgerCurrency = Currency | `item:${string}`;
+export interface LedgerEntry {
+  id: string;
+  at: string; // ISO time
+  currency: LedgerCurrency;
+  amount: number; // positive = earned/bought, negative = spent/used
+  reason: string; // 'task', 'ring', 'shop:chips-100', 'casino:slots', 'arcade:snake', ...
+  ref?: string; // task id, game id, ...
+}
+
+/** A game added by the site admin (games.json) or locally in the admin panel. */
+export interface ArcadeGame {
+  id: string;
+  title: string;
+  emoji?: string;
+  description?: string;
+  src?: string; // HTML file path relative to the site's games/ folder
+  url?: string; // external embed link
+  html?: string; // uploaded HTML (local admin games only)
+  cost: number; // vouchers per play
+  minutes?: number; // play time per voucher; unlimited when absent
+  theme?: ThemePack;
+  tags?: string[];
+  local?: boolean; // added in this browser's admin panel
+  builtIn?: boolean;
 }
 
 export interface DayNote {
@@ -129,6 +219,10 @@ export interface Settings {
   soundPack: SoundPack;
   soundPromptShown: boolean;
   reducedMotion: boolean;
+  celebrations: boolean; // confetti and checkbox particle bursts (separate from sounds and motion)
+  highContrast: boolean;
+  fontChoice: 'system' | 'atkinson' | 'lexend' | 'dyslexic';
+  textScale: number; // percent: 100, 112, 125, 140
   dailyGoal: number;
   pomodoroWorkMin: number;
   pomodoroBreakMin: number;
@@ -136,6 +230,9 @@ export interface Settings {
   weekStart: 0 | 1; // 0 Sunday, 1 Monday
   timeFormat: '12h' | '24h';
   gamification: boolean;
+  accountUrl: string; // Supabase project URL override (else VITE_SUPABASE_URL)
+  accountAnonKey: string; // Supabase anon key override (else VITE_SUPABASE_ANON_KEY)
+  lastAccountSyncAt?: string;
   gistToken: string;
   gistId: string;
   lastExportAt?: string;
@@ -143,6 +240,9 @@ export interface Settings {
   archiveAfterDays: number; // 0 disables
   autoDescribe: boolean; // fill notes/subtasks/estimate for new tasks
   schoologyFeedUrl: string;
+  canvasFeedUrl: string; // Canvas → Calendar → Calendar Feed (private link; kept behind the key lock)
+  canvasIncludeEvents?: boolean; // also add calendar events, not just assignments
+  lastCanvasSync?: string;
   schoologyProxy: string; // optional CORS proxy prefix, e.g. https://my-worker.example.workers.dev/?url=
   schoologyAutoCreateCourses: boolean;
   schoologyIgnored: string[]; // externalIds deleted by the user
@@ -155,12 +255,15 @@ export interface Settings {
   aiKeys: Partial<Record<AiProvider, string>>; // per-provider keys (browser only)
   aiModels: Partial<Record<AiProvider, string>>; // chosen model per provider
   aiBaseUrl: string; // custom OpenAI-compatible endpoint (ollama / lm studio / other)
+  aiModelCache: Partial<Record<AiProvider, string[]>>; // live model ids from the provider ("id|free" marks free OpenRouter models)
   weeklyXpGoal: number;
   themePack: ThemePack;
   timerPresets: { label: string; work: number; brk: number }[];
   notifyDueSoon: boolean;
   notifyLeadMin: number;
   notifyMorningDigest: boolean;
+  appBadge: boolean; // today's count on the installed app's icon
+  backgroundReminders: boolean; // morning digest + badge from the service worker when the app is closed
   powerHourEnabled: boolean;
   powerHourStart?: number; // hour of the day chosen for today
   powerHourDate?: string;
@@ -185,12 +288,29 @@ export interface Settings {
   lastLocalBackupAt?: string;
   dailyCapacityMin: number; // planner: minutes of homework you can do per day
   targetGrade: number; // grade calculator default target %
+  smartLists: SavedList[]; // saved Inbox filters shown in the sidebar
+  economyEnabled: boolean; // coins, shop, casino, arcade
+  casinoEnabled: boolean;
+  casinoBreakMin: number; // remind to take a homework break after N minutes of casino play (0 = off)
+  arcadeAdmin: boolean; // show the arcade admin panel in Settings
+  parentPinHash: string; // '' = no parent lock
+  casinoDailyLimitMin: number; // 0 = no daily limit
+  casinoMinutesByDay: Record<string, number>;
+  equippedTitle?: string; // shop cosmetic ids
+  equippedFrame?: string;
+  equippedConfetti?: string;
   onboarded: boolean;
-  demoSeeded: boolean;
   lastFrogPromptDate?: string;
   lastRecapDate?: string;
+  lastSeenChangelog?: string; // newest changelog heading already shown in What's new
+  courseLayout?: 'list' | 'board'; // course page: list or Kanban board
+  aiMonthlyCap?: number; // max AI requests per month (0 or unset = no limit)
+  weekdayCapacityMin?: Record<number, number>; // Plan my week: minutes per weekday (else dailyCapacityMin)
   lastWeeklyReviewDate?: string;
   lastBackupReminderAt?: string;
+  syncPassphrase: string; // end-to-end encryption of the synced copy (Gist, Drive, account); '' = off
+  locale?: 'auto' | 'en' | 'es'; // app language ('auto' follows the browser)
+  forceRtl?: boolean; // right-to-left layout even for a left-to-right language (for testing)
 }
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -200,6 +320,10 @@ export const DEFAULT_SETTINGS: Settings = {
   soundPack: 'soft',
   soundPromptShown: false,
   reducedMotion: false,
+  celebrations: true,
+  highContrast: false,
+  fontChoice: 'system',
+  textScale: 100,
   dailyGoal: 3,
   pomodoroWorkMin: 25,
   pomodoroBreakMin: 5,
@@ -207,11 +331,14 @@ export const DEFAULT_SETTINGS: Settings = {
   weekStart: 1,
   timeFormat: '12h',
   gamification: true,
+  accountUrl: '',
+  accountAnonKey: '',
   gistToken: '',
   gistId: '',
   archiveAfterDays: 90,
   autoDescribe: true,
   schoologyFeedUrl: '',
+  canvasFeedUrl: '',
   schoologyProxy: '',
   schoologyAutoCreateCourses: true,
   schoologyIgnored: [],
@@ -222,6 +349,7 @@ export const DEFAULT_SETTINGS: Settings = {
   aiKeys: {},
   aiModels: {},
   aiBaseUrl: '',
+  aiModelCache: {},
   weeklyXpGoal: 500,
   themePack: 'classic',
   timerPresets: [
@@ -233,6 +361,8 @@ export const DEFAULT_SETTINGS: Settings = {
   notifyDueSoon: false,
   notifyLeadMin: 60,
   notifyMorningDigest: false,
+  appBadge: true,
+  backgroundReminders: true,
   powerHourEnabled: true,
   collection: [],
   schoologyMode: 'ics',
@@ -253,8 +383,16 @@ export const DEFAULT_SETTINGS: Settings = {
   localBackupEnabled: false,
   dailyCapacityMin: 180,
   targetGrade: 90,
+  smartLists: [],
+  economyEnabled: true,
+  casinoEnabled: true,
+  casinoBreakMin: 20,
+  arcadeAdmin: false,
+  parentPinHash: '',
+  casinoDailyLimitMin: 0,
+  casinoMinutesByDay: {},
   onboarded: false,
-  demoSeeded: false,
+  syncPassphrase: '',
 };
 
 export const DEFAULT_STATS: Stats = {
@@ -277,6 +415,53 @@ export const DEFAULT_STATS: Stats = {
   xpByDay: {},
 };
 
+// ---------- School timetable ----------
+/** One slot in a bell schedule: "Period 3", "Lunch". Times are local "HH:MM". */
+export interface BellPeriod {
+  id: string;
+  name: string;
+  start: string;
+  end: string;
+}
+
+/** A named set of periods ("Regular", "Early release", "Assembly"). */
+export interface BellSchedule {
+  id: string;
+  name: string;
+  periods: BellPeriod[];
+}
+
+/** A class meeting: this course in this period, on some rotation days (A/B) or weekdays. Empty lists mean every school day. */
+export interface ClassMeeting {
+  id: string;
+  courseId: string;
+  periodId: string;
+  rotationDays?: string[]; // e.g. ['A']
+  weekdays?: number[]; // 0 = Sunday
+  room?: string;
+  teacher?: string;
+}
+
+export interface DayOverride {
+  noSchool?: boolean; // snow day, holiday
+  bellId?: string; // a different bell schedule that day
+  rotation?: string; // force the rotation day (and continue counting from it)
+}
+
+export interface SchoolSchedule {
+  updatedAt: string;
+  bells: BellSchedule[]; // the first one is the regular schedule
+  schoolDays: number[]; // weekdays with school, default Mon–Fri
+  rotation: string[]; // day labels in order, e.g. ['A', 'B']; empty = no rotation
+  rotationStart?: string; // a school day (YYYY-MM-DD) that is rotation[0]
+  weekdayBells?: Record<number, string>; // e.g. every Wednesday uses the late-start bell
+  overrides: Record<string, DayOverride>; // by YYYY-MM-DD
+  classes: ClassMeeting[];
+  attendance?: Record<string, Record<string, AttendanceMark>>; // day → class meeting id → mark
+}
+
+export type AttendanceMark = 'present' | 'late' | 'absent' | 'excused';
+
 export interface ExportBundle {
   version: 1;
   exportedAt: string;
@@ -287,6 +472,9 @@ export interface ExportBundle {
   dayNotes: DayNote[];
   decks?: Deck[];
   cards?: Card[];
+  tombstones?: Tombstone[];
+  ledger?: LedgerEntry[];
+  schedule?: SchoolSchedule;
   settings?: Partial<Settings>;
 }
 

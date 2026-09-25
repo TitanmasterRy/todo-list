@@ -28,7 +28,35 @@ export interface QuizSet {
   updatedAt: string;
 }
 
-export const SUBJECTS = ['Math', 'Science', 'Biology', 'Chemistry', 'Physics', 'English', 'History', 'Geography', 'Spanish', 'French', 'Computer Science', 'Health', 'Art', 'Music', 'Other'];
+/** Where Tools → Quiz maker keeps its sets (this browser only). Play → Quiz race reads them too. */
+export const QUIZSETS_KEY = 'homework-todo:quizsets';
+
+export function loadQuizSets(): QuizSet[] {
+  try {
+    const sets = JSON.parse(localStorage.getItem(QUIZSETS_KEY) ?? '[]') as QuizSet[];
+    return Array.isArray(sets) ? sets : [];
+  } catch {
+    return [];
+  }
+}
+
+export const SUBJECTS = [
+  'Math',
+  'Science',
+  'Biology',
+  'Chemistry',
+  'Physics',
+  'English',
+  'History',
+  'Geography',
+  'Spanish',
+  'French',
+  'Computer Science',
+  'Health',
+  'Art',
+  'Music',
+  'Other',
+];
 
 let n = 0;
 export function newQuestion(type: QuestionType = 'mc'): Question {
@@ -40,7 +68,10 @@ export function newQuestion(type: QuestionType = 'mc'): Question {
 
 export function correctText(q: Question): string {
   if (q.type === 'short' || q.type === 'fill') return q.answer ?? '';
-  return q.correct.map((i) => q.options[i] ?? '').filter(Boolean).join(' / ');
+  return q.correct
+    .map((i) => q.options[i] ?? '')
+    .filter(Boolean)
+    .join(' / ');
 }
 
 export function isComplete(q: Question): boolean {
@@ -67,7 +98,9 @@ export function toQuizlet(qs: Question[]): string {
 
 /** Blooket import template (Question Set → Import → Spreadsheet): Question #, Question Text, Answer 1–4, Time Limit (sec), Correct Answer(s) (1-based, comma-separated). */
 export function toBlooket(qs: Question[]): string {
-  const rows: (string | number | undefined)[][] = [['Question #', 'Question Text', 'Answer 1', 'Answer 2', 'Answer 3', 'Answer 4', 'Time Limit (sec) (Max: 300 seconds)', 'Correct Answer(s) (Only include Answer #)']];
+  const rows: (string | number | undefined)[][] = [
+    ['Question #', 'Question Text', 'Answer 1', 'Answer 2', 'Answer 3', 'Answer 4', 'Time Limit (sec) (Max: 300 seconds)', 'Correct Answer(s) (Only include Answer #)'],
+  ];
   let i = 1;
   for (const q of qs.filter(isComplete)) {
     const { options, correct } = asChoice(q);
@@ -90,10 +123,28 @@ export function toGimkit(qs: Question[]): string {
 
 /** Kahoot spreadsheet template: Question, Answer 1–4, Time limit, Correct answer(s). */
 export function toKahoot(qs: Question[]): string {
-  const rows: (string | number | undefined)[][] = [['Question - max 120 characters', 'Answer 1 - max 75 characters', 'Answer 2 - max 75 characters', 'Answer 3 - max 75 characters', 'Answer 4 - max 75 characters', 'Time limit (sec) – 5, 10, 20, 30, 60, 90, 120, or 240 secs', 'Correct answer(s) - choose at least one']];
+  const rows: (string | number | undefined)[][] = [
+    [
+      'Question - max 120 characters',
+      'Answer 1 - max 75 characters',
+      'Answer 2 - max 75 characters',
+      'Answer 3 - max 75 characters',
+      'Answer 4 - max 75 characters',
+      'Time limit (sec) – 5, 10, 20, 30, 60, 90, 120, or 240 secs',
+      'Correct answer(s) - choose at least one',
+    ],
+  ];
   for (const q of qs.filter(isComplete)) {
     const { options, correct } = asChoice(q);
-    rows.push([q.prompt.slice(0, 120), (options[0] ?? '').slice(0, 75), (options[1] ?? '').slice(0, 75), (options[2] ?? '').slice(0, 75), (options[3] ?? '').slice(0, 75), q.timeSec && [5, 10, 20, 30, 60, 90, 120, 240].includes(q.timeSec) ? q.timeSec : 20, correct.map((c) => c + 1).join(',')]);
+    rows.push([
+      q.prompt.slice(0, 120),
+      (options[0] ?? '').slice(0, 75),
+      (options[1] ?? '').slice(0, 75),
+      (options[2] ?? '').slice(0, 75),
+      (options[3] ?? '').slice(0, 75),
+      q.timeSec && [5, 10, 20, 30, 60, 90, 120, 240].includes(q.timeSec) ? q.timeSec : 20,
+      correct.map((c) => c + 1).join(','),
+    ]);
   }
   return csv(rows);
 }
@@ -101,13 +152,22 @@ export function toKahoot(qs: Question[]): string {
 /** Turn short-answer questions into 1-option choice rows for game platforms (they need options): uses the answer plus distractors from other questions. */
 export function asChoice(q: Question, pool: Question[] = []): { options: string[]; correct: number[] } {
   if (q.type === 'mc' || q.type === 'tf') return { options: q.options.slice(0, 4), correct: q.correct.filter((i) => i < 4) };
-  const distractors = pool.filter((p) => p.id !== q.id && (p.type === 'short' || p.type === 'fill') && p.answer).map((p) => p.answer!).slice(0, 3);
+  const distractors = pool
+    .filter((p) => p.id !== q.id && (p.type === 'short' || p.type === 'fill') && p.answer)
+    .map((p) => p.answer!)
+    .slice(0, 3);
   return { options: [q.answer ?? '', ...distractors], correct: [0] };
 }
 
 /** Printable worksheet + answer key in markdown. */
 export function toWorksheet(set: QuizSet, opts: { key?: boolean } = { key: true }): string {
-  const lines: string[] = [`# ${set.title}`, `${set.subject}${set.topic ? ` · ${set.topic}` : ''} · ${set.questions.length} questions · ${set.difficulty}`, '', 'Name: ______________________   Date: __________', ''];
+  const lines: string[] = [
+    `# ${set.title}`,
+    `${set.subject}${set.topic ? ` · ${set.topic}` : ''} · ${set.questions.length} questions · ${set.difficulty}`,
+    '',
+    'Name: ______________________   Date: __________',
+    '',
+  ];
   set.questions.forEach((q, i) => {
     lines.push(`**${i + 1}.** ${q.prompt}${q.type === 'fill' ? '' : ''}`);
     if (q.type === 'mc' || q.type === 'tf') q.options.filter((o) => o.trim()).forEach((o, j) => lines.push(`   ${String.fromCharCode(65 + j)}) ${o}`));
@@ -164,7 +224,12 @@ export function toQTI(set: QuizSet): string {
       const multi = q.correct.length > 1;
       const conditions = multi
         ? `<respcondition continue="No"><conditionvar><and>${q.correct.map((c) => `<varequal respident="response1">${ident}_${c}</varequal>`).join('')}</and></conditionvar><setvar action="Set" varname="SCORE">${pts}</setvar></respcondition>`
-        : q.correct.map((c) => `<respcondition continue="No"><conditionvar><varequal respident="response1">${ident}_${c}</varequal></conditionvar><setvar action="Set" varname="SCORE">${pts}</setvar></respcondition>`).join('');
+        : q.correct
+            .map(
+              (c) =>
+                `<respcondition continue="No"><conditionvar><varequal respident="response1">${ident}_${c}</varequal></conditionvar><setvar action="Set" varname="SCORE">${pts}</setvar></respcondition>`,
+            )
+            .join('');
       return `<item ident="${ident}" title="${xml(q.prompt.slice(0, 60))}">
   <itemmetadata><qtimetadata>
     <qtimetadatafield><fieldlabel>question_type</fieldlabel><fieldentry>${q.type === 'tf' ? 'true_false_question' : multi ? 'multiple_answers_question' : 'multiple_choice_question'}</fieldentry></qtimetadatafield>
@@ -230,9 +295,15 @@ export function toQTIZip(set: QuizSet): Uint8Array {
 /** Parse a pasted plain-text quiz: "1. Question?\nA) x\nB) y*\n..." where * marks correct; or "Q: … / A: …" pairs. */
 export function parseQuizText(text: string): Question[] {
   const out: Question[] = [];
-  const blocks = text.split(/\n\s*\n/).map((b) => b.trim()).filter(Boolean);
+  const blocks = text
+    .split(/\n\s*\n/)
+    .map((b) => b.trim())
+    .filter(Boolean);
   for (const b of blocks) {
-    const lines = b.split('\n').map((l) => l.trim()).filter(Boolean);
+    const lines = b
+      .split('\n')
+      .map((l) => l.trim())
+      .filter(Boolean);
     if (!lines.length) continue;
     const prompt = lines[0].replace(/^\d+[.)]\s*/, '').replace(/^q(?:uestion)?\s*[:.)-]\s*/i, '');
     const opts = lines.slice(1).filter((l) => /^[A-Da-d][.)]\s*/.test(l));

@@ -1,16 +1,33 @@
 // AI helper. Anthropic goes through the official SDK; every other provider speaks the OpenAI-compatible chat API.
-import Anthropic from '@anthropic-ai/sdk';
+import type Anthropic from '@anthropic-ai/sdk';
 import { store } from './store.svelte';
+import type { Found } from './syllabus';
+import { checkCap, recordUsage } from './aiusage';
 import type { AiProvider, TaskType } from './types';
-import { chatOpenAICompatible, providerInfo, type ChatImage, type ChatRequest } from './ai-providers';
+import { chatOpenAICompatible, cleanKey, listModelsOpenAICompatible, ModelNotFoundError, providerInfo, type ChatImage, type ChatRequest } from './ai-providers';
+import { hasSecret, secret, useSecret, type SecretSlot } from './secrets.svelte';
 
 export function currentProvider(): AiProvider {
   return store.settings.aiProvider || 'anthropic';
 }
 
+/** The provider's key slots (the old single Anthropic key field still counts). */
+function keySlots(provider: AiProvider): SecretSlot[] {
+  return provider === 'anthropic' ? ['aiKeys.anthropic', 'aiApiKey'] : [`aiKeys.${provider}`];
+}
+
 export function currentKey(provider: AiProvider = currentProvider()): string {
-  if (provider === 'anthropic') return store.settings.aiKeys.anthropic || store.settings.aiApiKey || '';
-  return store.settings.aiKeys[provider] || '';
+  return cleanKey(keySlots(provider).map(secret).find(Boolean) ?? '');
+}
+
+/** A key is saved for this provider (it may still be locked behind the passphrase). */
+export function hasKey(provider: AiProvider = currentProvider()): boolean {
+  return keySlots(provider).some(hasSecret);
+}
+
+/** Ask for the passphrase first if this provider's key is locked. */
+async function unlockKey(provider: AiProvider): Promise<void> {
+  for (const slot of keySlots(provider)) await useSecret(slot, { reason: 'Enter your passphrase to use your AI key.' });
 }
 
 export function currentModel(provider: AiProvider = currentProvider()): string {
@@ -24,7 +41,7 @@ export function aiAvailable(): boolean {
   const p = currentProvider();
   if (p === 'ollama') return true;
   if (p === 'custom') return !!store.settings.aiBaseUrl;
-  return !!currentKey(p);
+  return hasKey(p);
 }
 
 export function aiSupportsVision(): boolean {
@@ -34,50 +51,129 @@ export function aiSupportsVision(): boolean {
   return m ? m.vision : p === 'custom' || p === 'ollama';
 }
 
-function anthropicClient(): Anthropic {
+// The SDK is loaded on first use so it stays out of the main bundle.
+let sdk: Promise<typeof import('@anthropic-ai/sdk')> | null = null;
+function loadSdk(): Promise<typeof import('@anthropic-ai/sdk')> {
+  return (sdk ??= import('@anthropic-ai/sdk'));
+}
+
+async function anthropicClient(): Promise<Anthropic> {
+  await unlockKey('anthropic');
   const apiKey = currentKey('anthropic');
   if (!apiKey) throw new Error('Add an Anthropic API key in Settings → AI helper first.');
-  return new Anthropic({ apiKey, dangerouslyAllowBrowser: true });
+  const { default: AnthropicClient } = await loadSdk();
+  return new AnthropicClient({ apiKey, dangerouslyAllowBrowser: true });
+}
+
+/** Models that get server-side refusal fallbacks (the API re-runs a declined request on another model). */
+function wantsFallbacks(model: string): boolean {
+  return model === 'claude-opus-5' || model === 'claude-fable-5-1';
 }
 
 async function askAnthropic(req: ChatRequest): Promise<string> {
+  const { default: SDK } = await loadSdk();
+  const model = currentModel('anthropic');
+  const content: Anthropic.Beta.BetaContentBlockParam[] = [];
+  for (const img of req.images ?? []) {
+    const m = /^data:(image\/(?:jpeg|png|gif|webp));base64,(.*)$/.exec(img.dataUrl);
+    if (m) content.push({ type: 'image', source: { type: 'base64', media_type: m[1] as 'image/jpeg' | 'image/png' | 'image/gif' | 'image/webp', data: m[2] } });
+  }
+  content.push({ type: 'text', text: req.user });
+  const base: Anthropic.Beta.MessageCreateParamsNonStreaming = {
+    model,
+    // Current models think before answering, and thinking counts against max_tokens. A small cap
+    // (the old 16 for the key test, 2048 for answers) left nothing for the answer itself.
+    max_tokens: Math.max(req.maxTokens ?? 0, 16000),
+    system: req.system,
+    messages: [{ role: 'user', content }],
+    // effort isn't accepted by Haiku 4.5
+    ...(req.effort && !/haiku/.test(model) ? { output_config: { effort: req.effort } } : {}),
+  };
+  const client = await anthropicClient();
+  const send = (withFallbacks: boolean) => client.beta.messages.create(withFallbacks ? { ...base, betas: ['server-side-fallback-2026-07-01'], fallbacks: 'default' } : base);
   try {
-    const content: Anthropic.ContentBlockParam[] = [];
-    for (const img of req.images ?? []) {
-      const m = /^data:(image\/(?:jpeg|png|gif|webp));base64,(.*)$/.exec(img.dataUrl);
-      if (m) content.push({ type: 'image', source: { type: 'base64', media_type: m[1] as 'image/jpeg' | 'image/png' | 'image/gif' | 'image/webp', data: m[2] } });
+    let res: Anthropic.Beta.BetaMessage;
+    try {
+      res = await send(wantsFallbacks(model));
+    } catch (e) {
+      // if this key can't use the fallback beta, retry once without it
+      if (wantsFallbacks(model) && e instanceof SDK.BadRequestError && /fallback|beta/i.test(e.message)) res = await send(false);
+      else throw e;
     }
-    content.push({ type: 'text', text: req.user });
-    const res = await anthropicClient().messages.create({
-      model: currentModel('anthropic'),
-      max_tokens: req.maxTokens ?? 2048,
-      system: req.system,
-      messages: [{ role: 'user', content }],
-    });
-    if (res.stop_reason === 'refusal') throw new Error('The model declined this request.');
-    return res.content
-      .filter((b): b is Anthropic.TextBlock => b.type === 'text')
+    const text = res.content
+      .filter((b): b is Anthropic.Beta.BetaTextBlock => b.type === 'text')
       .map((b) => b.text)
       .join('\n')
       .trim();
+    if (res.stop_reason === 'refusal') throw new Error('The model declined this request.');
+    if (!text && res.stop_reason === 'max_tokens') throw new Error('The response was cut off before any answer. Try a shorter request.');
+    return text;
   } catch (e) {
-    if (e instanceof Anthropic.AuthenticationError) throw new Error('API key rejected. Check it in Settings → AI helper.');
-    if (e instanceof Anthropic.RateLimitError) throw new Error('Rate limited. Try again in a moment.');
-    if (e instanceof Anthropic.APIError) throw new Error(`API error ${e.status}: ${e.message}`);
+    if (e instanceof SDK.AuthenticationError || e instanceof SDK.PermissionDeniedError) throw new Error('API key rejected. Check it in Settings → AI helper.');
+    if (e instanceof SDK.NotFoundError) throw new ModelNotFoundError(`Model “${model}” isn't available to this key.`);
+    if (e instanceof SDK.RateLimitError) throw new Error('Rate limited. Try again in a moment.');
+    if (e instanceof SDK.APIConnectionError) throw new Error('Could not reach api.anthropic.com. Check your connection.');
+    if (e instanceof SDK.APIError) throw new Error(`API error ${e.status}: ${e.message}`);
     throw e;
   }
 }
 
 /** Route a request to the configured provider. */
-export async function ask(system: string, user: string, maxTokens = 2048, images?: ChatImage[]): Promise<string> {
+export async function ask(system: string, user: string, maxTokens = 2048, images?: ChatImage[], effort?: ChatRequest['effort']): Promise<string> {
+  checkCap(store.settings.aiMonthlyCap);
   const provider = currentProvider();
-  const req: ChatRequest = { system, user, maxTokens, images };
+  const reply = await askProvider(provider, { system, user, maxTokens, images, effort });
+  recordUsage(provider, system + user, images?.length ?? 0, reply);
+  return reply;
+}
+
+async function askProvider(provider: AiProvider, req: ChatRequest): Promise<string> {
   if (provider === 'anthropic') return askAnthropic(req);
+  const info = providerInfo(provider);
+  await unlockKey(provider);
+  if (info.needsKey && !currentKey(provider)) throw new Error(`Add a ${info.name} API key in Settings → AI helper first.`);
+  return chatOpenAICompatible({ baseUrl: baseUrlFor(provider), apiKey: currentKey(provider) || undefined, model: currentModel(provider), provider }, req);
+}
+
+function baseUrlFor(provider: AiProvider): string {
   const info = providerInfo(provider);
   const baseUrl = provider === 'custom' ? store.settings.aiBaseUrl : provider === 'ollama' && store.settings.aiBaseUrl ? store.settings.aiBaseUrl : info.baseUrl;
   if (!baseUrl) throw new Error('Set the endpoint URL for your custom provider in Settings → AI helper.');
-  if (info.needsKey && !currentKey(provider)) throw new Error(`Add a ${info.name} API key in Settings → AI helper first.`);
-  return chatOpenAICompatible({ baseUrl, apiKey: currentKey(provider) || undefined, model: currentModel(provider), provider }, req);
+  return baseUrl;
+}
+
+/** Live model list for the current provider (also proves the key works). Cached in settings. */
+export async function listModels(provider: AiProvider = currentProvider()): Promise<{ id: string; free?: boolean }[]> {
+  let models: { id: string; free?: boolean }[];
+  if (provider === 'anthropic') {
+    const { default: SDK } = await loadSdk();
+    try {
+      const page = await (await anthropicClient()).models.list({ limit: 100 });
+      models = page.data.map((m) => ({ id: m.id }));
+    } catch (e) {
+      if (e instanceof SDK.AuthenticationError || e instanceof SDK.PermissionDeniedError) throw new Error('API key rejected. Check it in Settings → AI helper.');
+      if (e instanceof SDK.APIConnectionError) throw new Error('Could not reach api.anthropic.com. Check your connection.');
+      throw e;
+    }
+  } else {
+    await unlockKey(provider);
+    models = await listModelsOpenAICompatible({ baseUrl: baseUrlFor(provider), apiKey: currentKey(provider) || undefined, provider });
+  }
+  if (models.length) store.updateSettings({ aiModelCache: { ...store.settings.aiModelCache, [provider]: models.map((m) => (m.free ? `${m.id}|free` : m.id)) } });
+  return models;
+}
+
+/** Pick a sensible replacement when the chosen model id no longer exists. */
+function pickReplacement(provider: AiProvider, models: { id: string; free?: boolean }[]): string | undefined {
+  const ids = models.map((m) => m.id);
+  const known = providerInfo(provider)
+    .models.map((m) => m.id)
+    .find((id) => ids.includes(id));
+  if (known) return known;
+  if (provider === 'openrouter') return models.find((m) => m.free)?.id ?? ids[0];
+  if (provider === 'gemini') return ids.find((id) => /gemini-.*flash/.test(id) && !/image|tts|audio|live|embedding/.test(id)) ?? ids[0];
+  if (provider === 'anthropic') return ids.find((id) => id.startsWith('claude-sonnet')) ?? ids[0];
+  return ids.find((id) => !/embed|whisper|tts|guard|audio|image/i.test(id)) ?? ids[0];
 }
 
 function parseJSON<T>(text: string): T {
@@ -153,9 +249,47 @@ export async function summarizeNotes(text: string): Promise<string> {
   return ask(system, text.slice(0, 20000), 3000);
 }
 
-/** Quick connectivity check. */
+/**
+ * Connectivity check: list models (proves the key), then send a tiny prompt (proves the model).
+ * If the chosen model has been retired or isn't available to this key, switch to one that is.
+ * Returns a note about what changed, if anything.
+ */
 export async function testKey(): Promise<string> {
-  return ask('Reply with the single word OK.', 'ping', 16);
+  const provider = currentProvider();
+  let models: { id: string; free?: boolean }[] = [];
+  try {
+    models = await listModels(provider);
+  } catch (e) {
+    // some OpenAI-compatible servers don't implement /models; a rejected key is still fatal
+    if (e instanceof Error && /rejected/i.test(e.message)) throw e;
+  }
+  let note = '';
+  const chosen = currentModel(provider);
+  if (models.length && provider !== 'custom' && !models.some((m) => m.id === chosen)) {
+    const next = pickReplacement(provider, models);
+    if (next) {
+      setModel(provider, next);
+      note = `“${chosen}” isn't available, switched to ${next}.`;
+    }
+  }
+  try {
+    await ask('Reply with the single word OK.', 'ping', 64, undefined, 'low');
+  } catch (e) {
+    if (!(e instanceof ModelNotFoundError) || !models.length) throw e;
+    const next = pickReplacement(
+      provider,
+      models.filter((m) => m.id !== currentModel(provider)),
+    );
+    if (!next) throw e;
+    setModel(provider, next);
+    note = `${e.message} Switched to ${next}.`;
+    await ask('Reply with the single word OK.', 'ping', 64, undefined, 'low');
+  }
+  return note;
+}
+
+export function setModel(provider: AiProvider, model: string): void {
+  store.updateSettings({ aiModels: { ...store.settings.aiModels, [provider]: model }, aiModel: provider === 'anthropic' ? model : store.settings.aiModel });
 }
 
 export interface QuizGenOptions {
@@ -190,7 +324,9 @@ export async function generateQuiz(o: QuizGenOptions): Promise<GeneratedQuestion
     `Count: ${o.count}`,
     `Difficulty: ${o.difficulty}`,
     `Question types to use: ${o.types.join(', ')}`,
-    o.audience === 'teacher' ? 'Audience: teacher building a graded quiz; questions should be assessment quality with clear, defensible answers.' : 'Audience: student studying; questions should teach the key ideas.',
+    o.audience === 'teacher'
+      ? 'Audience: teacher building a graded quiz; questions should be assessment quality with clear, defensible answers.'
+      : 'Audience: student studying; questions should teach the key ideas.',
     o.source ? `Base the questions on this material:\n${o.source.slice(0, 12000)}` : '',
   ]
     .filter(Boolean)
@@ -199,4 +335,41 @@ export async function generateQuiz(o: QuizGenOptions): Promise<GeneratedQuestion
   const arr = parseJSON<GeneratedQuestion[]>(text);
   if (!Array.isArray(arr)) throw new Error('Unexpected response');
   return arr.filter((q) => q && typeof q.prompt === 'string');
+}
+
+/** Syllabus box with AI: pull dated work and breaks out of messy syllabus text, or photos of the board / a handout. */
+export async function extractSyllabusAI(text: string, today: string, images?: ChatImage[]): Promise<Found[]> {
+  const system =
+    'You read school syllabi and course schedules. Output ONLY a JSON array. For each assignment, test, quiz, project, reading or deadline with a date, output ' +
+    '{"kind":"task","title": short title without the date,"date":"YYYY-MM-DD","type": one of "homework","reading","exam","project","quiz","other"}. ' +
+    'For breaks, holidays or days without class output {"kind":"break","name": string,"from":"YYYY-MM-DD","to":"YYYY-MM-DD"}. ' +
+    `Dates without a year belong to the school year around ${today}. Skip anything without a date. No markdown fences, no commentary.`;
+  const out = await ask(system, text.slice(0, 20000), 8192, images);
+  const rows = parseJSON<Record<string, unknown>[]>(out);
+  if (!Array.isArray(rows)) throw new Error('Unexpected response');
+  const types: TaskType[] = ['homework', 'reading', 'exam', 'project', 'quiz', 'other'];
+  const isKey = (x: unknown): x is string => typeof x === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(x);
+  const found: Found[] = [];
+  for (const r of rows) {
+    if (r?.kind === 'break' && isKey(r.from) && isKey(r.to)) found.push({ kind: 'break', name: String(r.name ?? 'Break').slice(0, 60), from: r.from, to: r.to, line: '' });
+    else if (typeof r?.title === 'string' && isKey(r.date))
+      found.push({ kind: 'task', title: r.title.slice(0, 140), dateKey: r.date, type: types.includes(r.type as TaskType) ? (r.type as TaskType) : 'homework', line: '' });
+  }
+  return found.sort((a, b) => ((a.kind === 'task' ? a.dateKey : a.from) < (b.kind === 'task' ? b.dateKey : b.from) ? -1 : 1));
+}
+
+/** Practice test → "Why?": explain a wrong answer briefly and kindly, with a tip to remember it. */
+export async function explainMistake(q: { prompt: string; correct: string; yours: string; explanation?: string; subject?: string }): Promise<string> {
+  const system =
+    'You are a patient tutor. A student got a practice question wrong. In at most 4 short sentences of markdown: say why their answer is wrong (or what it mixes up), why the correct answer is right, and one memorable tip. Be encouraging, no preamble.';
+  const user = [
+    q.subject && `Subject: ${q.subject}`,
+    `Question: ${q.prompt}`,
+    `Correct answer: ${q.correct}`,
+    `Student's answer: ${q.yours || '(left blank)'}`,
+    q.explanation && `Teacher's note: ${q.explanation}`,
+  ]
+    .filter(Boolean)
+    .join('\n');
+  return (await ask(system, user, 1024)).trim();
 }

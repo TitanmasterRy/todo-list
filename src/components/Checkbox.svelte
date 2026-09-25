@@ -58,7 +58,7 @@
       <path d="M5 12.5l4.5 4.5L19 7.5" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" />
     </svg>
   </span>
-  {#if burst && !store.settings.reducedMotion && !prefersReduced}
+  {#if burst && store.settings.celebrations !== false && !store.settings.reducedMotion && !prefersReduced}
     {#key burst}
       <span class="particles" aria-hidden="true">
         {#each particles as p}

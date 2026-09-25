@@ -21,7 +21,7 @@ function task(id: string, over: Partial<Task> = {}): Task {
 
 describe('storage', () => {
   beforeEach(() => {
-    indexedDB = new IDBFactory();
+    Object.assign(globalThis, { indexedDB: new IDBFactory() });
     storage.resetDBCache();
   });
 

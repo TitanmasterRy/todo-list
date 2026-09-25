@@ -40,7 +40,11 @@
 
 <section class="card">
   <h2>Study help</h2>
-  <p class="help">Quick reference sheets for common topics. Search, then open a sheet. {aiAvailable() ? 'Ask the tutor below for anything else.' : 'Add an API key in Settings → AI helper to ask questions in your own words.'}</p>
+  <p class="help">
+    Quick reference sheets for common topics. Search, then open a sheet. {aiAvailable()
+      ? 'Ask the tutor below for anything else.'
+      : 'Add an API key in Settings → AI helper to ask questions in your own words.'}
+  </p>
   <div class="search">
     <input class="input" bind:value={q} placeholder="Search: derivatives, quadratic, MLA, stoichiometry…" aria-label="Search topics" data-study-search />
     <div class="subs">
@@ -61,19 +65,27 @@
           <div class="body">
             {#each t.sections as s}
               <h4>{s.heading}</h4>
-              <ul>{#each s.items as item}<li>{@html inlineMd(item)}</li>{/each}</ul>
+              <ul>
+                {#each s.items as item}<li>{@html inlineMd(item)}</li>{/each}
+              </ul>
             {/each}
             {#if t.deeper?.length}
               <h4>Understanding it (textbook level)</h4>
               {#each t.deeper as d}
-                <details class="deep"><summary>{d.heading}</summary><p>{@html inlineMd(d.text)}</p></details>
+                <details class="deep">
+                  <summary>{d.heading}</summary>
+                  <p>{@html inlineMd(d.text)}</p>
+                </details>
               {/each}
             {/if}
             {#if t.examples?.length}
               <h4>Worked examples</h4>
               {#each t.examples as ex, i}
-                <details class="ex"><summary><strong>Example {i + 1}.</strong> {@html inlineMd(ex.problem)}</summary>
-                  <ol>{#each ex.steps as st}<li>{@html inlineMd(st)}</li>{/each}</ol>
+                <details class="ex">
+                  <summary><strong>Example {i + 1}.</strong> {@html inlineMd(ex.problem)}</summary>
+                  <ol>
+                    {#each ex.steps as st}<li>{@html inlineMd(st)}</li>{/each}
+                  </ol>
                   <p class="ans">Answer: {@html inlineMd(ex.answer)}</p>
                 </details>
               {/each}
@@ -82,10 +94,15 @@
               <h4>Free textbook</h4>
               <ul class="books">
                 {#each t.textbook as b}
-                  <li>📘 <a href={b.url} target="_blank" rel="noopener noreferrer">{b.title}</a>{#if b.chapter} <span class="muted">· {b.chapter}</span>{/if}</li>
+                  <li>
+                    📘 <a href={b.url} target="_blank" rel="noopener noreferrer">{b.title}</a>{#if b.chapter}
+                      <span class="muted">· {b.chapter}</span>{/if}
+                  </li>
                 {/each}
               </ul>
-              <p class="muted">OpenStax books are free and peer-reviewed. Download the PDF from the book page and open it in Tools → Book reader to read, highlight and make notecards.</p>
+              <p class="muted">
+                OpenStax books are free and peer-reviewed. Download the PDF from the book page and open it in Tools → Book reader to read, highlight and make notecards.
+              </p>
             {/if}
           </div>
         {/if}
@@ -96,9 +113,21 @@
 </section>
 
 <section class="card ask">
-  <h2>Ask the tutor {#if !aiAvailable()}<span class="muted">(optional AI)</span>{/if}</h2>
-  <form onsubmit={(e) => { e.preventDefault(); void ask(); }}>
-    <textarea class="textarea" bind:value={question} placeholder={aiAvailable() ? 'Explain how to find the derivative of x² sin(x), then give me one to try' : 'Add your Anthropic API key in Settings → AI helper to enable this'} disabled={!aiAvailable()}></textarea>
+  <h2>
+    Ask the tutor {#if !aiAvailable()}<span class="muted">(optional AI)</span>{/if}
+  </h2>
+  <form
+    onsubmit={(e) => {
+      e.preventDefault();
+      void ask();
+    }}
+  >
+    <textarea
+      class="textarea"
+      bind:value={question}
+      placeholder={aiAvailable() ? 'Explain how to find the derivative of x² sin(x), then give me one to try' : 'Add your Anthropic API key in Settings → AI helper to enable this'}
+      disabled={!aiAvailable()}
+    ></textarea>
     <div class="btns">
       <button class="btn primary" type="submit" disabled={!aiAvailable() || !question.trim() || busy}>{busy ? 'Thinking…' : 'Ask'}</button>
       {#if open}<span class="muted">Context: {TOPICS.find((t) => t.id === open)?.title}</span>{/if}
@@ -110,34 +139,152 @@
 </section>
 
 <style>
-  section { margin-bottom: 12px; }
-  h2 { font-size: 16px; margin: 0 0 6px; }
-  .help, .muted { font-size: 13px; color: var(--text-muted); font-weight: 400; }
-  .search { display: flex; flex-direction: column; gap: 8px; margin: 8px 0 12px; }
-  .subs { display: flex; gap: 4px; flex-wrap: wrap; }
-  .subs .chip { cursor: pointer; }
-  .subs .chip.on { border-color: var(--accent); color: var(--accent); }
-  .topics { display: flex; flex-direction: column; gap: 6px; }
-  .topic { border: 1px solid var(--border); border-radius: 10px; overflow: hidden; }
-  .topic.open { border-color: var(--accent); }
-  .t-head { width: 100%; display: flex; align-items: center; gap: 10px; padding: 10px 12px; text-align: left; color: var(--text); }
-  .t-head:hover { background: var(--bg-hover); }
-  .emoji { font-size: 18px; }
-  .title { font-weight: 600; flex: 1; }
-  .tags { font-size: 11px; color: var(--text-faint); }
-  .body { padding: 4px 14px 12px; font-size: 14px; }
-  .body h4 { margin: 10px 0 4px; font-size: 12px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-muted); }
-  .body ul { margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 3px; }
-  .body :global(code) { font-family: var(--mono); font-size: 12px; background: var(--bg-elev-2); padding: 1px 4px; border-radius: 4px; }
-  .deep, .ex { margin: 4px 0; padding: 6px 10px; border-radius: 8px; background: var(--bg-elev-2); font-size: 13px; }
-  .deep summary, .ex summary { cursor: pointer; }
-  .deep p { margin: 6px 0 0; line-height: 1.5; }
-  .ex ol { margin: 6px 0; padding-left: 20px; display: flex; flex-direction: column; gap: 3px; }
-  .ans { margin: 4px 0 0; font-weight: 600; color: var(--success); }
-  .books { list-style: none; padding: 0; margin: 0 0 6px; }
-  .ask .textarea { min-height: 70px; }
-  .btns { display: flex; gap: 10px; align-items: center; margin-top: 6px; }
-  .answer { margin-top: 12px; padding: 12px; background: var(--bg-elev-2); border-radius: 10px; font-size: 14px; }
-  .answer :global(p) { margin: 0 0 8px; }
-  .answer :global(code) { font-family: var(--mono); font-size: 12px; }
+  section {
+    margin-bottom: 12px;
+  }
+  h2 {
+    font-size: 16px;
+    margin: 0 0 6px;
+  }
+  .help,
+  .muted {
+    font-size: 13px;
+    color: var(--text-muted);
+    font-weight: 400;
+  }
+  .search {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin: 8px 0 12px;
+  }
+  .subs {
+    display: flex;
+    gap: 4px;
+    flex-wrap: wrap;
+  }
+  .subs .chip {
+    cursor: pointer;
+  }
+  .subs .chip.on {
+    border-color: var(--accent);
+    color: var(--accent-text);
+  }
+  .topics {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .topic {
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    overflow: hidden;
+  }
+  .topic.open {
+    border-color: var(--accent);
+  }
+  .t-head {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 12px;
+    text-align: left;
+    color: var(--text);
+  }
+  .t-head:hover {
+    background: var(--bg-hover);
+  }
+  .emoji {
+    font-size: 18px;
+  }
+  .title {
+    font-weight: 600;
+    flex: 1;
+  }
+  .tags {
+    font-size: 11px;
+    color: var(--text-faint);
+  }
+  .body {
+    padding: 4px 14px 12px;
+    font-size: 14px;
+  }
+  .body h4 {
+    margin: 10px 0 4px;
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--text-muted);
+  }
+  .body ul {
+    margin: 0;
+    padding-left: 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+  }
+  .body :global(code) {
+    font-family: var(--mono);
+    font-size: 12px;
+    background: var(--bg-elev-2);
+    padding: 1px 4px;
+    border-radius: 4px;
+  }
+  .deep,
+  .ex {
+    margin: 4px 0;
+    padding: 6px 10px;
+    border-radius: 8px;
+    background: var(--bg-elev-2);
+    font-size: 13px;
+  }
+  .deep summary,
+  .ex summary {
+    cursor: pointer;
+  }
+  .deep p {
+    margin: 6px 0 0;
+    line-height: 1.5;
+  }
+  .ex ol {
+    margin: 6px 0;
+    padding-left: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+  }
+  .ans {
+    margin: 4px 0 0;
+    font-weight: 600;
+    color: var(--success-text);
+  }
+  .books {
+    list-style: none;
+    padding: 0;
+    margin: 0 0 6px;
+  }
+  .ask .textarea {
+    min-height: 70px;
+  }
+  .btns {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    margin-top: 6px;
+  }
+  .answer {
+    margin-top: 12px;
+    padding: 12px;
+    background: var(--bg-elev-2);
+    border-radius: 10px;
+    font-size: 14px;
+  }
+  .answer :global(p) {
+    margin: 0 0 8px;
+  }
+  .answer :global(code) {
+    font-family: var(--mono);
+    font-size: 12px;
+  }
 </style>

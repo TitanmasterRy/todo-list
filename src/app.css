@@ -6,7 +6,13 @@
   --bg-hover: #252a35;
   --text: #e8eaf0;
   --text-muted: #9aa1b2;
-  --text-faint: #6b7280;
+  --text-faint: var(--text-muted); /* kept as a token; separate faint grays failed 4.5:1 contrast */
+  --accent-contrast: #fff;
+  /* text versions of the signal colors, mixed toward the theme's text color so they pass 4.5:1 on its surfaces */
+  --accent-text: color-mix(in srgb, var(--accent) 70%, var(--text));
+  --success-text: color-mix(in srgb, var(--success) 60%, var(--text));
+  --danger-text: color-mix(in srgb, var(--danger) 75%, var(--text));
+  --warn-text: color-mix(in srgb, var(--warn) 55%, var(--text));
   --border: #2a2f3a;
   --border-strong: #3a4150;
   --danger: #ef4444;
@@ -35,7 +41,6 @@
   --bg-hover: #e9ecf3;
   --text: #171923;
   --text-muted: #5b6270;
-  --text-faint: #8b92a3;
   --border: #e1e4ec;
   --border-strong: #c9cedb;
   --overdue: #dc2626;
@@ -51,7 +56,6 @@
   --bg-hover: #252a35;
   --text: #e8eaf0;
   --text-muted: #9aa1b2;
-  --text-faint: #6b7280;
   --border: #2a2f3a;
   --border-strong: #3a4150;
   --overdue: #f87171;
@@ -134,7 +138,7 @@ button:disabled {
 }
 
 a {
-  color: var(--accent);
+  color: var(--accent-text);
 }
 
 :focus-visible {
@@ -164,7 +168,10 @@ a {
   color: var(--text);
   font-weight: 500;
   font-size: 14px;
-  transition: background var(--dur) var(--ease), transform var(--dur) var(--ease), border-color var(--dur);
+  transition:
+    background var(--dur) var(--ease),
+    transform var(--dur) var(--ease),
+    border-color var(--dur);
   white-space: nowrap;
 }
 .btn:hover {
@@ -177,14 +184,14 @@ a {
 .btn.primary {
   background: var(--accent);
   border-color: transparent;
-  color: #fff;
+  color: var(--accent-contrast, #fff);
 }
 .btn.primary:hover {
   filter: brightness(1.1);
   background: var(--accent);
 }
 .btn.danger {
-  color: var(--danger);
+  color: var(--danger-text);
   border-color: color-mix(in srgb, var(--danger) 40%, transparent);
 }
 .btn.danger:hover {
@@ -260,15 +267,16 @@ a {
   background: color-mix(in srgb, var(--overdue) 12%, transparent);
 }
 .chip.today {
-  color: var(--accent);
+  /* accent text on an accent tint needs darkening (light) or lightening (dark) to reach 4.5:1 */
+  color: var(--accent-text);
   border-color: color-mix(in srgb, var(--accent) 40%, transparent);
   background: color-mix(in srgb, var(--accent) 12%, transparent);
 }
 .chip.p-high {
-  color: var(--warn);
+  color: var(--warn-text);
 }
 .chip.p-urgent {
-  color: var(--danger);
+  color: var(--danger-text);
 }
 .chip.exam,
 .chip.quiz {
@@ -420,6 +428,12 @@ a {
   }
 }
 
+/* arrows and other directional glyphs point the other way in right-to-left layouts */
+[dir='rtl'] .flip {
+  display: inline-block;
+  transform: scaleX(-1);
+}
+
 @keyframes pop-in {
   from {
     transform: scale(0.94);
@@ -478,4 +492,44 @@ a {
 :root[data-pack='nature'] .card,
 :root[data-pack='nature'] .task {
   box-shadow: 0 1px 0 color-mix(in srgb, var(--border-strong) 40%, transparent);
+}
+
+/* High contrast (Settings → Appearance): stronger borders and focus rings, muted text close to body text, underlined links. */
+:root.high-contrast {
+  --text-muted: color-mix(in srgb, var(--text) 88%, var(--bg));
+  --border: color-mix(in srgb, var(--text) 45%, var(--bg));
+  --border-strong: var(--text);
+  --accent-text: color-mix(in srgb, var(--accent) 45%, var(--text));
+}
+:root.high-contrast :focus-visible {
+  outline: 3px solid var(--text) !important;
+  outline-offset: 2px;
+}
+:root.high-contrast a {
+  text-decoration: underline;
+}
+:root.high-contrast .btn,
+:root.high-contrast .input,
+:root.high-contrast .select,
+:root.high-contrast .textarea,
+:root.high-contrast .card {
+  border-width: 2px;
+}
+
+/* Segmented toggle (Upcoming list/month, casino options, arcade admin) */
+.cz-seg {
+  display: inline-flex;
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  border: 1px solid var(--border);
+}
+.cz-seg button {
+  padding: 6px 12px;
+  font-size: 13px;
+  background: var(--bg-elev);
+  color: var(--text-muted);
+}
+.cz-seg button.on {
+  background: var(--accent);
+  color: var(--accent-contrast, #fff);
 }

@@ -2,11 +2,20 @@
   import { fly } from 'svelte/transition';
   import { flip } from 'svelte/animate';
   import { toasts } from '../lib/toast.svelte';
+  import { t as tr } from '../lib/i18n/index.svelte';
 </script>
 
 <div class="toasts" aria-live="polite" aria-relevant="additions">
   {#each toasts.items as t (t.id)}
-    <div class="toast {t.kind}" class:combo={(t.combo ?? 0) > 0} style="--combo:{Math.min(10, t.combo ?? 0)}" in:fly={{ y: 20, duration: 220 }} out:fly={{ y: 10, duration: 160 }} animate:flip={{ duration: 200 }} role="status">
+    <div
+      class="toast {t.kind}"
+      class:combo={(t.combo ?? 0) > 0}
+      style="--combo:{Math.min(10, t.combo ?? 0)}"
+      in:fly={{ y: 20, duration: 220 }}
+      out:fly={{ y: 10, duration: 160 }}
+      animate:flip={{ duration: 200 }}
+      role="status"
+    >
       {#if t.emoji}<span class="emoji">{t.emoji}</span>{/if}
       <div class="body">
         <div class="msg">{t.message}</div>
@@ -15,7 +24,7 @@
       {#if t.action}
         <button class="btn sm act" onclick={t.action.onClick}>{t.action.label}</button>
       {/if}
-      <button class="x" onclick={() => toasts.dismiss(t.id)} aria-label="Dismiss">×</button>
+      <button class="x" onclick={() => toasts.dismiss(t.id)} aria-label={tr('common.dismiss')}>×</button>
     </div>
   {/each}
 </div>

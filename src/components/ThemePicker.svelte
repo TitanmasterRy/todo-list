@@ -14,11 +14,22 @@
 
 <div class="packs">
   {#each THEMES as t (t.id)}
-    <button class="pack" class:on={store.settings.themePack === t.id} onclick={() => pick(t.id)} aria-pressed={store.settings.themePack === t.id} style="--pc:{t.confetti[0]}; --pc2:{t.confetti[1]}; --pc3:{t.confetti[2]}">
+    <button
+      class="pack"
+      class:on={store.settings.themePack === t.id}
+      onclick={() => pick(t.id)}
+      aria-pressed={store.settings.themePack === t.id}
+      style="--pc:{t.confetti[0]}; --pc2:{t.confetti[1]}; --pc3:{t.confetti[2]}"
+    >
       <span class="swatch"><i></i><i></i><i></i></span>
       <span class="name">{t.emoji} {t.name}</span>
       <span class="tag">{t.tagline}</span>
-      <span class="meta">sound: {t.sound} · {t.particles.shapes.filter((s) => !['dot','line','pixel','star'].includes(s)).slice(0, 3).join(' ') || t.particles.shapes[0]} particles</span>
+      <span class="meta"
+        >sound: {t.sound} · {t.particles.shapes
+          .filter((s) => !['dot', 'line', 'pixel', 'star'].includes(s))
+          .slice(0, 3)
+          .join(' ') || t.particles.shapes[0]} particles</span
+      >
     </button>
   {/each}
 </div>
@@ -40,7 +51,9 @@
     text-align: left;
     color: var(--text);
     background: var(--bg-elev-2);
-    transition: transform var(--dur) var(--spring), border-color var(--dur);
+    transition:
+      transform var(--dur) var(--spring),
+      border-color var(--dur);
   }
   .pack:hover {
     transform: translateY(-2px);

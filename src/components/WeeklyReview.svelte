@@ -32,6 +32,19 @@
   const heaviest = $derived(nextDays.reduce((best, d) => (d.min > best.min || (d.min === best.min && d.n > best.n) ? d : best), nextDays[0]));
   const maxMin = $derived(Math.max(1, ...nextDays.map((d) => d.min)));
   const overdue = $derived(store.overdueTasks.length);
+  // coins this week (local days), from the ledger
+  const weekCoins = $derived.by(() => {
+    let earned = 0;
+    let spent = 0;
+    let quests = 0;
+    for (const e of store.ledger) {
+      if (e.currency !== 'coins' || dueKey(e.at) < since) continue;
+      if (e.amount > 0) earned += e.amount;
+      else if (e.reason.startsWith('shop:')) spent -= e.amount;
+      if (e.reason === 'quest' && e.amount > 0 && !e.ref?.endsWith(':all')) quests++;
+    }
+    return { earned, spent, quests };
+  });
   const dayLabel = (k: string) => {
     const d = fromKey(k);
     return `${DAY_NAMES[d.getDay()]} ${MONTH_SHORT[d.getMonth()]} ${d.getDate()}`;
@@ -42,9 +55,8 @@
   }
 </script>
 
-<!-- svelte-ignore a11y_no_static_element_interactions, a11y_click_events_have_key_events -->
 <div class="modal-backdrop" onclick={close} role="presentation">
-  <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
+  <!-- svelte-ignore a11y_click_events_have_key_events -->
   <div use:focusTrap class="modal review" role="dialog" aria-modal="true" aria-label="Weekly review" tabindex="-1" onclick={(e) => e.stopPropagation()}>
     <h2>📋 Weekly review</h2>
     <p class="muted">Last 7 days, and a look at the week ahead.</p>
@@ -68,7 +80,11 @@
         <h3>Biggest wins</h3>
         <ul class="wins">
           {#each wins as t (t.id)}
-            <li>🏆 <strong>{t.title}</strong>{#if store.courseById(t.courseId)} <span class="muted">· {store.courseById(t.courseId)?.name}</span>{/if}{#if t.estimateMin} <span class="muted">· {formatMinutes(t.estimateMin)}</span>{/if}</li>
+            <li>
+              🏆 <strong>{t.title}</strong>{#if store.courseById(t.courseId)}
+                <span class="muted">· {store.courseById(t.courseId)?.name}</span>{/if}{#if t.estimateMin}
+                <span class="muted">· {formatMinutes(t.estimateMin)}</span>{/if}
+            </li>
           {/each}
         </ul>
       </section>
@@ -92,11 +108,34 @@
       {/if}
     </section>
 
+    {#if store.settings.economyEnabled}
+      <section>
+        <h3>Coins this week</h3>
+        <p>
+          Earned <strong>{weekCoins.earned.toLocaleString()} 🪙</strong>{weekCoins.spent ? `, spent ${weekCoins.spent.toLocaleString()}` : ''}{weekCoins.quests
+            ? ` · ${weekCoins.quests} daily quest${weekCoins.quests === 1 ? '' : 's'} claimed`
+            : ''}.
+        </p>
+      </section>
+    {/if}
+
     <section>
       <h3>Next week</h3>
-      {#if overdue}<p class="warn">⚠ {overdue} overdue task{overdue > 1 ? 's' : ''} to deal with first. <button class="link" onclick={() => { store.rollOverdueToToday(); }}>Roll to today</button></p>{/if}
+      {#if overdue}<p class="warn">
+          ⚠ {overdue} overdue task{overdue > 1 ? 's' : ''} to deal with first.
+          <button
+            class="link"
+            onclick={() => {
+              store.rollOverdueToToday();
+            }}>Roll to today</button
+          >
+        </p>{/if}
       {#if heaviest && heaviest.n}
-        <p>Heaviest day: <strong>{dayLabel(heaviest.key)}</strong> with {heaviest.n} task{heaviest.n > 1 ? 's' : ''}{heaviest.min ? ` (${formatMinutes(heaviest.min)})` : ''}{heaviest.exams ? ` including ${heaviest.exams} exam/quiz` : ''}.</p>
+        <p>
+          Heaviest day: <strong>{dayLabel(heaviest.key)}</strong> with {heaviest.n} task{heaviest.n > 1 ? 's' : ''}{heaviest.min
+            ? ` (${formatMinutes(heaviest.min)})`
+            : ''}{heaviest.exams ? ` including ${heaviest.exams} exam/quiz` : ''}.
+        </p>
       {:else}
         <p class="muted">Nothing scheduled for the next 7 days.</p>
       {/if}
@@ -139,11 +178,11 @@
     letter-spacing: 0;
   }
   .warn {
-    color: var(--warn);
+    color: var(--warn-text);
     font-size: 14px;
   }
   .link {
-    color: var(--accent);
+    color: var(--accent-text);
     font-weight: 500;
   }
   ul {

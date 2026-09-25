@@ -1,14 +1,14 @@
 <script lang="ts">
   import { store, byDueThenOrder } from '../lib/store.svelte';
-  import { ui } from '../lib/ui.svelte';
   import { toasts } from '../lib/toast.svelte';
   import type { Task } from '../lib/types';
   import { addDaysKey, dueKey, isOverdue, isDueToday } from '../lib/dates';
   import { schoology, syncNow, syncFromText, testApiCredentials, schoologyConfigured } from '../lib/schoologySync.svelte';
   import { isSchoologyFeedUrl } from '../lib/schoology';
+  import { forgetSecret, secret } from '../lib/secrets.svelte';
   let mode = $state<'api' | 'ics'>(store.settings.schoologyMode);
-  let apiKey = $state(store.settings.schoologyKey);
-  let apiSecret = $state(store.settings.schoologySecret);
+  let apiKey = $state(secret('schoologyKey'));
+  let apiSecret = $state(secret('schoologySecret'));
   let domain = $state(store.settings.schoologyDomain);
   let interval = $state(store.settings.schoologyIntervalMin);
   let signingIn = $state(false);
@@ -22,7 +22,14 @@
     signingIn = true;
     try {
       signedInAs = await testApiCredentials(apiKey.trim(), apiSecret.trim(), proxy.trim());
-      store.updateSettings({ schoologyMode: 'api', schoologyKey: apiKey.trim(), schoologySecret: apiSecret.trim(), schoologyProxy: proxy.trim(), schoologyDomain: domain.trim(), schoologyIntervalMin: interval });
+      store.updateSettings({
+        schoologyMode: 'api',
+        schoologyKey: apiKey.trim(),
+        schoologySecret: apiSecret.trim(),
+        schoologyProxy: proxy.trim(),
+        schoologyDomain: domain.trim(),
+        schoologyIntervalMin: interval,
+      });
       toasts.push({ message: `Signed in as ${signedInAs}`, detail: 'Assignments and grades will sync automatically.', kind: 'success', emoji: '🔄' });
       showSetup = false;
       void syncNow();
@@ -34,7 +41,7 @@
   }
   import TaskItem from '../components/TaskItem.svelte';
 
-  let url = $state(store.settings.schoologyFeedUrl);
+  let url = $state(secret('schoologyFeedUrl'));
   let proxy = $state(store.settings.schoologyProxy);
   let pasted = $state('');
   let showSetup = $state(!schoologyConfigured());
@@ -66,7 +73,12 @@
     try {
       const r = await syncFromText(text);
       schoology.status = 'ok';
-      toasts.push({ message: `Imported ${r.created} new assignment${r.created === 1 ? '' : 's'}`, detail: `${r.updated} updated · ${r.total} in file`, kind: 'success', emoji: '🔄' });
+      toasts.push({
+        message: `Imported ${r.created} new assignment${r.created === 1 ? '' : 's'}`,
+        detail: `${r.updated} updated · ${r.total} in file`,
+        kind: 'success',
+        emoji: '🔄',
+      });
       pasted = '';
       showSetup = false;
     } catch (e) {
@@ -94,7 +106,8 @@
     toasts.push({ message: `Mapped “${name}”`, detail: 'Sync again to attach existing assignments.', kind: 'success' });
   }
   function disconnect() {
-    store.updateSettings({ schoologyFeedUrl: '', schoologyKey: '', schoologySecret: '', lastSchoologyError: undefined });
+    forgetSecret('schoologyFeedUrl', 'schoologyKey', 'schoologySecret');
+    store.updateSettings({ lastSchoologyError: undefined });
     url = '';
     apiKey = '';
     apiSecret = '';
@@ -113,7 +126,9 @@
     {#if schoologyConfigured()}
       <span class="status {schoology.status}">
         {schoology.status === 'syncing' ? 'Syncing…' : schoology.status === 'error' ? 'Sync error' : schoology.status === 'ok' ? 'Synced' : 'Connected'}
-        {#if store.settings.lastSchoologySync}<span class="muted"> · {new Date(store.settings.lastSchoologySync).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}</span>{/if}
+        {#if store.settings.lastSchoologySync}<span class="muted">
+            · {new Date(store.settings.lastSchoologySync).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}</span
+          >{/if}
       </span>
       <button class="btn sm" onclick={() => void syncNow()} disabled={schoology.status === 'syncing'}>Sync now</button>
       <button class="btn ghost sm" onclick={() => (showSetup = !showSetup)}>Setup</button>
@@ -128,24 +143,55 @@
     <section class="card setup">
       <h2>Connect Schoology</h2>
       <div class="modes" role="tablist">
-        <button role="tab" aria-selected={mode === 'api'} class:on={mode === 'api'} onclick={() => (mode = 'api')}>Sign in with API key <span class="rec">assignments + grades</span></button>
+        <button role="tab" aria-selected={mode === 'api'} class:on={mode === 'api'} onclick={() => (mode = 'api')}
+          >Sign in with API key <span class="rec">assignments + grades</span></button
+        >
         <button role="tab" aria-selected={mode === 'ics'} class:on={mode === 'ics'} onclick={() => (mode = 'ics')}>Calendar feed <span class="rec">assignments only</span></button>
       </div>
-      <p class="help">Schoology has no “Sign in with Schoology” button for outside apps, and it blocks browsers on other sites from talking to it. Both ways below need a tiny relay you own: deploy <code>docs/cors-proxy-worker.js</code> as a free Cloudflare Worker (about two minutes) and paste its URL. Your keys go only from your browser to Schoology through that relay.</p>
+      <p class="help">
+        Schoology has no “Sign in with Schoology” button for outside apps, and it blocks browsers on other sites from talking to it. Both ways below need a tiny relay you own:
+        deploy <code>docs/cors-proxy-worker.js</code> as a free Cloudflare Worker (about two minutes) and paste its URL. Your keys go only from your browser to Schoology through that
+        relay.
+      </p>
       <label class="fld">CORS proxy prefix <input class="input" bind:value={proxy} placeholder="https://your-worker.workers.dev/?url=" /></label>
       {#if mode === 'api'}
         <ol class="steps">
-          <li>Open <a href="https://app.schoology.com/api" target="_blank" rel="noopener noreferrer">app.schoology.com/api</a> while logged in. It shows your personal <strong>Consumer Key</strong> and <strong>Secret</strong>. (If the page is missing, your school has disabled student API access; use the calendar feed instead.)</li>
+          <li>
+            Open <a href="https://app.schoology.com/api" target="_blank" rel="noopener noreferrer">app.schoology.com/api</a> while logged in. It shows your personal
+            <strong>Consumer Key</strong>
+            and <strong>Secret</strong>. (If the page is missing, your school has disabled student API access; use the calendar feed instead.)
+          </li>
           <li>Paste them below and sign in. The app then syncs every course, assignment, due date and grade on load and every {interval} minutes.</li>
         </ol>
-        <form class="grid" onsubmit={(e) => { e.preventDefault(); void signIn(); }}>
+        <form
+          class="grid"
+          onsubmit={(e) => {
+            e.preventDefault();
+            void signIn();
+          }}
+        >
           <label class="fld">Consumer key <input class="input" bind:value={apiKey} autocomplete="off" /></label>
           <label class="fld">Consumer secret <input class="input" type="password" bind:value={apiSecret} autocomplete="off" /></label>
           <label class="fld">Your school’s Schoology address (optional, for links) <input class="input" bind:value={domain} placeholder="https://myschool.schoology.com" /></label>
           <label class="fld">Sync every <input class="input num" type="number" min="5" max="240" bind:value={interval} /> minutes</label>
-          <label class="check"><input type="checkbox" checked={store.settings.schoologyImportGrades} onchange={(e) => store.updateSettings({ schoologyImportGrades: (e.target as HTMLInputElement).checked })} /> Import grades (fills scores on assignments and course final grades; pays grade XP)</label>
-          <label class="check"><input type="checkbox" checked={store.settings.schoologyAutoCreateCourses} onchange={(e) => store.updateSettings({ schoologyAutoCreateCourses: (e.target as HTMLInputElement).checked })} /> Create courses automatically for new class names</label>
-          <label class="check"><input type="checkbox" checked={store.settings.autoDescribe} onchange={(e) => store.updateSettings({ autoDescribe: (e.target as HTMLInputElement).checked })} /> Auto-describe assignments that have no description</label>
+          <label class="check"
+            ><input
+              type="checkbox"
+              checked={store.settings.schoologyImportGrades}
+              onchange={(e) => store.updateSettings({ schoologyImportGrades: (e.target as HTMLInputElement).checked })}
+            /> Import grades (fills scores on assignments and course final grades; pays grade XP)</label
+          >
+          <label class="check"
+            ><input
+              type="checkbox"
+              checked={store.settings.schoologyAutoCreateCourses}
+              onchange={(e) => store.updateSettings({ schoologyAutoCreateCourses: (e.target as HTMLInputElement).checked })}
+            /> Create courses automatically for new class names</label
+          >
+          <label class="check"
+            ><input type="checkbox" checked={store.settings.autoDescribe} onchange={(e) => store.updateSettings({ autoDescribe: (e.target as HTMLInputElement).checked })} /> Auto-describe
+            assignments that have no description</label
+          >
           <div class="btns">
             <button class="btn primary" type="submit" disabled={signingIn || !apiKey.trim() || !apiSecret.trim()}>{signingIn ? 'Signing in…' : 'Sign in and sync'}</button>
             {#if schoologyConfigured()}<button type="button" class="btn danger" onclick={disconnect}>Disconnect</button>{/if}
@@ -153,15 +199,34 @@
         </form>
       {:else}
         <ol class="steps">
-          <li>In Schoology open <strong>Calendar</strong> → <strong>⚙ / Export</strong> → <strong>Enable</strong> the iCal feed and copy its URL (<code>https://app.schoology.com/calendar/feed/ical/…/schoology.ics</code>).</li>
+          <li>
+            In Schoology open <strong>Calendar</strong> → <strong>⚙ / Export</strong> → <strong>Enable</strong> the iCal feed and copy its URL (<code
+              >https://app.schoology.com/calendar/feed/ical/…/schoology.ics</code
+            >).
+          </li>
           <li>Paste it below. Without a proxy you can still upload the <code>.ics</code> file by hand whenever you want to refresh.</li>
         </ol>
-        <form class="grid" onsubmit={(e) => { e.preventDefault(); saveSetup(); }}>
+        <form
+          class="grid"
+          onsubmit={(e) => {
+            e.preventDefault();
+            saveSetup();
+          }}
+        >
           <label class="fld">Feed URL <input class="input" bind:value={url} placeholder="https://app.schoology.com/calendar/feed/ical/…/schoology.ics" /></label>
           {#if url && !isSchoologyFeedUrl(url)}<span class="warn">That doesn’t look like a Schoology iCal URL, but you can try it.</span>{/if}
           <label class="fld">Sync every <input class="input num" type="number" min="5" max="240" bind:value={interval} /> minutes</label>
-          <label class="check"><input type="checkbox" checked={store.settings.schoologyAutoCreateCourses} onchange={(e) => store.updateSettings({ schoologyAutoCreateCourses: (e.target as HTMLInputElement).checked })} /> Create courses automatically for new class names</label>
-          <label class="check"><input type="checkbox" checked={store.settings.autoDescribe} onchange={(e) => store.updateSettings({ autoDescribe: (e.target as HTMLInputElement).checked })} /> Auto-describe assignments that have no description (plan, steps, estimate)</label>
+          <label class="check"
+            ><input
+              type="checkbox"
+              checked={store.settings.schoologyAutoCreateCourses}
+              onchange={(e) => store.updateSettings({ schoologyAutoCreateCourses: (e.target as HTMLInputElement).checked })}
+            /> Create courses automatically for new class names</label
+          >
+          <label class="check"
+            ><input type="checkbox" checked={store.settings.autoDescribe} onchange={(e) => store.updateSettings({ autoDescribe: (e.target as HTMLInputElement).checked })} /> Auto-describe
+            assignments that have no description (plan, steps, estimate)</label
+          >
           <div class="btns">
             <button class="btn primary" type="submit" disabled={!url.trim()}>Save and sync</button>
             {#if schoologyConfigured()}<button type="button" class="btn danger" onclick={disconnect}>Disconnect</button>{/if}
@@ -198,31 +263,52 @@
   {/if}
 
   {#if !synced.length && !showSetup}
-    <div class="empty"><div class="big">🔄</div><h3>No synced assignments yet</h3><p>Sync now, or open Setup to upload your calendar file.</p></div>
+    <div class="empty">
+      <div class="big">🔄</div>
+      <h3>No synced assignments yet</h3>
+      <p>Sync now, or open Setup to upload your calendar file.</p>
+    </div>
   {/if}
 
   {#if overdue.length}
-    <div class="section-title overdue"><span>Overdue</span><span class="count">{overdue.length}</span><span class="spacer"></span><button class="btn sm" onclick={() => store.rollOverdueToToday()}>Roll all to today</button></div>
-    <div class="task-list">{#each overdue as task (task.id)}<TaskItem {task} listIds={ids} />{/each}</div>
+    <div class="section-title overdue">
+      <span>Overdue</span><span class="count">{overdue.length}</span><span class="spacer"></span><button class="btn sm" onclick={() => store.rollOverdueToToday()}
+        >Roll all to today</button
+      >
+    </div>
+    <div class="task-list">
+      {#each overdue as task (task.id)}<TaskItem {task} listIds={ids} />{/each}
+    </div>
   {/if}
   {#if dueSoon.length}
     <div class="section-title"><span>Due in the next 7 days</span><span class="count">{dueSoon.length}</span></div>
-    <div class="task-list">{#each dueSoon as task (task.id)}<TaskItem {task} listIds={ids} />{/each}</div>
+    <div class="task-list">
+      {#each dueSoon as task (task.id)}<TaskItem {task} listIds={ids} />{/each}
+    </div>
   {/if}
   {#if later.length}
     <div class="section-title"><span>Later</span><span class="count">{later.length}</span></div>
-    <div class="task-list">{#each later as task (task.id)}<TaskItem {task} listIds={ids} />{/each}</div>
+    <div class="task-list">
+      {#each later as task (task.id)}<TaskItem {task} listIds={ids} />{/each}
+    </div>
   {/if}
   {#if done.length}
     <button class="section-title toggle" onclick={() => (showDone = !showDone)} aria-expanded={showDone}>
       <span>Completed</span><span class="count">{done.length}</span><span class="spacer"></span><span class="hint">{showDone ? 'Hide' : 'Show'}</span>
     </button>
     {#if showDone}
-      <div class="task-list">{#each done.slice(0, 60) as task (task.id)}<TaskItem {task} compact />{/each}</div>
+      <div class="task-list">
+        {#each done.slice(0, 60) as task (task.id)}<TaskItem {task} compact />{/each}
+      </div>
     {/if}
   {/if}
   {#if synced.length && !showSetup}
-    <p class="muted foot">Deleting a synced assignment here keeps it from coming back on the next sync. Manage the connection under Setup, or in <button class="link" onclick={() => store.go('settings')}>Settings</button>.</p>
+    <p class="muted foot">
+      Deleting a synced assignment here keeps it from coming back on the next sync. Manage the connection under Setup, or in <button
+        class="link"
+        onclick={() => store.go('settings')}>Settings</button
+      >.
+    </p>
   {/if}
 </div>
 
@@ -232,10 +318,10 @@
     font-weight: 600;
   }
   .status.ok {
-    color: var(--success);
+    color: var(--success-text);
   }
   .status.error {
-    color: var(--danger);
+    color: var(--danger-text);
   }
   .muted {
     color: var(--text-muted);
@@ -243,7 +329,7 @@
     font-weight: 400;
   }
   .err {
-    color: var(--danger);
+    color: var(--danger-text);
     margin-bottom: 12px;
   }
   .setup h2,
@@ -328,7 +414,7 @@
     color: var(--text);
   }
   .warn {
-    color: var(--warn);
+    color: var(--warn-text);
     font-size: 12px;
   }
   .btns {
@@ -389,6 +475,6 @@
     margin-top: 16px;
   }
   .link {
-    color: var(--accent);
+    color: var(--accent-text);
   }
 </style>

@@ -5,17 +5,12 @@
   import { keymap } from '@codemirror/view';
   import { indentUnit } from '@codemirror/language';
   import { indentWithTab } from '@codemirror/commands';
-  import { javascript } from '@codemirror/lang-javascript';
-  import { python } from '@codemirror/lang-python';
-  import { html } from '@codemirror/lang-html';
-  import { css } from '@codemirror/lang-css';
-  import { java } from '@codemirror/lang-java';
-  import { cpp } from '@codemirror/lang-cpp';
   import { oneDark } from '@codemirror/theme-one-dark';
 
   import { LANGUAGES, deleteSnippet, languageExt, languageLabel, listSnippets, newSnippet, saveSnippet, type Snippet, type SnippetLanguage } from '../../lib/snippets';
   import { CSS_SAMPLE_HTML, ONECOMPILER_URLS, canRun, runHTML, runJavaScript, runPython } from '../../lib/coderunner';
   import { downloadText } from '../../lib/download';
+  import SandboxFrame from '../SandboxFrame.svelte';
   import { toasts } from '../../lib/toast.svelte';
 
   // ---------- snippets ----------
@@ -110,24 +105,45 @@
   const langComp = new Compartment();
   const themeComp = new Compartment();
 
-  function langExt(l: SnippetLanguage): Extension {
+  // Language packages load on first use, so opening the editor doesn't download all six.
+  const langCache = new Map<SnippetLanguage, Extension>();
+  async function langExt(l: SnippetLanguage): Promise<Extension> {
+    const hit = langCache.get(l);
+    if (hit) return hit;
     const unit = indentUnit.of(l === 'python' ? '    ' : '  ');
+    let ext: Extension;
     switch (l) {
       case 'javascript':
-        return [javascript(), unit];
+        ext = (await import('@codemirror/lang-javascript')).javascript();
+        break;
       case 'typescript':
-        return [javascript({ typescript: true }), unit];
+        ext = (await import('@codemirror/lang-javascript')).javascript({ typescript: true });
+        break;
       case 'python':
-        return [python(), unit];
+        ext = (await import('@codemirror/lang-python')).python();
+        break;
       case 'html':
-        return [html(), unit];
+        ext = (await import('@codemirror/lang-html')).html();
+        break;
       case 'css':
-        return [css(), unit];
+        ext = (await import('@codemirror/lang-css')).css();
+        break;
       case 'java':
-        return [java(), unit];
+        ext = (await import('@codemirror/lang-java')).java();
+        break;
       case 'cpp':
-        return [cpp(), unit];
+        ext = (await import('@codemirror/lang-cpp')).cpp();
+        break;
     }
+    const full = [ext, unit];
+    langCache.set(l, full);
+    return full;
+  }
+  /** Load a language and apply it if it's still the one being edited. */
+  function applyLang(l: SnippetLanguage) {
+    void langExt(l).then((ext) => {
+      if (view && loadedLang === l) view.dispatch({ effects: langComp.reconfigure(ext) });
+    });
   }
   function isDark(): boolean {
     const root = document.documentElement;
@@ -164,7 +180,7 @@
       }
       return;
     }
-    const effects = s.language !== loadedLang ? [langComp.reconfigure(langExt(s.language))] : [];
+    const langChanged = s.language !== loadedLang;
     if (s.id !== loadedId) {
       loadedId = s.id;
       loadedLang = s.language;
@@ -174,10 +190,10 @@
           extensions: extensions(),
         }),
       );
-      view.dispatch({ effects: [langComp.reconfigure(langExt(s.language))] });
-    } else if (effects.length) {
+      applyLang(s.language);
+    } else if (langChanged) {
       loadedLang = s.language;
-      view.dispatch({ effects });
+      applyLang(s.language);
     }
   }
   function extensions(): Extension[] {
@@ -317,7 +333,11 @@
   function download() {
     if (!selected) return;
     flushSave();
-    const base = selected.name.trim().replace(/[^\w.-]+/g, '-').replace(/^-+|-+$/g, '') || 'snippet';
+    const base =
+      selected.name
+        .trim()
+        .replace(/[^\w.-]+/g, '-')
+        .replace(/^-+|-+$/g, '') || 'snippet';
     const filename = `${base}.${languageExt(selected.language)}`;
     downloadText(filename, selected.code, MIME[selected.language]);
     toasts.push({ message: `Downloaded ${filename}`, kind: 'success' });
@@ -347,7 +367,14 @@
               {#if renamingId === s.id}
                 <input class="input rename" bind:this={renameInput} bind:value={renameValue} onkeydown={renameKey} onblur={commitRename} aria-label="Snippet name" />
               {:else}
-                <button class="pick" role="option" aria-selected={s.id === selectedId} onclick={() => select(s.id)} ondblclick={() => startRename(s)} title="Double-click to rename">
+                <button
+                  class="pick"
+                  role="option"
+                  aria-selected={s.id === selectedId}
+                  onclick={() => select(s.id)}
+                  ondblclick={() => startRename(s)}
+                  title="Double-click to rename"
+                >
                   <span class="nm">{s.name}</span>
                   <span class="chip lang">{languageLabel(s.language)}</span>
                 </button>
@@ -363,7 +390,12 @@
     <div class="main">
       <div class="bar">
         {#if selected}
-          <select class="select lang-sel" value={selected.language} onchange={(e) => setLanguage((e.target as HTMLSelectElement).value as SnippetLanguage)} aria-label="Snippet language">
+          <select
+            class="select lang-sel"
+            value={selected.language}
+            onchange={(e) => setLanguage((e.target as HTMLSelectElement).value as SnippetLanguage)}
+            aria-label="Snippet language"
+          >
             {#each LANGUAGES as l (l.id)}<option value={l.id}>{l.label}</option>{/each}
           </select>
         {/if}
@@ -402,9 +434,14 @@
             {#if ms !== null && !previewDoc}<span class="muted">{ms} ms</span>{/if}
           </div>
           {#if previewDoc}
-            <iframe class="preview" sandbox="allow-scripts" srcdoc={previewDoc} title="HTML preview"></iframe>
+            {#key previewDoc}<SandboxFrame class="preview" sandbox="allow-scripts" html={previewDoc} title="HTML preview" />{/key}
           {:else}
-            <pre class="console" aria-live="polite">{#if !output.length && !error}<span class="muted">(no output)</span>{/if}{#each output as line, i (i)}<span class="line" class:err={line.startsWith('✖ ')} class:warn={line.startsWith('⚠ ')} class:val={line.startsWith('→ ')}>{line}</span>{/each}{#if error}<span class="line err">{error}</span>{/if}</pre>
+            <pre class="console" aria-live="polite">{#if !output.length && !error}<span class="muted">(no output)</span>{/if}{#each output as line, i (i)}<span
+                  class="line"
+                  class:err={line.startsWith('✖ ')}
+                  class:warn={line.startsWith('⚠ ')}
+                  class:val={line.startsWith('→ ')}>{line}</span
+                >{/each}{#if error}<span class="line err">{error}</span>{/if}</pre>
           {/if}
         </div>
       {/if}
@@ -413,48 +450,236 @@
 </section>
 
 <style>
-  .head { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 10px; }
-  h2 { font-size: 16px; margin: 0; }
-  .new { display: flex; gap: 6px; align-items: center; }
-  .new .select { width: auto; padding: 5px 8px; font-size: 13px; }
-  .layout { display: grid; grid-template-columns: 200px minmax(0, 1fr); gap: 12px; }
-  .side { min-width: 0; }
-  .list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 2px; max-height: 60vh; overflow-y: auto; }
-  .list li { display: flex; align-items: center; gap: 2px; border-radius: 8px; }
-  .list li.on { background: color-mix(in srgb, var(--accent) 14%, transparent); }
-  .list li:not(.on):hover { background: var(--bg-hover); }
-  .pick { flex: 1; min-width: 0; display: flex; align-items: center; gap: 6px; padding: 6px 8px; text-align: left; color: var(--text); font-size: 13px; border-radius: 8px; }
-  .pick .nm { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .chip.lang { font-size: 10px; padding: 0 6px; }
-  .list li .btn.icon { width: 26px; height: 26px; padding: 0; font-size: 12px; opacity: 0; }
-  .list li:hover .btn.icon, .list li.on .btn.icon, .list li .btn.icon:focus-visible { opacity: 1; }
-  .rename { padding: 4px 8px; font-size: 13px; }
-  .main { min-width: 0; display: flex; flex-direction: column; gap: 8px; }
-  .bar { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
-  .lang-sel { width: auto; padding: 5px 8px; font-size: 13px; }
-  .hint { margin-left: auto; font-size: 12px; }
-  .muted { color: var(--text-muted); font-size: 13px; }
-  .note { margin: 0; font-size: 13px; color: var(--text-muted); padding: 8px 10px; border-radius: 8px; background: var(--bg-elev-2); }
-  .ext { color: var(--accent); font-weight: 600; margin-left: 4px; }
-  .editor { border: 1px solid var(--border); border-radius: var(--radius-sm); overflow: hidden; height: 320px; resize: vertical; min-height: 120px; }
-  .editor.hidden { display: none; }
-  .editor :global(.cm-editor) { height: 100%; }
-  .empty { margin: 0; padding: 20px; text-align: center; }
-  .status { display: flex; align-items: center; gap: 8px; margin: 0; font-size: 13px; color: var(--text-muted); }
-  .spin { width: 12px; height: 12px; border-radius: 50%; border: 2px solid var(--border-strong); border-top-color: var(--accent); animation: spin 0.8s linear infinite; }
-  @keyframes spin { to { transform: rotate(360deg); } }
-  .out { border: 1px solid var(--border); border-radius: var(--radius-sm); overflow: hidden; }
-  .out-head { display: flex; justify-content: space-between; padding: 4px 10px; font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-faint); background: var(--bg-elev-2); border-bottom: 1px solid var(--border); }
-  .console { margin: 0; padding: 8px 10px; font-family: var(--mono); font-size: 13px; line-height: 1.5; white-space: pre-wrap; word-break: break-word; max-height: 260px; overflow: auto; background: var(--bg-elev-2); }
-  .line { display: block; }
-  .line.err { color: var(--danger); }
-  .line.warn { color: var(--warn); }
-  .line.val { color: var(--text-muted); }
-  .preview { display: block; width: 100%; height: 320px; border: 0; background: #fff; }
+  .head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-bottom: 10px;
+  }
+  h2 {
+    font-size: 16px;
+    margin: 0;
+  }
+  .new {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+  }
+  .new .select {
+    width: auto;
+    padding: 5px 8px;
+    font-size: 13px;
+  }
+  .layout {
+    display: grid;
+    grid-template-columns: 200px minmax(0, 1fr);
+    gap: 12px;
+  }
+  .side {
+    min-width: 0;
+  }
+  .list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    max-height: 60vh;
+    overflow-y: auto;
+  }
+  .list li {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    border-radius: 8px;
+  }
+  .list li.on {
+    background: color-mix(in srgb, var(--accent) 14%, transparent);
+  }
+  .list li:not(.on):hover {
+    background: var(--bg-hover);
+  }
+  .pick {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 8px;
+    text-align: left;
+    color: var(--text);
+    font-size: 13px;
+    border-radius: 8px;
+  }
+  .pick .nm {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .chip.lang {
+    font-size: 10px;
+    padding: 0 6px;
+  }
+  .list li .btn.icon {
+    width: 26px;
+    height: 26px;
+    padding: 0;
+    font-size: 12px;
+    opacity: 0;
+  }
+  .list li:hover .btn.icon,
+  .list li.on .btn.icon,
+  .list li .btn.icon:focus-visible {
+    opacity: 1;
+  }
+  .rename {
+    padding: 4px 8px;
+    font-size: 13px;
+  }
+  .main {
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .bar {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+  }
+  .lang-sel {
+    width: auto;
+    padding: 5px 8px;
+    font-size: 13px;
+  }
+  .hint {
+    margin-left: auto;
+    font-size: 12px;
+  }
+  .muted {
+    color: var(--text-muted);
+    font-size: 13px;
+  }
+  .note {
+    margin: 0;
+    font-size: 13px;
+    color: var(--text-muted);
+    padding: 8px 10px;
+    border-radius: 8px;
+    background: var(--bg-elev-2);
+  }
+  .ext {
+    color: var(--accent-text);
+    font-weight: 600;
+    margin-left: 4px;
+  }
+  .editor {
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    overflow: hidden;
+    height: 320px;
+    resize: vertical;
+    min-height: 120px;
+  }
+  .editor.hidden {
+    display: none;
+  }
+  .editor :global(.cm-editor) {
+    height: 100%;
+  }
+  .empty {
+    margin: 0;
+    padding: 20px;
+    text-align: center;
+  }
+  .status {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 0;
+    font-size: 13px;
+    color: var(--text-muted);
+  }
+  .spin {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    border: 2px solid var(--border-strong);
+    border-top-color: var(--accent);
+    animation: spin 0.8s linear infinite;
+  }
+  @keyframes spin {
+    to {
+      transform: rotate(360deg);
+    }
+  }
+  .out {
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    overflow: hidden;
+  }
+  .out-head {
+    display: flex;
+    justify-content: space-between;
+    padding: 4px 10px;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--text-faint);
+    background: var(--bg-elev-2);
+    border-bottom: 1px solid var(--border);
+  }
+  .console {
+    margin: 0;
+    padding: 8px 10px;
+    font-family: var(--mono);
+    font-size: 13px;
+    line-height: 1.5;
+    white-space: pre-wrap;
+    word-break: break-word;
+    max-height: 260px;
+    overflow: auto;
+    background: var(--bg-elev-2);
+  }
+  .line {
+    display: block;
+  }
+  .line.err {
+    color: var(--danger-text);
+  }
+  .line.warn {
+    color: var(--warn-text);
+  }
+  .line.val {
+    color: var(--text-muted);
+  }
+  .out :global(.preview) {
+    display: block;
+    width: 100%;
+    height: 320px;
+    border: 0;
+    background: #fff;
+  }
   @media (max-width: 720px) {
-    .layout { grid-template-columns: 1fr; }
-    .list { flex-direction: row; flex-wrap: wrap; max-height: none; }
-    .list li { flex: 1 1 160px; }
-    .list li .btn.icon { opacity: 1; }
+    .layout {
+      grid-template-columns: 1fr;
+    }
+    .list {
+      flex-direction: row;
+      flex-wrap: wrap;
+      max-height: none;
+    }
+    .list li {
+      flex: 1 1 160px;
+    }
+    .list li .btn.icon {
+      opacity: 1;
+    }
   }
 </style>

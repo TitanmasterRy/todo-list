@@ -18,7 +18,9 @@
     { name: 'Language', emoji: '🗣️', color: COURSE_COLORS[8] },
     { name: 'CS', emoji: '💻', color: COURSE_COLORS[0] },
   ];
-  let rows = $state<Row[]>(Array.from({ length: 4 }, (_, i) => ({ name: '', emoji: COURSE_EMOJIS[i % COURSE_EMOJIS.length], color: COURSE_COLORS[(i * 3) % COURSE_COLORS.length] })));
+  let rows = $state<Row[]>(
+    Array.from({ length: 4 }, (_, i) => ({ name: '', emoji: COURSE_EMOJIS[i % COURSE_EMOJIS.length], color: COURSE_COLORS[(i * 3) % COURSE_COLORS.length] })),
+  );
   let paste = $state('');
   let first: HTMLInputElement | undefined = $state();
   $effect(() => first?.focus());
@@ -56,7 +58,6 @@
   }
 </script>
 
-<!-- svelte-ignore a11y_no_static_element_interactions, a11y_click_events_have_key_events -->
 <div class="modal-backdrop" onclick={close} role="presentation">
   <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_noninteractive_element_interactions -->
   <form use:focusTrap class="modal setup" aria-label="Semester setup" onclick={(e) => e.stopPropagation()} onsubmit={create}>
@@ -89,7 +90,9 @@
     </details>
     <div class="actions">
       <button type="button" class="btn" onclick={close}>Cancel</button>
-      <button type="submit" class="btn primary" disabled={!rows.some((r) => r.name.trim())}>Create {rows.filter((r) => r.name.trim()).length || ''} course{rows.filter((r) => r.name.trim()).length === 1 ? '' : 's'}</button>
+      <button type="submit" class="btn primary" disabled={!rows.some((r) => r.name.trim())}
+        >Create {rows.filter((r) => r.name.trim()).length || ''} course{rows.filter((r) => r.name.trim()).length === 1 ? '' : 's'}</button
+      >
     </div>
   </form>
 </div>

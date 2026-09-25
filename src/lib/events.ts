@@ -15,6 +15,7 @@ export interface AppEvents {
   collectible: { id: string; name: string; emoji: string; kind: 'sticker' | 'title' };
   streakMilestone: { days: number };
   navigate: { view: string; courseId?: string; taskId?: string };
+  unlocked: Record<string, never>; // the key vault was unlocked: background syncs can run now
 }
 
 type Handler<K extends keyof AppEvents> = (payload: AppEvents[K]) => void;

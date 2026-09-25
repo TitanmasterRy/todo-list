@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Word search</title>
+<style>
+  :root { --bg: #fbf8f1; --fg: #2d2a26; --accent: #c0392b; }
+  html, body { margin: 0; min-height: 100%; background: var(--bg); color: var(--fg); font: 15px Georgia, 'Times New Roman', serif; display: grid; place-items: center; user-select: none; touch-action: none; }
+  .wrap { display: grid; gap: 12px; justify-items: center; padding: 12px; }
+  .grid { display: grid; gap: 2px; background: repeating-linear-gradient(#fbf8f1, #fbf8f1 27px, #d6e4f0 28px); padding: 8px; border: 1px solid #d8cfc0; box-shadow: 2px 3px 0 #e6dccb; }
+  .l { width: min(30px, 8vw); height: min(30px, 8vw); display: grid; place-items: center; font-weight: 700; font-size: 17px; border-radius: 50%; }
+  .l.sel { background: color-mix(in srgb, var(--accent) 30%, transparent); }
+  .l.found { color: var(--accent); text-decoration: underline; }
+  .words { display: flex; flex-wrap: wrap; gap: 6px 14px; max-width: 420px; justify-content: center; }
+  .words span.done { text-decoration: line-through; opacity: .5; }
+  button { font: inherit; padding: 6px 14px; border: 1px solid #2d2a26; background: #fff; border-radius: 4px; cursor: pointer; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div><b>✏️ Word search</b> · <span id="left"></span> left · <span id="time">0</span>s <button id="new">New puzzle</button></div>
+  <div class="grid" id="g"></div>
+  <div class="words" id="w"></div>
+  <small>Drag across a word (any direction). Words can come from your notecards via ?words=a,b,c</small>
+</div>
+<script>
+  const q = new URLSearchParams(location.search);
+  if (q.get('accent')) document.documentElement.style.setProperty('--accent', q.get('accent'));
+  if (q.get('dark') === '1') { document.documentElement.style.setProperty('--bg', '#1c1b19'); document.documentElement.style.setProperty('--fg', '#efe8dc'); }
+  const report = (score) => parent.postMessage({ type: 'hwtodo:score', score }, '*');
+  const DEFAULT = ['PENCIL', 'ESSAY', 'ALGEBRA', 'ATOM', 'VERB', 'NOTES', 'QUIZ', 'MAP', 'GRAPH', 'PROOF', 'READ', 'CELL'];
+  const custom = (q.get('words') || '').split(',').map((w) => w.toUpperCase().replace(/[^A-Z]/g, '')).filter((w) => w.length >= 3 && w.length <= 10);
+  const N = 11, DIRS = [[1, 0], [0, 1], [1, 1], [1, -1], [-1, 0], [0, -1], [-1, -1], [-1, 1]], $ = (id) => document.getElementById(id);
+  let grid, words, found, sel = [], start, t0, clock;
+  function build() {
+    const pool = (custom.length >= 4 ? custom : DEFAULT).sort(() => Math.random() - 0.5);
+    grid = Array(N * N).fill(''); words = [];
+    for (const w of pool) { if (words.length >= 10) break; for (let tries = 0; tries < 150; tries++) { const [dx, dy] = DIRS[Math.floor(Math.random() * DIRS.length)]; const x0 = Math.floor(Math.random() * N), y0 = Math.floor(Math.random() * N); const cells = [...w].map((_, i) => [x0 + dx * i, y0 + dy * i]); if (cells.every(([x, y], i) => x >= 0 && y >= 0 && x < N && y < N && (!grid[y * N + x] || grid[y * N + x] === w[i]))) { cells.forEach(([x, y], i) => (grid[y * N + x] = w[i])); words.push({ w, cells: cells.map(([x, y]) => y * N + x) }); break; } } }
+    grid = grid.map((c) => c || String.fromCharCode(65 + Math.floor(Math.random() * 26)));
+    found = new Set(); t0 = Date.now(); clearInterval(clock); clock = setInterval(() => ($('time').textContent = Math.floor((Date.now() - t0) / 1000)), 500); render();
+  }
+  function render() {
+    const foundCells = new Set(words.filter((w) => found.has(w.w)).flatMap((w) => w.cells));
+    $('g').style.gridTemplateColumns = `repeat(${N}, auto)`;
+    $('g').innerHTML = grid.map((ch, i) => `<div class="l ${sel.includes(i) ? 'sel' : ''} ${foundCells.has(i) ? 'found' : ''}" data-i="${i}">${ch}</div>`).join('');
+    $('w').innerHTML = words.map((w) => `<span class="${found.has(w.w) ? 'done' : ''}">${w.w}</span>`).join('');
+    $('left').textContent = words.length - found.size;
+  }
+  function line(a, b) { const ax = a % N, ay = (a / N) | 0, bx = b % N, by = (b / N) | 0, dx = Math.sign(bx - ax), dy = Math.sign(by - ay), len = Math.max(Math.abs(bx - ax), Math.abs(by - ay)); if (ax !== bx && ay !== by && Math.abs(bx - ax) !== Math.abs(by - ay)) return [a]; return Array.from({ length: len + 1 }, (_, i) => (ay + dy * i) * N + ax + dx * i); }
+  const cellAt = (e) => { const el = document.elementFromPoint(e.clientX, e.clientY); return el && el.dataset && el.dataset.i !== undefined ? +el.dataset.i : null; };
+  $('g').addEventListener('pointerdown', (e) => { start = cellAt(e); if (start !== null) { sel = [start]; render(); } });
+  addEventListener('pointermove', (e) => { if (start == null) return; const i = cellAt(e); if (i !== null) { sel = line(start, i); render(); } });
+  addEventListener('pointerup', () => {
+    if (start == null) return; const s = sel.map((i) => grid[i]).join(''); const r = [...s].reverse().join('');
+    const hit = words.find((w) => !found.has(w.w) && (w.w === s || w.w === r) && (w.cells.join() === sel.join() || [...w.cells].reverse().join() === sel.join()));
+    if (hit) found.add(hit.w);
+    start = null; sel = []; render();
+    if (found.size === words.length) { clearInterval(clock); const secs = Math.floor((Date.now() - t0) / 1000); const score = Math.max(50, words.length * 100 - secs * 2); report(score); $('left').textContent = `0 · done in ${secs}s, score ${score}!`; }
+  });
+  $('new').onclick = build; build();
+</script>
+</body>
+</html>

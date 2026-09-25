@@ -2,11 +2,13 @@
   import { store, byDueThenOrder } from '../lib/store.svelte';
   import { ui } from '../lib/ui.svelte';
   import type { Course, Task } from '../lib/types';
-  import { addDaysKey, dueKey, formatMinutes, endOfWeekKey } from '../lib/dates';
+  import { dueKey, formatMinutes, endOfWeekKey } from '../lib/dates';
   import QuickAdd from '../components/QuickAdd.svelte';
   import TaskItem from '../components/TaskItem.svelte';
   import Sortable from '../components/Sortable.svelte';
-  import CourseEditor from '../components/CourseEditor.svelte';
+  import { t } from '../lib/i18n/index.svelte';
+  const loadCourseEditor = () => import('../components/CourseEditor.svelte');
+  const loadBoard = () => import('../components/KanbanBoard.svelte');
 
   const live = (t: Task) => !t.completedAt || store.lingering.has(t.id);
   const weekEnd = $derived(endOfWeekKey(store.today, store.settings.weekStart));
@@ -25,8 +27,12 @@
     return store.openTasks.filter((t) => t.courseId === c.id && t.dueAt && dueKey(t.dueAt) < store.today).length;
   }
   const courseTasks = $derived(course ? tasksFor(course) : []);
-  const courseDone = $derived(course ? store.tasks.filter((t) => t.courseId === course.id && t.completedAt && !store.lingering.has(t.id)).sort((a, b) => (a.completedAt! < b.completedAt! ? 1 : -1)) : []);
+  const courseDone = $derived(
+    course ? store.tasks.filter((t) => t.courseId === course.id && t.completedAt && !store.lingering.has(t.id)).sort((a, b) => (a.completedAt! < b.completedAt! ? 1 : -1)) : [],
+  );
   let showDone = $state(false);
+  const board = $derived(store.settings.courseLayout === 'board');
+  const allCourseTasks = $derived(course ? store.tasks.filter((t) => t.courseId === course.id) : []);
   const archivedCourses = $derived(store.courses.filter((c) => c.archived));
   let showArchived = $state(false);
 </script>
@@ -34,62 +40,76 @@
 <div class="page wide">
   {#if course}
     <header class="page-head" style="--course:{course.color}">
-      <button class="btn ghost sm" onclick={() => store.go('courses', { courseId: null })}>← All courses</button>
+      <button class="btn ghost sm" onclick={() => store.go('courses', { courseId: null })}><span class="flip">←</span> {t('courses.all')}</button>
       <div class="course-title">
         <span class="dot"></span>
         <h1>{course.emoji ? course.emoji + ' ' : ''}{course.name}</h1>
       </div>
       <div class="grow"></div>
-      <button class="btn sm" onclick={() => (ui.courseEditor = course.id)}>Edit</button>
+      <div class="seg" role="radiogroup" aria-label={t('upcoming.layout')}>
+        <button role="radio" aria-checked={!board} class:on={!board} onclick={() => store.updateSettings({ courseLayout: 'list' })}>☰ {t('upcoming.list')}</button>
+        <button role="radio" aria-checked={board} class:on={board} onclick={() => store.updateSettings({ courseLayout: 'board' })}>▦ {t('courses.board')}</button>
+      </div>
+      <button class="btn sm" onclick={() => (ui.courseEditor = course.id)}>{t('common.edit')}</button>
     </header>
     <div class="workload">
-      <span><strong>{formatMinutes(workload(course))}</strong> of work</span>
+      <span><strong>{formatMinutes(workload(course))}</strong> {t('courses.ofWork')}</span>
       <span class="sep">·</span>
-      <span><strong>{dueThisWeek(course)}</strong> due this week</span>
+      <span><strong>{dueThisWeek(course)}</strong> {t('courses.dueThisWeek')}</span>
       {#if overdueCount(course)}
         <span class="sep">·</span>
-        <span class="over"><strong>{overdueCount(course)}</strong> overdue</span>
+        <span class="over"><strong>{overdueCount(course)}</strong> {t('courses.overdue', { count: overdueCount(course) })}</span>
       {/if}
       <span class="sep">·</span>
-      <span><strong>{courseDone.length}</strong> done</span>
+      <span><strong>{courseDone.length}</strong> {t('courses.done', { count: courseDone.length })}</span>
     </div>
-    <QuickAdd defaultCourseId={course.id} placeholder="Add a task to {course.name}…" autofocus />
-    <div class="section-title"><span>Open</span><span class="count">{courseTasks.length}</span></div>
-    <Sortable items={courseTasks} group="course" onreorder={(ids) => store.reorder(ids)}>
-      {#snippet item(task)}
-        <TaskItem {task} showCourse={false} listIds={courseTasks.map((t) => t.id)} dragHandle />
-      {/snippet}
-    </Sortable>
-    {#if !courseTasks.length}
-      <div class="empty"><div class="big">🎓</div><h3>All clear</h3><p>No open tasks for this course.</p></div>
-    {/if}
-    {#if courseDone.length}
-      <button class="section-title toggle" onclick={() => (showDone = !showDone)} aria-expanded={showDone}>
-        <span>Completed</span><span class="count">{courseDone.length}</span><span class="spacer"></span><span class="hint">{showDone ? 'Hide' : 'Show'}</span>
-      </button>
-      {#if showDone}
-        <div class="task-list">
-          {#each courseDone.slice(0, 50) as task (task.id)}
-            <TaskItem {task} showCourse={false} compact />
-          {/each}
+    <QuickAdd defaultCourseId={course.id} placeholder={t('quick.placeholderCourse', { name: course.name })} autofocus />
+    {#if board}
+      <div style="--course:{course.color}">{#await loadBoard() then m}<m.default tasks={allCourseTasks} />{/await}</div>
+    {:else}
+      <div class="section-title"><span>{t('inbox.open')}</span><span class="count">{courseTasks.length}</span></div>
+      <Sortable items={courseTasks} group="course" onreorder={(ids) => store.reorder(ids)}>
+        {#snippet item(task)}
+          <TaskItem {task} showCourse={false} listIds={courseTasks.map((t) => t.id)} dragHandle />
+        {/snippet}
+      </Sortable>
+      {#if !courseTasks.length}
+        <div class="empty">
+          <div class="big">🎓</div>
+          <h3>{t('courses.allClear')}</h3>
+          <p>{t('courses.allClearHint')}</p>
         </div>
+      {/if}
+      {#if courseDone.length}
+        <button class="section-title toggle" onclick={() => (showDone = !showDone)} aria-expanded={showDone}>
+          <span>{t('inbox.completed')}</span><span class="count">{courseDone.length}</span><span class="spacer"></span><span class="hint"
+            >{showDone ? t('common.hide') : t('common.show')}</span
+          >
+        </button>
+        {#if showDone}
+          <div class="task-list">
+            {#each courseDone.slice(0, 50) as task (task.id)}
+              <TaskItem {task} showCourse={false} compact />
+            {/each}
+          </div>
+        {/if}
       {/if}
     {/if}
   {:else}
     <header class="page-head">
       <div>
-        <h1>Courses</h1>
-        <div class="sub">One column per course. Workload is the sum of estimates on open tasks.</div>
+        <h1>{t('nav.courses')}</h1>
+        <div class="sub">{t('courses.sub')}</div>
       </div>
       <div class="grow"></div>
-      <button class="btn sm" onclick={() => (ui.semesterSetup = true)}>Semester setup</button>
-      <button class="btn primary sm" onclick={() => (ui.courseEditor = 'new')}>+ New course</button>
+      <button class="btn sm" onclick={() => (ui.semesterSetup = true)}>{t('courses.semesterSetup')}</button>
+      <button class="btn primary sm" onclick={() => (ui.courseEditor = 'new')}>+ {t('courses.new')}</button>
     </header>
     {#if !store.activeCourses.length}
       <div class="empty">
         <div class="big">📚</div>
-        <h3>No courses yet</h3>
-        <p>Create courses to group tasks and see workload per class. Try “Semester setup” to add several at once.</p>
+        <h3>{t('courses.none')}</h3>
+        <p>{t('courses.noneHint')}</p>
       </div>
     {/if}
     <div class="grid">
@@ -101,11 +121,11 @@
               <span class="dot"></span>
               <span class="name">{c.emoji ? c.emoji + ' ' : ''}{c.name}</span>
             </button>
-            <button class="btn ghost sm icon" aria-label="Edit course" onclick={() => (ui.courseEditor = c.id)}>✎</button>
+            <button class="btn ghost sm icon" aria-label={t('courses.edit')} onclick={() => (ui.courseEditor = c.id)}>✎</button>
           </header>
           <div class="col-stats">
-            <span title="Total estimated minutes on open tasks">⏱ {formatMinutes(workload(c))}</span>
-            <span title="Due this week">📅 {dueThisWeek(c)} this week</span>
+            <span title={t('courses.totalTitle')}>⏱ {formatMinutes(workload(c))}</span>
+            <span title={t('courses.dueThisWeekTitle')}>📅 {dueThisWeek(c)} {t('today.minWeek')}</span>
             {#if overdueCount(c)}<span class="over">⚠ {overdueCount(c)}</span>{/if}
           </div>
           <div class="col-tasks">
@@ -113,10 +133,10 @@
               <TaskItem {task} showCourse={false} compact />
             {/each}
             {#if tasks.length > 8}
-              <button class="more" onclick={() => store.go('courses', { courseId: c.id })}>+{tasks.length - 8} more</button>
+              <button class="more" onclick={() => store.go('courses', { courseId: c.id })}>{t('courses.more', { n: tasks.length - 8 })}</button>
             {/if}
             {#if !tasks.length}
-              <div class="nothing">Nothing open</div>
+              <div class="nothing">{t('courses.nothingOpen')}</div>
             {/if}
           </div>
         </section>
@@ -124,7 +144,7 @@
     </div>
     {#if archivedCourses.length}
       <button class="section-title toggle" onclick={() => (showArchived = !showArchived)} aria-expanded={showArchived}>
-        <span>Archived</span><span class="count">{archivedCourses.length}</span>
+        <span>{t('courses.archived')}</span><span class="count">{archivedCourses.length}</span>
       </button>
       {#if showArchived}
         <div class="archived">
@@ -138,7 +158,7 @@
 </div>
 
 {#if ui.courseEditor}
-  <CourseEditor />
+  {#await loadCourseEditor() then m}<m.default />{/await}
 {/if}
 
 <style>
@@ -200,7 +220,7 @@
     font-weight: 700;
     font-size: 16px;
     flex: 1;
-    text-align: left;
+    text-align: start;
     color: var(--text);
   }
   .col-stats {
@@ -216,9 +236,9 @@
     gap: 4px;
   }
   .more {
-    color: var(--accent);
+    color: var(--accent-text);
     font-size: 13px;
-    text-align: left;
+    text-align: start;
     padding: 4px;
   }
   .nothing {
@@ -228,7 +248,7 @@
   }
   .toggle {
     width: 100%;
-    text-align: left;
+    text-align: start;
   }
   .hint {
     font-weight: 400;
@@ -240,5 +260,23 @@
     display: flex;
     gap: 6px;
     flex-wrap: wrap;
+  }
+  .seg {
+    display: inline-flex;
+    gap: 2px;
+    background: var(--bg-sunken, var(--bg-elev));
+    border-radius: 8px;
+    padding: 2px;
+  }
+  .seg button {
+    padding: 4px 10px;
+    border-radius: 6px;
+    font-size: 13px;
+    color: var(--text-muted);
+  }
+  .seg button.on {
+    background: var(--bg-elev);
+    color: var(--text);
+    font-weight: 600;
   }
 </style>

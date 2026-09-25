@@ -3,6 +3,7 @@
   import { onMount } from 'svelte';
   import { store } from '../lib/store.svelte';
   import { themeById } from '../lib/themes';
+  import { CONFETTI_STYLES } from '../lib/economy';
 
   interface Props {
     trigger: number; // bump to fire
@@ -29,14 +30,15 @@
   }
   let parts: P[] = [];
 
-
   function fire() {
-    if (!canvas || store.settings.reducedMotion || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    if (!canvas || store.settings.celebrations === false || store.settings.reducedMotion || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
     const W = (canvas.width = window.innerWidth);
     const H = (canvas.height = window.innerHeight);
     const theme = themeById(store.settings.themePack);
-    const colors = theme.confetti;
-    const emojiShapes = theme.particles.shapes.filter((s) => !['dot', 'line', 'pixel', 'star'].includes(s));
+    // a confetti style bought in the shop overrides the theme pack's
+    const style = store.settings.equippedConfetti ? CONFETTI_STYLES[store.settings.equippedConfetti] : undefined;
+    const colors = style?.colors ?? theme.confetti;
+    const emojiShapes = style?.emoji ?? theme.particles.shapes.filter((s) => !['dot', 'line', 'pixel', 'star'].includes(s));
     parts = [];
     for (let i = 0; i < intensity; i++) {
       const side = i % 2 === 0 ? -1 : 1;
@@ -50,7 +52,19 @@
         vr: (Math.random() - 0.5) * 0.3,
         color: colors[i % colors.length],
         life: 1,
-        shape: theme.flourish === 'pixels' ? 0 : theme.flourish === 'stars' ? 3 : theme.flourish === 'hearts' || theme.flourish === 'leaves' ? (i % 2 ? 4 : 1) : i % 3,
+        shape: style
+          ? i % 3
+            ? 4
+            : 1
+          : theme.flourish === 'pixels'
+            ? 0
+            : theme.flourish === 'stars'
+              ? 3
+              : theme.flourish === 'hearts' || theme.flourish === 'leaves'
+                ? i % 2
+                  ? 4
+                  : 1
+                : i % 3,
         emoji: emojiShapes.length ? emojiShapes[i % emojiShapes.length] : '',
       });
     }

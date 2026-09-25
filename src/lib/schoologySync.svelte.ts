@@ -6,6 +6,9 @@ import { diffAssignments, eventsToAssignments, matchCourseName, type ExternalAss
 import { autoDescribe } from './autodescribe';
 import { COURSE_COLORS, COURSE_EMOJIS } from './colors';
 import { pullAll, getMe } from './schoologyApi';
+import { hasSecret, isLocked, useSecret } from './secrets.svelte';
+import { on } from './events';
+import { cspHint } from './csp';
 
 const intervalMs = () => Math.max(5, store.settings.schoologyIntervalMin || 30) * 60 * 1000;
 const INTERVAL_MS = 30 * 60 * 1000;
@@ -21,6 +24,7 @@ export const schoology = new SchoologyState();
 
 let timer: ReturnType<typeof setInterval> | undefined;
 let started = false;
+let offUnlocked: (() => void) | undefined;
 
 /** Fetch the feed: direct first, then through the optional CORS proxy prefix. */
 export async function fetchFeed(url: string, proxy: string): Promise<string> {
@@ -43,7 +47,7 @@ export async function fetchFeed(url: string, proxy: string): Promise<string> {
   const msg = lastErr instanceof Error ? lastErr.message : String(lastErr);
   throw new Error(
     /Failed to fetch|NetworkError|Load failed/i.test(msg)
-      ? 'The browser blocked the request (CORS). Add a CORS proxy in the setup panel, or upload the .ics file instead.'
+      ? `The browser blocked the request (CORS). Add a CORS proxy in the setup panel, or upload the .ics file instead.${proxy.trim() ? cspHint(proxy.trim()) : ''}`
       : msg,
   );
 }
@@ -54,7 +58,10 @@ function resolveCourse(a: ExternalAssignment, autoCreate: boolean, created: Map<
   const norm = name.toLowerCase();
   const byAlias = store.courses.find((c) => c.schoologyName && c.schoologyName.toLowerCase() === norm);
   if (byAlias) return byAlias.id;
-  const matched = matchCourseName(name, store.activeCourses.map((c) => ({ id: c.id, name: c.name })));
+  const matched = matchCourseName(
+    name,
+    store.activeCourses.map((c) => ({ id: c.id, name: c.name })),
+  );
   if (matched) return matched;
   if (created.has(norm)) return created.get(norm);
   if (autoCreate) {
@@ -69,7 +76,12 @@ function resolveCourse(a: ExternalAssignment, autoCreate: boolean, created: Map<
 
 /** "AP Calculus BC - Period 3 - Smith" → "AP Calculus BC" */
 export function shortenCourseName(name: string): string {
-  return name.split(/\s+[-–:]\s+|\s*\(|\s+section\s+/i)[0].trim().slice(0, 40) || name;
+  return (
+    name
+      .split(/\s+[-–:]\s+|\s*\(|\s+section\s+/i)[0]
+      .trim()
+      .slice(0, 40) || name
+  );
 }
 
 /** Sync from raw iCalendar text (feed, upload, or paste). */
@@ -88,9 +100,7 @@ export function applyAssignments(assignments: ExternalAssignment[]): { created: 
     if (!id && a.courseName) unmatched.add(a.courseName);
     return id;
   };
-  const existing = store.tasks
-    .filter((t) => t.externalId)
-    .map((t) => ({ externalId: t.externalId!, title: t.title, dueAt: t.dueAt, notes: t.notes, completedAt: t.completedAt }));
+  const existing = store.tasks.filter((t) => t.externalId).map((t) => ({ externalId: t.externalId!, title: t.title, dueAt: t.dueAt, notes: t.notes, completedAt: t.completedAt }));
   const diff = diffAssignments(existing, assignments, settings.schoologyIgnored);
   const describe = (a: ExternalAssignment) => {
     if (!settings.autoDescribe) return {};
@@ -107,11 +117,13 @@ export function applyAssignments(assignments: ExternalAssignment[]): { created: 
 }
 
 /** API mode: pull sections, assignments and grades with the user's key/secret (through the proxy). */
-export async function syncFromApi(): Promise<{ created: number; updated: number; total: number; graded: number }> {
+export async function syncFromApi(opts: { interactive?: boolean } = {}): Promise<{ created: number; updated: number; total: number; graded: number }> {
   const s = store.settings;
-  if (!s.schoologyKey || !s.schoologySecret) throw new Error('Add your Schoology API key and secret first.');
+  const key = await useSecret('schoologyKey', opts);
+  const apiSecret = await useSecret('schoologySecret', opts);
+  if (!key || !apiSecret) throw new Error('Add your Schoology API key and secret first.');
   if (!s.schoologyProxy) throw new Error('The Schoology API needs the CORS proxy (see Setup).');
-  const creds = { key: s.schoologyKey, secret: s.schoologySecret, proxy: s.schoologyProxy };
+  const creds = { key, secret: apiSecret, proxy: s.schoologyProxy };
   const data = await pullAll(creds, s.schoologyDomain, s.schoologyImportGrades);
   const out = applyAssignments(data.assignments);
   // grades → scores on the matching tasks (pays grade XP the first time)
@@ -141,29 +153,40 @@ export async function testApiCredentials(key: string, secret: string, proxy: str
 let inFlight: Promise<void> | null = null;
 
 export function schoologyConfigured(): boolean {
-  const s = store.settings;
-  return s.schoologyMode === 'api' ? !!(s.schoologyKey && s.schoologySecret) : !!s.schoologyFeedUrl;
+  return store.settings.schoologyMode === 'api' ? hasSecret('schoologyKey') && hasSecret('schoologySecret') : hasSecret('schoologyFeedUrl');
 }
 
 export async function syncNow(opts: { quiet?: boolean } = {}): Promise<void> {
-  const { schoologyFeedUrl: url, schoologyProxy: proxy, schoologyMode: mode } = store.settings;
+  const { schoologyProxy: proxy, schoologyMode: mode } = store.settings;
   if (!schoologyConfigured()) {
     schoology.status = 'off';
     return;
   }
+  // background refreshes skip quietly while the key lock is closed; a button press asks for the passphrase
+  if (opts.quiet && isLocked(mode === 'api' ? 'schoologyKey' : 'schoologyFeedUrl')) {
+    schoology.status = 'idle';
+    return;
+  }
+  const url = mode === 'api' ? '' : await useSecret('schoologyFeedUrl');
   if (inFlight) return inFlight;
   inFlight = (async () => {
     schoology.status = 'syncing';
     schoology.lastError = null;
     try {
       let r: { created: number; updated: number; total: number; graded?: number };
-      if (mode === 'api') r = await syncFromApi();
+      if (mode === 'api') r = await syncFromApi({ interactive: !opts.quiet });
       else r = await syncFromText(await fetchFeed(url, proxy));
       schoology.status = 'ok';
       if (!opts.quiet || r.created > 0 || (r.graded ?? 0) > 0) {
         toasts.push({
           message: r.created ? `${r.created} new assignment${r.created > 1 ? 's' : ''} from Schoology` : 'Schoology is up to date',
-          detail: [r.updated ? `${r.updated} updated` : '', r.graded ? `${r.graded} new grade${r.graded > 1 ? 's' : ''}` : '', `${r.total} in ${mode === 'api' ? 'Schoology' : 'feed'}`].filter(Boolean).join(' · '),
+          detail: [
+            r.updated ? `${r.updated} updated` : '',
+            r.graded ? `${r.graded} new grade${r.graded > 1 ? 's' : ''}` : '',
+            `${r.total} in ${mode === 'api' ? 'Schoology' : 'feed'}`,
+          ]
+            .filter(Boolean)
+            .join(' · '),
           kind: r.created || r.graded ? 'success' : 'info',
           emoji: '🔄',
         });
@@ -193,6 +216,9 @@ export function startSchoologySync(): void {
     if (Date.now() - last > intervalMs() - 5000) void syncNow({ quiet: true });
   };
   timer = setInterval(tick, 60 * 1000);
+  offUnlocked ??= on('unlocked', () => {
+    if (schoologyConfigured()) void syncNow({ quiet: true });
+  });
   document.addEventListener('visibilitychange', tick);
   window.addEventListener('online', tick);
   void INTERVAL_MS;

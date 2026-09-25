@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Sandbox</title>
+  </head>
+  <body>
+    <script>
+      // Renders untrusted HTML handed over by the app (uploaded arcade games, the Code tool's HTML preview).
+      // The app's own page has a Content-Security-Policy with no inline scripts; srcdoc frames would inherit it,
+      // so this separate document (no CSP of its own) does the rendering instead. It refuses to run unless it is
+      // inside a sandboxed iframe with an opaque origin, so the content can never reach the app's storage.
+      (function () {
+        if (window.parent === window || window.origin !== 'null') {
+          document.body.textContent = 'This page only runs inside Homework To-Do.';
+          return;
+        }
+        function onMessage(e) {
+          if (e.source !== window.parent || !e.data || e.data.type !== 'hwtodo:render' || typeof e.data.html !== 'string') return;
+          removeEventListener('message', onMessage);
+          document.open();
+          document.write(e.data.html);
+          document.close();
+        }
+        addEventListener('message', onMessage);
+        window.parent.postMessage({ type: 'hwtodo:sandbox-ready' }, '*');
+      })();
+    </script>
+  </body>
+</html>

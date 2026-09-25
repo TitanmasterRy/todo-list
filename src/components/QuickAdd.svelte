@@ -1,9 +1,11 @@
 <script lang="ts">
+  import { voiceToQuickAdd } from '../lib/voice';
   import { store, type NewTaskInput } from '../lib/store.svelte';
   import { parseQuickAdd } from '../lib/parser';
   import { ui } from '../lib/ui.svelte';
   import { toasts } from '../lib/toast.svelte';
   import { primeAudio } from '../lib/sounds';
+  import { locale, t } from '../lib/i18n/index.svelte';
 
   interface Props {
     defaultDueKey?: string;
@@ -11,15 +13,26 @@
     placeholder?: string;
     autofocus?: boolean;
   }
-  let { defaultDueKey, defaultCourseId, placeholder = 'Add a task… try “Read ch 4 tomorrow 8pm #calc !high ~45m”', autofocus = false }: Props = $props();
+  let { defaultDueKey, defaultCourseId, placeholder, autofocus = false }: Props = $props();
 
   let text = $state('');
   let input: HTMLInputElement | undefined = $state();
   let focused = $state(false);
   let listening = $state(false);
   let describeNext = $state(true);
-  type SR = { start(): void; stop(): void; lang: string; interimResults: boolean; onresult: ((e: { results: ArrayLike<ArrayLike<{ transcript: string }>> }) => void) | null; onend: (() => void) | null; onerror: (() => void) | null };
-  const SRClass = typeof window !== 'undefined' ? ((window as unknown as { SpeechRecognition?: new () => SR }).SpeechRecognition ?? (window as unknown as { webkitSpeechRecognition?: new () => SR }).webkitSpeechRecognition) : undefined;
+  type SR = {
+    start(): void;
+    stop(): void;
+    lang: string;
+    interimResults: boolean;
+    onresult: ((e: { results: ArrayLike<ArrayLike<{ transcript: string }>> }) => void) | null;
+    onend: (() => void) | null;
+    onerror: (() => void) | null;
+  };
+  const SRClass =
+    typeof window !== 'undefined'
+      ? ((window as unknown as { SpeechRecognition?: new () => SR }).SpeechRecognition ?? (window as unknown as { webkitSpeechRecognition?: new () => SR }).webkitSpeechRecognition)
+      : undefined;
   let rec: SR | null = null;
   function toggleVoice() {
     if (!SRClass) return;
@@ -28,7 +41,7 @@
       return;
     }
     rec = new SRClass();
-    rec.lang = navigator.language || 'en-US';
+    rec.lang = locale() === 'en' ? navigator.language || 'en-US' : locale();
     rec.interimResults = true;
     rec.onresult = (e) => {
       let t = '';
@@ -37,6 +50,8 @@
     };
     rec.onend = () => {
       listening = false;
+      // "add read chapter four for tomorrow at five p.m." → "read chapter 4 tomorrow at 5pm"
+      if (text) text = voiceToQuickAdd(text);
       input?.focus();
     };
     rec.onerror = () => (listening = false);
@@ -45,12 +60,15 @@
   }
   function onPaste(e: ClipboardEvent) {
     const data = e.clipboardData?.getData('text') ?? '';
-    const lines = data.split(/\r?\n/).map((l) => l.replace(/^[-*•\d.)\s]+/, '').trim()).filter(Boolean);
+    const lines = data
+      .split(/\r?\n/)
+      .map((l) => l.replace(/^[-*•\d.)\s]+/, '').trim())
+      .filter(Boolean);
     if (lines.length < 2) return;
     e.preventDefault();
     const inputs = lines.map((line) => lineToInput(line));
     const created = store.addTasks(inputs);
-    toasts.push({ message: `Added ${created.length} tasks from your paste`, kind: 'success', emoji: '📋' });
+    toasts.push({ message: t('quick.pasted', { count: created.length }), kind: 'success', emoji: '📋' });
     text = '';
   }
   $effect(() => {
@@ -66,6 +84,8 @@
       now: store.now,
       courses: store.activeCourses.map((c) => ({ id: c.id, name: c.name })),
       weekStart: store.settings.weekStart,
+      locale: locale(),
+      timeFormat: store.settings.timeFormat,
     }),
   );
   const template = $derived(parsed.template ? store.findTemplate(parsed.template) : undefined);
@@ -79,7 +99,14 @@
     const m = /(?:^|\s)#([\w-]*)$/.exec(text);
     if (!m) return [];
     const q = m[1].toLowerCase().replace(/[^a-z0-9]/g, '');
-    return store.activeCourses.filter((c) => c.name.toLowerCase().replace(/[^a-z0-9]/g, '').startsWith(q)).slice(0, 5);
+    return store.activeCourses
+      .filter((c) =>
+        c.name
+          .toLowerCase()
+          .replace(/[^a-z0-9]/g, '')
+          .startsWith(q),
+      )
+      .slice(0, 5);
   });
 
   $effect(() => {
@@ -92,7 +119,7 @@
   });
 
   function lineToInput(line: string): NewTaskInput {
-    const p = parseQuickAdd(line, { now: store.now, courses: store.activeCourses.map((c) => ({ id: c.id, name: c.name })), weekStart: store.settings.weekStart });
+    const p = parseQuickAdd(line, { now: store.now, courses: store.activeCourses.map((c) => ({ id: c.id, name: c.name })), weekStart: store.settings.weekStart, locale: locale() });
     const base: NewTaskInput = { title: p.title || line };
     if (p.courseId) base.courseId = p.courseId;
     else if (defaultCourseId) base.courseId = defaultCourseId;
@@ -113,7 +140,7 @@
     const base: NewTaskInput = { title: '' };
     if (p.template) {
       if (!template) {
-        toasts.push({ message: `No template named @${p.template}`, kind: 'warn' });
+        toasts.push({ message: t('quick.noTemplate', { name: p.template }), kind: 'warn' });
         return;
       }
       Object.assign(base, {
@@ -166,13 +193,13 @@
   }
 </script>
 
-<form class="quick" class:focused onsubmit={submit} role="search" aria-label="Quick add">
+<form class="quick" class:focused onsubmit={submit} role="search" aria-label={t('quick.label')}>
   <span class="plus" aria-hidden="true">+</span>
   <input
     bind:this={input}
     bind:value={text}
-    {placeholder}
-    aria-label="Quick add task"
+    placeholder={placeholder ?? t('quick.placeholder')}
+    aria-label={t('quick.input')}
     autocomplete="off"
     enterkeyhint="done"
     onfocus={() => (focused = true)}
@@ -182,33 +209,44 @@
     data-quick-add
   />
   {#if SRClass}
-    <button type="button" class="btn ghost sm icon mic" class:on={listening} onclick={toggleVoice} aria-label={listening ? 'Stop listening' : 'Add by voice'} title="Add by voice">{listening ? '🔴' : '🎤'}</button>
+    <button
+      type="button"
+      class="btn ghost sm icon mic"
+      class:on={listening}
+      onclick={toggleVoice}
+      aria-label={listening ? t('quick.stopListening') : t('quick.voice')}
+      title={t('quick.voice')}>{listening ? '🔴' : '🎤'}</button
+    >
   {/if}
   {#if text}
-    <button class="btn primary sm go" type="submit">Add</button>
+    <button class="btn primary sm go" type="submit">{t('common.add')}</button>
   {:else}
     <span class="hint" aria-hidden="true"><span class="kbd hint-only">n</span></span>
   {/if}
 </form>
 {#if text.trim()}
   <div class="preview" aria-live="polite">
-    <span class="title-preview">{parsed.template ? (template ? `${template.task.title}${parsed.title ? ' — ' + parsed.title : ''}` : `@${parsed.template}?`) : parsed.title || '…'}</span>
+    <span class="title-preview"
+      >{parsed.template ? (template ? `${template.task.title}${parsed.title ? ' — ' + parsed.title : ''}` : `@${parsed.template}?`) : parsed.title || '…'}</span
+    >
     {#each parsed.chips as chip}
       <span class="chip {chip.kind}">{chip.label}</span>
     {/each}
     {#if !parsed.dueAt && defaultDueKey}
-      <span class="chip faint">📅 Today</span>
+      <span class="chip faint">📅 {t('date.today')}</span>
     {/if}
     {#if store.settings.autoDescribe && !parsed.template}
-      <button type="button" class="chip auto" class:off={!describeNext} onclick={() => (describeNext = !describeNext)} title="Auto-fill a plan, steps and estimate">{describeNext ? '✨ auto plan' : 'no auto plan'}</button>
+      <button type="button" class="chip auto" class:off={!describeNext} onclick={() => (describeNext = !describeNext)} title={t('quick.autoPlanTitle')}
+        >{describeNext ? t('quick.autoPlan') : t('quick.noAutoPlan')}</button
+      >
     {/if}
     {#if !parsed.courseId && defaultCourseId && store.courseById(defaultCourseId)}
       <span class="chip faint">{store.courseById(defaultCourseId)?.name}</span>
     {/if}
     {#if templateSuggestions.length}
       <span class="sugg">
-        {#each templateSuggestions as t}
-          <button type="button" class="chip" onclick={() => applySuggestion('@', t.name)}>@{t.name}</button>
+        {#each templateSuggestions as tp}
+          <button type="button" class="chip" onclick={() => applySuggestion('@', tp.name)}>@{tp.name}</button>
         {/each}
       </span>
     {/if}
@@ -231,14 +269,16 @@
     border-radius: 12px;
     background: var(--bg-elev);
     border: 1px solid var(--border);
-    transition: border-color var(--dur), box-shadow var(--dur);
+    transition:
+      border-color var(--dur),
+      box-shadow var(--dur);
   }
   .quick.focused {
     border-color: var(--accent);
     box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 22%, transparent);
   }
   .plus {
-    color: var(--accent);
+    color: var(--accent-text);
     font-size: 20px;
     font-weight: 600;
   }
@@ -270,14 +310,14 @@
     font-weight: 500;
   }
   .chip.due {
-    color: var(--accent);
+    color: var(--accent-text);
   }
   .chip.course {
     color: var(--text);
     border-color: var(--accent);
   }
   .chip.priority {
-    color: var(--warn);
+    color: var(--warn-text);
   }
   .chip.faint {
     opacity: 0.6;
@@ -291,7 +331,7 @@
   }
   .chip.auto {
     cursor: pointer;
-    color: var(--accent);
+    color: var(--accent-text);
   }
   .chip.auto.off {
     color: var(--text-faint);

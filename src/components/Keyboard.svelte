@@ -31,17 +31,50 @@
 
   function closeAll(): boolean {
     let closed = false;
-    if (ui.palette) (ui.palette = false), (closed = true);
-    if (ui.shortcuts) (ui.shortcuts = false), (closed = true);
-    if (ui.snoozeMenuFor) (ui.snoozeMenuFor = null), (closed = true);
-    if (store.editingTaskId) (store.editingTaskId = null), (closed = true);
-    if (ui.courseEditor) (ui.courseEditor = null), (closed = true);
-    if (ui.weeklyReview) (ui.weeklyReview = false), (closed = true);
-    if (ui.semesterSetup) (ui.semesterSetup = false), (closed = true);
-    if (ui.frogPrompt) (ui.frogPrompt = false), (closed = true);
-    if (ui.recap) (ui.recap = false), (closed = true);
-    if (!closed && store.bulkMode) (store.clearSelection(), (closed = true));
-    if (!closed && store.selectedTaskId) (store.selectedTaskId = null), (closed = true);
+    if (ui.palette) {
+      ui.palette = false;
+      closed = true;
+    }
+    if (ui.shortcuts) {
+      ui.shortcuts = false;
+      closed = true;
+    }
+    if (ui.snoozeMenuFor) {
+      ui.snoozeMenuFor = null;
+      closed = true;
+    }
+    if (store.editingTaskId) {
+      store.editingTaskId = null;
+      closed = true;
+    }
+    if (ui.courseEditor) {
+      ui.courseEditor = null;
+      closed = true;
+    }
+    if (ui.weeklyReview) {
+      ui.weeklyReview = false;
+      closed = true;
+    }
+    if (ui.semesterSetup) {
+      ui.semesterSetup = false;
+      closed = true;
+    }
+    if (ui.frogPrompt) {
+      ui.frogPrompt = false;
+      closed = true;
+    }
+    if (ui.recap) {
+      ui.recap = false;
+      closed = true;
+    }
+    if (!closed && store.bulkMode) {
+      store.clearSelection();
+      closed = true;
+    }
+    if (!closed && store.selectedTaskId) {
+      store.selectedTaskId = null;
+      closed = true;
+    }
     return closed;
   }
 
@@ -119,6 +152,19 @@
           store.selectedTaskId = ids[idx + 1] ?? ids[idx - 1] ?? null;
         }
         return;
+      case 'w':
+        e.preventDefault();
+        if (store.view !== 'today') store.go('today');
+        ui.whatNow = !ui.whatNow;
+        return;
+      case '[':
+      case ']':
+        // keyboard alternative to dragging between days
+        if (store.selectedTaskId) {
+          e.preventDefault();
+          store.shiftTaskDays(store.selectedTaskId, e.key === ']' ? 1 : -1);
+        }
+        return;
       case 's':
         if (store.selectedTaskId) {
           e.preventDefault();
@@ -152,9 +198,9 @@
         }
         return;
     }
-    if (/^[1-8]$/.test(e.key)) {
+    if (/^[1-9]$/.test(e.key)) {
       const v = VIEWS.find((x) => x.key === e.key);
-      if (v) {
+      if (v && (v.id !== 'play' || store.settings.economyEnabled)) {
         e.preventDefault();
         store.go(v.id);
       }

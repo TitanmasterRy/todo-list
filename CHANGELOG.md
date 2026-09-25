@@ -1,5 +1,75 @@
 # Changelog
 
+## Roadmap pass 6: languages, sharing, practice tests, Canvas, smarter sync
+
+- **Languages:** Spanish (Settings → Language, or Auto), including Spanish dates in quick add ("leer capítulo 3 mañana a las 5 !alta"); dates and numbers follow your region; right-to-left layout support.
+- **Smarter sync:** tasks remember when each field changed, so edits to different fields on two devices both survive.
+- **Practice tests** (Tools → Practice test): take Quiz maker sets like a real test, review, turn misses into notecards, and track scores over time.
+- **Periodic table** (Tools → Compute) with electron configurations, a molar mass calculator and element notecards.
+- **Photo of the board → tasks** in the Syllabus box (AI vision, or on-device text recognition).
+- **Canvas** calendar feed sync (Tools → Connect → Canvas).
+- **Share into the app:** share a PDF, photo or document to the installed app → Book reader or a new task with it attached.
+- **Share my week** (Stats): a square image of your week's numbers (never task titles).
+- **Voice:** the quick-add mic understands "add read chapter four for tomorrow at five p.m., high priority".
+- **Browser extension** (`extension/`): add the page you're on as a task.
+- **Study rooms, friends and class mode** (no server needed): a Pomodoro room anyone can join by link, friend codes that compare streaks and weekly XP, and teacher class lists students can subscribe to.
+
+## Roadmap pass 5: timetable, attendance, grades, syllabus box, privacy and security, more study games
+
+- **Timetable** (Tools → Timetable): bell schedules (regular, early release, one per weekday), A/B or day 1–4 rotation counted over school days, classes with rooms and teachers, and special days. Today shows the class that's on now, the minutes left and what's next; the task editor can set a due date to "Next class".
+- **Attendance:** mark classes present, late, absent or excused on Today or for the last two weeks, with per-class rates. Marking absent offers a catch-up task.
+- **Grades:** a trend chart per course, what-if scores for work that isn't graded yet, and letter scales per course (+/−, 10-point, 7-point, pass/fail or custom).
+- **Plan my week** (Tools): spreads the next week's work over days by estimate and the time you have each day (earliest deadline first, after whatever it waits on), then pins each task to its day.
+- **Syllabus box** (Tools → Syllabus box): paste a syllabus and it finds the dates, titles and types (and breaks), ready to add as tasks. AI is optional.
+- **Math:** LaTeX in task notes, notecards and boss battle (`$x^2$`, `$$…$$`), rendered by KaTeX, which loads only when there's math ("$5" stays money).
+- **Study games:** a crossword built from a deck, and Quiz race against the ghost of your best run. **Star map** (Play) lights a star for every day you finished something.
+- **Lock my keys** (Settings → Privacy & security): API keys and tokens are stored encrypted with a passphrase you enter once per session.
+- **End-to-end encrypted sync:** with a sync passphrase, the Gist, Google Drive and account copies (and backups, if you like) are encrypted in your browser before upload.
+- **Delete everything** (Settings → Data) lists what will go and can also delete the gist, the Drive file and your account's server copy.
+- **What goes where:** a plain-language list of what each optional feature sends to which service (also in PRIVACY.md).
+- **Content-Security-Policy** on the site; uploaded games and code previews run in a separate sandbox page. The Schoology relay can be locked to your own site and rate-limited.
+
+## Roadmap pass 4: plan it out, attachments, course boards, background reminders, more games
+
+- **Plan it out** (task editor): split a big task into dated milestones working back from the due date, each waiting on the one before; or space exam study sessions before a test, linked to a notecard deck so each session has a Study button.
+- **Attachments:** photos, PDFs and documents on tasks, kept on this device (big photos are shrunk). The file names sync, so other devices show "on another device".
+- **Course boards:** a List / Board switch on each course page with To do / Doing / Done columns.
+- **Break mode:** add school breaks in Settings; days inside them don't count against your streak, and Today shows that you're on break.
+- **Notifications:** reminders go through the service worker (so they work on Android, and clicking one opens the task), today's count shows on the app icon, and the installed app gets a morning digest and badge in the background.
+- **Printable weekly planner** (Upcoming → Print week): one landscape page with each day's tasks and blank lines.
+- **What's new** after an update, from this changelog.
+- **Arcade:** Solitaire (Klondike, draw 1 or 3, undo), Invaders, Lunar lander and a Flappy-style paper-plane glider.
+- **Study games** (Play → Study games): Boss battle (multiple choice from your deck against a three-phase boss) and Match rush (match terms to definitions against the clock).
+- **Code health:** Settings and Tools are split into one component per section.
+
+## Roadmap pass 3: task planning, smarter notecards, store split
+
+- **Tasks:** "waiting on" dependencies (blocked tasks are dimmed and can be hidden), per-task reminders (minutes before, the night before, the morning of, or a set time), a start/stop timer with tracked time next to the estimate and an "estimates are usually off by X%" note, repeat every n weeks / monthly / "2nd Tuesday", and "Skip this one" for a single occurrence.
+- **Saved lists:** save any Inbox filter as a sidebar list, with presets like "Exams in the next 14 days"; new due-window, priority and waiting filters.
+- **Notecards:** FSRS scheduling with Again/Hard/Good/Easy and next-interval previews, picture cards, fill-in-the-blank cards (`{{c1::answer}}`), Anki `.apkg` import and Anki text export.
+- **Code health:** `store.svelte.ts` is split into method groups under `src/lib/store/` (planning, courses and templates, notecards, imports) with the same `store.method(...)` API.
+
+## Roadmap pass 2: quality, accessibility, planning, study tools, quests, more games
+
+- **Quality:** ESLint + Prettier, Playwright end-to-end tests against the production build (offline, phone layout, shop/casino/arcade, tools, economy), axe accessibility checks on every view in light and dark, a unit-tested contrast audit of every theme pack, first-load bundle budget, Dependabot. Less-used views and editor languages load on demand (first load 199 → ~114 kB gzipped).
+- **Fixes found by the new checks:** calendar export didn't escape semicolons; faint text, accent buttons and signal colors failed contrast in several themes; list semantics; the deal of the day switched items after you bought it.
+- **Accessibility:** `[`/`]` move tasks by day, high contrast, reading fonts, text size, confetti toggle.
+- **Planning:** What should I do now?, month calendar, CSV/Markdown export, CSV import (Todoist and spreadsheets).
+- **Study tools:** essay tools, citation generator (DOI/ISBN lookup), unit converter.
+- **Economy:** daily quests, deal of the day, casino achievements, parent PIN and daily casino time limit, coins in the weekly review.
+- **Arcade:** Breakout, Sudoku, Hangman, Lights Out and Typing defense.
+
+## Roadmap pass 1: sync fixes, deploy anywhere, AI fix, accounts, economy
+
+- **Sync:** deletions are recorded as tombstones and sync to other devices (no more resurrected tasks); Trash keeps deleted tasks 30 days; courses merge last-write-wins; undo and restore stamp a fresh `updatedAt`; change detection covers every synced collection.
+- **Accounts:** sign up and sign in with email and password (Supabase), forgot/change password, version-checked sync.
+- **AI:** keys work again across providers (token budgets for thinking models, OpenAI reasoning-model parameters, live model list with automatic replacement of retired models, cleaned-up keys). The Anthropic SDK loads on demand.
+- **Deploy:** Vercel, Netlify, Render, Replit, Cloudflare Pages, Firebase, Surge and Docker (Fly.io, Railway, Koyeb) configs, `DEPLOY.md`, one-click buttons; base path defaults to `/` off GitHub Pages; CI runs on pull requests.
+- **Economy:** coins from schoolwork, shop, wallet history, cosmetics.
+- **Casino:** 13 play-chip games with tested payout tables and a homework-break reminder.
+- **Arcade:** vouchers, admin-managed `games.json`, in-app admin panel, sandboxed player, high scores, 7 built-in theme games.
+- PWA home-screen shortcuts; `ROADMAP.md` with everything still to do.
+
 ## Phase 1 — Scaffold, data layer, Today view
 
 - Vite + Svelte 5 + TypeScript scaffold, plain CSS with variables, system font stack

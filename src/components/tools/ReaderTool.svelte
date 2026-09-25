@@ -7,7 +7,22 @@
   import { aiAvailable, explain, makeNotecards } from '../../lib/ai';
   import { renderMarkdown } from '../../lib/markdown';
   import { uid } from '../../lib/id';
-  import { addBook, addHighlight, deleteBook, deleteHighlight, estimateUsage, formatBytes, getBook, listBooks, listHighlights, requestPersistentStorage, updateBook, type BookMeta, type Highlight, type LibraryFile } from '../../lib/library';
+  import {
+    addBook,
+    addHighlight,
+    deleteBook,
+    deleteHighlight,
+    estimateUsage,
+    formatBytes,
+    getBook,
+    listBooks,
+    listHighlights,
+    requestPersistentStorage,
+    updateBook,
+    type BookMeta,
+    type Highlight,
+    type LibraryFile,
+  } from '../../lib/library';
   import PdfViewer from './PdfViewer.svelte';
 
   const POMODORO_SEC = 25 * 60;
@@ -51,7 +66,12 @@
     ui.captureKeys = !!book;
   });
   onMount(() => {
-    void refreshList();
+    void refreshList().then(() => {
+      // a PDF shared into the app opens straight away
+      const b = ui.openBook && books.find((x) => x.id === ui.openBook);
+      ui.openBook = null;
+      if (b) void open(b);
+    });
     void refreshUsage();
   });
   onDestroy(() => {
@@ -115,7 +135,9 @@
 
   async function keepData() {
     const ok = await requestPersistentStorage();
-    persistResult = ok ? 'Your library is marked persistent; the browser won’t clear it to free space.' : 'The browser didn’t grant persistent storage. Installing the app or bookmarking it usually helps.';
+    persistResult = ok
+      ? 'Your library is marked persistent; the browser won’t clear it to free space.'
+      : 'The browser didn’t grant persistent storage. Installing the app or bookmarking it usually helps.';
     toasts.push({ message: ok ? 'Data will be kept' : 'Not granted', kind: ok ? 'success' : 'warn' });
   }
 
@@ -242,7 +264,12 @@
     if (!cardFront.trim() || !cardBack.trim()) return;
     const deckId = resolveDeck();
     const added = store.addCards(deckId, [{ front: cardFront, back: cardBack }]);
-    toasts.push({ message: added.length ? 'Notecard added' : 'Nothing added', detail: added.length ? `In “${store.decks.find((d) => d.id === deckId)?.name ?? 'deck'}”` : undefined, kind: added.length ? 'success' : 'warn', emoji: added.length ? '🃏' : undefined });
+    toasts.push({
+      message: added.length ? 'Notecard added' : 'Nothing added',
+      detail: added.length ? `In “${store.decks.find((d) => d.id === deckId)?.name ?? 'deck'}”` : undefined,
+      kind: added.length ? 'success' : 'warn',
+      emoji: added.length ? '🃏' : undefined,
+    });
     cardForm = false;
     sel = null;
   }
@@ -283,7 +310,12 @@
       }
       const deckId = resolveDeck();
       const added = store.addCards(deckId, items);
-      toasts.push({ message: `Added ${added.length} card${added.length === 1 ? '' : 's'}`, detail: `In “${store.decks.find((d) => d.id === deckId)?.name ?? 'deck'}”`, kind: added.length ? 'success' : 'warn', emoji: '🃏' });
+      toasts.push({
+        message: `Added ${added.length} card${added.length === 1 ? '' : 's'}`,
+        detail: `In “${store.decks.find((d) => d.id === deckId)?.name ?? 'deck'}”`,
+        kind: added.length ? 'success' : 'warn',
+        emoji: '🃏',
+      });
     } catch (e) {
       toasts.push({ message: 'Could not make cards', detail: e instanceof Error ? e.message : String(e), kind: 'warn' });
     } finally {
@@ -323,7 +355,11 @@
 {#if !book}
   <section class="card">
     <h2>Reader</h2>
-    <p class="help">Keep textbooks and readings here, pick up where you left off, and turn what you read into highlights and notecards. <strong>Files stay in this browser only; nothing is uploaded.</strong></p>
+    <p class="help">
+      Keep textbooks and readings here, pick up where you left off, and turn what you read into highlights and notecards. <strong
+        >Files stay in this browser only; nothing is uploaded.</strong
+      >
+    </p>
     <div class="addrow">
       <input type="file" accept=".pdf,application/pdf" multiple hidden bind:this={fileInput} onchange={onFiles} />
       <button class="btn primary" onclick={() => fileInput?.click()} disabled={adding}>{adding ? 'Adding…' : '+ Add PDF'}</button>
@@ -343,7 +379,11 @@
             <button class="book" onclick={() => open(b)}>
               <span class="dot" style="background:{courseColor(b.courseId)}"></span>
               <span class="name">{b.name}</span>
-              <span class="meta">{formatBytes(b.size)}{b.pageCount ? ` · page ${b.lastPage}/${b.pageCount}` : b.lastPage > 1 ? ` · page ${b.lastPage}` : ''}{b.bookmarks.length ? ` · ${b.bookmarks.length} ★` : ''}</span>
+              <span class="meta"
+                >{formatBytes(b.size)}{b.pageCount ? ` · page ${b.lastPage}/${b.pageCount}` : b.lastPage > 1 ? ` · page ${b.lastPage}` : ''}{b.bookmarks.length
+                  ? ` · ${b.bookmarks.length} ★`
+                  : ''}</span
+              >
               {#if b.pageCount}
                 <span class="prog"><span class="fill" style="width:{Math.min(100, (b.lastPage / b.pageCount) * 100)}%"></span></span>
               {/if}
@@ -354,7 +394,8 @@
       </ul>
     {/if}
     <div class="storage">
-      <span class="muted">{usage ? `Using ${formatBytes(usage.usage)}${usage.quota ? ` of ${formatBytes(usage.quota)}` : ''} in this browser.` : 'Storage usage unavailable.'}</span>
+      <span class="muted">{usage ? `Using ${formatBytes(usage.usage)}${usage.quota ? ` of ${formatBytes(usage.quota)}` : ''} in this browser.` : 'Storage usage unavailable.'}</span
+      >
       <button class="btn sm" onclick={keepData}>Keep my data</button>
     </div>
     {#if persistResult}<p class="muted small">{persistResult}</p>{/if}
@@ -378,7 +419,9 @@
         <span class="muted zoom">{Math.round(zoom * 100)}%</span>
         <button class="btn sm icon" onclick={() => setZoom(zoom + 0.1)} disabled={zoom >= 3} aria-label="Zoom in">+</button>
       </div>
-      <button class="btn sm icon" class:star={bookmarked} onclick={toggleBookmark} aria-label={bookmarked ? 'Remove bookmark' : 'Bookmark this page'} aria-pressed={bookmarked}>{bookmarked ? '★' : '☆'}</button>
+      <button class="btn sm icon" class:star={bookmarked} onclick={toggleBookmark} aria-label={bookmarked ? 'Remove bookmark' : 'Bookmark this page'} aria-pressed={bookmarked}
+        >{bookmarked ? '★' : '☆'}</button
+      >
       <button class="btn sm" class:on={showHighlights} onclick={() => (showHighlights = !showHighlights)}>Highlights{highlights.length ? ` (${highlights.length})` : ''}</button>
     </div>
     {#if book.bookmarks.length}
@@ -398,7 +441,15 @@
           <button class="btn sm" onclick={openCardForm}>Make notecard</button>
           <button class="btn sm" onclick={saveHighlight}>Save highlight</button>
           {#if aiAvailable()}<button class="btn sm" onclick={explainSel} disabled={explaining}>{explaining ? 'Thinking…' : '✨ Explain'}</button>{/if}
-          <button class="btn ghost sm icon" onclick={() => { sel = null; cardForm = false; explanation = null; }} aria-label="Dismiss">×</button>
+          <button
+            class="btn ghost sm icon"
+            onclick={() => {
+              sel = null;
+              cardForm = false;
+              explanation = null;
+            }}
+            aria-label="Dismiss">×</button
+          >
         </div>
         {#if cardForm}
           <form class="cardform" onsubmit={saveCard}>
@@ -418,7 +469,9 @@
       <div class="hl-panel">
         <div class="hl-head">
           <strong>Highlights</strong>
-          <button class="btn sm" onclick={cardsFromHighlights} disabled={!highlights.length || makingCards}>{makingCards ? 'Making…' : aiAvailable() ? '✨ Make cards from all highlights' : 'Make cards from all highlights'}</button>
+          <button class="btn sm" onclick={cardsFromHighlights} disabled={!highlights.length || makingCards}
+            >{makingCards ? 'Making…' : aiAvailable() ? '✨ Make cards from all highlights' : 'Make cards from all highlights'}</button
+          >
         </div>
         {#if !highlights.length}
           <p class="muted">Select text on a page and choose “Save highlight”.</p>
@@ -454,61 +507,305 @@
 {/if}
 
 <style>
-  h2 { font-size: 16px; margin: 0 0 8px; }
-  .help, .muted { font-size: 13px; color: var(--text-muted); font-weight: 400; }
-  .help { margin: 0 0 10px; }
-  .small { font-size: 12px; }
-  .addrow { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 10px; align-items: center; }
-  .addrow .select { width: auto; }
-  .books { list-style: none; margin: 0 0 10px; padding: 0; display: flex; flex-direction: column; gap: 6px; }
-  .books li { display: flex; align-items: center; gap: 4px; }
-  .book { flex: 1; min-width: 0; display: grid; grid-template-columns: 12px 1fr; gap: 4px 10px; align-items: center; padding: 10px 12px; border-radius: 10px; background: var(--bg-elev-2); text-align: left; color: var(--text); }
-  .book:hover { background: var(--bg-hover); }
-  .dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
-  .name { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .meta { grid-column: 2; font-size: 12px; color: var(--text-muted); }
-  .prog { grid-column: 2; height: 4px; background: var(--border); border-radius: 2px; overflow: hidden; }
-  .prog .fill { display: block; height: 100%; background: var(--accent); }
-  .storage { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; border-top: 1px solid var(--border); padding-top: 10px; }
+  h2 {
+    font-size: 16px;
+    margin: 0 0 8px;
+  }
+  .help,
+  .muted {
+    font-size: 13px;
+    color: var(--text-muted);
+    font-weight: 400;
+  }
+  .help {
+    margin: 0 0 10px;
+  }
+  .small {
+    font-size: 12px;
+  }
+  .addrow {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+    margin-bottom: 10px;
+    align-items: center;
+  }
+  .addrow .select {
+    width: auto;
+  }
+  .books {
+    list-style: none;
+    margin: 0 0 10px;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .books li {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+  .book {
+    flex: 1;
+    min-width: 0;
+    display: grid;
+    grid-template-columns: 12px 1fr;
+    gap: 4px 10px;
+    align-items: center;
+    padding: 10px 12px;
+    border-radius: 10px;
+    background: var(--bg-elev-2);
+    text-align: left;
+    color: var(--text);
+  }
+  .book:hover {
+    background: var(--bg-hover);
+  }
+  .dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+  .name {
+    font-weight: 600;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .meta {
+    grid-column: 2;
+    font-size: 12px;
+    color: var(--text-muted);
+  }
+  .prog {
+    grid-column: 2;
+    height: 4px;
+    background: var(--border);
+    border-radius: 2px;
+    overflow: hidden;
+  }
+  .prog .fill {
+    display: block;
+    height: 100%;
+    background: var(--accent);
+  }
+  .storage {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    flex-wrap: wrap;
+    border-top: 1px solid var(--border);
+    padding-top: 10px;
+  }
 
-  .reader { padding: 12px; }
-  .toolbar { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin-bottom: 8px; }
-  .title { flex: 1 1 140px; min-width: 0; font-weight: 600; font-size: 14px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .timer { font-size: 12px; color: var(--text-muted); font-variant-numeric: tabular-nums; }
-  .group { display: inline-flex; align-items: center; gap: 4px; }
-  .jump { display: inline-flex; align-items: center; gap: 4px; }
-  .input.pg { width: 58px; padding: 4px 6px; font-size: 13px; text-align: center; -moz-appearance: textfield; appearance: textfield; }
-  .zoom { min-width: 40px; text-align: center; font-variant-numeric: tabular-nums; }
-  .btn.star { color: var(--warn); border-color: color-mix(in srgb, var(--warn) 50%, transparent); }
-  .btn.on { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 16%, transparent); }
-  .bookmarks { display: flex; gap: 4px; flex-wrap: wrap; align-items: center; margin-bottom: 8px; }
-  .chip { padding: 2px 8px; border-radius: 999px; font-size: 12px; background: var(--bg-elev-2); border: 1px solid var(--border); color: var(--text-muted); }
-  .chip.on { border-color: var(--accent); color: var(--text); }
+  .reader {
+    padding: 12px;
+  }
+  .toolbar {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+    margin-bottom: 8px;
+  }
+  .title {
+    flex: 1 1 140px;
+    min-width: 0;
+    font-weight: 600;
+    font-size: 14px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .timer {
+    font-size: 12px;
+    color: var(--text-muted);
+    font-variant-numeric: tabular-nums;
+  }
+  .group {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+  }
+  .jump {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+  }
+  .input.pg {
+    width: 58px;
+    padding: 4px 6px;
+    font-size: 13px;
+    text-align: center;
+    -moz-appearance: textfield;
+    appearance: textfield;
+  }
+  .zoom {
+    min-width: 40px;
+    text-align: center;
+    font-variant-numeric: tabular-nums;
+  }
+  .btn.star {
+    color: var(--warn-text);
+    border-color: color-mix(in srgb, var(--warn) 50%, transparent);
+  }
+  .btn.on {
+    border-color: var(--accent);
+    background: color-mix(in srgb, var(--accent) 16%, transparent);
+  }
+  .bookmarks {
+    display: flex;
+    gap: 4px;
+    flex-wrap: wrap;
+    align-items: center;
+    margin-bottom: 8px;
+  }
+  .chip {
+    padding: 2px 8px;
+    border-radius: 999px;
+    font-size: 12px;
+    background: var(--bg-elev-2);
+    border: 1px solid var(--border);
+    color: var(--text-muted);
+  }
+  .chip.on {
+    border-color: var(--accent);
+    color: var(--text);
+  }
 
-  .popover { position: sticky; top: 8px; z-index: 5; margin-bottom: 8px; padding: 8px 10px; border-radius: 10px; background: var(--bg-elev-2); border: 1px solid var(--border-strong); box-shadow: var(--shadow); display: flex; flex-direction: column; gap: 6px; }
-  .snippet { font-size: 12px; color: var(--text-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .acts { display: flex; gap: 4px; flex-wrap: wrap; align-items: center; }
-  .cardform { display: grid; grid-template-columns: 1fr 1fr auto auto; gap: 6px; }
-  .cardform .select { width: auto; max-width: 200px; }
+  .popover {
+    position: sticky;
+    top: 8px;
+    z-index: 5;
+    margin-bottom: 8px;
+    padding: 8px 10px;
+    border-radius: 10px;
+    background: var(--bg-elev-2);
+    border: 1px solid var(--border-strong);
+    box-shadow: var(--shadow);
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .snippet {
+    font-size: 12px;
+    color: var(--text-muted);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .acts {
+    display: flex;
+    gap: 4px;
+    flex-wrap: wrap;
+    align-items: center;
+  }
+  .cardform {
+    display: grid;
+    grid-template-columns: 1fr 1fr auto auto;
+    gap: 6px;
+  }
+  .cardform .select {
+    width: auto;
+    max-width: 200px;
+  }
 
-  .hl-panel, .explain { margin-bottom: 8px; padding: 10px 12px; border-radius: 10px; background: var(--bg-elev-2); border: 1px solid var(--border); }
-  .hl-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; margin-bottom: 6px; font-size: 14px; }
-  .hls { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
-  .hls li { display: grid; grid-template-columns: auto 1fr auto; gap: 8px; align-items: start; font-size: 13px; padding: 4px 0; border-top: 1px solid var(--border); }
-  .pagelink { color: var(--accent); font-weight: 600; font-size: 12px; white-space: nowrap; padding-top: 2px; }
-  .hltext { color: var(--text); line-height: 1.4; }
-  .explain { margin-top: 8px; }
-  .md { font-size: 14px; line-height: 1.5; }
-  .md :global(p) { margin: 0 0 8px; }
-  .md :global(h3), .md :global(h4), .md :global(h5) { margin: 10px 0 4px; font-size: 14px; }
-  .md :global(ul), .md :global(ol) { margin: 0 0 8px; padding-left: 20px; }
-  .md :global(code) { font-family: var(--mono); font-size: 12px; background: var(--bg-elev); padding: 1px 4px; border-radius: 4px; }
+  .hl-panel,
+  .explain {
+    margin-bottom: 8px;
+    padding: 10px 12px;
+    border-radius: 10px;
+    background: var(--bg-elev-2);
+    border: 1px solid var(--border);
+  }
+  .hl-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-bottom: 6px;
+    font-size: 14px;
+  }
+  .hls {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .hls li {
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    gap: 8px;
+    align-items: start;
+    font-size: 13px;
+    padding: 4px 0;
+    border-top: 1px solid var(--border);
+  }
+  .pagelink {
+    color: var(--accent-text);
+    font-weight: 600;
+    font-size: 12px;
+    white-space: nowrap;
+    padding-top: 2px;
+  }
+  .hltext {
+    color: var(--text);
+    line-height: 1.4;
+  }
+  .explain {
+    margin-top: 8px;
+  }
+  .md {
+    font-size: 14px;
+    line-height: 1.5;
+  }
+  .md :global(p) {
+    margin: 0 0 8px;
+  }
+  .md :global(h3),
+  .md :global(h4),
+  .md :global(h5) {
+    margin: 10px 0 4px;
+    font-size: 14px;
+  }
+  .md :global(ul),
+  .md :global(ol) {
+    margin: 0 0 8px;
+    padding-left: 20px;
+  }
+  .md :global(code) {
+    font-family: var(--mono);
+    font-size: 12px;
+    background: var(--bg-elev);
+    padding: 1px 4px;
+    border-radius: 4px;
+  }
 
-  .stage { position: relative; width: 100%; max-width: 100%; }
-  .keys { margin: 8px 0 0; text-align: center; }
+  .stage {
+    position: relative;
+    width: 100%;
+    max-width: 100%;
+  }
+  .keys {
+    margin: 8px 0 0;
+    text-align: center;
+  }
   @media (max-width: 600px) {
-    .cardform { grid-template-columns: 1fr; }
-    .cardform .select { max-width: none; width: 100%; }
-    .keys { display: none; }
+    .cardform {
+      grid-template-columns: 1fr;
+    }
+    .cardform .select {
+      max-width: none;
+      width: 100%;
+    }
+    .keys {
+      display: none;
+    }
   }
 </style>

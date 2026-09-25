@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Homework To-Do extension settings</title>
+    <style>
+      body {
+        font:
+          14px system-ui,
+          sans-serif;
+        max-width: 520px;
+        margin: 24px auto;
+        padding: 0 16px;
+      }
+      input {
+        width: 100%;
+        box-sizing: border-box;
+        padding: 8px 10px;
+        border: 1px solid #c9cedb;
+        border-radius: 8px;
+        font: inherit;
+      }
+      button {
+        margin-top: 10px;
+        padding: 8px 14px;
+        border: 0;
+        border-radius: 8px;
+        background: #6c5ce7;
+        color: #fff;
+        font: inherit;
+        cursor: pointer;
+      }
+      .ok {
+        color: #15803d;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Homework To-Do</h1>
+    <label for="app">Your app's address (where you open Homework To-Do)</label>
+    <input id="app" placeholder="https://your-homework-todo.example/" />
+    <button id="save">Save</button> <span id="msg" class="ok"></span>
+    <script src="shared.js"></script>
+    <script src="options.js"></script>
+  </body>
+</html>

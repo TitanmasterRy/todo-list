@@ -29,6 +29,11 @@ jobs:
         env:
           # Vite base path is derived from the repository name so a rename keeps working.
           GITHUB_REPOSITORY: ${{ github.repository }}
+          GITHUB_PAGES: 'true'
+          # optional: email/password accounts (repository Settings → Secrets and variables → Actions → Variables)
+          VITE_SUPABASE_URL: ${{ vars.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ vars.VITE_SUPABASE_ANON_KEY }}
+          VITE_ARCADE_MANIFEST: ${{ vars.VITE_ARCADE_MANIFEST }}
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:

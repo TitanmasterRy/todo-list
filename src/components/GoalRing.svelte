@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { t } from '../lib/i18n/index.svelte';
   interface Props {
     value: number;
     goal: number;
@@ -13,7 +14,7 @@
   const closed = $derived(pct >= 1);
 </script>
 
-<div class="ring" class:closed style="width:{size}px;height:{size}px" role="img" aria-label="Daily goal: {value} of {goal} tasks">
+<div class="ring" class:closed style="width:{size}px;height:{size}px" role="img" aria-label={t('goal.ring', { value, count: goal })}>
   <svg viewBox="0 0 {size} {size}" width={size} height={size}>
     <circle cx={size / 2} cy={size / 2} {r} fill="none" stroke="var(--border)" stroke-width={stroke} />
     <circle
@@ -57,7 +58,7 @@
     font-variant-numeric: tabular-nums;
   }
   .closed .lbl {
-    color: var(--accent);
+    color: var(--accent-text);
     font-size: 16px;
   }
 </style>

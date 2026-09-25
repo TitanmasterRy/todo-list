@@ -69,7 +69,9 @@ function hasWord(tokens: string[], ...targets: string[]): boolean {
 }
 
 function hasPhrase(text: string, ...phrases: string[]): boolean {
-  const n = normalize(text).replace(/[^a-z0-9#.\-\s]/g, ' ').replace(/\s+/g, ' ');
+  const n = normalize(text)
+    .replace(/[^a-z0-9#.\-\s]/g, ' ')
+    .replace(/\s+/g, ' ');
   return phrases.some((p) => new RegExp(`(^|[^a-z0-9])${escapeRe(p)}([^a-z0-9]|$)`).test(n));
 }
 
@@ -151,9 +153,7 @@ interface ProblemInfo {
 /** Parse "problems 1–20", "#1-15", "questions 3-9", "exercises 2, 4, 6", "20 problems". */
 function parseProblems(title: string): ProblemInfo | undefined {
   const t = normalize(title);
-  const range = t.match(
-    /\b(?:problems?|questions?|exercises?|q|qs|nos?\.?|numbers?|#)\s*#?\s*(\d{1,3})\s*(?:-|to|through)\s*(\d{1,3})\b/,
-  );
+  const range = t.match(/\b(?:problems?|questions?|exercises?|q|qs|nos?\.?|numbers?|#)\s*#?\s*(\d{1,3})\s*(?:-|to|through)\s*(\d{1,3})\b/);
   if (range) {
     const from = parseInt(range[1], 10);
     const to = parseInt(range[2], 10);
@@ -173,7 +173,10 @@ function parseProblems(title: string): ProblemInfo | undefined {
   }
   const list = t.match(/\b(?:problems?|questions?|exercises?)\s*#?\s*((?:\d{1,3}\s*,\s*)+\d{1,3})\b/);
   if (list) {
-    const nums = list[1].split(',').map((s) => s.trim()).filter(Boolean);
+    const nums = list[1]
+      .split(',')
+      .map((s) => s.trim())
+      .filter(Boolean);
     return { count: nums.length, label: `problems ${nums.join(', ')}` };
   }
   const countFirst = t.match(/\b(\d{1,3})\s+(?:problems?|questions?|exercises?)\b/);
@@ -193,10 +196,7 @@ function detectKind(title: string): Kind {
 
   if (hasWord(tokens, 'quiz', 'quizzes')) return 'quiz';
   if (hasWord(tokens, 'test', 'exam', 'exams', 'midterm', 'midterms', 'final', 'finals')) return 'exam';
-  if (
-    isLabReport ||
-    hasWord(tokens, 'essay', 'paper', 'report', 'draft', 'write', 'presentation', 'slides', 'project', 'speech', 'poster', 'outline')
-  ) {
+  if (isLabReport || hasWord(tokens, 'essay', 'paper', 'report', 'draft', 'write', 'presentation', 'slides', 'project', 'speech', 'poster', 'outline')) {
     return 'project';
   }
   if (hasWord(tokens, 'lab', 'labs')) return 'lab';
@@ -276,10 +276,10 @@ export function autoDescribe(title: string, ctx: AutoDescribeContext = {}): Auto
   const cn = courseLabel(ctx.courseName);
   const t = cleanTitle(title);
 
-  let what = '';
-  let plan = '';
-  let tip = '';
-  let subtasks: string[] = [];
+  let what: string;
+  let plan: string;
+  let tip: string;
+  let subtasks: string[];
   const tags: string[] = [];
   let estimate = BASE_ESTIMATE[type];
 
@@ -315,9 +315,7 @@ export function autoDescribe(title: string, ctx: AutoDescribeContext = {}): Auto
       const isSlides = hasWord(words(title), 'presentation', 'slides', 'poster', 'speech');
       const isLabReport = hasPhrase(text, 'lab report', 'lab write-up', 'lab writeup');
       what = `${isLabReport ? 'Lab report' : isSlides ? 'Presentation' : 'Writing'}${cn}: ${t}.`;
-      plan = isSlides
-        ? 'outline key points → build slides → rehearse → polish.'
-        : 'outline and thesis → draft → revise → proofread and cite.';
+      plan = isSlides ? 'outline key points → build slides → rehearse → polish.' : 'outline and thesis → draft → revise → proofread and cite.';
       tip = isLabReport
         ? 'Write the results and analysis first; cite sources as you go.'
         : isSlides

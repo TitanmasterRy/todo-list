@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Hangman</title>
+<style>
+  :root { --bg: #fbf8f1; --fg: #2d2a26; --accent: #c0392b; }
+  html, body { margin: 0; min-height: 100%; background: var(--bg); color: var(--fg); font: 16px Georgia, serif; display: grid; place-items: center; }
+  .wrap { display: grid; gap: 14px; justify-items: center; padding: 12px; max-width: 560px; }
+  svg { width: 180px; height: 180px; }
+  .word { font: 700 30px/1 ui-monospace, monospace; letter-spacing: 0.3em; text-align: center; }
+  .keys { display: grid; grid-template-columns: repeat(9, 1fr); gap: 5px; }
+  .keys button { font: 700 16px system-ui; padding: 8px 0; min-width: 34px; border: 1px solid var(--fg); background: #fff; border-radius: 4px; cursor: pointer; color: #2d2a26; }
+  .keys button:disabled { opacity: 0.35; cursor: default; }
+  .keys button.hit { background: #d4edda; }
+  .keys button.hit:disabled { opacity: 1; }
+  .hint { font-style: italic; opacity: 0.8; text-align: center; }
+  .new { font: inherit; padding: 6px 16px; border: 1px solid var(--fg); background: #fff; border-radius: 4px; cursor: pointer; color: #2d2a26; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div><b>✏️ Hangman</b> · Score <span id="score">0</span> · Streak <span id="streak">0</span></div>
+  <svg viewBox="0 0 120 120" aria-hidden="true" id="art" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"></svg>
+  <div class="word" id="word" aria-live="polite"></div>
+  <div class="hint" id="hint"></div>
+  <div class="keys" id="keys"></div>
+  <div id="msg"></div>
+  <button class="new" id="new">New word</button>
+</div>
+<script>
+  const q = new URLSearchParams(location.search);
+  if (q.get('accent')) document.documentElement.style.setProperty('--accent', q.get('accent'));
+  if (q.get('dark') === '1') { document.documentElement.style.setProperty('--bg', '#1c1b19'); document.documentElement.style.setProperty('--fg', '#efe8dc'); }
+  const report = (score) => parent.postMessage({ type: 'hwtodo:score', score }, '*');
+  const DEFAULT = ['PHOTOSYNTHESIS', 'MITOCHONDRIA', 'DEMOCRACY', 'HYPOTENUSE', 'METAPHOR', 'ALGORITHM', 'MOLECULE', 'RENAISSANCE', 'EQUATION', 'PARAGRAPH', 'ECOSYSTEM', 'GRAVITY', 'CONSTITUTION', 'FRACTION', 'VOLCANO'];
+  const custom = (q.get('words') || '').split(',').map((w) => w.toUpperCase().replace(/[^A-Z]/g, '')).filter((w) => w.length >= 3 && w.length <= 14);
+  const POOL = custom.length >= 4 ? custom : DEFAULT;
+  const PARTS = ['<line x1="10" y1="112" x2="70" y2="112"/>', '<line x1="30" y1="112" x2="30" y2="10"/>', '<line x1="30" y1="10" x2="80" y2="10"/>', '<line x1="80" y1="10" x2="80" y2="24"/>', '<circle cx="80" cy="34" r="10"/>', '<line x1="80" y1="44" x2="80" y2="74"/>', '<line x1="80" y1="52" x2="66" y2="64"/>', '<line x1="80" y1="52" x2="94" y2="64"/>', '<line x1="80" y1="74" x2="68" y2="94"/>', '<line x1="80" y1="74" x2="92" y2="94"/>'];
+  const $ = (id) => document.getElementById(id);
+  let word, guessed, misses, score = 0, streak = 0, over;
+  function start() { word = POOL[Math.floor(Math.random() * POOL.length)]; guessed = new Set(); misses = 0; over = false; $('msg').textContent = ''; $('hint').textContent = custom.length >= 4 ? 'From your notecards' : `${word.length} letters`; render(); }
+  function render() {
+    $('word').textContent = [...word].map((ch) => (guessed.has(ch) || over ? ch : '_')).join('');
+    $('art').innerHTML = PARTS.slice(0, 3 + misses).join('');
+    $('keys').innerHTML = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('').map((k) => `<button data-k="${k}" ${guessed.has(k) || over ? 'disabled' : ''} class="${guessed.has(k) && word.includes(k) ? 'hit' : ''}">${k}</button>`).join('');
+    $('score').textContent = score; $('streak').textContent = streak;
+  }
+  function guess(k) {
+    if (over || guessed.has(k)) return; guessed.add(k);
+    if (!word.includes(k)) misses++;
+    if ([...word].every((ch) => guessed.has(ch))) { over = true; streak++; score += 10 * word.length + (7 - misses) * 5 + streak * 5; $('msg').textContent = `✓ ${word}!`; report(score); }
+    else if (misses >= 7) { over = true; streak = 0; $('msg').textContent = `The word was ${word}.`; report(score); }
+    render();
+  }
+  $('keys').addEventListener('click', (e) => { const b = e.target.closest('button'); if (b) guess(b.dataset.k); });
+  addEventListener('keydown', (e) => { if (/^[a-z]$/i.test(e.key)) guess(e.key.toUpperCase()); if (e.key === 'Enter' && over) start(); });
+  $('new').onclick = start; start();
+</script>
+</body>
+</html>

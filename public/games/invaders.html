@@ -1,0 +1,149 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Invaders</title>
+<style>
+  :root { --bg: #0b0820; --fg: #fff; --accent: #ff4fd8; --panel: rgba(255,255,255,.14); }
+  html, body { margin: 0; height: 100%; background: var(--bg); color: var(--fg); font: 15px system-ui, sans-serif; overflow: hidden; touch-action: none; }
+  canvas { display: block; margin: 0 auto; max-width: 100vw; max-height: 100vh; }
+  .hud { position: fixed; top: 8px; left: 12px; font-weight: 800; font-variant-numeric: tabular-nums; pointer-events: none; }
+  #pause { position: fixed; top: 6px; right: 10px; width: 38px; height: 34px; border: 0; border-radius: 8px; background: var(--panel); color: var(--fg); font-size: 16px; cursor: pointer; }
+  .center { position: fixed; inset: 0; display: grid; place-items: center; pointer-events: none; text-align: center; }
+  .center button { pointer-events: auto; font: inherit; padding: 10px 22px; border: 0; border-radius: 10px; background: var(--accent); color: #120d33; font-weight: 800; cursor: pointer; }
+  .pad { position: fixed; bottom: 12px; left: 0; right: 0; display: flex; justify-content: space-between; padding: 0 14px; pointer-events: none; }
+  .pad div { display: flex; gap: 10px; }
+  .pad button { pointer-events: auto; width: 62px; height: 62px; border-radius: 50%; border: 0; background: var(--panel); color: var(--fg); font-size: 22px; touch-action: none; }
+  @media (hover: hover) { .pad { display: none; } }
+</style>
+</head>
+<body>
+<canvas id="c" width="480" height="640" role="img" aria-label="Invaders: rows of aliens march down; shoot them from behind the shields"></canvas>
+<div class="hud" aria-live="polite">Score <span id="score">0</span> · Lives <span id="lives">3</span> · Wave <span id="wave">1</span></div>
+<button id="pause" aria-label="Pause">⏸</button>
+<div class="center" id="menu"><div><h2>👾 Invaders</h2><p id="tip">← → or mouse to move · Space, ↑ or click to fire · P pause<br />Waves march faster as you thin them out.</p><button id="go">Start</button></div></div>
+<div class="pad"><div><button data-k="l" aria-label="Move left">◀</button><button data-k="r" aria-label="Move right">▶</button></div><div><button data-k="f" aria-label="Fire">●</button></div></div>
+<script>
+  // Homework To-Do arcade game. Report scores with parent.postMessage({ type: 'hwtodo:score', score }, '*').
+  const q = new URLSearchParams(location.search), root = document.documentElement.style;
+  if (q.get('accent')) root.setProperty('--accent', q.get('accent'));
+  const light = q.get('dark') === '0';
+  if (light) { root.setProperty('--bg', '#f1eefc'); root.setProperty('--fg', '#1b1438'); root.setProperty('--panel', 'rgba(27,20,56,.12)'); }
+  const calm = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const report = (score) => parent.postMessage({ type: 'hwtodo:score', score }, '*');
+  const c = document.getElementById('c'), x = c.getContext('2d'), $ = (id) => document.getElementById(id);
+  const W = 480, H = 640, PY = H - 56, SHIELD_Y = H - 150, COLS = 9, ROWS = 5;
+  const COL = light ? { field: '#ffffff', shield: '#1faa7a', rows: ['#d6336c', '#e8590c', '#e8590c', '#1c7ed6', '#1c7ed6'], shot: '#1b1438' } : { field: '#120d33', shield: '#1dd1a1', rows: ['#ff4fd8', '#ff9f43', '#ff9f43', '#54a0ff', '#54a0ff'], shot: '#fff' };
+  // 1-bit sprites, two frames each: squid (30 pts), crab (20), octopus (10)
+  const ART = [
+    [['...##...', '..####..', '.######.', '##.##.##', '########', '..#..#..', '.#.##.#.', '#.#..#.#'], ['...##...', '..####..', '.######.', '##.##.##', '########', '.#.##.#.', '#......#', '.#....#.']],
+    [['..#.....#..', '...#...#...', '..#######..', '.##.###.##.', '###########', '#.#######.#', '#.#.....#.#', '...##.##...'], ['..#.....#..', '#..#...#..#', '#.#######.#', '###.###.###', '###########', '.#########.', '..#.....#..', '.#.......#.']],
+    [['....####....', '.##########.', '############', '###..##..###', '############', '...##..##...', '..##.##.##..', '##........##'], ['....####....', '.##########.', '############', '###..##..###', '############', '..###..###..', '.##..##..##.', '..##....##..']],
+  ];
+  const PTS = [30, 20, 20, 10, 10], TYPE = [0, 1, 1, 2, 2], PXS = 2.5;
+  function sprite(rows, color) { const s = document.createElement('canvas'); s.width = rows[0].length * PXS; s.height = rows.length * PXS; const g = s.getContext('2d'); g.fillStyle = color; rows.forEach((r, y) => [...r].forEach((ch, xx) => ch === '#' && g.fillRect(xx * PXS, y * PXS, PXS, PXS))); return s; }
+  const SPR = COL.rows.map((color, r) => ART[TYPE[r]].map((f) => sprite(f, color)));
+  const SHIELD = ['..########..', '.##########.', '############', '############', '############', '####....####', '###......###'];
+  let inv, dir, stepT, frame, shots, bombs, shields, ship, ufo, bits, score, lives, wave, state = 'menu', paused = false, keys = {}, target = null, cool = 0, hurt = 0, ufoT = 0, last = 0, acc = 0;
+  function fit() { const s = Math.min(innerWidth / W, innerHeight / H); c.style.width = W * s + 'px'; c.style.height = H * s + 'px'; }
+  addEventListener('resize', fit); fit();
+  function build() {
+    inv = []; const top = 90 + Math.min(wave - 1, 6) * 14;
+    for (let r = 0; r < ROWS; r++) for (let k = 0; k < COLS; k++) inv.push({ r, k, x: 40 + k * 44 + (12 - ART[TYPE[r]][0][0].length) * PXS * 0.5, y: top + r * 36, w: ART[TYPE[r]][0][0].length * PXS, h: 8 * PXS, alive: true });
+    dir = 1; stepT = 0; frame = 0; bombs = []; shots = [];
+    shields = []; for (let s = 0; s < 4; s++) SHIELD.forEach((row, ry) => [...row].forEach((ch, rx) => ch === '#' && shields.push({ x: 50 + s * 110 + rx * 4, y: SHIELD_Y + ry * 4 })));
+  }
+  function start() { score = 0; lives = 3; wave = 1; ship = { x: W / 2 }; bits = []; ufo = null; ufoT = 900; hurt = 0; build(); state = 'playing'; paused = false; $('menu').style.display = 'none'; hud(); }
+  function hud() { $('score').textContent = score; $('lives').textContent = lives; $('wave').textContent = wave; }
+  function boom(px, py, color) { if (!calm) for (let i = 0; i < 12; i++) bits.push({ x: px, y: py, vx: (Math.random() - 0.5) * 4, vy: (Math.random() - 0.5) * 4, life: 24, color }); }
+  function over(why) { state = 'over'; report(score); $('menu').style.display = 'grid'; $('menu').querySelector('h2').textContent = `Score ${score}`; $('tip').textContent = why; $('go').textContent = 'Again'; }
+  const hit = (a, px, py, pad = 0) => px > a.x - pad && px < a.x + a.w + pad && py > a.y - pad && py < a.y + a.h + pad;
+  function eatShield(px, py) { const i = shields.findIndex((b) => px > b.x - 1 && px < b.x + 5 && py > b.y - 2 && py < b.y + 6); if (i < 0) return false; const b = shields[i]; shields = shields.filter((o, j) => j !== i && !(Math.abs(o.x - b.x) <= 4 && Math.abs(o.y - b.y) <= 4 && Math.random() < 0.4)); return true; }
+  function tick() {
+    if (state !== 'playing') return;
+    // ship
+    if (keys.l || keys.r) target = null;
+    if (keys.l) ship.x -= 4; if (keys.r) ship.x += 4;
+    if (target !== null) ship.x += Math.max(-4, Math.min(4, target - ship.x));
+    ship.x = Math.max(18, Math.min(W - 18, ship.x));
+    if (keys.f) fire();
+    cool--; if (hurt > 0) hurt--;
+    // formation: steps faster as it thins out and with every wave
+    const alive = inv.filter((i) => i.alive);
+    const every = Math.max(2, Math.round(3 + (alive.length / (ROWS * COLS)) * 30 - (wave - 1) * 4));
+    if (++stepT >= every) {
+      stepT = 0; frame ^= 1;
+      const edge = alive.some((i) => (dir > 0 ? i.x + i.w + 6 > W - 8 : i.x - 6 < 8));
+      if (edge) { dir = -dir; alive.forEach((i) => (i.y += 14)); } else alive.forEach((i) => (i.x += 6 * dir));
+    }
+    // bombs from the lowest invader in a random column
+    if (Math.random() < Math.min(0.06, 0.012 + wave * 0.005) && bombs.length < 3 + wave) {
+      const cols = [...new Set(alive.map((i) => i.k))], k = cols[Math.floor(Math.random() * cols.length)];
+      const low = alive.filter((i) => i.k === k).sort((a, b) => b.y - a.y)[0];
+      if (low) bombs.push({ x: low.x + low.w / 2, y: low.y + low.h, v: 2.6 + wave * 0.3 });
+    }
+    // mystery saucer
+    if (!ufo && --ufoT <= 0) { const l = Math.random() < 0.5; ufo = { x: l ? -40 : W + 40, y: 52, w: 36, h: 14, v: l ? 1.6 : -1.6, pts: [50, 100, 150, 300][Math.floor(Math.random() * 4)] }; ufoT = 1200 + Math.random() * 900; }
+    if (ufo) { ufo.x += ufo.v; if (ufo.x < -60 || ufo.x > W + 60) ufo = null; }
+    for (const s of shots) {
+      s.y -= 8;
+      if (s.y < 30) { s.dead = true; continue; }
+      if (eatShield(s.x, s.y)) { s.dead = true; continue; }
+      const t = alive.find((i) => i.alive && hit(i, s.x, s.y));
+      if (t) { t.alive = false; s.dead = true; score += PTS[t.r]; boom(t.x + t.w / 2, t.y + t.h / 2, COL.rows[t.r]); hud(); continue; }
+      if (ufo && hit(ufo, s.x, s.y)) { score += ufo.pts; boom(ufo.x + 18, ufo.y + 7, COL.rows[0]); ufo = null; s.dead = true; hud(); continue; }
+      const b = bombs.find((o) => Math.abs(o.x - s.x) < 5 && Math.abs(o.y - s.y) < 10);
+      if (b) { b.dead = true; s.dead = true; }
+    }
+    for (const b of bombs) {
+      if (b.dead) continue;
+      b.y += b.v;
+      if (b.y > H - 20) b.dead = true;
+      else if (eatShield(b.x, b.y)) b.dead = true;
+      else if (hurt <= 0 && Math.abs(b.x - ship.x) < 16 && b.y > PY - 8 && b.y < PY + 12) {
+        b.dead = true; lives--; hurt = 90; boom(ship.x, PY, COL.shield); bombs = []; hud();
+        if (lives <= 0) return over('Your last cannon was hit.');
+      }
+    }
+    shots = shots.filter((s) => !s.dead); bombs = bombs.filter((b) => !b.dead);
+    // invaders chew through shields they touch
+    for (const i of alive) if (i.y + i.h >= SHIELD_Y) shields = shields.filter((b) => !hit(i, b.x + 2, b.y + 2));
+    if (alive.some((i) => i.alive && i.y + i.h >= PY - 8)) return over('The invaders landed.');
+    if (inv.every((i) => !i.alive)) { score += 100 * wave; wave++; build(); hud(); }
+    bits.forEach((b) => { b.x += b.vx; b.y += b.vy; b.life--; }); bits = bits.filter((b) => b.life > 0);
+  }
+  function fire() { if (state === 'playing' && !paused && cool <= 0 && shots.length < 1 + Math.min(1, wave - 1)) { shots.push({ x: ship.x, y: PY - 10 }); cool = 14; } }
+  function draw(now) {
+    x.fillStyle = COL.field; x.fillRect(0, 0, W, H);
+    const accent = getComputedStyle(document.documentElement).getPropertyValue('--accent').trim();
+    x.fillStyle = COL.shield; for (const b of shields || []) x.fillRect(b.x, b.y, 4, 4);
+    for (const i of inv || []) if (i.alive) x.drawImage(SPR[i.r][frame], Math.round(i.x), Math.round(i.y));
+    if (ufo) { x.fillStyle = COL.rows[0]; x.beginPath(); x.ellipse(ufo.x + 18, ufo.y + 9, 18, 6, 0, 0, 7); x.fill(); x.beginPath(); x.ellipse(ufo.x + 18, ufo.y + 4, 8, 6, 0, Math.PI, 0); x.fill(); }
+    if (ship && (hurt <= 0 || Math.floor(hurt / 6) % 2)) { x.fillStyle = accent; x.fillRect(ship.x - 15, PY, 30, 10); x.fillRect(ship.x - 9, PY - 5, 18, 5); x.fillRect(ship.x - 2, PY - 11, 4, 6); }
+    x.fillStyle = COL.shot; for (const s of shots || []) x.fillRect(s.x - 1.5, s.y - 6, 3, 12);
+    for (const b of bombs || []) { x.fillStyle = COL.rows[1]; const zig = calm ? 0 : Math.sin(now / 60 + b.x) * 2; x.fillRect(b.x - 1.5 + zig, b.y - 5, 3, 10); }
+    for (const b of bits || []) { x.globalAlpha = b.life / 24; x.fillStyle = b.color; x.fillRect(b.x - 2, b.y - 2, 4, 4); } x.globalAlpha = 1;
+    x.fillStyle = COL.shield; x.fillRect(0, H - 22, W, 2);
+    if (paused) { x.fillStyle = COL.shot; x.font = '800 30px system-ui, sans-serif'; x.textAlign = 'center'; x.fillText('Paused · press P', W / 2, H / 2); x.textAlign = 'start'; }
+  }
+  // fixed 60 Hz update so the march speed doesn't depend on the screen's refresh rate
+  function loop(now) { const dt = Math.min(100, now - (last || now)); last = now; if (!paused) { acc += dt; while (acc >= 1000 / 60) { tick(); acc -= 1000 / 60; } } draw(now); requestAnimationFrame(loop); }
+  function pause(on = !paused) { if (state !== 'playing') return; paused = on; acc = 0; $('pause').textContent = paused ? '▶' : '⏸'; $('pause').setAttribute('aria-label', paused ? 'Resume' : 'Pause'); }
+  const KEY = { ArrowLeft: 'l', a: 'l', ArrowRight: 'r', d: 'r', ' ': 'f', ArrowUp: 'f', w: 'f' };
+  addEventListener('keydown', (e) => { if (KEY[e.key]) { keys[KEY[e.key]] = true; e.preventDefault(); } if (e.key === 'p' || e.key === 'P') pause(); });
+  addEventListener('keyup', (e) => { if (KEY[e.key]) keys[KEY[e.key]] = false; });
+  c.addEventListener('pointermove', (e) => { const r = c.getBoundingClientRect(); target = ((e.clientX - r.left) / r.width) * W; });
+  c.addEventListener('pointerdown', (e) => { const r = c.getBoundingClientRect(); target = ((e.clientX - r.left) / r.width) * W; fire(); });
+  document.querySelectorAll('.pad button').forEach((b) => {
+    const k = b.dataset.k, off = () => (keys[k] = false);
+    b.addEventListener('pointerdown', (e) => { e.preventDefault(); keys[k] = true; }); b.addEventListener('pointerup', off); b.addEventListener('pointercancel', off); b.addEventListener('pointerleave', off);
+  });
+  addEventListener('blur', () => { keys = {}; pause(true); });
+  document.addEventListener('visibilitychange', () => { if (document.hidden) pause(true); });
+  $('pause').onclick = () => pause();
+  $('go').onclick = start;
+  wave = 1; build(); requestAnimationFrame(loop);
+</script>
+</body>
+</html>

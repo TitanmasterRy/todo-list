@@ -97,10 +97,7 @@ const BASE_TOPICS: Topic[] = [
       },
       {
         heading: 'Distance & midpoint',
-        items: [
-          'Distance: `d = √((x₂ − x₁)² + (y₂ − y₁)²)`',
-          'Midpoint: `((x₁ + x₂)/2, (y₁ + y₂)/2)`',
-        ],
+        items: ['Distance: `d = √((x₂ − x₁)² + (y₂ − y₁)²)`', 'Midpoint: `((x₁ + x₂)/2, (y₁ + y₂)/2)`'],
       },
       {
         heading: 'Systems of equations',
@@ -357,7 +354,7 @@ const BASE_TOPICS: Topic[] = [
           "`f'(x) = lim (h→0) [f(x + h) − f(x)] / h`",
           'Derivative = slope of the tangent line = instantaneous rate of change',
           'Differentiable ⇒ continuous (not the reverse — e.g. `|x|` at 0)',
-          'Tangent line at a: `y = f(a) + f\'(a)(x − a)`',
+          "Tangent line at a: `y = f(a) + f'(a)(x − a)`",
         ],
       },
       {
@@ -391,10 +388,10 @@ const BASE_TOPICS: Topic[] = [
           "First derivative test: `f'` changes + → − is a max, − → + is a min",
           "Second derivative test: at a critical point, `f'' > 0` min, `f'' < 0` max, `f'' = 0` inconclusive",
           'Absolute extrema on [a, b]: compare f at critical points **and** endpoints',
-          'Position s(t): velocity `v = s\'`, acceleration `a = v\'`; speed = |v|; speeding up when v and a share a sign',
+          "Position s(t): velocity `v = s'`, acceleration `a = v'`; speed = |v|; speeding up when v and a share a sign",
           'Related rates: write an equation relating the quantities, differentiate with respect to t, then substitute values',
           "Mean Value Theorem: some c in (a, b) has `f'(c) = (f(b) − f(a)) / (b − a)`",
-          'Linear approximation: `f(x) ≈ f(a) + f\'(a)(x − a)`',
+          "Linear approximation: `f(x) ≈ f(a) + f'(a)(x − a)`",
         ],
       },
     ],
@@ -430,9 +427,9 @@ const BASE_TOPICS: Topic[] = [
       {
         heading: 'Fundamental Theorem of Calculus',
         items: [
-          'Part 1: if `F(x) = ∫ₐˣ f(t) dt`, then `F\'(x) = f(x)`',
-          'Chain version: `d/dx ∫ₐ^(g(x)) f(t) dt = f(g(x)) · g\'(x)`',
-          'Part 2: `∫ₐᵇ f(x) dx = F(b) − F(a)` where `F\' = f`',
+          "Part 1: if `F(x) = ∫ₐˣ f(t) dt`, then `F'(x) = f(x)`",
+          "Chain version: `d/dx ∫ₐ^(g(x)) f(t) dt = f(g(x)) · g'(x)`",
+          "Part 2: `∫ₐᵇ f(x) dx = F(b) − F(a)` where `F' = f`",
           'Net change: `∫ₐᵇ v(t) dt` = displacement; `∫ₐᵇ |v(t)| dt` = total distance',
           'Average value of f on [a, b]: `(1 / (b − a)) ∫ₐᵇ f(x) dx`',
         ],
@@ -613,9 +610,9 @@ const BASE_TOPICS: Topic[] = [
         items: [
           'Momentum `p = mv` (vector, kg·m/s)',
           'Impulse `J = F Δt = Δp`',
-          'Conservation of momentum (no external net force): `m₁v₁ + m₂v₂ = m₁v₁\' + m₂v₂\'`',
+          "Conservation of momentum (no external net force): `m₁v₁ + m₂v₂ = m₁v₁' + m₂v₂'`",
           'Elastic collision: momentum **and** KE conserved',
-          'Inelastic: momentum conserved, KE not; perfectly inelastic → objects stick, `(m₁ + m₂)v\'`',
+          "Inelastic: momentum conserved, KE not; perfectly inelastic → objects stick, `(m₁ + m₂)v'`",
           'Explosions/recoil: total momentum stays zero if it started at zero',
         ],
       },
@@ -671,9 +668,9 @@ const BASE_TOPICS: Topic[] = [
         heading: 'Gas laws',
         items: [
           'Ideal gas: `PV = nRT`, `R = 0.08206 L·atm/(mol·K)` or `8.314 J/(mol·K)`; **T in kelvin** (`K = °C + 273.15`)',
-          "Boyle: `P₁V₁ = P₂V₂` (constant T); Charles: `V₁/T₁ = V₂/T₂` (constant P); Gay-Lussac: `P₁/T₁ = P₂/T₂`",
+          'Boyle: `P₁V₁ = P₂V₂` (constant T); Charles: `V₁/T₁ = V₂/T₂` (constant P); Gay-Lussac: `P₁/T₁ = P₂/T₂`',
           'Combined: `P₁V₁/T₁ = P₂V₂/T₂`',
-          "Dalton: `P_total = P₁ + P₂ + …`; partial pressure `Pᵢ = xᵢ · P_total`",
+          'Dalton: `P_total = P₁ + P₂ + …`; partial pressure `Pᵢ = xᵢ · P_total`',
           'Density of a gas: `d = PM / RT` (M = molar mass)',
           '`1 atm = 760 mmHg = 760 torr = 101.325 kPa`',
         ],
@@ -792,7 +789,7 @@ const BASE_TOPICS: Topic[] = [
           '**Transcription** (nucleus): DNA template → mRNA by RNA polymerase',
           '**Translation** (ribosome): mRNA codons (3 bases) → amino acids via tRNA anticodons',
           'Start codon AUG (methionine); stop codons UAA, UAG, UGA',
-          'DNA replication is semiconservative; DNA polymerase builds 5\' → 3\'',
+          "DNA replication is semiconservative; DNA polymerase builds 5' → 3'",
           'Mutations: point (substitution), frameshift (insertion/deletion); silent, missense, nonsense',
         ],
       },
@@ -1360,12 +1357,7 @@ const DEPTH: Record<string, Depth> = {
       },
       {
         problem: 'Solve |2x − 3| ≤ 7.',
-        steps: [
-          '|expression| ≤ 7 means −7 ≤ expression ≤ 7.',
-          '−7 ≤ 2x − 3 ≤ 7.',
-          'Add 3 everywhere: −4 ≤ 2x ≤ 10.',
-          'Divide by 2 (positive, so the signs stay): −2 ≤ x ≤ 5.',
-        ],
+        steps: ['|expression| ≤ 7 means −7 ≤ expression ≤ 7.', '−7 ≤ 2x − 3 ≤ 7.', 'Add 3 everywhere: −4 ≤ 2x ≤ 10.', 'Divide by 2 (positive, so the signs stay): −2 ≤ x ≤ 5.'],
         answer: '−2 ≤ x ≤ 5, or [−2, 5]',
       },
     ],
@@ -1384,7 +1376,11 @@ const DEPTH: Record<string, Depth> = {
       },
     ],
     textbook: [
-      { title: 'Intermediate Algebra 2e (OpenStax)', url: `${OSX}intermediate-algebra-2e`, chapter: `Ch. 5 Polynomials and Polynomial Functions, Ch. 6 Factoring, Ch. 9 Quadratic Equations — ${PDF}` },
+      {
+        title: 'Intermediate Algebra 2e (OpenStax)',
+        url: `${OSX}intermediate-algebra-2e`,
+        chapter: `Ch. 5 Polynomials and Polynomial Functions, Ch. 6 Factoring, Ch. 9 Quadratic Equations — ${PDF}`,
+      },
       { title: 'College Algebra 2e (OpenStax)', url: `${OSX}college-algebra-2e`, chapter: `Ch. 1 Prerequisites, Ch. 2 Equations and Inequalities — ${PDF}` },
     ],
   },
@@ -1412,11 +1408,7 @@ const DEPTH: Record<string, Depth> = {
       },
       {
         problem: 'Find the domain of f(x) = √(x − 4) / (x − 9).',
-        steps: [
-          'The square root needs x − 4 ≥ 0, so x ≥ 4.',
-          'The denominator cannot be zero, so x ≠ 9.',
-          'Combine both conditions: x ≥ 4 but x ≠ 9.',
-        ],
+        steps: ['The square root needs x − 4 ≥ 0, so x ≥ 4.', 'The denominator cannot be zero, so x ≠ 9.', 'Combine both conditions: x ≥ 4 but x ≠ 9.'],
         answer: '[4, 9) ∪ (9, ∞)',
       },
       {
@@ -1536,20 +1528,12 @@ const DEPTH: Record<string, Depth> = {
       },
       {
         problem: 'Two sides of a triangle are a = 7 and b = 9 with included angle C = 60°. Find side c.',
-        steps: [
-          'Law of Cosines: c² = a² + b² − 2ab cos C.',
-          'c² = 49 + 81 − 2(7)(9)(cos 60°) = 130 − 126(0.5) = 130 − 63 = 67.',
-          'c = √67 ≈ 8.19.',
-        ],
+        steps: ['Law of Cosines: c² = a² + b² − 2ab cos C.', 'c² = 49 + 81 − 2(7)(9)(cos 60°) = 130 − 126(0.5) = 130 − 63 = 67.', 'c = √67 ≈ 8.19.'],
         answer: 'c = √67 ≈ 8.19',
       },
       {
         problem: 'Solve 2 sin x − 1 = 0 for 0 ≤ x < 2π.',
-        steps: [
-          'Isolate: sin x = 1/2.',
-          'Reference angle with sin = 1/2 is π/6.',
-          'Sine is positive in quadrants I and II: x = π/6 and x = π − π/6 = 5π/6.',
-        ],
+        steps: ['Isolate: sin x = 1/2.', 'Reference angle with sin = 1/2 is π/6.', 'Sine is positive in quadrants I and II: x = π/6 and x = π − π/6 = 5π/6.'],
         answer: 'x = π/6, 5π/6',
       },
     ],
@@ -1568,7 +1552,11 @@ const DEPTH: Record<string, Depth> = {
       },
     ],
     textbook: [
-      { title: 'Algebra and Trigonometry 2e (OpenStax)', url: `${OSX}algebra-and-trigonometry-2e`, chapter: `Ch. 7 The Unit Circle, Ch. 9 Trigonometric Identities and Equations, Ch. 10 Further Applications of Trigonometry — ${PDF}` },
+      {
+        title: 'Algebra and Trigonometry 2e (OpenStax)',
+        url: `${OSX}algebra-and-trigonometry-2e`,
+        chapter: `Ch. 7 The Unit Circle, Ch. 9 Trigonometric Identities and Equations, Ch. 10 Further Applications of Trigonometry — ${PDF}`,
+      },
       { title: 'Precalculus 2e (OpenStax)', url: `${OSX}precalculus-2e`, chapter: `Ch. 5 Trigonometric Functions, Ch. 7 Trigonometric Identities and Equations — ${PDF}` },
     ],
   },
@@ -1576,11 +1564,7 @@ const DEPTH: Record<string, Depth> = {
     examples: [
       {
         problem: 'A circle has diameter 10 cm. Find its area and circumference.',
-        steps: [
-          'Radius r = diameter / 2 = 5 cm.',
-          'Area = πr² = π(5²) = 25π ≈ 78.54 cm².',
-          'Circumference = 2πr = 10π ≈ 31.42 cm.',
-        ],
+        steps: ['Radius r = diameter / 2 = 5 cm.', 'Area = πr² = π(5²) = 25π ≈ 78.54 cm².', 'Circumference = 2πr = 10π ≈ 31.42 cm.'],
         answer: 'Area 25π ≈ 78.5 cm²; circumference 10π ≈ 31.4 cm',
       },
       {
@@ -1595,11 +1579,7 @@ const DEPTH: Record<string, Depth> = {
       },
       {
         problem: 'A right triangle has legs 8 and 15. Find the hypotenuse.',
-        steps: [
-          'Pythagorean theorem: c² = a² + b² = 8² + 15² = 64 + 225 = 289.',
-          'c = √289 = 17.',
-          'This is the 8-15-17 Pythagorean triple.',
-        ],
+        steps: ['Pythagorean theorem: c² = a² + b² = 8² + 15² = 64 + 225 = 289.', 'c = √289 = 17.', 'This is the 8-15-17 Pythagorean triple.'],
         answer: 'c = 17',
       },
       {
@@ -1645,12 +1625,7 @@ const DEPTH: Record<string, Depth> = {
       },
       {
         problem: 'Evaluate lim (x→∞) (3x² + 5x) / (2x² − 1).',
-        steps: [
-          'Highest power in numerator and denominator is x², so divide every term by x².',
-          '(3 + 5/x) / (2 − 1/x²).',
-          'As x → ∞, 5/x → 0 and 1/x² → 0.',
-          'The limit is 3/2.',
-        ],
+        steps: ['Highest power in numerator and denominator is x², so divide every term by x².', '(3 + 5/x) / (2 − 1/x²).', 'As x → ∞, 5/x → 0 and 1/x² → 0.', 'The limit is 3/2.'],
         answer: '3/2',
       },
       {
@@ -1665,12 +1640,7 @@ const DEPTH: Record<string, Depth> = {
       },
       {
         problem: 'Find k so that f(x) = x² + 1 for x < 2 and f(x) = kx − 1 for x ≥ 2 is continuous at x = 2.',
-        steps: [
-          'Left-hand limit: 2² + 1 = 5.',
-          'Right-hand limit and f(2): k(2) − 1 = 2k − 1.',
-          'Continuity requires both sides to match: 2k − 1 = 5.',
-          '2k = 6, so k = 3.',
-        ],
+        steps: ['Left-hand limit: 2² + 1 = 5.', 'Right-hand limit and f(2): k(2) − 1 = 2k − 1.', 'Continuity requires both sides to match: 2k − 1 = 5.', '2k = 6, so k = 3.'],
         answer: 'k = 3',
       },
     ],
@@ -1696,30 +1666,17 @@ const DEPTH: Record<string, Depth> = {
     examples: [
       {
         problem: 'Differentiate f(x) = x³ · sin x.',
-        steps: [
-          'This is a product, so use (uv)′ = u′v + uv′ with u = x³ and v = sin x.',
-          'u′ = 3x², v′ = cos x.',
-          'f′(x) = 3x² sin x + x³ cos x.',
-        ],
+        steps: ['This is a product, so use (uv)′ = u′v + uv′ with u = x³ and v = sin x.', 'u′ = 3x², v′ = cos x.', 'f′(x) = 3x² sin x + x³ cos x.'],
         answer: 'f′(x) = 3x² sin x + x³ cos x',
       },
       {
         problem: 'Differentiate g(x) = (2x + 1)⁵.',
-        steps: [
-          'Chain rule: outer function u⁵, inner function u = 2x + 1.',
-          'Derivative of the outer: 5u⁴; derivative of the inner: 2.',
-          'g′(x) = 5(2x + 1)⁴ · 2 = 10(2x + 1)⁴.',
-        ],
+        steps: ['Chain rule: outer function u⁵, inner function u = 2x + 1.', 'Derivative of the outer: 5u⁴; derivative of the inner: 2.', 'g′(x) = 5(2x + 1)⁴ · 2 = 10(2x + 1)⁴.'],
         answer: 'g′(x) = 10(2x + 1)⁴',
       },
       {
         problem: 'Find the tangent line to f(x) = x² − 3x at x = 2.',
-        steps: [
-          'Point: f(2) = 4 − 6 = −2, so the point is (2, −2).',
-          'Slope: f′(x) = 2x − 3, so f′(2) = 1.',
-          'Point-slope: y − (−2) = 1(x − 2).',
-          'y = x − 4.',
-        ],
+        steps: ['Point: f(2) = 4 − 6 = −2, so the point is (2, −2).', 'Slope: f′(x) = 2x − 3, so f′(2) = 1.', 'Point-slope: y − (−2) = 1(x − 2).', 'y = x − 4.'],
         answer: 'y = x − 4',
       },
       {
@@ -1746,9 +1703,7 @@ const DEPTH: Record<string, Depth> = {
         text: 'Because f′ is the slope, f′ > 0 means the function is climbing and f′ < 0 means it is falling; extremes can only happen where f′ is zero or undefined, which is why we find critical points. The second derivative measures how the slope itself is changing: f″ > 0 means the graph curves upward like a cup (concave up), and f″ < 0 means it curves downward. Combining them gives the second derivative test, and locating where f″ changes sign gives inflection points. In physics the same ideas read as position, velocity and acceleration, which is why kinematics and calculus are studied together.',
       },
     ],
-    textbook: [
-      { title: 'Calculus Volume 1 (OpenStax)', url: `${OSX}calculus-volume-1`, chapter: `Ch. 3 Derivatives, Ch. 4 Applications of Derivatives — ${PDF}` },
-    ],
+    textbook: [{ title: 'Calculus Volume 1 (OpenStax)', url: `${OSX}calculus-volume-1`, chapter: `Ch. 3 Derivatives, Ch. 4 Applications of Derivatives — ${PDF}` }],
   },
   integrals: {
     examples: [
@@ -1826,11 +1781,7 @@ const DEPTH: Record<string, Depth> = {
       },
       {
         problem: 'Test scores are normal with mean 70 and standard deviation 8. What is the z-score of 82, and what percent of students scored below it?',
-        steps: [
-          'z = (x − μ) / σ = (82 − 70) / 8 = 12 / 8 = 1.5.',
-          'From a z-table, P(Z < 1.5) ≈ 0.9332.',
-          'About 93.3% scored below 82, so 82 is roughly the 93rd percentile.',
-        ],
+        steps: ['z = (x − μ) / σ = (82 − 70) / 8 = 12 / 8 = 1.5.', 'From a z-table, P(Z < 1.5) ≈ 0.9332.', 'About 93.3% scored below 82, so 82 is roughly the 93rd percentile.'],
         answer: 'z = 1.5; about 93.3% below',
       },
       {
@@ -1869,7 +1820,11 @@ const DEPTH: Record<string, Depth> = {
       },
     ],
     textbook: [
-      { title: 'Introductory Statistics 2e (OpenStax)', url: `${OSX}introductory-statistics-2e`, chapter: `Ch. 2 Descriptive Statistics, Ch. 3 Probability Topics, Ch. 4 Discrete Random Variables, Ch. 6 The Normal Distribution — ${PDF}` },
+      {
+        title: 'Introductory Statistics 2e (OpenStax)',
+        url: `${OSX}introductory-statistics-2e`,
+        chapter: `Ch. 2 Descriptive Statistics, Ch. 3 Probability Topics, Ch. 4 Discrete Random Variables, Ch. 6 The Normal Distribution — ${PDF}`,
+      },
     ],
   },
   'physics-kinematics-newton': {
@@ -1929,19 +1884,23 @@ const DEPTH: Record<string, Depth> = {
       },
     ],
     textbook: [
-      { title: 'College Physics 2e (OpenStax)', url: `${OSX}college-physics-2e`, chapter: `Ch. 2 Kinematics, Ch. 3 Two-Dimensional Kinematics, Ch. 4 Dynamics: Force and Newton's Laws of Motion — ${PDF}` },
-      { title: 'University Physics Volume 1 (OpenStax)', url: `${OSX}university-physics-volume-1`, chapter: `Ch. 3 Motion Along a Straight Line, Ch. 4 Motion in Two and Three Dimensions, Ch. 5 Newton's Laws of Motion — ${PDF}` },
+      {
+        title: 'College Physics 2e (OpenStax)',
+        url: `${OSX}college-physics-2e`,
+        chapter: `Ch. 2 Kinematics, Ch. 3 Two-Dimensional Kinematics, Ch. 4 Dynamics: Force and Newton's Laws of Motion — ${PDF}`,
+      },
+      {
+        title: 'University Physics Volume 1 (OpenStax)',
+        url: `${OSX}university-physics-volume-1`,
+        chapter: `Ch. 3 Motion Along a Straight Line, Ch. 4 Motion in Two and Three Dimensions, Ch. 5 Newton's Laws of Motion — ${PDF}`,
+      },
     ],
   },
   'physics-energy-momentum-circular': {
     examples: [
       {
         problem: 'A 500 kg roller-coaster car starts from rest 30 m above the bottom of a hill. Ignoring friction, how fast is it moving at the bottom?',
-        steps: [
-          'Energy conservation: PE_top = KE_bottom, so mgh = ½mv².',
-          'Mass cancels: v = √(2gh) = √(2 × 9.8 × 30) = √588.',
-          'v ≈ 24.2 m/s.',
-        ],
+        steps: ['Energy conservation: PE_top = KE_bottom, so mgh = ½mv².', 'Mass cancels: v = √(2gh) = √(2 × 9.8 × 30) = √588.', 'v ≈ 24.2 m/s.'],
         answer: 'v ≈ 24.2 m/s (independent of mass)',
       },
       {
@@ -1976,7 +1935,7 @@ const DEPTH: Record<string, Depth> = {
     deeper: [
       {
         heading: 'Why energy is conserved (and when it is not)',
-        text: 'The work-energy theorem, W_net = ΔKE, follows directly from Newton\'s second law and the kinematic equation v² = v₀² + 2ad: multiply both sides by ½m and you have the theorem. Gravity and springs are conservative forces, meaning the work they do depends only on start and end points, so their work can be bookkept as potential energy. That is why mechanical energy (KE + PE) stays constant when only conservative forces act. Friction and air drag are not conservative; they turn mechanical energy into thermal energy, so with them present you write KE₀ + PE₀ + W_friction = KE + PE, where the friction work is negative.',
+        text: "The work-energy theorem, W_net = ΔKE, follows directly from Newton's second law and the kinematic equation v² = v₀² + 2ad: multiply both sides by ½m and you have the theorem. Gravity and springs are conservative forces, meaning the work they do depends only on start and end points, so their work can be bookkept as potential energy. That is why mechanical energy (KE + PE) stays constant when only conservative forces act. Friction and air drag are not conservative; they turn mechanical energy into thermal energy, so with them present you write KE₀ + PE₀ + W_friction = KE + PE, where the friction work is negative.",
       },
       {
         heading: 'Momentum vs kinetic energy in collisions',
@@ -1988,19 +1947,23 @@ const DEPTH: Record<string, Depth> = {
       },
     ],
     textbook: [
-      { title: 'College Physics 2e (OpenStax)', url: `${OSX}college-physics-2e`, chapter: `Ch. 6 Uniform Circular Motion and Gravitation, Ch. 7 Work, Energy, and Energy Resources, Ch. 8 Linear Momentum and Collisions — ${PDF}` },
-      { title: 'University Physics Volume 1 (OpenStax)', url: `${OSX}university-physics-volume-1`, chapter: `Ch. 7 Work and Kinetic Energy, Ch. 8 Potential Energy and Conservation of Energy, Ch. 9 Linear Momentum and Collisions — ${PDF}` },
+      {
+        title: 'College Physics 2e (OpenStax)',
+        url: `${OSX}college-physics-2e`,
+        chapter: `Ch. 6 Uniform Circular Motion and Gravitation, Ch. 7 Work, Energy, and Energy Resources, Ch. 8 Linear Momentum and Collisions — ${PDF}`,
+      },
+      {
+        title: 'University Physics Volume 1 (OpenStax)',
+        url: `${OSX}university-physics-volume-1`,
+        chapter: `Ch. 7 Work and Kinetic Energy, Ch. 8 Potential Energy and Conservation of Energy, Ch. 9 Linear Momentum and Collisions — ${PDF}`,
+      },
     ],
   },
   'chemistry-moles-stoichiometry-gases': {
     examples: [
       {
         problem: 'How many moles are in 25.0 g of calcium carbonate, CaCO₃?',
-        steps: [
-          'Molar mass: Ca 40.08 + C 12.01 + 3 × O 16.00 = 40.08 + 12.01 + 48.00 = 100.09 g/mol.',
-          'n = mass / molar mass = 25.0 g / 100.09 g/mol.',
-          'n ≈ 0.250 mol.',
-        ],
+        steps: ['Molar mass: Ca 40.08 + C 12.01 + 3 × O 16.00 = 40.08 + 12.01 + 48.00 = 100.09 g/mol.', 'n = mass / molar mass = 25.0 g / 100.09 g/mol.', 'n ≈ 0.250 mol.'],
         answer: '0.250 mol CaCO₃',
       },
       {
@@ -2024,18 +1987,13 @@ const DEPTH: Record<string, Depth> = {
       },
       {
         problem: '5.85 g of NaCl is dissolved to make 250 mL of solution. What is the molarity?',
-        steps: [
-          'Molar mass of NaCl = 22.99 + 35.45 = 58.44 g/mol.',
-          'Moles = 5.85 / 58.44 ≈ 0.100 mol.',
-          'Volume in liters = 0.250 L.',
-          'M = 0.100 mol / 0.250 L = 0.400 M.',
-        ],
+        steps: ['Molar mass of NaCl = 22.99 + 35.45 = 58.44 g/mol.', 'Moles = 5.85 / 58.44 ≈ 0.100 mol.', 'Volume in liters = 0.250 L.', 'M = 0.100 mol / 0.250 L = 0.400 M.'],
         answer: '0.400 M NaCl',
       },
     ],
     deeper: [
       {
-        heading: 'Why the mole is the chemist\'s counting unit',
+        heading: "Why the mole is the chemist's counting unit",
         text: 'Atoms are far too small to count or weigh one at a time, so chemists count them by the group. A mole is 6.022 × 10²³ particles, chosen so that one mole of an element has a mass in grams numerically equal to its atomic mass in atomic mass units. That link is what lets a balance measure the number of atoms: weigh a sample, divide by the molar mass, and you know how many moles, and therefore how many particles, you have. Balanced equations describe ratios of particles, so converting every mass to moles first is the only way to compare reactants and products correctly.',
       },
       {
@@ -2044,11 +2002,15 @@ const DEPTH: Record<string, Depth> = {
       },
       {
         heading: 'Why the ideal gas law works',
-        text: 'Gases are mostly empty space, with tiny molecules in constant random motion. Pressure comes from those molecules hitting the walls, so it rises when they hit more often (smaller volume or more moles) or harder (higher temperature). PV = nRT captures all of these in one equation, and Boyle\'s, Charles\'s and Avogadro\'s laws are just special cases with two variables held constant. The law is "ideal" because it ignores molecular size and attractions; real gases deviate at high pressure and low temperature, where molecules are crowded and slow enough for those effects to matter. Temperature must be in kelvin because pressure is proportional to absolute temperature, not Celsius.',
+        text: "Gases are mostly empty space, with tiny molecules in constant random motion. Pressure comes from those molecules hitting the walls, so it rises when they hit more often (smaller volume or more moles) or harder (higher temperature). PV = nRT captures all of these in one equation, and Boyle's, Charles's and Avogadro's laws are just special cases with two variables held constant. The law is \"ideal\" because it ignores molecular size and attractions; real gases deviate at high pressure and low temperature, where molecules are crowded and slow enough for those effects to matter. Temperature must be in kelvin because pressure is proportional to absolute temperature, not Celsius.",
       },
     ],
     textbook: [
-      { title: 'Chemistry 2e (OpenStax)', url: `${OSX}chemistry-2e`, chapter: `Ch. 3 Composition of Substances and Solutions, Ch. 4 Stoichiometry of Chemical Reactions, Ch. 9 Gases — ${PDF}` },
+      {
+        title: 'Chemistry 2e (OpenStax)',
+        url: `${OSX}chemistry-2e`,
+        chapter: `Ch. 3 Composition of Substances and Solutions, Ch. 4 Stoichiometry of Chemical Reactions, Ch. 9 Gases — ${PDF}`,
+      },
     ],
   },
   'chemistry-periodic-trends-bonding': {
@@ -2106,7 +2068,11 @@ const DEPTH: Record<string, Depth> = {
       },
     ],
     textbook: [
-      { title: 'Chemistry 2e (OpenStax)', url: `${OSX}chemistry-2e`, chapter: `Ch. 6 Electronic Structure and Periodic Properties of Elements, Ch. 7 Chemical Bonding and Molecular Geometry — ${PDF}` },
+      {
+        title: 'Chemistry 2e (OpenStax)',
+        url: `${OSX}chemistry-2e`,
+        chapter: `Ch. 6 Electronic Structure and Periodic Properties of Elements, Ch. 7 Chemical Bonding and Molecular Geometry — ${PDF}`,
+      },
     ],
   },
   'biology-cell-genetics': {
@@ -2132,7 +2098,8 @@ const DEPTH: Record<string, Depth> = {
         answer: 'rryy = 1/16; round & green = 3/16',
       },
       {
-        problem: 'A human cell has 46 chromosomes. How many chromosomes and chromatids are present after S phase, in each daughter cell after mitosis, and in a gamete after meiosis?',
+        problem:
+          'A human cell has 46 chromosomes. How many chromosomes and chromatids are present after S phase, in each daughter cell after mitosis, and in a gamete after meiosis?',
         steps: [
           'S phase copies each chromosome, so there are still 46 chromosomes but each has 2 sister chromatids: 92 chromatids.',
           'Mitosis separates sister chromatids, giving two identical daughter cells with 46 chromosomes each.',
@@ -2143,7 +2110,7 @@ const DEPTH: Record<string, Depth> = {
       {
         problem: 'A father with blood type A (genotype IᴬI⁰) and a mother with type B (IᴮI⁰) have a child. What is the chance the child is type O?',
         steps: [
-          'Father\'s gametes: Iᴬ or I⁰. Mother\'s gametes: Iᴮ or I⁰.',
+          "Father's gametes: Iᴬ or I⁰. Mother's gametes: Iᴮ or I⁰.",
           'Punnett square: IᴬIᴮ (AB), IᴬI⁰ (A), IᴮI⁰ (B), I⁰I⁰ (O).',
           'Each box is 1/4, so P(type O) = 1/4; all four blood types are possible.',
         ],
@@ -2153,7 +2120,7 @@ const DEPTH: Record<string, Depth> = {
     deeper: [
       {
         heading: 'Why Punnett squares work',
-        text: 'A Punnett square is a probability table. Meiosis separates the two alleles of a gene into different gametes (Mendel\'s law of segregation), so each gamete carries one allele chosen at random. Fertilization pairs a random gamete from each parent, and the square simply lists every combination with equal probability. For two genes on different chromosomes the alleles sort independently, so a dihybrid outcome is just the product of two monohybrid probabilities; that is faster than drawing a 16-box square. The ratios are predictions for large numbers of offspring, so a family of four children will often not match 3:1 exactly.',
+        text: "A Punnett square is a probability table. Meiosis separates the two alleles of a gene into different gametes (Mendel's law of segregation), so each gamete carries one allele chosen at random. Fertilization pairs a random gamete from each parent, and the square simply lists every combination with equal probability. For two genes on different chromosomes the alleles sort independently, so a dihybrid outcome is just the product of two monohybrid probabilities; that is faster than drawing a 16-box square. The ratios are predictions for large numbers of offspring, so a family of four children will often not match 3:1 exactly.",
       },
       {
         heading: 'Mitosis vs meiosis: the point of each',
@@ -2161,11 +2128,15 @@ const DEPTH: Record<string, Depth> = {
       },
       {
         heading: 'Structure follows function in the cell',
-        text: 'Every organelle\'s structure suits its job. Mitochondria have folded inner membranes to pack in more surface area for the electron transport chain, which is why active cells such as muscle have so many. The rough ER is studded with ribosomes so proteins can be threaded into it as they are made, then shipped through the Golgi for packaging. The phospholipid bilayer is fluid and selectively permeable because its hydrophobic core blocks ions and polar molecules, forcing them through protein channels; that selectivity is what makes gradients, and therefore nerve signals and ATP synthesis, possible. Plant cells add a rigid wall and chloroplasts for photosynthesis.',
+        text: "Every organelle's structure suits its job. Mitochondria have folded inner membranes to pack in more surface area for the electron transport chain, which is why active cells such as muscle have so many. The rough ER is studded with ribosomes so proteins can be threaded into it as they are made, then shipped through the Golgi for packaging. The phospholipid bilayer is fluid and selectively permeable because its hydrophobic core blocks ions and polar molecules, forcing them through protein channels; that selectivity is what makes gradients, and therefore nerve signals and ATP synthesis, possible. Plant cells add a rigid wall and chloroplasts for photosynthesis.",
       },
     ],
     textbook: [
-      { title: 'Biology 2e (OpenStax)', url: `${OSX}biology-2e`, chapter: `Ch. 4 Cell Structure, Ch. 10 Cell Reproduction, Ch. 11 Meiosis and Sexual Reproduction, Ch. 12 Mendel's Experiments and Heredity — ${PDF}` },
+      {
+        title: 'Biology 2e (OpenStax)',
+        url: `${OSX}biology-2e`,
+        chapter: `Ch. 4 Cell Structure, Ch. 10 Cell Reproduction, Ch. 11 Meiosis and Sexual Reproduction, Ch. 12 Mendel's Experiments and Heredity — ${PDF}`,
+      },
       { title: 'Concepts of Biology (OpenStax)', url: `${OSX}concepts-biology`, chapter: `Ch. 3 Cell Structure and Function, Ch. 8 Patterns of Inheritance — ${PDF}` },
     ],
   },
@@ -2179,7 +2150,8 @@ const DEPTH: Record<string, Depth> = {
           'Narrow the claim and add reasons that preview the body paragraphs: mental health, comparison, sleep.',
           'Acknowledge the other side with an "although" clause to show nuance.',
         ],
-        answer: '"Although social media helps teens stay connected, its algorithm-driven feeds harm adolescent mental health by encouraging constant comparison, disrupting sleep, and rewarding outrage over conversation."',
+        answer:
+          '"Although social media helps teens stay connected, its algorithm-driven feeds harm adolescent mental health by encouraging constant comparison, disrupting sleep, and rewarding outrage over conversation."',
       },
       {
         problem: 'Outline a five-paragraph argumentative essay on later school start times.',
@@ -2190,7 +2162,8 @@ const DEPTH: Record<string, Depth> = {
           'Body 3 (safety + counterargument): later starts reduce drowsy-driving crashes; address bus-schedule cost objection and rebut.',
           'Conclusion: restate thesis in new words, synthesize the three reasons, end with a call to action.',
         ],
-        answer: 'A thesis with three previewed reasons, one body paragraph per reason (claim, evidence, explanation, link), a counterargument paragraph, and a conclusion that ends with a call to action.',
+        answer:
+          'A thesis with three previewed reasons, one body paragraph per reason (claim, evidence, explanation, link), a counterargument paragraph, and a conclusion that ends with a call to action.',
       },
       {
         problem: 'Fix this weak topic sentence: "This paragraph is about how Gatsby uses money."',
@@ -2217,7 +2190,11 @@ const DEPTH: Record<string, Depth> = {
       },
     ],
     textbook: [
-      { title: 'Writing Guide with Handbook (OpenStax)', url: `${OSX}writing-guide`, chapter: `Ch. 10 Position Argument: Practicing the Art of Rhetoric, Ch. 11 Reasoning Strategies, Handbook on paragraphs and thesis — ${PDF}` },
+      {
+        title: 'Writing Guide with Handbook (OpenStax)',
+        url: `${OSX}writing-guide`,
+        chapter: `Ch. 10 Position Argument: Practicing the Art of Rhetoric, Ch. 11 Reasoning Strategies, Handbook on paragraphs and thesis — ${PDF}`,
+      },
     ],
   },
   'citations-mla-apa': {
@@ -2238,7 +2215,8 @@ const DEPTH: Record<string, Depth> = {
           'Use initials, an ampersand before the last author, and italics for the journal name and volume number.',
           'In-text: (Smith & Lee, 2020) for a paraphrase; add p. 47 for a direct quote.',
         ],
-        answer: 'Smith, J. A., & Lee, K. (2020). Sleep and adolescent memory. Journal of Educational Research, 12(3), 45–60. https://doi.org/10.0000/example  In-text: (Smith & Lee, 2020, p. 47)',
+        answer:
+          'Smith, J. A., & Lee, K. (2020). Sleep and adolescent memory. Journal of Educational Research, 12(3), 45–60. https://doi.org/10.0000/example  In-text: (Smith & Lee, 2020, p. 47)',
       },
       {
         problem: 'Cite a web page in MLA 9 with an author, page title, site name, publication date and URL.',
@@ -2262,7 +2240,7 @@ const DEPTH: Record<string, Depth> = {
     deeper: [
       {
         heading: 'Why citation styles differ',
-        text: 'MLA and APA were designed by different disciplines with different priorities. The humanities (MLA) value the exact words and where they appear, so the in-text citation gives the author and page number and the reference list gives the full title first. The sciences (APA) value how recent a finding is, so the year sits right next to the author\'s name in every citation and the date comes second in the reference. Once you see the logic, the formats stop looking arbitrary: each style front-loads whatever its readers care about most, and both exist so a reader can find the exact source you used.',
+        text: "MLA and APA were designed by different disciplines with different priorities. The humanities (MLA) value the exact words and where they appear, so the in-text citation gives the author and page number and the reference list gives the full title first. The sciences (APA) value how recent a finding is, so the year sits right next to the author's name in every citation and the date comes second in the reference. Once you see the logic, the formats stop looking arbitrary: each style front-loads whatever its readers care about most, and both exist so a reader can find the exact source you used.",
       },
       {
         heading: 'What must be cited and why',
@@ -2274,7 +2252,11 @@ const DEPTH: Record<string, Depth> = {
       },
     ],
     textbook: [
-      { title: 'Writing Guide with Handbook (OpenStax)', url: `${OSX}writing-guide`, chapter: `Ch. 13 Research Process, Ch. 14 Annotated Bibliography, Handbook: MLA and APA Documentation and Format — ${PDF}` },
+      {
+        title: 'Writing Guide with Handbook (OpenStax)',
+        url: `${OSX}writing-guide`,
+        chapter: `Ch. 13 Research Process, Ch. 14 Annotated Bibliography, Handbook: MLA and APA Documentation and Format — ${PDF}`,
+      },
     ],
   },
   'grammar-style-quick-fixes': {
@@ -2332,9 +2314,7 @@ const DEPTH: Record<string, Depth> = {
         text: 'Wordiness usually comes from nominalizations (turning verbs into nouns: "make a decision" instead of "decide"), empty openers ("There are many reasons that"), and redundant pairs ("each and every", "basic fundamentals"). Every extra word is a small tax on attention, and readers will not pay it forever. Edit in passes: first cut phrases that add no meaning, then replace weak verb-plus-noun combinations with a single strong verb, then check that each sentence has a clear subject doing a clear action near its start. Reading aloud exposes what the eye skims past, especially repeated words and sentences that run out of breath.',
       },
     ],
-    textbook: [
-      { title: 'Writing Guide with Handbook (OpenStax)', url: `${OSX}writing-guide`, chapter: `Handbook: Grammar, Punctuation, Sentence Structure and Style — ${PDF}` },
-    ],
+    textbook: [{ title: 'Writing Guide with Handbook (OpenStax)', url: `${OSX}writing-guide`, chapter: `Handbook: Grammar, Punctuation, Sentence Structure and Style — ${PDF}` }],
   },
   'study-techniques': {
     examples: [
@@ -2386,7 +2366,11 @@ const DEPTH: Record<string, Depth> = {
       },
     ],
     textbook: [
-      { title: 'College Success (OpenStax)', url: `${OSX}college-success`, chapter: `Ch. 3 Managing Your Time and Priorities, Ch. 4 Reading and Note-Taking, Ch. 5 Studying, Memory, and Test Taking — ${PDF}` },
+      {
+        title: 'College Success (OpenStax)',
+        url: `${OSX}college-success`,
+        chapter: `Ch. 3 Managing Your Time and Priorities, Ch. 4 Reading and Note-Taking, Ch. 5 Studying, Memory, and Test Taking — ${PDF}`,
+      },
     ],
   },
   'test-taking-strategies': {
@@ -2463,11 +2447,7 @@ const DEPTH: Record<string, Depth> = {
       },
       {
         problem: 'Express 0.00045 m in scientific notation and in micrometers.',
-        steps: [
-          'Move the decimal 4 places right: 0.00045 = 4.5 × 10⁻⁴ m.',
-          '1 µm = 10⁻⁶ m, so divide by 10⁻⁶: 4.5 × 10⁻⁴ / 10⁻⁶ = 4.5 × 10² µm.',
-          'That is 450 µm (or 0.45 mm).',
-        ],
+        steps: ['Move the decimal 4 places right: 0.00045 = 4.5 × 10⁻⁴ m.', '1 µm = 10⁻⁶ m, so divide by 10⁻⁶: 4.5 × 10⁻⁴ / 10⁻⁶ = 4.5 × 10² µm.', 'That is 450 µm (or 0.45 mm).'],
         answer: '4.5 × 10⁻⁴ m = 450 µm',
       },
       {
@@ -2491,11 +2471,15 @@ const DEPTH: Record<string, Depth> = {
       },
       {
         heading: 'Why the SI base units are what they are',
-        text: 'The SI system defines seven base units (metre, kilogram, second, ampere, kelvin, mole, candela) and builds every other unit from them, so a newton is kg·m/s² and a joule is a newton-metre. Since 2019 all seven are defined by fixing the values of natural constants such as the speed of light and Planck\'s constant, rather than by physical artifacts, so any lab can reproduce them. Checking that both sides of an equation have the same base units, called dimensional analysis, catches wrong formulas before you compute: if you derive a speed and the units come out as m/s², something is missing.',
+        text: "The SI system defines seven base units (metre, kilogram, second, ampere, kelvin, mole, candela) and builds every other unit from them, so a newton is kg·m/s² and a joule is a newton-metre. Since 2019 all seven are defined by fixing the values of natural constants such as the speed of light and Planck's constant, rather than by physical artifacts, so any lab can reproduce them. Checking that both sides of an equation have the same base units, called dimensional analysis, catches wrong formulas before you compute: if you derive a speed and the units come out as m/s², something is missing.",
       },
     ],
     textbook: [
-      { title: 'College Physics 2e (OpenStax)', url: `${OSX}college-physics-2e`, chapter: `Ch. 1 Introduction: The Nature of Science and Physics (units, unit conversion, accuracy and significant figures) — ${PDF}` },
+      {
+        title: 'College Physics 2e (OpenStax)',
+        url: `${OSX}college-physics-2e`,
+        chapter: `Ch. 1 Introduction: The Nature of Science and Physics (units, unit conversion, accuracy and significant figures) — ${PDF}`,
+      },
       { title: 'Chemistry 2e (OpenStax)', url: `${OSX}chemistry-2e`, chapter: `Ch. 1 Essential Ideas (measurements, measurement uncertainty, dimensional analysis) — ${PDF}` },
     ],
   },
@@ -2555,8 +2539,16 @@ const DEPTH: Record<string, Depth> = {
       },
     ],
     textbook: [
-      { title: 'Introduction to Python Programming (OpenStax)', url: `${OSX}introduction-python-programming`, chapter: `Ch. 2–6 Variables, Expressions, Conditionals, Loops, Functions; Ch. 8–9 Lists and Dictionaries — ${PDF}` },
-      { title: 'Introduction to Computer Science (OpenStax)', url: `${OSX}introduction-computer-science`, chapter: `Ch. 3 Data Structures and Algorithms (Big-O, searching, sorting) — ${PDF}` },
+      {
+        title: 'Introduction to Python Programming (OpenStax)',
+        url: `${OSX}introduction-python-programming`,
+        chapter: `Ch. 2–6 Variables, Expressions, Conditionals, Loops, Functions; Ch. 8–9 Lists and Dictionaries — ${PDF}`,
+      },
+      {
+        title: 'Introduction to Computer Science (OpenStax)',
+        url: `${OSX}introduction-computer-science`,
+        chapter: `Ch. 3 Data Structures and Algorithms (Big-O, searching, sorting) — ${PDF}`,
+      },
     ],
   },
   'spanish-french-essentials': {
@@ -2587,7 +2579,7 @@ const DEPTH: Record<string, Depth> = {
           'Verbs of motion (the DR & MRS VANDERTRAMP list) use être, and the participle agrees with the subject: aller → allé.',
           '"Je suis allé" (male speaker) or "Je suis allée" (female speaker); "Elle est allée".',
         ],
-        answer: 'J\'ai mangé / Elle a mangé; Je suis allé(e) / Elle est allée',
+        answer: "J'ai mangé / Elle a mangé; Je suis allé(e) / Elle est allée",
       },
       {
         problem: 'Translate "the red cars" into Spanish and French, checking gender and number agreement.',
@@ -2614,7 +2606,11 @@ const DEPTH: Record<string, Depth> = {
       },
     ],
     textbook: [
-      { title: 'College Success (OpenStax)', url: `${OSX}college-success`, chapter: `Ch. 5 Studying, Memory, and Test Taking (memory and spaced review strategies for vocabulary) — ${PDF}; OpenStax has no Spanish or French course text, so pair this with your class textbook` },
+      {
+        title: 'College Success (OpenStax)',
+        url: `${OSX}college-success`,
+        chapter: `Ch. 5 Studying, Memory, and Test Taking (memory and spaced review strategies for vocabulary) — ${PDF}; OpenStax has no Spanish or French course text, so pair this with your class textbook`,
+      },
     ],
   },
 };
@@ -2622,7 +2618,11 @@ const DEPTH: Record<string, Depth> = {
 export const TOPICS: Topic[] = BASE_TOPICS.map((t) => ({ ...t, ...DEPTH[t.id] }));
 
 function normalizeQuery(q: string): string {
-  return q.toLowerCase().replace(/[^\p{L}\p{N}\s\-']/gu, ' ').replace(/\s+/g, ' ').trim();
+  return q
+    .toLowerCase()
+    .replace(/[^\p{L}\p{N}\s\-']/gu, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
 }
 
 function stripMarkdown(s: string): string {

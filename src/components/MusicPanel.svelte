@@ -4,6 +4,7 @@
   import { toasts } from '../lib/toast.svelte';
   import * as sp from '../lib/spotify.svelte';
   import { spotify, toEmbedUrl, type SpotifyPlaylist } from '../lib/spotify.svelte';
+  import { hasSecret } from '../lib/secrets.svelte';
 
   let query = $state('');
   let results = $state<SpotifyPlaylist[]>([]);
@@ -22,7 +23,7 @@
   const activeDevice = $derived(spotify.playback?.device?.id ?? spotify.devices.find((d) => d.isActive)?.id ?? '');
 
   onMount(() => {
-    if (store.settings.spotifyRefreshToken) {
+    if (hasSecret('spotifyRefreshToken')) {
       sp.startPolling();
       void refreshDevices(true);
     }
@@ -112,7 +113,9 @@
         <button class="btn icon" aria-label="Previous track" onclick={() => guard(sp.previous)}>⏮</button>
         <button class="btn icon primary" aria-label={spotify.playback?.isPlaying ? 'Pause' : 'Play'} onclick={toggle}>{spotify.playback?.isPlaying ? '⏸' : '▶'}</button>
         <button class="btn icon" aria-label="Next track" onclick={() => guard(sp.next)}>⏭</button>
-        <label class="vol"><span aria-hidden="true">🔊</span><input type="range" min="0" max="100" value={spotify.playback?.device?.volume ?? 50} onchange={volume} aria-label="Volume" /></label>
+        <label class="vol"
+          ><span aria-hidden="true">🔊</span><input type="range" min="0" max="100" value={spotify.playback?.device?.volume ?? 50} onchange={volume} aria-label="Volume" /></label
+        >
       </div>
       <div class="devices">
         <select class="select" aria-label="Playback device" value={activeDevice} onchange={pickDevice}>
@@ -126,12 +129,22 @@
         <button class="btn sm" type="submit" disabled={searching}>{searching ? '…' : 'Search'}</button>
       </form>
       {#if results.length}
-        <ul class="list">{#each results as p (p.id)}<li>{#if p.image}<img src={p.image} alt="" />{/if}<span class="n">{p.name}<small>{p.owner}</small></span><button class="btn sm" onclick={() => playPlaylist(p.uri)}>Play</button></li>{/each}</ul>
+        <ul class="list">
+          {#each results as p (p.id)}<li>
+              {#if p.image}<img src={p.image} alt="" />{/if}<span class="n">{p.name}<small>{p.owner}</small></span><button class="btn sm" onclick={() => playPlaylist(p.uri)}
+                >Play</button
+              >
+            </li>{/each}
+        </ul>
       {/if}
       <button class="btn ghost sm" onclick={toggleMine} aria-expanded={showMine}>{showMine ? 'Hide' : 'My playlists'}</button>
       {#if showMine}
         <ul class="list">
-          {#each mine as p (p.id)}<li>{#if p.image}<img src={p.image} alt="" />{/if}<span class="n">{p.name}<small>{p.owner}</small></span><button class="btn sm" onclick={() => playPlaylist(p.uri)}>Play</button></li>{:else}<li class="hint">No playlists yet.</li>{/each}
+          {#each mine as p (p.id)}<li>
+              {#if p.image}<img src={p.image} alt="" />{/if}<span class="n">{p.name}<small>{p.owner}</small></span><button class="btn sm" onclick={() => playPlaylist(p.uri)}
+                >Play</button
+              >
+            </li>{:else}<li class="hint">No playlists yet.</li>{/each}
         </ul>
       {/if}
     {/if}
@@ -157,38 +170,199 @@
 </section>
 
 <style>
-  .music { display: flex; flex-direction: column; gap: 10px; }
-  .head { display: flex; align-items: center; gap: 8px; }
-  h2 { font-size: 16px; margin: 0; flex: 1; }
-  .who { font-size: 12px; color: var(--text-muted); }
-  .hint { font-size: 12px; color: var(--text-muted); margin: 0; }
-  .notice { padding: 6px 10px; border-radius: var(--radius-sm); background: color-mix(in srgb, var(--warn) 12%, transparent); color: var(--text); }
-  .err { font-size: 12px; color: var(--danger); margin: 0; }
-  .connect { display: flex; flex-direction: column; gap: 8px; align-items: flex-start; }
-  .now { display: flex; gap: 10px; align-items: center; }
-  .art { width: 56px; height: 56px; border-radius: 8px; object-fit: cover; flex: none; }
-  .art.blank { display: grid; place-items: center; background: var(--bg-elev-2); color: var(--text-faint); font-size: 22px; }
-  .meta { min-width: 0; flex: 1; }
-  .title { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .sub { font-size: 12px; color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .bar { height: 4px; border-radius: 2px; background: var(--bg-elev-2); margin-top: 6px; overflow: hidden; }
-  .fill { height: 100%; background: var(--accent); transition: width 1s linear; }
-  .times { display: flex; justify-content: space-between; font-size: 11px; color: var(--text-faint); font-family: var(--mono); margin-top: 2px; }
-  .controls { display: flex; align-items: center; gap: 6px; }
-  .vol { display: flex; align-items: center; gap: 6px; flex: 1; margin-left: 6px; min-width: 0; }
-  .vol input { flex: 1; min-width: 0; accent-color: var(--accent); }
-  .devices { display: flex; gap: 6px; }
-  .devices .select { flex: 1; min-width: 0; }
-  .search { display: flex; gap: 6px; }
-  .search .input { flex: 1; min-width: 0; }
-  .list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; max-height: 220px; overflow-y: auto; }
-  .list li { display: flex; align-items: center; gap: 8px; padding: 4px 6px; border-radius: 6px; }
-  .list li:hover { background: var(--bg-hover); }
-  .list img { width: 32px; height: 32px; border-radius: 4px; object-fit: cover; flex: none; }
-  .list .n { flex: 1; min-width: 0; display: flex; flex-direction: column; font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .list small { color: var(--text-muted); font-size: 11px; }
-  hr { border: 0; border-top: 1px solid var(--border); margin: 2px 0; width: 100%; }
-  .embed { display: flex; flex-direction: column; gap: 6px; }
-  iframe { width: 100%; border: 0; border-radius: 12px; background: var(--bg-elev-2); }
-  .embed-foot { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+  .music {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .head {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  h2 {
+    font-size: 16px;
+    margin: 0;
+    flex: 1;
+  }
+  .who {
+    font-size: 12px;
+    color: var(--text-muted);
+  }
+  .hint {
+    font-size: 12px;
+    color: var(--text-muted);
+    margin: 0;
+  }
+  .notice {
+    padding: 6px 10px;
+    border-radius: var(--radius-sm);
+    background: color-mix(in srgb, var(--warn) 12%, transparent);
+    color: var(--text);
+  }
+  .err {
+    font-size: 12px;
+    color: var(--danger-text);
+    margin: 0;
+  }
+  .connect {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    align-items: flex-start;
+  }
+  .now {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+  }
+  .art {
+    width: 56px;
+    height: 56px;
+    border-radius: 8px;
+    object-fit: cover;
+    flex: none;
+  }
+  .art.blank {
+    display: grid;
+    place-items: center;
+    background: var(--bg-elev-2);
+    color: var(--text-faint);
+    font-size: 22px;
+  }
+  .meta {
+    min-width: 0;
+    flex: 1;
+  }
+  .title {
+    font-weight: 600;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .sub {
+    font-size: 12px;
+    color: var(--text-muted);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .bar {
+    height: 4px;
+    border-radius: 2px;
+    background: var(--bg-elev-2);
+    margin-top: 6px;
+    overflow: hidden;
+  }
+  .fill {
+    height: 100%;
+    background: var(--accent);
+    transition: width 1s linear;
+  }
+  .times {
+    display: flex;
+    justify-content: space-between;
+    font-size: 11px;
+    color: var(--text-faint);
+    font-family: var(--mono);
+    margin-top: 2px;
+  }
+  .controls {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .vol {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex: 1;
+    margin-left: 6px;
+    min-width: 0;
+  }
+  .vol input {
+    flex: 1;
+    min-width: 0;
+    accent-color: var(--accent);
+  }
+  .devices {
+    display: flex;
+    gap: 6px;
+  }
+  .devices .select {
+    flex: 1;
+    min-width: 0;
+  }
+  .search {
+    display: flex;
+    gap: 6px;
+  }
+  .search .input {
+    flex: 1;
+    min-width: 0;
+  }
+  .list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    max-height: 220px;
+    overflow-y: auto;
+  }
+  .list li {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 4px 6px;
+    border-radius: 6px;
+  }
+  .list li:hover {
+    background: var(--bg-hover);
+  }
+  .list img {
+    width: 32px;
+    height: 32px;
+    border-radius: 4px;
+    object-fit: cover;
+    flex: none;
+  }
+  .list .n {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    font-size: 13px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .list small {
+    color: var(--text-muted);
+    font-size: 11px;
+  }
+  hr {
+    border: 0;
+    border-top: 1px solid var(--border);
+    margin: 2px 0;
+    width: 100%;
+  }
+  .embed {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  iframe {
+    width: 100%;
+    border: 0;
+    border-radius: 12px;
+    background: var(--bg-elev-2);
+  }
+  .embed-foot {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 8px;
+  }
 </style>

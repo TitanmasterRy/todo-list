@@ -1,7 +1,8 @@
 // Optional Spotify Web API integration using Authorization Code + PKCE (no backend).
 // Access token lives in memory; the rotating refresh token is persisted via settings (localStorage).
 import { store } from './store.svelte';
-import type { Settings } from './types';
+import { on } from './events';
+import { forgetSecret, hasSecret, isLocked, secret, setSecrets, useSecret } from './secrets.svelte';
 
 const ACCOUNTS = 'https://accounts.spotify.com';
 const API = 'https://api.spotify.com/v1';
@@ -169,9 +170,7 @@ async function tokenRequest(body: Record<string, string>): Promise<void> {
   if (!res.ok || !json.access_token) throw new Error(json.error_description ?? json.error ?? `Spotify token ${res.status}`);
   accessToken = json.access_token;
   expiresAt = Date.now() + (json.expires_in - 60) * 1000;
-  if (json.refresh_token && json.refresh_token !== store.settings.spotifyRefreshToken) {
-    store.updateSettings({ spotifyRefreshToken: json.refresh_token } satisfies Partial<Settings>);
-  }
+  if (json.refresh_token && json.refresh_token !== secret('spotifyRefreshToken')) setSecrets({ spotifyRefreshToken: json.refresh_token });
 }
 
 /** Finish the PKCE dance if we just came back from Spotify. Returns true if a redirect was handled. */
@@ -203,10 +202,10 @@ export async function handleRedirect(): Promise<boolean> {
 }
 
 /** Return a valid access token, refreshing with the stored refresh token when needed. */
-export async function ensureToken(): Promise<string> {
+export async function ensureToken(interactive = true): Promise<string> {
   if (accessToken && Date.now() < expiresAt) return accessToken;
   if (refreshing) return refreshing;
-  const refresh = store.settings.spotifyRefreshToken;
+  const refresh = await useSecret('spotifyRefreshToken', { interactive, reason: 'Enter your passphrase to connect to Spotify.' });
   if (!refresh) throw new Error('Not connected to Spotify.');
   refreshing = (async () => {
     try {
@@ -227,7 +226,7 @@ export function logout(): void {
   stopPolling();
   accessToken = '';
   expiresAt = 0;
-  store.updateSettings({ spotifyRefreshToken: '' });
+  forgetSecret('spotifyRefreshToken');
   spotify.status = 'off';
   spotify.error = null;
   spotify.user = null;
@@ -239,7 +238,10 @@ export function logout(): void {
 // ---------- API ----------
 async function api<T>(path: string, init: RequestInit = {}): Promise<T | null> {
   const token = await ensureToken();
-  const res = await fetch(`${API}${path}`, { ...init, headers: { Authorization: `Bearer ${token}`, ...(init.body ? { 'Content-Type': 'application/json' } : {}), ...(init.headers ?? {}) } });
+  const res = await fetch(`${API}${path}`, {
+    ...init,
+    headers: { Authorization: `Bearer ${token}`, ...(init.body ? { 'Content-Type': 'application/json' } : {}), ...(init.headers ?? {}) },
+  });
   if (res.status === 204 || res.status === 202) return null;
   const json = (await res.json().catch(() => null)) as (T & { error?: { status?: number; message?: string; reason?: string } }) | null;
   if (!res.ok) {
@@ -305,7 +307,15 @@ export async function getPlayback(): Promise<SpotifyPlayback | null> {
   const pb: SpotifyPlayback = {
     isPlaying: p.is_playing,
     track: it
-      ? { name: it.name, artists: it.artists?.map((a) => a.name).join(', ') ?? coll?.name ?? '', album: coll?.name ?? '', image: coll?.images?.[0]?.url, durationMs: it.duration_ms, progressMs: p.progress_ms ?? 0, uri: it.uri }
+      ? {
+          name: it.name,
+          artists: it.artists?.map((a) => a.name).join(', ') ?? coll?.name ?? '',
+          album: coll?.name ?? '',
+          image: coll?.images?.[0]?.url,
+          durationMs: it.duration_ms,
+          progressMs: p.progress_ms ?? 0,
+          uri: it.uri,
+        }
       : undefined,
     device: p.device?.id ? { id: p.device.id, name: p.device.name, type: p.device.type, volume: p.device.volume_percent ?? undefined } : undefined,
   };
@@ -382,7 +392,7 @@ async function refreshPlayback(): Promise<void> {
 
 function tick(): void {
   if (typeof document !== 'undefined' && document.visibilityState !== 'visible') return;
-  if (!store.settings.spotifyRefreshToken) return;
+  if (!hasSecret('spotifyRefreshToken') || isLocked('spotifyRefreshToken')) return;
   void refreshPlayback();
 }
 
@@ -398,17 +408,21 @@ export function stopPolling(): void {
   pollTimer = undefined;
 }
 
+let offUnlocked: (() => void) | undefined;
+
 /** Call once on app load: finish a pending login, then restore the session from the refresh token. */
 export async function init(): Promise<void> {
   if (typeof window === 'undefined') return;
   await handleRedirect();
-  if (!store.settings.spotifyRefreshToken || !clientId()) {
+  // the refresh token may be behind the key lock: pick the session up once it's unlocked
+  offUnlocked ??= on('unlocked', () => void init());
+  if (!hasSecret('spotifyRefreshToken') || isLocked('spotifyRefreshToken') || !clientId()) {
     if (spotify.status !== 'error') spotify.status = 'off';
     return;
   }
   try {
     if (spotify.status !== 'connected') spotify.status = 'connecting';
-    await ensureToken();
+    await ensureToken(false);
     await Promise.all([getMe(), refreshPlayback()]);
     spotify.status = 'connected';
     spotify.error = null;

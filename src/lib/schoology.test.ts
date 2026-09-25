@@ -252,7 +252,11 @@ describe('diffAssignments', () => {
   });
 
   it('does not clear a due date when the feed has none, and ignores deleted ids even if they change', () => {
-    const d = diffAssignments([{ externalId: 'assignment:1', title: 'T', dueAt: '2026-09-21' }], [inc({ externalId: 'assignment:1' }), inc({ externalId: 'assignment:9', title: 'Z' })], ['assignment:9']);
+    const d = diffAssignments(
+      [{ externalId: 'assignment:1', title: 'T', dueAt: '2026-09-21' }],
+      [inc({ externalId: 'assignment:1' }), inc({ externalId: 'assignment:9', title: 'Z' })],
+      ['assignment:9'],
+    );
     expect(d.update).toEqual([]);
     expect(d.create).toEqual([]);
     expect(d.unchanged).toBe(1);

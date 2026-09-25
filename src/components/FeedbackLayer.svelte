@@ -9,6 +9,7 @@
   import { playSound, primeAudio } from '../lib/sounds';
   import { badgeById } from '../lib/gamification';
   import Confetti from './Confetti.svelte';
+  import { t as tr } from '../lib/i18n/index.svelte';
 
   let confetti = $state(0);
   let levelUp = $state<number | null>(null);
@@ -40,16 +41,15 @@
         const g = store.settings.gamification;
         const entry = undo.stack[undo.stack.length - 1];
         const parts: string[] = [];
-        if (e.xp.early) parts.push('early +25%');
-        if (e.xp.longTask) parts.push('long task ×1.5');
-        if (e.xp.frog) parts.push('🐸 frog ×2');
-        if (e.xp.early && e.xp.earlyDays >= 3) parts[parts.indexOf('early +25%')] = `${e.xp.earlyDays} days early ×1.5`;
-        if (e.xp.crit) parts.unshift('💥 CRITICAL HIT ×2');
-        if (e.xp.powerHour) parts.unshift('⚡ POWER HOUR ×1.5');
-        if (e.xp.comboCount > 0) parts.push(`combo ×${e.xp.comboMultiplier.toFixed(1)}`);
-        if (e.xp.subtaskBonus) parts.push(`+${e.xp.subtaskBonus} subtasks`);
+        if (e.xp.early) parts.push(e.xp.earlyDays >= 3 ? tr('xp.earlyDays', { n: e.xp.earlyDays }) : tr('xp.early'));
+        if (e.xp.longTask) parts.push(tr('xp.long'));
+        if (e.xp.frog) parts.push(tr('xp.frog'));
+        if (e.xp.crit) parts.unshift(tr('xp.crit'));
+        if (e.xp.powerHour) parts.unshift(tr('xp.power'));
+        if (e.xp.comboCount > 0) parts.push(tr('xp.combo', { n: e.xp.comboMultiplier.toFixed(1) }));
+        if (e.xp.subtaskBonus) parts.push(tr('xp.subtasks', { n: e.xp.subtaskBonus }));
         toasts.push({
-          message: g ? `+${e.xp.total} XP · ${e.task.title}` : `Completed “${e.task.title}”`,
+          message: g ? `+${e.xp.total} XP · ${e.task.title}` : tr('toast.completed', { title: e.task.title }),
           detail: g && parts.length ? parts.join(' · ') : undefined,
           kind: g ? 'xp' : 'success',
           combo: g ? e.xp.comboCount : 0,
@@ -57,16 +57,16 @@
           timeout: 5000,
           action: entry
             ? {
-                label: 'Undo',
+                label: tr('common.undo'),
                 onClick: () => {
-                  toasts.items.filter((t) => t.action?.label === 'Undo' && t.message.includes(e.task.title)).forEach((t) => toasts.dismiss(t.id));
+                  toasts.items.filter((t) => t.action?.label === tr('common.undo') && t.message.includes(e.task.title)).forEach((t) => toasts.dismiss(t.id));
                   void undo.undoEntry(entry);
                 },
               }
             : undefined,
         });
         if (g && e.freezeEarned) {
-          toasts.push({ message: 'Streak freeze earned', detail: 'A missed day will not break your streak.', kind: 'info', emoji: '🧊' });
+          toasts.push({ message: tr('xp.freeze'), detail: tr('xp.freezeDetail'), kind: 'info', emoji: '🧊' });
         }
       }),
       on('graded', (e) => {
@@ -90,12 +90,24 @@
       }),
       on('studied', (e) => {
         if (!store.settings.gamification) return;
-        toasts.push({ message: `+${e.xp} XP · ${e.clearedAll ? 'Deck cleared!' : 'Study session'}`, detail: `${e.correct}/${e.reviewed} cards right`, kind: 'xp', combo: e.clearedAll ? 4 : 0, emoji: e.clearedAll ? '🃏' : '📚' });
+        toasts.push({
+          message: `+${e.xp} XP · ${e.clearedAll ? 'Deck cleared!' : 'Study session'}`,
+          detail: `${e.correct}/${e.reviewed} cards right`,
+          kind: 'xp',
+          combo: e.clearedAll ? 4 : 0,
+          emoji: e.clearedAll ? '🃏' : '📚',
+        });
         if (e.clearedAll) playSound('badge');
       }),
       on('collectible', (c) => {
         enqueue(() => {
-          toasts.push({ message: `Mystery reward: ${c.emoji} ${c.name}`, detail: c.kind === 'title' ? 'A new title for your profile. See Settings → Collection.' : 'A new sticker for your collection.', kind: 'badge', emoji: '🎁', timeout: 7000 });
+          toasts.push({
+            message: `Mystery reward: ${c.emoji} ${c.name}`,
+            detail: c.kind === 'title' ? 'A new title for your profile. See Settings → Collection.' : 'A new sticker for your collection.',
+            kind: 'badge',
+            emoji: '🎁',
+            timeout: 7000,
+          });
           playSound('badge');
           done(600);
         });
@@ -104,7 +116,7 @@
         enqueue(() => {
           confetti++;
           playSound('levelup');
-          toasts.push({ message: `${days}-day streak!`, detail: days >= 30 ? 'That is real discipline.' : 'Keep the chain going.', kind: 'levelup', emoji: '🔥', timeout: 6000 });
+          toasts.push({ message: tr('xp.streak', { n: days }), detail: days >= 30 ? tr('xp.streak30') : tr('xp.streakKeep'), kind: 'levelup', emoji: '🔥', timeout: 6000 });
           done(1500);
         });
       }),
@@ -138,7 +150,13 @@
         enqueue(() => {
           confetti++;
           playSound('ring');
-          toasts.push({ message: 'Daily goal reached!', detail: `${store.settings.dailyGoal} tasks done today. Anything else is a bonus.`, kind: 'success', emoji: '🎯', timeout: 5000 });
+          toasts.push({
+            message: tr('xp.goal'),
+            detail: tr('xp.goalDetail', { count: store.settings.dailyGoal }),
+            kind: 'success',
+            emoji: '🎯',
+            timeout: 5000,
+          });
           done(1200);
         });
       }),
@@ -148,18 +166,18 @@
       setTimeout(() => {
         if (store.settings.soundPromptShown) return;
         toasts.push({
-          message: 'Turn on sounds?',
-          detail: 'A crisp pop when you finish a task. You can change this in Settings.',
+          message: tr('xp.soundPrompt'),
+          detail: tr('xp.soundPromptDetail'),
           kind: 'info',
           emoji: '🔊',
           timeout: 12000,
           action: {
-            label: 'Enable',
+            label: tr('xp.enable'),
             onClick: () => {
               store.updateSettings({ soundsEnabled: true, soundPromptShown: true });
               primeAudio();
               playSound('pop');
-              toasts.items.filter((t) => t.message === 'Turn on sounds?').forEach((t) => toasts.dismiss(t.id));
+              toasts.items.filter((t) => t.message === tr('xp.soundPrompt')).forEach((t) => toasts.dismiss(t.id));
             },
           },
         });
@@ -176,9 +194,9 @@
   <div class="overlay" transition:fade={{ duration: 200 }} aria-live="assertive">
     <div class="levelup" in:scale={{ start: 0.6, duration: 500, opacity: 0 }}>
       <div class="glow"></div>
-      <div class="lbl">Level up</div>
+      <div class="lbl">{tr('xp.levelUp')}</div>
       <div class="num">{levelUp}</div>
-      <div class="sub">Keep going.</div>
+      <div class="sub">{tr('xp.keepGoing')}</div>
     </div>
   </div>
 {/if}
@@ -187,7 +205,7 @@
   <div class="badge-pop" transition:scale={{ start: 0.5, duration: 400 }} role="status">
     <div class="medal"><span>{badge.emoji}</span></div>
     <div>
-      <div class="lbl">Badge unlocked</div>
+      <div class="lbl">{tr('xp.badge')}</div>
       <div class="name">{badge.name}</div>
       <div class="desc">{badge.description}</div>
     </div>
@@ -269,7 +287,9 @@
     border: 1px solid var(--warn);
     border-radius: 16px;
     padding: 12px 18px 12px 12px;
-    box-shadow: var(--shadow), 0 0 40px color-mix(in srgb, var(--warn) 35%, transparent);
+    box-shadow:
+      var(--shadow),
+      0 0 40px color-mix(in srgb, var(--warn) 35%, transparent);
     z-index: 401;
     max-width: calc(100vw - 32px);
   }
@@ -296,7 +316,7 @@
     font-size: 11px;
     text-transform: uppercase;
     letter-spacing: 0.1em;
-    color: var(--warn);
+    color: var(--warn-text);
     font-weight: 700;
   }
   .name {

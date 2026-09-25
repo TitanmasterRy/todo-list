@@ -302,7 +302,7 @@ const FN: Record<string, Fn> = {
 /** Names of all supported functions, for help text. */
 export const FUNCTIONS: string[] = Object.keys(FN);
 
-const CONSTANTS: Record<string, number> = { pi: Math.PI, 'π': Math.PI, e: Math.E, tau: 2 * Math.PI, inf: Infinity };
+const CONSTANTS: Record<string, number> = { pi: Math.PI, π: Math.PI, e: Math.E, tau: 2 * Math.PI, inf: Infinity };
 
 function lookupVar(name: string, vars: Record<string, number>): number {
   if (Object.hasOwn(vars, name)) return vars[name];
@@ -329,17 +329,26 @@ function evalNode(n: Node, ctx: Ctx): number {
       const a = evalNode(n.left, ctx);
       const b = evalNode(n.right, ctx);
       switch (n.op) {
-        case '+': return a + b;
-        case '-': return a - b;
-        case '*': return a * b;
-        case '/': return a / b;
-        case '%': return a % b;
-        case '^': return Math.pow(a, b);
+        case '+':
+          return a + b;
+        case '-':
+          return a - b;
+        case '*':
+          return a * b;
+        case '/':
+          return a / b;
+        case '%':
+          return a % b;
+        case '^':
+          return Math.pow(a, b);
       }
       break;
     }
     case 'call':
-      return FN[n.name].fn(n.args.map((arg) => evalNode(arg, ctx)), ctx);
+      return FN[n.name].fn(
+        n.args.map((arg) => evalNode(arg, ctx)),
+        ctx,
+      );
   }
   throw new MathError('Invalid expression');
 }
@@ -370,10 +379,7 @@ export function evaluate(expr: string, opts: EvalOptions = {}): number {
  * Throws MathError at compile time for syntax errors and unknown variables;
  * the returned function returns NaN for domain errors (sqrt(-1), 2.5!, ...).
  */
-export function compile(
-  expr: string,
-  opts: Omit<EvalOptions, 'variables'> & { variables?: Record<string, number> } = {},
-): (x: number) => number {
+export function compile(expr: string, opts: Omit<EvalOptions, 'variables'> & { variables?: Record<string, number> } = {}): (x: number) => number {
   const ast = parse(expr);
   const vars: Record<string, number> = { ...(opts.variables ?? {}), x: 0 };
   for (const name of collectVars(ast, new Set())) lookupVar(name, vars); // throws if unknown

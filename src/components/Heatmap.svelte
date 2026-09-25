@@ -37,7 +37,11 @@
   const max = $derived(Math.max(1, ...Object.values(data)));
   const level = (n: number) => (n === 0 ? 0 : n >= max * 0.75 ? 4 : n >= max * 0.5 ? 3 : n >= max * 0.25 ? 2 : 1);
   let hover = $state<{ key: string; count: number } | null>(null);
-  const total = $derived(Object.entries(data).filter(([k]) => k > addDaysKey(endKey, -365)).reduce((a, [, v]) => a + v, 0));
+  const total = $derived(
+    Object.entries(data)
+      .filter(([k]) => k > addDaysKey(endKey, -365))
+      .reduce((a, [, v]) => a + v, 0),
+  );
   const rowLabels = $derived(Array.from({ length: 7 }, (_, r) => DAY_SHORT[(r + weekStart) % 7]));
 
   function label(key: string): string {
@@ -51,7 +55,9 @@
     <span><strong>{total}</strong> tasks completed in the last year</span>
     <span class="hover">{hover ? `${hover.count} on ${label(hover.key)}` : ''}</span>
   </div>
-  <div class="scroll">
+  <!-- focusable so keyboard users can scroll the year -->
+  <!-- svelte-ignore a11y_no_noninteractive_tabindex -->
+  <div class="scroll" tabindex="0" role="region" aria-label="Year of completions">
     <div class="months" style="--cols:{weeks}">
       {#each grid.months as m}
         <span style="grid-column:{m.col + 2}">{m.label}</span>
