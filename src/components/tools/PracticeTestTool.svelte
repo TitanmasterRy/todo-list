@@ -8,6 +8,37 @@
   import { correctText, loadQuizSets, type Question, type QuizSet } from '../../lib/quizmaker';
   import { addAttempt, answered, gradeTest, loadAttempts, pointsOf, summaryOf, testable, type Attempt, type Graded, type Response } from '../../lib/practicetest';
   import { formatTime } from '../../lib/studygames';
+  import { renderMarkdown } from '../../lib/markdown';
+
+  // "Why?" on a missed question: an AI explanation of the mistake (when a key is set), which can become a notecard
+  let aiOk = $state(false);
+  void import('../../lib/ai').then((m) => (aiOk = m.aiAvailable()));
+  let why = $state<Record<string, { busy?: boolean; text?: string; error?: string }>>({});
+  async function explain(q: Question) {
+    why[q.id] = { busy: true };
+    try {
+      const { explainMistake } = await import('../../lib/ai');
+      why[q.id] = {
+        text: await explainMistake({
+          prompt: q.prompt,
+          correct: correctText(q),
+          yours: shown(q, responses[q.id]).replace(/^—$/, ''),
+          explanation: q.explanation,
+          subject: set?.subject,
+        }),
+      };
+    } catch (e) {
+      why[q.id] = { error: e instanceof Error ? e.message : String(e) };
+    }
+  }
+  function whyToCard(q: Question) {
+    const text = why[q.id]?.text;
+    if (!set || !text) return;
+    const name = `${set.title} — missed`;
+    const deck = store.decks.find((d) => d.name === name) ?? store.addDeck(name);
+    store.addCards(deck.id, [{ front: q.prompt, back: `${correctText(q)}\n\n${text}` }]);
+    toasts.push({ message: `Saved to “${deck.name}”`, kind: 'success', emoji: '🃏' });
+  }
 
   const sets = loadQuizSets().filter((s) => testable(s).length);
   let attempts = $state(loadAttempts());
@@ -200,6 +231,17 @@
           <p class="ans">Your answer: <strong>{shown(q, responses[q.id])}</strong></p>
           {#if !r?.correct}<p class="ans">Correct: <strong>{correctText(q)}</strong></p>{/if}
           {#if q.explanation}<p class="muted">{q.explanation}</p>{/if}
+          {#if !r?.correct && aiOk}
+            {@const w = why[q.id]}
+            {#if w?.text}
+              <div class="why">{@html renderMarkdown(w.text)}</div>
+              <button class="link small" onclick={() => whyToCard(q)}>🃏 Save as a notecard</button>
+            {:else if w?.error}
+              <p class="err">{w.error}</p>
+            {:else}
+              <button class="btn sm ghost" onclick={() => explain(q)} disabled={w?.busy}>{w?.busy ? 'Thinking…' : '✨ Explain my mistake'}</button>
+            {/if}
+          {/if}
           {#if (q.type === 'short' || q.type === 'fill') && answered(q, responses[q.id])}
             <button class="link small" onclick={() => override(q, !r?.correct)}>{r?.correct ? 'Actually, count it wrong' : 'My answer means the same: count it right'}</button>
           {/if}
@@ -400,5 +442,19 @@
   }
   .b.last {
     background: var(--accent);
+  }
+  .why {
+    font-size: 14px;
+    background: color-mix(in srgb, var(--accent) 7%, transparent);
+    border-radius: 8px;
+    padding: 6px 10px;
+    margin: 6px 0 2px;
+  }
+  .why :global(p) {
+    margin: 4px 0;
+  }
+  .err {
+    color: var(--danger-text);
+    font-size: 13px;
   }
 </style>

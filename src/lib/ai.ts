@@ -2,6 +2,7 @@
 import type Anthropic from '@anthropic-ai/sdk';
 import { store } from './store.svelte';
 import type { Found } from './syllabus';
+import { checkCap, recordUsage } from './aiusage';
 import type { AiProvider, TaskType } from './types';
 import { chatOpenAICompatible, cleanKey, listModelsOpenAICompatible, ModelNotFoundError, providerInfo, type ChatImage, type ChatRequest } from './ai-providers';
 import { hasSecret, secret, useSecret, type SecretSlot } from './secrets.svelte';
@@ -119,8 +120,14 @@ async function askAnthropic(req: ChatRequest): Promise<string> {
 
 /** Route a request to the configured provider. */
 export async function ask(system: string, user: string, maxTokens = 2048, images?: ChatImage[], effort?: ChatRequest['effort']): Promise<string> {
+  checkCap(store.settings.aiMonthlyCap);
   const provider = currentProvider();
-  const req: ChatRequest = { system, user, maxTokens, images, effort };
+  const reply = await askProvider(provider, { system, user, maxTokens, images, effort });
+  recordUsage(provider, system + user, images?.length ?? 0, reply);
+  return reply;
+}
+
+async function askProvider(provider: AiProvider, req: ChatRequest): Promise<string> {
   if (provider === 'anthropic') return askAnthropic(req);
   const info = providerInfo(provider);
   await unlockKey(provider);
@@ -349,4 +356,20 @@ export async function extractSyllabusAI(text: string, today: string, images?: Ch
       found.push({ kind: 'task', title: r.title.slice(0, 140), dateKey: r.date, type: types.includes(r.type as TaskType) ? (r.type as TaskType) : 'homework', line: '' });
   }
   return found.sort((a, b) => ((a.kind === 'task' ? a.dateKey : a.from) < (b.kind === 'task' ? b.dateKey : b.from) ? -1 : 1));
+}
+
+/** Practice test → "Why?": explain a wrong answer briefly and kindly, with a tip to remember it. */
+export async function explainMistake(q: { prompt: string; correct: string; yours: string; explanation?: string; subject?: string }): Promise<string> {
+  const system =
+    'You are a patient tutor. A student got a practice question wrong. In at most 4 short sentences of markdown: say why their answer is wrong (or what it mixes up), why the correct answer is right, and one memorable tip. Be encouraging, no preamble.';
+  const user = [
+    q.subject && `Subject: ${q.subject}`,
+    `Question: ${q.prompt}`,
+    `Correct answer: ${q.correct}`,
+    `Student's answer: ${q.yours || '(left blank)'}`,
+    q.explanation && `Teacher's note: ${q.explanation}`,
+  ]
+    .filter(Boolean)
+    .join('\n');
+  return (await ask(system, user, 1024)).trim();
 }

@@ -1,4 +1,5 @@
 <script lang="ts">
+  import AiUsage from './AiUsage.svelte';
   // Settings → AI helper: provider, key, endpoint and model.
   import { store } from '../../lib/store.svelte';
   import { toasts } from '../../lib/toast.svelte';
@@ -143,6 +144,7 @@
   {:else}
     <div class="btns"><button class="btn sm" onclick={() => void connectAI()} disabled={aiBusy}>{aiBusy ? 'Testing…' : 'Test connection'}</button></div>
   {/if}
+  <AiUsage />
 </section>
 
 <style>

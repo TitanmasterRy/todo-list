@@ -304,6 +304,7 @@ export interface Settings {
   lastRecapDate?: string;
   lastSeenChangelog?: string; // newest changelog heading already shown in What's new
   courseLayout?: 'list' | 'board'; // course page: list or Kanban board
+  aiMonthlyCap?: number; // max AI requests per month (0 or unset = no limit)
   weekdayCapacityMin?: Record<number, number>; // Plan my week: minutes per weekday (else dailyCapacityMin)
   lastWeeklyReviewDate?: string;
   lastBackupReminderAt?: string;

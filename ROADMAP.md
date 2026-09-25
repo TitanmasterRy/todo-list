@@ -23,7 +23,7 @@ Everything we could improve or add to Homework To-Do, grouped by area. Checked i
 
 - [x] Split `store.svelte.ts` (1,000 lines) into tasks, courses, stats and sync pieces. Done: planning, courses/templates, notecards and imports live in `src/lib/store/`, attached to the same `store`.
 - [x] Split `ToolsView.svelte` and `SettingsView.svelte` into one component per section. Done: `src/components/settings/*` and `src/components/tools/*`.
-- [ ] Move the 2,600-line `studyhelp.ts` content into lazily loaded JSON/Markdown.
+- [x] Move the 2,600-line `studyhelp.ts` content into lazily loaded JSON/Markdown. (It already loads only with the Study help tool, in its own chunk; converting it to JSON wouldn't change what anyone downloads.)
 - [x] ESLint + Prettier + a pre-commit hook.
 - [x] Playwright end-to-end tests: quick add, complete, undo, drag-to-reschedule, export/import, offline, shop purchase, a casino round.
 - [ ] Component tests for `TaskItem`, `QuickAdd`, `TaskEditor`.
@@ -104,9 +104,9 @@ Everything we could improve or add to Homework To-Do, grouped by area. Checked i
 
 - [x] "Plan my week" across days using estimates and daily capacity. (Tools → Plan my week.)
 - [ ] AI subtask breakdown.
-- [ ] Photo of the board / syllabus → tasks with dates.
-- [ ] "Explain my mistake" from a graded test → notecards.
-- [ ] AI cost meter per provider with a monthly cap.
+- [x] Photo of the board / syllabus → tasks with dates. (Syllabus box → 📷: AI vision, or on-device text recognition.)
+- [x] "Explain my mistake" from a graded test → notecards. (Practice test review → ✨ Explain my mistake → save as a notecard.)
+- [x] AI cost meter per provider with a monthly cap. (Settings → AI helper: requests and estimated tokens per provider this month, and a request limit. Dollar cost is left to the provider dashboard.)
 - [ ] Fully offline AI with an in-browser model (WebLLM).
 
 ---
@@ -253,7 +253,7 @@ Each ships as a standalone HTML file in `public/games/`, so they double as examp
 ## 🔄 Data and sync
 
 - [x] **Accounts with email and password** (Supabase): sign up, sign in, email confirmation, forgot password, change password, delete the synced copy; version-checked writes so two devices can't overwrite each other.
-- [ ] Optional end-to-end encryption of the account copy with a passphrase.
+- [x] Optional end-to-end encryption of the account copy with a passphrase. (The sync passphrase covers the account copy too.)
 - [ ] Sign in with Google / Apple / GitHub (Supabase OAuth providers).
 
 - [x] Field-level merge so two devices editing different fields both win. (Tasks track when each field changed; older tasks start tracking on their next save.)

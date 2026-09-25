@@ -60,3 +60,38 @@ test('practice test: take it, review, count an answer right, missed → notecard
   await page.getByRole('button', { name: 'All tests' }).click();
   await expect(page.getByText('last 100% · best 100%')).toBeVisible();
 });
+
+test('explain my mistake with AI, save it as a notecard, and see it in the usage meter', async ({ page }) => {
+  await page.addInitScript((s) => {
+    if (!localStorage.getItem('homework-todo:quizsets')) localStorage.setItem('homework-todo:quizsets', JSON.stringify([s]));
+  }, SET);
+  await page.route('https://api.groq.com/openai/v1/chat/completions', (r) =>
+    r.fulfill({
+      contentType: 'application/json',
+      headers: { 'Access-Control-Allow-Origin': '*' },
+      body: JSON.stringify({ choices: [{ message: { content: 'The **nucleus** stores DNA; the mitochondria make ATP.' } }] }),
+    }),
+  );
+  await openApp(page, { aiProvider: 'groq', aiKeys: { groq: 'gsk_test' } });
+  await openPractice(page);
+  await page.getByRole('button', { name: 'Start' }).click();
+  await page
+    .getByRole('radiogroup', { name: /Powerhouse/ })
+    .getByLabel('Nucleus')
+    .check();
+  await page.getByRole('radiogroup', { name: /walls/ }).getByLabel('True').check();
+  await page.getByLabel('Answer to question 3').fill('photosynthesis');
+  await page.getByRole('button', { name: 'Hand it in' }).click();
+  await page.getByRole('button', { name: /Explain my mistake/ }).click();
+  await expect(page.locator('.why')).toContainText('the mitochondria make ATP');
+  await page.getByRole('button', { name: /Save as a notecard/ }).click();
+  await expect(page.getByText('Saved to “Cells quiz — missed”')).toBeVisible();
+  await page
+    .getByRole('button', { name: /Settings/ })
+    .first()
+    .click();
+  await expect(page.locator('.usage')).toContainText('groq');
+  await page.getByLabel('Monthly AI request limit').fill('1');
+  await page.getByLabel('Monthly AI request limit').press('Tab');
+  await expect(page.locator('.usage')).toContainText('1 of 1 requests used');
+});
