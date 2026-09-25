@@ -11,13 +11,29 @@
   import GraphTool from '../components/tools/GraphTool.svelte';
   import NotecardsTool from '../components/tools/NotecardsTool.svelte';
   import TranscriptTool from '../components/tools/TranscriptTool.svelte';
-  import StudyHelpTool from '../components/tools/StudyHelpTool.svelte';
   import { ui } from '../lib/ui.svelte';
 
   import ScanTool from '../components/tools/ScanTool.svelte';
 
   type Tab =
-    'grades' | 'planner' | 'calendar' | 'reading' | 'calculator' | 'graph' | 'notecards' | 'study' | 'transcript' | 'scan' | 'reader' | 'code' | 'google' | 'quiz' | 'powerschool';
+    | 'grades'
+    | 'planner'
+    | 'calendar'
+    | 'reading'
+    | 'calculator'
+    | 'graph'
+    | 'notecards'
+    | 'study'
+    | 'transcript'
+    | 'scan'
+    | 'reader'
+    | 'code'
+    | 'google'
+    | 'quiz'
+    | 'powerschool'
+    | 'essay'
+    | 'citations'
+    | 'units';
   type Group = 'plan' | 'grades' | 'study' | 'compute' | 'connect';
   let tab = $state<Tab>((ui.toolsTab as Tab) || 'planner');
   $effect(() => {
@@ -35,8 +51,11 @@
     { id: 'scan', label: 'Scan paper', icon: '📷', group: 'study' },
     { id: 'reader', label: 'Book reader', icon: '📚', group: 'study' },
     { id: 'study', label: 'Study help', icon: '💡', group: 'study' },
+    { id: 'essay', label: 'Essay tools', icon: '📝', group: 'study' },
+    { id: 'citations', label: 'Citations', icon: '🔖', group: 'study' },
     { id: 'calculator', label: 'Calculator', icon: '🧮', group: 'compute' },
     { id: 'graph', label: 'Graphing', icon: '📈', group: 'compute' },
+    { id: 'units', label: 'Unit converter', icon: '📏', group: 'compute' },
     { id: 'code', label: 'Code editor', icon: '💻', group: 'compute' },
     { id: 'google', label: 'Google (Gmail, Classroom, Calendar, Drive)', icon: '🟢', group: 'connect' },
   ];
@@ -395,7 +414,29 @@
   {:else if tab === 'notecards'}
     <NotecardsTool />
   {:else if tab === 'study'}
-    <StudyHelpTool />
+    {#await import('../components/tools/StudyHelpTool.svelte')}
+      <div class="card muted">Loading study help…</div>
+    {:then m}
+      <m.default />
+    {/await}
+  {:else if tab === 'essay'}
+    {#await import('../components/tools/EssayTool.svelte')}
+      <div class="card muted">Loading…</div>
+    {:then m}
+      <m.default />
+    {/await}
+  {:else if tab === 'citations'}
+    {#await import('../components/tools/CitationTool.svelte')}
+      <div class="card muted">Loading…</div>
+    {:then m}
+      <m.default />
+    {/await}
+  {:else if tab === 'units'}
+    {#await import('../components/tools/UnitTool.svelte')}
+      <div class="card muted">Loading…</div>
+    {:then m}
+      <m.default />
+    {/await}
   {:else if tab === 'transcript'}
     <TranscriptTool />
   {:else if tab === 'scan'}
