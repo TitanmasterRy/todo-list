@@ -101,6 +101,9 @@ Settings → AI helper. Pick a provider and paste its key (stored only in your b
 - **Files on tasks:** attach photos, PDFs and documents in the task editor. Files stay on the device (big photos are shrunk); other devices see the names.
 - **Break mode** (Settings → Goals) pauses your streak during school breaks.
 - **Print week** (Upcoming) prints a one-page weekly planner, or saves it as a PDF.
+- **Timetable** (Tools → Timetable): bell schedules, A/B or day 1–4 rotations, classes with rooms, and days off. Today shows what's on now and what's next, the task editor offers "Next class" as a due date, and you can track attendance.
+- **Syllabus box** (Tools → Syllabus box): paste a syllabus and add its dated work (and breaks) in one go.
+- **Grades:** per-course trend charts, "what if" scores and custom letter scales (Tools → Grade calculator).
 - **Export and import:** Settings → Data exports CSV (for spreadsheets) and Markdown (checklists by course), and imports CSV from this app, Todoist or any spreadsheet with a title column.
 
 ## Accessibility

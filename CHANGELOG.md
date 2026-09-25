@@ -1,5 +1,13 @@
 # Changelog
 
+## Roadmap pass 5: timetable, attendance, grades, syllabus box, privacy and security, more study games
+
+- **Timetable** (Tools → Timetable): bell schedules (regular, early release, one per weekday), A/B or day 1–4 rotation counted over school days, classes with rooms and teachers, and special days. Today shows the class that's on now, the minutes left and what's next; the task editor can set a due date to "Next class".
+- **Attendance:** mark classes present, late, absent or excused on Today or for the last two weeks, with per-class rates. Marking absent offers a catch-up task.
+- **Grades:** a trend chart per course, what-if scores for work that isn't graded yet, and letter scales per course (+/−, 10-point, 7-point, pass/fail or custom).
+- **Syllabus box** (Tools → Syllabus box): paste a syllabus and it finds the dates, titles and types (and breaks), ready to add as tasks. AI is optional.
+- **Study games:** a crossword built from a deck, and Quiz race against the ghost of your best run. **Star map** (Play) lights a star for every day you finished something.
+
 ## Roadmap pass 4: plan it out, attachments, course boards, background reminders, more games
 
 - **Plan it out** (task editor): split a big task into dated milestones working back from the due date, each waiting on the one before; or space exam study sessions before a test, linked to a notecard deck so each session has a Study button.
