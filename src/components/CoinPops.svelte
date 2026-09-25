@@ -17,7 +17,7 @@
   .pops {
     position: fixed;
     top: 14px;
-    right: 16px;
+    inset-inline-end: 16px;
     z-index: 120;
     display: grid;
     gap: 6px;

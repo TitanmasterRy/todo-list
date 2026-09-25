@@ -16,6 +16,7 @@
   import { withoutSecrets } from '../../lib/secretSlots';
   import { deleteEverything, remoteCopies, type RemoteCopy, type RemoteId, type WipeResult } from '../../lib/wipe';
   import { set } from './settings';
+  import { t } from '../../lib/i18n/index.svelte';
   const s = $derived(store.settings);
   let persisted = $state<boolean | null>(null);
   void isPersisted().then((v) => (persisted = v));
@@ -188,7 +189,7 @@
 </script>
 
 <section class="card">
-  <h2>Data</h2>
+  <h2>{t('settings.data')}</h2>
   <div class="btns">
     <button class="btn primary" onclick={exportNow}>Download backup</button>
     <button class="btn" onclick={() => fileInput?.click()}>Import JSON…</button>

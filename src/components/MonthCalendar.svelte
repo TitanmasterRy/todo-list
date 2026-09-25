@@ -1,13 +1,15 @@
 <script lang="ts">
   // Month calendar: tasks by due day. Arrow keys move between days, Enter opens the day's list.
   import { store } from '../lib/store.svelte';
-  import { DAY_SHORT, MONTH_SHORT, dueKey, fromKey, formatDayHeading } from '../lib/dates';
+  import { dayName, monthName, dueKey, fromKey, formatDayHeading } from '../lib/dates';
+  import { locale, t } from '../lib/i18n/index.svelte';
   import { monthGrid, shiftMonth } from '../lib/calendar';
   import QuickAdd from './QuickAdd.svelte';
   import TaskItem from './TaskItem.svelte';
   import type { Task } from '../lib/types';
 
   const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+  const monthTitle = (m: number) => (locale() === 'en' ? MONTHS[m] : monthName(m, 'long'));
   const t0 = fromKey(store.today);
   let year = $state(t0.getFullYear());
   let month = $state(t0.getMonth());
@@ -25,7 +27,7 @@
     for (const list of m.values()) list.sort((a, b) => Number(!!a.completedAt) - Number(!!b.completedAt) || (a.dueAt ?? '').localeCompare(b.dueAt ?? ''));
     return m;
   });
-  const weekdays = $derived(Array.from({ length: 7 }, (_, i) => DAY_SHORT[(i + store.settings.weekStart) % 7]));
+  const weekdays = $derived(Array.from({ length: 7 }, (_, i) => dayName((i + store.settings.weekStart) % 7)));
   const selectedTasks = $derived(byDay.get(selected) ?? []);
   const monthPrefix = $derived(`${year}-${String(month + 1).padStart(2, '0')}`);
 
@@ -46,7 +48,9 @@
     }
   }
   function onKey(e: KeyboardEvent, k: string) {
-    const step = { ArrowLeft: -1, ArrowRight: 1, ArrowUp: -7, ArrowDown: 7 }[e.key];
+    // left/right follow the reading direction
+    const side = document.documentElement.dir === 'rtl' ? -1 : 1;
+    const step = { ArrowLeft: -side, ArrowRight: side, ArrowUp: -7, ArrowDown: 7 }[e.key];
     if (!step) return;
     e.preventDefault();
     e.stopPropagation();
@@ -60,14 +64,14 @@
 
 <div class="cal">
   <div class="bar">
-    <button class="btn ghost sm" onclick={() => go(-1)} aria-label="Previous month">‹</button>
-    <h2>{MONTHS[month]} {year}</h2>
-    <button class="btn ghost sm" onclick={() => go(1)} aria-label="Next month">›</button>
-    <button class="btn sm" onclick={today}>Today</button>
+    <button class="btn ghost sm" onclick={() => go(-1)} aria-label={t('month.prev')}><span class="flip">‹</span></button>
+    <h2>{monthTitle(month)} {year}</h2>
+    <button class="btn ghost sm" onclick={() => go(1)} aria-label={t('month.next')}><span class="flip">›</span></button>
+    <button class="btn sm" onclick={today}>{t('date.today')}</button>
     <div class="grow"></div>
-    <label class="toggle"><input type="checkbox" bind:checked={showDone} /> Show done</label>
+    <label class="toggle"><input type="checkbox" bind:checked={showDone} /> {t('month.showDone')}</label>
   </div>
-  <div class="grid" role="grid" aria-label="{MONTHS[month]} {year}">
+  <div class="grid" role="grid" aria-label="{monthTitle(month)} {year}">
     <div class="row head" role="row">
       {#each weekdays as w (w)}<div class="wd" role="columnheader">{w}</div>{/each}
     </div>
@@ -86,15 +90,15 @@
             tabindex={k === selected ? 0 : -1}
             data-cal-day={k}
             aria-selected={k === selected}
-            aria-label="{formatDayHeading(k, store.now)}: {open.length} open task{open.length === 1 ? '' : 's'}"
+            aria-label="{formatDayHeading(k, store.now)}: {t('month.open', { count: open.length })}"
             onclick={() => pick(k)}
             onkeydown={(e) => (e.key === 'Enter' || e.key === ' ' ? (e.preventDefault(), pick(k)) : onKey(e, k))}
           >
-            <span class="n">{Number(k.slice(8))}{k.slice(8) === '01' ? ` ${MONTH_SHORT[Number(k.slice(5, 7)) - 1]}` : ''}</span>
-            {#each list.slice(0, 3) as t (t.id)}
-              <span class="t" class:done={!!t.completedAt} style="--c:{colorOf(t)}" title={t.title}>{t.title}</span>
+            <span class="n">{Number(k.slice(8))}{k.slice(8) === '01' ? ` ${monthName(Number(k.slice(5, 7)) - 1)}` : ''}</span>
+            {#each list.slice(0, 3) as tk (tk.id)}
+              <span class="t" class:done={!!tk.completedAt} style="--c:{colorOf(tk)}" title={tk.title}>{tk.title}</span>
             {/each}
-            {#if list.length > 3}<span class="more">+{list.length - 3} more</span>{/if}
+            {#if list.length > 3}<span class="more">{t('courses.more', { n: list.length - 3 })}</span>{/if}
           </div>
         {/each}
       </div>
@@ -104,11 +108,11 @@
   <section class="dayview" aria-live="polite">
     <h3>
       {formatDayHeading(selected, store.now)}
-      <span class="muted">{selectedTasks.length ? `${selectedTasks.length} task${selectedTasks.length === 1 ? '' : 's'}` : 'nothing due'}</span>
+      <span class="muted">{selectedTasks.length ? t('common.tasks', { count: selectedTasks.length }) : t('month.nothing')}</span>
     </h3>
-    {#key selected}<QuickAdd defaultDueKey={selected} placeholder="Add a task for this day…" />{/key}
+    {#key selected}<QuickAdd defaultDueKey={selected} placeholder={t('month.addPh')} />{/key}
     <div role="list">
-      {#each selectedTasks as t (t.id)}<div role="listitem"><TaskItem task={t} listIds={selectedTasks.map((x) => x.id)} /></div>{/each}
+      {#each selectedTasks as tk (tk.id)}<div role="listitem"><TaskItem task={tk} listIds={selectedTasks.map((x) => x.id)} /></div>{/each}
     </div>
   </section>
 </div>
@@ -157,7 +161,7 @@
   .day {
     min-height: 92px;
     padding: 4px 6px;
-    border-right: 1px solid var(--border);
+    border-inline-end: 1px solid var(--border);
     border-bottom: 1px solid var(--border);
     display: flex;
     flex-direction: column;
@@ -166,7 +170,7 @@
     min-width: 0;
   }
   .row .day:last-child {
-    border-right: 0;
+    border-inline-end: 0;
   }
   .day:hover {
     background: var(--bg-hover);
@@ -205,8 +209,8 @@
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    border-left: 3px solid var(--c);
-    padding-left: 4px;
+    border-inline-start: 3px solid var(--c);
+    padding-inline-start: 4px;
   }
   .t.done {
     text-decoration: line-through;
@@ -235,7 +239,7 @@
     .t {
       font-size: 0;
       height: 6px;
-      border-left: 0;
+      border-inline-start: 0;
       border-radius: 3px;
       background: var(--c);
       padding: 0;

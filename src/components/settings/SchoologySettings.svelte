@@ -4,13 +4,14 @@
   import { schoology, syncNow as syncSchoology } from '../../lib/schoologySync.svelte';
   import { forgetSecret, hasSecret, secret } from '../../lib/secrets.svelte';
   import { set } from './settings';
+  import { t } from '../../lib/i18n/index.svelte';
   const s = $derived(store.settings);
   let schoologyUrl = $state(secret('schoologyFeedUrl'));
   let schoologyProxy = $state(store.settings.schoologyProxy);
 </script>
 
 <section class="card">
-  <h2>Schoology sync <span class="chip optional">optional</span></h2>
+  <h2>{t('settings.schoology')} <span class="chip optional">{t('settings.optional')}</span></h2>
   <p class="help">
     Mode: <strong>{s.schoologyMode === 'api' ? 'API sign-in (assignments + grades)' : 'calendar feed (assignments)'}</strong>, syncing every {s.schoologyIntervalMin} min. Full setup
     (API key sign-in, proxy, manual import) lives in the <button class="link" onclick={() => store.go('schoology')}>Schoology view</button>.

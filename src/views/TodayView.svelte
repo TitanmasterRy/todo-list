@@ -1,7 +1,8 @@
 <script lang="ts">
   import { store } from '../lib/store.svelte';
   import { ui } from '../lib/ui.svelte';
-  import { formatMinutes, DAY_NAMES, MONTH_SHORT, fromKey } from '../lib/dates';
+  import { formatMinutes, formatMonthDay, formatTime, formatWeekdayDate, fromKey } from '../lib/dates';
+  import { locale, t } from '../lib/i18n/index.svelte';
   import QuickAdd from '../components/QuickAdd.svelte';
   import TaskItem from '../components/TaskItem.svelte';
   import GoalRing from '../components/GoalRing.svelte';
@@ -22,8 +23,10 @@
     const min = store.todayEstimateMin;
     if (!min) return '';
     const d = new Date(store.now.getTime() + min * 60000);
-    return d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+    return locale() === 'en' ? d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }) : formatTime(d, store.settings.timeFormat);
   });
+  // "8pm" in English (as before), the locale's own clock otherwise
+  const hourLabel = (h: number) => (locale() === 'en' ? `${h % 12 || 12}${h >= 12 ? 'pm' : 'am'}` : formatTime(new Date(2026, 0, 1, h % 24), store.settings.timeFormat));
   const chipCourses = $derived(store.activeCourses.filter((c) => store.todayTasks.some((t) => t.courseId === c.id)));
 
   // Sections keep recently completed tasks (store.lingering) in place until their exit animation runs.
@@ -35,7 +38,7 @@
   );
   const allIds = $derived([...overdue, ...dueToday, ...pinned].map((t) => t.id));
   const d = $derived(fromKey(store.today));
-  const dateLabel = $derived(`${DAY_NAMES[d.getDay()]}, ${MONTH_SHORT[d.getMonth()]} ${d.getDate()}`);
+  const dateLabel = $derived(formatWeekdayDate(d));
   const empty = $derived(overdue.length === 0 && dueToday.length === 0 && pinned.length === 0);
   let showNoDate = $state(false);
   const frog = $derived(store.frogTask);
@@ -55,13 +58,13 @@
 <div class="page">
   <header class="page-head">
     <div>
-      <h1>Today</h1>
+      <h1>{t('nav.today')}</h1>
       <div class="sub">{dateLabel}</div>
     </div>
     <div class="grow"></div>
-    <button class="btn sm" onclick={() => (ui.whatNow = !ui.whatNow)} aria-expanded={ui.whatNow}>🧭 What now?</button>
+    <button class="btn sm" onclick={() => (ui.whatNow = !ui.whatNow)} aria-expanded={ui.whatNow}>🧭 {t('today.whatNow')}</button>
     {#if store.settings.gamification}
-      <div class="stat" title="Streak">
+      <div class="stat" title={t('today.streak')}>
         <span class="flame" class:hot={store.streak > 0}>🔥</span>
         <span class="n">{store.streak}</span>
       </div>
@@ -71,8 +74,8 @@
 
   {#if store.currentBreak}
     <div class="card onbreak" role="status">
-      🏖️ <strong>{store.currentBreak.name || 'On break'}</strong> until {MONTH_SHORT[fromKey(store.currentBreak.to).getMonth()]}
-      {fromKey(store.currentBreak.to).getDate()}. Your streak is paused, so enjoy it.
+      🏖️ <strong>{store.currentBreak.name || t('today.onBreak')}</strong>
+      {t('today.breakUntil', { date: formatMonthDay(fromKey(store.currentBreak.to), fromKey(store.currentBreak.to)) })}
     </div>
   {/if}
   {#if store.schedule?.classes.length}
@@ -81,36 +84,36 @@
   <WhatNow />
   <QuestsCard />
 
-  <div class="workload" aria-label="Workload">
-    <span><strong>{formatMinutes(store.todayEstimateMin)}</strong> today</span>
+  <div class="workload" aria-label={t('today.workload')}>
+    <span><strong>{formatMinutes(store.todayEstimateMin)}</strong> {t('today.minToday')}</span>
     <span class="sep">·</span>
-    <span><strong>{formatMinutes(store.weekEstimateMin)}</strong> this week</span>
+    <span><strong>{formatMinutes(store.weekEstimateMin)}</strong> {t('today.minWeek')}</span>
     <span class="sep">·</span>
-    <span><strong>{store.todayTasks.length}</strong> task{store.todayTasks.length === 1 ? '' : 's'}</span>
+    <span><strong>{store.todayTasks.length}</strong> {t('today.taskWord', { count: store.todayTasks.length })}</span>
     {#if finishAt}
       <span class="sep">·</span>
-      <span title="If you start now and work straight through">done by <strong>{finishAt}</strong></span>
+      <span title={t('today.doneByTitle')}>{t('today.doneBy')} <strong>{finishAt}</strong></span>
     {/if}
     {#if frog}
       <span class="sep">·</span>
       <span>🐸 <strong>{frog.title}</strong></span>
     {:else if store.todayTasks.length}
       <span class="sep">·</span>
-      <button class="link" onclick={() => (ui.frogPrompt = true)}>Pick a frog</button>
+      <button class="link" onclick={() => (ui.frogPrompt = true)}>{t('today.pickFrog')}</button>
     {/if}
   </div>
 
   {#if powerNow}
-    <div class="power">⚡ <strong>Power hour</strong> until {(powerHour + 1) % 12 || 12}{powerHour + 1 >= 12 ? 'pm' : 'am'}: every task pays ×1.5 XP</div>
+    <div class="power">⚡ <strong>{t('today.powerHour')}</strong> {t('today.powerUntil', { time: hourLabel(powerHour + 1) })}</div>
   {:else if store.settings.gamification && store.settings.powerHourEnabled && store.now.getHours() < powerHour}
-    <div class="power soon">⚡ Power hour today at {powerHour % 12 || 12}{powerHour >= 12 ? 'pm' : 'am'} · ×1.5 XP</div>
+    <div class="power soon">⚡ {t('today.powerSoon', { time: hourLabel(powerHour) })}</div>
   {/if}
 
   <QuickAdd defaultDueKey={store.today} autofocus />
 
   {#if chipCourses.length > 1}
     <div class="course-chips">
-      <button class="chip" class:on={courseChip === null} onclick={() => (courseChip = null)}>All</button>
+      <button class="chip" class:on={courseChip === null} onclick={() => (courseChip = null)}>{t('common.all')}</button>
       {#each chipCourses as c (c.id)}
         <button class="chip" class:on={courseChip === c.id} style="--cc:{c.color}" onclick={() => (courseChip = courseChip === c.id ? null : c.id)}
           ><span class="dot"></span>{c.emoji ?? ''} {c.name}</button
@@ -121,9 +124,9 @@
 
   {#if overdue.length}
     <div class="section-title overdue">
-      <span>Overdue</span><span class="count">{store.overdueTasks.length}</span>
+      <span>{t('today.overdue')}</span><span class="count">{store.overdueTasks.length}</span>
       <span class="spacer"></span>
-      <button class="btn sm" onclick={() => store.rollOverdueToToday()}>Roll all to today</button>
+      <button class="btn sm" onclick={() => store.rollOverdueToToday()}>{t('today.rollAll')}</button>
     </div>
     <Sortable items={overdue} onreorder={(ids) => store.reorder(ids)} ondropfrom={(id) => onDrop(id, 'today')} group="today">
       {#snippet item(task)}
@@ -133,9 +136,9 @@
   {/if}
 
   <div class="section-title">
-    <span>Due today</span><span class="count">{dueToday.length}</span>
+    <span>{t('today.dueToday')}</span><span class="count">{dueToday.length}</span>
   </div>
-  <Sortable items={dueToday} onreorder={(ids) => store.reorder(ids)} ondropfrom={(id) => onDrop(id, 'today')} group="today" placeholder="Drop here to make it due today">
+  <Sortable items={dueToday} onreorder={(ids) => store.reorder(ids)} ondropfrom={(id) => onDrop(id, 'today')} group="today" placeholder={t('today.dropDue')}>
     {#snippet item(task)}
       <TaskItem {task} listIds={allIds} dragHandle />
     {/snippet}
@@ -143,10 +146,11 @@
 
   {#if pinned.length || showNoDate}
     <div class="section-title">
-      <span>Planned for today</span><span class="count">{pinned.length}</span><span class="spacer"></span><button class="link" onclick={() => store.go('tools')}>Plan my day</button
+      <span>{t('today.planned')}</span><span class="count">{pinned.length}</span><span class="spacer"></span><button class="link" onclick={() => store.go('tools')}
+        >{t('today.planDay')}</button
       >
     </div>
-    <Sortable items={pinned} onreorder={(ids) => store.reorder(ids)} ondropfrom={(id) => onDrop(id, 'pinned')} group="today" placeholder="Drag a task without a date here">
+    <Sortable items={pinned} onreorder={(ids) => store.reorder(ids)} ondropfrom={(id) => onDrop(id, 'pinned')} group="today" placeholder={t('today.dropPinned')}>
       {#snippet item(task)}
         <TaskItem {task} listIds={allIds} dragHandle />
       {/snippet}
@@ -156,23 +160,23 @@
   {#if empty}
     <div class="empty">
       <div class="big">{store.ringClosedToday ? '🎉' : '🌤️'}</div>
-      <h3>{store.ringClosedToday ? 'Goal reached. Nothing left for today.' : 'Nothing due today'}</h3>
-      <p>Add a task above, or pull one in from your undated tasks.</p>
+      <h3>{store.ringClosedToday ? t('today.goalReached') : t('today.nothingDue')}</h3>
+      <p>{t('today.emptyHint')}</p>
     </div>
   {/if}
 
   {#if store.noDateTasks.length}
     <button class="section-title toggle" onclick={() => (showNoDate = !showNoDate)} aria-expanded={showNoDate}>
-      <span>No date</span><span class="count">{store.noDateTasks.length}</span>
+      <span>{t('today.noDate')}</span><span class="count">{store.noDateTasks.length}</span>
       <span class="spacer"></span>
-      <span class="hint">{showNoDate ? 'Hide' : 'Show · drag into today'}</span>
+      <span class="hint">{showNoDate ? t('common.hide') : t('today.showNoDate')}</span>
     </button>
     {#if showNoDate}
       <Sortable items={store.noDateTasks} onreorder={(ids) => store.reorder(ids)} group="today">
         {#snippet item(task)}
           <div class="nodate">
             <TaskItem {task} listIds={allIds} dragHandle compact />
-            <button class="btn ghost sm" onclick={() => store.pinToToday(task.id)}>→ Today</button>
+            <button class="btn ghost sm" onclick={() => store.pinToToday(task.id)}>{t('today.toToday')}</button>
           </div>
         {/snippet}
       </Sortable>
@@ -181,7 +185,7 @@
 
   {#if doneToday.length}
     <div class="section-title">
-      <span>Done today</span><span class="count">{doneToday.length}</span>
+      <span>{t('today.doneToday')}</span><span class="count">{doneToday.length}</span>
     </div>
     <div class="task-list done-list">
       {#each doneToday.filter((t) => !store.lingering.has(t.id)) as task (task.id)}
@@ -278,7 +282,7 @@
   }
   .toggle {
     width: 100%;
-    text-align: left;
+    text-align: start;
   }
   .hint {
     font-weight: 400;

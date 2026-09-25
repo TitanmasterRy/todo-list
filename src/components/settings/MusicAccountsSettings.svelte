@@ -2,11 +2,12 @@
   // Settings → Music & accounts: Spotify and Google client IDs.
   import { store } from '../../lib/store.svelte';
   import { set } from './settings';
+  import { t } from '../../lib/i18n/index.svelte';
   const s = $derived(store.settings);
 </script>
 
 <section class="card">
-  <h2>Music &amp; accounts</h2>
+  <h2>{t('settings.music')}</h2>
   <div class="row">
     <label for="spid">Spotify Client ID</label>
     <input

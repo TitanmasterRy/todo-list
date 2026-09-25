@@ -37,19 +37,29 @@ import { notecardsMethods } from './store/notecards.svelte';
 import { externalMethods } from './store/external.svelte';
 import { attachmentMethods } from './store/attachments.svelte';
 import { afterSettingsChange, resetVault, settingsForDisk } from './secrets.svelte';
+import { setLocale, t as tr } from './i18n/index.svelte';
 
 export type View = 'today' | 'upcoming' | 'courses' | 'inbox' | 'focus' | 'stats' | 'tools' | 'schoology' | 'play' | 'settings';
+// `label` follows the app language (a getter, so reading it in a component re-renders on a language switch)
+const view = (id: View, icon: string, key: string) => ({
+  id,
+  icon,
+  key,
+  get label() {
+    return tr(`nav.${id}` as const);
+  },
+});
 export const VIEWS: { id: View; label: string; icon: string; key: string }[] = [
-  { id: 'today', label: 'Today', icon: '☀️', key: '1' },
-  { id: 'upcoming', label: 'Upcoming', icon: '📅', key: '2' },
-  { id: 'courses', label: 'Courses', icon: '📚', key: '3' },
-  { id: 'inbox', label: 'Inbox', icon: '📥', key: '4' },
-  { id: 'focus', label: 'Focus', icon: '🎯', key: '5' },
-  { id: 'stats', label: 'Stats', icon: '📈', key: '6' },
-  { id: 'tools', label: 'Tools', icon: '🧰', key: '7' },
-  { id: 'schoology', label: 'Schoology', icon: '🔄', key: '8' },
-  { id: 'play', label: 'Play', icon: '🎮', key: '9' },
-  { id: 'settings', label: 'Settings', icon: '⚙️', key: '' },
+  view('today', '☀️', '1'),
+  view('upcoming', '📅', '2'),
+  view('courses', '📚', '3'),
+  view('inbox', '📥', '4'),
+  view('focus', '🎯', '5'),
+  view('stats', '📈', '6'),
+  view('tools', '🧰', '7'),
+  view('schoology', '🔄', '8'),
+  view('play', '🎮', '9'),
+  view('settings', '⚙️', ''),
 ];
 
 export type NewTaskInput = Partial<Omit<Task, 'id' | 'createdAt' | 'updatedAt' | 'order' | 'deferredCount' | 'subtasks' | 'tags'>> & {
@@ -121,6 +131,7 @@ export class Store {
 
   // ---------- init ----------
   async init(): Promise<void> {
+    const language = this.applyLocale().catch((e) => console.error(e)); // loads with the data, before the first render
     try {
       const [tasks, courses, templates, stats, notes, decks, cards, tombstones, ledger, schedule] = await Promise.all([
         db.getAllTasks(),
@@ -148,6 +159,7 @@ export class Store {
       this.applyTheme();
       configureSounds({ enabled: this.settings.soundsEnabled, pack: this.settings.soundPack });
       await this.archiveOldCompleted();
+      await language;
       this.ready = true;
       this.startClock();
       // tidy up files left behind by tasks deleted for good (on this or another device)
@@ -155,6 +167,7 @@ export class Store {
     } catch (e) {
       console.error(e);
       this.loadError = e instanceof Error ? e.message : String(e);
+      await language;
       this.ready = true;
     }
   }
@@ -184,6 +197,12 @@ export class Store {
     if ('soundsEnabled' in patch || 'soundPack' in patch) {
       configureSounds({ enabled: this.settings.soundsEnabled, pack: this.settings.soundPack });
     }
+    if ('locale' in patch || 'forceRtl' in patch) void this.applyLocale();
+  }
+
+  /** App language and text direction (<html lang dir>); non-English strings load on demand. */
+  applyLocale(): Promise<void> {
+    return setLocale(this.settings.locale ?? 'auto', { forceRtl: this.settings.forceRtl });
   }
 
   applyTheme(): void {
@@ -260,7 +279,7 @@ export class Store {
     const t = this.trash.find((x) => x.id === id);
     if (!t) return;
     this.restoreTaskInternal(structuredClone($state.snapshot(t.task)) as Task);
-    toasts.push({ message: `Restored “${t.task.title}”`, kind: 'success' });
+    toasts.push({ message: tr('toast.restored', { title: t.task.title }), kind: 'success' });
   }
 
   emptyTrash(): void {
@@ -399,8 +418,8 @@ export class Store {
     this.persistTask(task);
     if (opts.undoable !== false) {
       undo.push(
-        { label: `Added “${task.title}”`, undo: () => this.removeTaskInternal(task.id) },
-        { toast: !opts.silent, timeout: 3500, detail: described ? `Planned: ${task.subtasks.length} steps · ~${task.estimateMin} min` : undefined },
+        { label: tr('toast.added', { title: task.title }), undo: () => this.removeTaskInternal(task.id) },
+        { toast: !opts.silent, timeout: 3500, detail: described ? tr('toast.planned', { count: task.subtasks.length, min: task.estimateMin ?? 0 }) : undefined },
       );
     }
     return task;
@@ -411,7 +430,7 @@ export class Store {
     const created = inputs.filter((i) => i.title.trim()).map((i) => this.addTask(i, { undoable: false }));
     if (created.length) {
       undo.push({
-        label: `Added ${created.length} tasks`,
+        label: tr('toast.addedMany', { count: created.length }),
         undo: () => {
           const ids = new Set(created.map((t) => t.id));
           this.tasks = this.tasks.filter((t) => !ids.has(t.id));
@@ -465,7 +484,7 @@ export class Store {
       for (const b of r.newBadges) emit('badge', { id: b });
     }
     if (opts.undoable) {
-      undo.push({ label: opts.label ?? `Edited “${snapshot.title}”`, undo: () => this.restoreTaskInternal(snapshot) }, { timeout: 4000 });
+      undo.push({ label: opts.label ?? tr('toast.edited', { title: snapshot.title }), undo: () => this.restoreTaskInternal(snapshot) }, { timeout: 4000 });
     }
     return next;
   }
@@ -513,7 +532,7 @@ export class Store {
 
     undo.push(
       {
-        label: `Completed “${task.title}”`,
+        label: tr('toast.completed', { title: task.title }),
         undo: () => {
           // fresh updatedAt so sync treats the undo as the latest edit
           const reopened = { ...prevTask, updatedAt: isoNow() };
@@ -601,7 +620,7 @@ export class Store {
     stats.totalCompleted = Math.max(0, stats.totalCompleted - 1);
     this.stats = stats;
     this.persistStats();
-    undo.push({ label: `Reopened “${task.title}”`, undo: () => this.restoreTaskInternal(prev) });
+    undo.push({ label: tr('toast.reopened', { title: task.title }), undo: () => this.restoreTaskInternal(prev) });
   }
 
   deleteTask(id: string): void {
@@ -614,7 +633,7 @@ export class Store {
     this.removeTaskInternal(id, true);
     if (this.selectedTaskId === id) this.selectedTaskId = null;
     if (this.focusTaskId === id) this.focusTaskId = null;
-    undo.push({ label: `Deleted “${task.title}”`, undo: () => this.restoreTaskInternal(snapshot) }, { kind: 'warn' });
+    undo.push({ label: tr('toast.deleted', { title: task.title }), undo: () => this.restoreTaskInternal(snapshot) }, { kind: 'warn' });
   }
 
   bulkDelete(ids: string[]): void {
@@ -631,7 +650,7 @@ export class Store {
     this.clearSelection();
     undo.push(
       {
-        label: `Deleted ${snaps.length} tasks`,
+        label: tr('toast.deletedMany', { count: snaps.length }),
         undo: () => {
           const now = isoNow();
           const back = snaps.map((t) => ({ ...t, updatedAt: now }));
@@ -679,7 +698,7 @@ export class Store {
     this.persistTasks(updated);
     this.clearSelection();
     undo.push({
-      label: `Tagged ${updated.length} tasks #${tag}`,
+      label: tr('toast.tagged', { count: updated.length, tag }),
       undo: () => {
         const now = isoNow();
         const back = snaps.map((t) => ({ ...t, updatedAt: now }));
@@ -809,7 +828,20 @@ export function byFrogThenOrder(a: Task, b: Task): number {
   return a.order - b.order;
 }
 
-export const PRIORITY_LABEL: Record<Priority, string> = { low: 'Low', normal: 'Normal', high: 'High', urgent: 'Urgent' };
+export const PRIORITY_LABEL: Record<Priority, string> = {
+  get low() {
+    return tr('priority.low');
+  },
+  get normal() {
+    return tr('priority.normal');
+  },
+  get high() {
+    return tr('priority.high');
+  },
+  get urgent() {
+    return tr('priority.urgent');
+  },
+};
 
 type PlanningMethods = typeof planningMethods;
 type OrganizeMethods = typeof organizeMethods;

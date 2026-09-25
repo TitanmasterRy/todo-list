@@ -1,10 +1,11 @@
 <script lang="ts">
   // Settings → Trash: deleted tasks kept for 30 days.
   import { store } from '../../lib/store.svelte';
+  import { t } from '../../lib/i18n/index.svelte';
 </script>
 
 <section class="card">
-  <h2>Trash <span class="muted">{store.trash.length}</span></h2>
+  <h2>{t('settings.trash')} <span class="muted">{store.trash.length}</span></h2>
   <p class="help">Deleted tasks stay here for 30 days. Deletions also sync, so a task deleted on one device is removed on the others.</p>
   {#if store.trash.length}
     <ul class="trash">

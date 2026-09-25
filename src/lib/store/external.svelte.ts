@@ -9,6 +9,7 @@ import type { ExternalAssignment, SyncDiff } from '../schoology';
 import { undo } from '../undo.svelte';
 import { emit } from '../events';
 import type { Store } from '../store.svelte';
+import { t as tr } from '../i18n/index.svelte';
 
 export const externalMethods = {
   /** Add imported tasks (CSV import) in one undoable step. Course names are matched or created. Done tasks arrive completed without XP. */
@@ -61,7 +62,7 @@ export const externalMethods = {
     this.persistTasks(created);
     undo.push(
       {
-        label: `Imported ${created.length} tasks`,
+        label: tr('toast.imported', { count: created.length }),
         undo: () => {
           const ids = new Set(created.map((t) => t.id));
           this.tasks = this.tasks.filter((t) => !ids.has(t.id));

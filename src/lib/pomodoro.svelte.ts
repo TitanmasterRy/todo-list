@@ -1,6 +1,7 @@
 import { store } from './store.svelte';
 import { playSound } from './sounds';
 import { toasts } from './toast.svelte';
+import { t } from './i18n/index.svelte';
 
 export type Mode = 'work' | 'break' | 'long' | 'custom' | 'stopwatch';
 
@@ -102,8 +103,8 @@ class Pomodoro {
         if (this.customMin >= 20) store.recordPomodoro();
         if (store.focusTaskId) store.addTimeSpent(store.focusTaskId, this.customMin);
         playSound('timerDone');
-        toasts.push({ message: `${this.customMin} min timer done`, kind: 'success', emoji: '⏰' });
-        this.notify('Timer done', `${this.customMin} minutes are up.`);
+        toasts.push({ message: t('pomo.timerDone', { n: this.customMin }), kind: 'success', emoji: '⏰' });
+        this.notify(t('pomo.timerDoneTitle'), t('pomo.timerDoneBody', { n: this.customMin }));
       }
       this.setMode('custom');
       return;
@@ -115,14 +116,14 @@ class Pomodoro {
         // the minutes count toward the task you're focusing on
         if (store.focusTaskId) store.addTimeSpent(store.focusTaskId, store.settings.pomodoroWorkMin);
         playSound('timerDone');
-        toasts.push({ message: 'Pomodoro done', detail: 'Take a break. You earned it.', kind: 'success', emoji: '🍅' });
-        this.notify('Pomodoro done', 'Time for a break.');
+        toasts.push({ message: t('pomo.done'), detail: t('pomo.doneDetail'), kind: 'success', emoji: '🍅' });
+        this.notify(t('pomo.done'), t('pomo.doneBody'));
       }
       this.setMode(this.sessions > 0 && this.sessions % 4 === 0 ? 'long' : 'break');
     } else {
       if (natural) {
         playSound('timerDone');
-        this.notify('Break over', 'Back to it.');
+        this.notify(t('pomo.breakOver'), t('pomo.breakOverBody'));
       }
       this.setMode('work');
     }

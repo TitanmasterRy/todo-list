@@ -303,6 +303,8 @@ export interface Settings {
   lastWeeklyReviewDate?: string;
   lastBackupReminderAt?: string;
   syncPassphrase: string; // end-to-end encryption of the synced copy (Gist, Drive, account); '' = off
+  locale?: 'auto' | 'en' | 'es'; // app language ('auto' follows the browser)
+  forceRtl?: boolean; // right-to-left layout even for a left-to-right language (for testing)
 }
 
 export const DEFAULT_SETTINGS: Settings = {

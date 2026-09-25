@@ -1,4 +1,5 @@
 import { toasts } from './toast.svelte';
+import { t } from './i18n/index.svelte';
 
 export interface UndoEntry {
   label: string;
@@ -19,7 +20,7 @@ class UndoStore {
         kind: opts.kind ?? 'info',
         timeout: opts.timeout ?? 6000,
         action: {
-          label: 'Undo',
+          label: t('common.undo'),
           onClick: () => {
             toasts.dismiss(id);
             void this.undoEntry(entry);
@@ -41,7 +42,7 @@ class UndoStore {
     const entry = this.stack[this.stack.length - 1];
     if (!entry) return false;
     await this.undoEntry(entry);
-    toasts.push({ message: `Undid: ${entry.label}`, kind: 'info', timeout: 2500 });
+    toasts.push({ message: t('undo.undid', { label: entry.label }), kind: 'info', timeout: 2500 });
     return true;
   }
 

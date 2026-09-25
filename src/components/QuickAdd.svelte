@@ -4,6 +4,7 @@
   import { ui } from '../lib/ui.svelte';
   import { toasts } from '../lib/toast.svelte';
   import { primeAudio } from '../lib/sounds';
+  import { locale, t } from '../lib/i18n/index.svelte';
 
   interface Props {
     defaultDueKey?: string;
@@ -11,7 +12,7 @@
     placeholder?: string;
     autofocus?: boolean;
   }
-  let { defaultDueKey, defaultCourseId, placeholder = 'Add a task… try “Read ch 4 tomorrow 8pm #calc !high ~45m”', autofocus = false }: Props = $props();
+  let { defaultDueKey, defaultCourseId, placeholder, autofocus = false }: Props = $props();
 
   let text = $state('');
   let input: HTMLInputElement | undefined = $state();
@@ -39,7 +40,7 @@
       return;
     }
     rec = new SRClass();
-    rec.lang = navigator.language || 'en-US';
+    rec.lang = locale() === 'en' ? navigator.language || 'en-US' : locale();
     rec.interimResults = true;
     rec.onresult = (e) => {
       let t = '';
@@ -64,7 +65,7 @@
     e.preventDefault();
     const inputs = lines.map((line) => lineToInput(line));
     const created = store.addTasks(inputs);
-    toasts.push({ message: `Added ${created.length} tasks from your paste`, kind: 'success', emoji: '📋' });
+    toasts.push({ message: t('quick.pasted', { count: created.length }), kind: 'success', emoji: '📋' });
     text = '';
   }
   $effect(() => {
@@ -80,6 +81,8 @@
       now: store.now,
       courses: store.activeCourses.map((c) => ({ id: c.id, name: c.name })),
       weekStart: store.settings.weekStart,
+      locale: locale(),
+      timeFormat: store.settings.timeFormat,
     }),
   );
   const template = $derived(parsed.template ? store.findTemplate(parsed.template) : undefined);
@@ -113,7 +116,7 @@
   });
 
   function lineToInput(line: string): NewTaskInput {
-    const p = parseQuickAdd(line, { now: store.now, courses: store.activeCourses.map((c) => ({ id: c.id, name: c.name })), weekStart: store.settings.weekStart });
+    const p = parseQuickAdd(line, { now: store.now, courses: store.activeCourses.map((c) => ({ id: c.id, name: c.name })), weekStart: store.settings.weekStart, locale: locale() });
     const base: NewTaskInput = { title: p.title || line };
     if (p.courseId) base.courseId = p.courseId;
     else if (defaultCourseId) base.courseId = defaultCourseId;
@@ -134,7 +137,7 @@
     const base: NewTaskInput = { title: '' };
     if (p.template) {
       if (!template) {
-        toasts.push({ message: `No template named @${p.template}`, kind: 'warn' });
+        toasts.push({ message: t('quick.noTemplate', { name: p.template }), kind: 'warn' });
         return;
       }
       Object.assign(base, {
@@ -187,13 +190,13 @@
   }
 </script>
 
-<form class="quick" class:focused onsubmit={submit} role="search" aria-label="Quick add">
+<form class="quick" class:focused onsubmit={submit} role="search" aria-label={t('quick.label')}>
   <span class="plus" aria-hidden="true">+</span>
   <input
     bind:this={input}
     bind:value={text}
-    {placeholder}
-    aria-label="Quick add task"
+    placeholder={placeholder ?? t('quick.placeholder')}
+    aria-label={t('quick.input')}
     autocomplete="off"
     enterkeyhint="done"
     onfocus={() => (focused = true)}
@@ -203,12 +206,17 @@
     data-quick-add
   />
   {#if SRClass}
-    <button type="button" class="btn ghost sm icon mic" class:on={listening} onclick={toggleVoice} aria-label={listening ? 'Stop listening' : 'Add by voice'} title="Add by voice"
-      >{listening ? '🔴' : '🎤'}</button
+    <button
+      type="button"
+      class="btn ghost sm icon mic"
+      class:on={listening}
+      onclick={toggleVoice}
+      aria-label={listening ? t('quick.stopListening') : t('quick.voice')}
+      title={t('quick.voice')}>{listening ? '🔴' : '🎤'}</button
     >
   {/if}
   {#if text}
-    <button class="btn primary sm go" type="submit">Add</button>
+    <button class="btn primary sm go" type="submit">{t('common.add')}</button>
   {:else}
     <span class="hint" aria-hidden="true"><span class="kbd hint-only">n</span></span>
   {/if}
@@ -222,11 +230,11 @@
       <span class="chip {chip.kind}">{chip.label}</span>
     {/each}
     {#if !parsed.dueAt && defaultDueKey}
-      <span class="chip faint">📅 Today</span>
+      <span class="chip faint">📅 {t('date.today')}</span>
     {/if}
     {#if store.settings.autoDescribe && !parsed.template}
-      <button type="button" class="chip auto" class:off={!describeNext} onclick={() => (describeNext = !describeNext)} title="Auto-fill a plan, steps and estimate"
-        >{describeNext ? '✨ auto plan' : 'no auto plan'}</button
+      <button type="button" class="chip auto" class:off={!describeNext} onclick={() => (describeNext = !describeNext)} title={t('quick.autoPlanTitle')}
+        >{describeNext ? t('quick.autoPlan') : t('quick.noAutoPlan')}</button
       >
     {/if}
     {#if !parsed.courseId && defaultCourseId && store.courseById(defaultCourseId)}
@@ -234,8 +242,8 @@
     {/if}
     {#if templateSuggestions.length}
       <span class="sugg">
-        {#each templateSuggestions as t}
-          <button type="button" class="chip" onclick={() => applySuggestion('@', t.name)}>@{t.name}</button>
+        {#each templateSuggestions as tp}
+          <button type="button" class="chip" onclick={() => applySuggestion('@', tp.name)}>@{tp.name}</button>
         {/each}
       </span>
     {/if}

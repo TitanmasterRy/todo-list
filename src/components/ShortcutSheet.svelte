@@ -1,54 +1,55 @@
 <script lang="ts">
   import { focusTrap } from '../lib/focusTrap';
   import { ui } from '../lib/ui.svelte';
-  const groups: { title: string; keys: [string, string][] }[] = [
+  import { t } from '../lib/i18n/index.svelte';
+  const groups: { title: string; keys: [string, string][] }[] = $derived([
     {
-      title: 'Global',
+      title: t('keys.global'),
       keys: [
-        ['n', 'New task (focus quick add)'],
-        ['/', 'Search'],
-        ['Ctrl K', 'Command palette'],
-        ['Ctrl Z', 'Undo last action'],
-        ['1 – 9', 'Switch view (Today, Upcoming, Courses, Inbox, Focus, Stats, Tools, Schoology, Play)'],
-        ['?', 'This sheet'],
-        ['Esc', 'Close / clear selection'],
+        ['n', t('keys.new')],
+        ['/', t('keys.search')],
+        ['Ctrl K', t('nav.palette')],
+        ['Ctrl Z', t('keys.undo')],
+        ['1 – 9', t('keys.views')],
+        ['?', t('keys.sheet')],
+        ['Esc', t('keys.esc')],
       ],
     },
     {
-      title: 'Tasks',
+      title: t('keys.tasks'),
       keys: [
-        ['j / k', 'Move down / up'],
-        ['Enter', 'Open task'],
-        ['e', 'Edit task'],
-        ['Space', 'Complete task'],
-        ['s', 'Snooze menu'],
-        ['w', 'What should I do now?'],
-        ['[ / ]', 'Move selected task a day earlier / later'],
-        ['x', 'Select for bulk actions'],
-        ['f', 'Focus on task'],
-        ['d', 'Duplicate task'],
-        ['Del', 'Delete task'],
-        ['Shift click', 'Select a range'],
+        ['j / k', t('keys.move')],
+        ['Enter', t('keys.open')],
+        ['e', t('editor.label')],
+        [t('keys.spaceKey'), t('keys.complete')],
+        ['s', t('keys.snooze')],
+        ['w', t('cmd.whatNow')],
+        ['[ / ]', t('keys.shift')],
+        ['x', t('keys.bulk')],
+        ['f', t('keys.focus')],
+        ['d', t('keys.duplicate')],
+        ['Del', t('keys.delete')],
+        [t('keys.shiftClick'), t('keys.range')],
       ],
     },
     {
-      title: 'Quick add syntax',
+      title: t('keys.syntax'),
       keys: [
-        ['tomorrow 8pm', 'Due date and time (today, mon, next fri, in 3 days, 9/21, sep 21)'],
-        ['#calc', 'Course (falls back to a tag)'],
-        ['!high', 'Priority: !low !high !urgent'],
-        ['~45m', 'Estimate: ~30m ~2h'],
-        ['every mon wed', 'Repeat: every day, every 3 days, weekdays'],
-        ['@name', 'New from template'],
+        [t('keys.exDate'), t('keys.date')],
+        [t('keys.exCourse'), t('keys.course')],
+        [t('keys.exPriority'), t('keys.priority')],
+        ['~45m', t('keys.estimate')],
+        [t('keys.exRepeat'), t('keys.repeat')],
+        [t('keys.exTemplate'), t('keys.template')],
       ],
     },
-  ];
+  ]);
 </script>
 
 <div class="modal-backdrop" onclick={() => (ui.shortcuts = false)} role="presentation">
   <!-- svelte-ignore a11y_click_events_have_key_events -->
-  <div use:focusTrap class="modal sheet" role="dialog" aria-modal="true" aria-label="Keyboard shortcuts" tabindex="-1" onclick={(e) => e.stopPropagation()}>
-    <h2>Keyboard shortcuts</h2>
+  <div use:focusTrap class="modal sheet" role="dialog" aria-modal="true" aria-label={t('keys.title')} tabindex="-1" onclick={(e) => e.stopPropagation()}>
+    <h2>{t('keys.title')}</h2>
     <div class="cols">
       {#each groups as g}
         <section>
@@ -66,7 +67,7 @@
         </section>
       {/each}
     </div>
-    <div class="actions"><button class="btn" onclick={() => (ui.shortcuts = false)}>Close <span class="kbd">Esc</span></button></div>
+    <div class="actions"><button class="btn" onclick={() => (ui.shortcuts = false)}>{t('common.close')} <span class="kbd">Esc</span></button></div>
   </div>
 </div>
 

@@ -55,9 +55,10 @@ Everything we could improve or add to Homework To-Do, grouped by area. Checked i
 
 ## 🌍 Reach
 
-- [ ] Translations (strings in per-language files), starting with Spanish, including the quick-add date parser.
-- [ ] Format dates and numbers with `Intl` for the user's region.
-- [ ] Right-to-left layout support.
+- [x] Translations (strings in per-language files), starting with Spanish, including the quick-add date parser. (Settings → Language: Auto / English / Español. Translated: sidebar and tab bar, Today, Upcoming and the month calendar, Inbox, Courses, Focus, quick add, task rows, the task editor, snooze and bulk menus, toasts and undo, completion feedback, daily prompts, What now, daily quests, onboarding, the command palette, the shortcut sheet, and the Settings headings plus the Appearance and Language sections. Quick add understands Spanish dates, times, priorities and repeats: “mañana a las 5”, “el viernes”, “15 de octubre”, “!alta”.)
+- [x] Format dates and numbers with `Intl` for the user's region. (Day and month names, “hace 3 días”, times and numbers follow the language and the browser's region; English output is unchanged. The 12/24-hour and week-start settings still apply.)
+- [x] Right-to-left layout support. (The shell, sidebar, task rows, menus and calendar use logical CSS properties and flip their arrows; `dir` follows the language, and Settings → Language has a right-to-left switch for testing until an RTL language is added.)
+- [ ] Translate the rest: Stats, Tools (all tools), Schoology, Play (shop, casino, arcade, study games), the remaining Settings sections (AI, sync, data, privacy, notifications, economy…), course editor, semester setup, weekly review, What's new, and the level titles and badge names. Then add an RTL language (Arabic or Hebrew).
 
 ## ✅ Core to-do features
 

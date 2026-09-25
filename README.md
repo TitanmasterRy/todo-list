@@ -116,6 +116,18 @@ Settings → AI helper. Pick a provider and paste its key (stored only in your b
 - **Grades:** per-course trend charts, "what if" scores and custom letter scales (Tools → Grade calculator).
 - **Export and import:** Settings → Data exports CSV (for spreadsheets) and Markdown (checklists by course), and imports CSV from this app, Todoist or any spreadsheet with a title column.
 
+## Languages
+
+**Settings → Language:** Auto (follows the browser), English or Español. The switch is instant, sets `<html lang dir>`, and dates, times and numbers follow your region through `Intl` ("mañana 17:00", "5 oct", "hace 3 días"). In Spanish, quick add understands Spanish too: `Leer capítulo 3 mañana a las 5 #historia !alta`, `el viernes`, `pasado mañana`, `la próxima semana`, `en 3 días`, `15 de octubre`, `cada lunes y miércoles`. The app shell and the everyday screens are translated; Tools, Play, Stats and some Settings sections are still English. A **right-to-left layout** switch in the same section previews RTL until an RTL language is added.
+
+Adding a language:
+
+1. Copy `src/lib/i18n/es.ts` to `src/lib/i18n/<code>.ts` (for example `fr.ts`) and translate the values. Keep the keys and the `{placeholders}`; plural messages take the forms your language needs (`one`, `few`, `many`, `other`…, see `Intl.PluralRules`).
+2. Add the code to `Locale`, `LOCALES` and `loaders` in `src/lib/i18n/index.svelte.ts`, and to the `locale` setting type in `src/lib/types.ts`. Right-to-left languages are detected from the code.
+3. `npm run check` fails until every key is translated, and `npm test` checks the placeholders. Quick-add words for the new language go in `src/lib/parser.ts` (see the Spanish block).
+
+New strings go in `src/lib/i18n/en.ts` first, then in every other language file; use them with `t('key', { name })`.
+
 ## Accessibility
 
 Settings → Appearance: high-contrast mode, reading fonts (Atkinson Hyperlegible, Lexend, OpenDyslexic, bundled so they work offline), text size up to 140%, reduced motion, and a separate switch for confetti and sparkle bursts. Every view is checked with axe in light and dark mode on each pull request, and every theme pack passes WCAG AA text contrast.
@@ -221,6 +233,7 @@ Press `?` in the app for the sheet.
 ```
 src/lib/         types, storage (IndexedDB), store, dates, parser, recurrence, gamification, backup, gist sync, sounds
 src/lib/store/   store method groups (planning, courses and templates, notecards, imports) merged into the store
+src/lib/i18n/    translations: en.ts (source of truth), es.ts, and t() / setLocale()
 src/components/  task item, checkbox, quick add, editor, sortable list, toasts, feedback layer, palette, dialogs
 src/views/       Today, Upcoming, Courses, Inbox, Focus, Stats, Tools, Schoology, Play, Settings
 src/lib/casino/  casino game rules (slots, blackjack, roulette, poker, baccarat, craps, quick games)

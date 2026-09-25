@@ -9,6 +9,7 @@
   import { driveSync } from '../../lib/google.svelte';
   import { account, syncNow as accountSync } from '../../lib/account.svelte';
   import type { SecretSlot } from '../../lib/secrets.svelte';
+  import { t } from '../../lib/i18n/index.svelte';
 
   const MIN = 8;
   const LABELS: Record<string, string> = {
@@ -88,7 +89,7 @@
 </script>
 
 <section class="card" id="privacy">
-  <h2>Privacy &amp; security</h2>
+  <h2>{t('settings.privacy')}</h2>
   <p class="help">
     Everything lives on this device unless you switch on a sync or an integration. There are no analytics, ads or trackers, and this site has no server of its own.
   </p>

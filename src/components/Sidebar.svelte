@@ -4,13 +4,14 @@
   import { ui } from '../lib/ui.svelte';
   import { economy } from '../lib/economy.svelte';
   import { TITLE_TEXT } from '../lib/economy';
+  import { formatNumber, t } from '../lib/i18n/index.svelte';
 
   const lp = $derived(levelProgress(store.stats.xp));
   const views = $derived(VIEWS.filter((v) => v.id !== 'play' || store.settings.economyEnabled));
   const title = $derived(store.settings.equippedTitle ? TITLE_TEXT[store.settings.equippedTitle] : levelTitle(lp.level));
 </script>
 
-<nav class="sidebar" aria-label="Main">
+<nav class="sidebar" aria-label={t('nav.main')}>
   <div class="brand">
     <span class="logo" aria-hidden="true">✓</span>
     <span>Homework</span>
@@ -28,7 +29,7 @@
   </ul>
   {#if store.settings.smartLists.length}
     <div class="courses">
-      <div class="head">Lists</div>
+      <div class="head">{t('nav.lists')}</div>
       {#each store.settings.smartLists as l (l.id)}
         <button
           class="course"
@@ -46,7 +47,7 @@
   {/if}
   {#if store.activeCourses.length}
     <div class="courses">
-      <div class="head">Courses</div>
+      <div class="head">{t('nav.coursesHead')}</div>
       {#each store.activeCourses as c (c.id)}
         <button class="course" class:active={store.view === 'courses' && store.courseFilter === c.id} onclick={() => store.go('courses', { courseId: c.id })}>
           <span class="dot" style="background:{c.color}"></span>
@@ -58,20 +59,20 @@
   {/if}
   <div class="grow"></div>
   {#if store.settings.economyEnabled}
-    <button class="wallet" onclick={() => store.go('play')} title="Coins, chips and vouchers">
-      <span>🪙 {economy.wallet.coins.toLocaleString()}</span>
-      {#if store.settings.casinoEnabled}<span>🎰 {economy.wallet.chips.toLocaleString()}</span>{/if}
+    <button class="wallet" onclick={() => store.go('play')} title={t('nav.wallet')}>
+      <span>🪙 {formatNumber(economy.wallet.coins)}</span>
+      {#if store.settings.casinoEnabled}<span>🎰 {formatNumber(economy.wallet.chips)}</span>{/if}
       <span>🎟️ {economy.wallet.vouchers}</span>
     </button>
   {/if}
   {#if store.settings.gamification}
     <div class="level frame-{store.settings.equippedFrame ?? 'none'}" title="{store.stats.xp} XP">
-      <div class="lvl-row"><span>Lv {lp.level} · {title}</span><span class="muted">{lp.into}/{lp.needed}</span></div>
+      <div class="lvl-row"><span>{t('nav.level', { level: lp.level, title })}</span><span class="muted">{lp.into}/{lp.needed}</span></div>
       <div class="bar"><div class="fill" style="width:{lp.pct * 100}%"></div></div>
     </div>
   {/if}
   <button class="btn ghost sm palette" onclick={() => (ui.palette = true)}>
-    <span>Command palette</span><span class="kbd">⌘K</span>
+    <span>{t('nav.palette')}</span><span class="kbd">⌘K</span>
   </button>
 </nav>
 
@@ -79,11 +80,11 @@
   .sidebar {
     position: fixed;
     top: 0;
-    left: 0;
+    inset-inline-start: 0;
     bottom: 0;
     width: var(--sidebar-w);
     background: var(--bg-elev);
-    border-right: 1px solid var(--border);
+    border-inline-end: 1px solid var(--border);
     display: flex;
     flex-direction: column;
     padding: 16px 10px;
@@ -126,7 +127,7 @@
     border-radius: 8px;
     color: var(--text-muted);
     font-weight: 500;
-    text-align: left;
+    text-align: start;
     transition:
       background var(--dur),
       color var(--dur);

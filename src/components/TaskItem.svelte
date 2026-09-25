@@ -8,6 +8,7 @@
   import { ruleLabel } from '../lib/remind';
   import Checkbox from './Checkbox.svelte';
   import SnoozeMenu from './SnoozeMenu.svelte';
+  import { t } from '../lib/i18n/index.svelte';
 
   interface Props {
     task: Task;
@@ -94,24 +95,24 @@
   style="--course:{course?.color ?? 'var(--accent)'}"
 >
   {#if dragHandle}
-    <span class="handle" aria-hidden="true" title="Drag to reorder">⋮⋮</span>
+    <span class="handle" aria-hidden="true" title={t('task.drag')}>⋮⋮</span>
   {/if}
   {#if store.bulkMode}
     <input
       type="checkbox"
       class="sel"
       {checked}
-      aria-label="Select task"
+      aria-label={t('task.select')}
       onclick={(e) => {
         e.stopPropagation();
         store.toggleSelect(task.id);
       }}
     />
   {/if}
-  <Checkbox checked={done} color={course?.color} onchange={onComplete} label={done ? `Reopen ${task.title}` : `Complete ${task.title}`} />
+  <Checkbox checked={done} color={course?.color} onchange={onComplete} label={done ? t('task.reopen', { title: task.title }) : t('task.complete', { title: task.title })} />
   <div class="body">
     <div class="title-row">
-      {#if isFrog}<span class="frog-ico" title="Eat the frog: double XP">🐸</span>{/if}
+      {#if isFrog}<span class="frog-ico" title={t('task.frog')}>🐸</span>{/if}
       <button
         class="title"
         onclick={(e) => {
@@ -129,7 +130,7 @@
             expanded = !expanded;
           }}
           aria-expanded={expanded}
-          aria-label="Toggle subtasks"
+          aria-label={t('task.toggleSubtasks')}
         >
           {subDone}/{task.subtasks.length}
           {expanded ? '▾' : '▸'}
@@ -143,11 +144,11 @@
         {/if}
         {#if task.type === 'exam' || task.type === 'quiz'}
           <span class="chip {task.type}"
-            >{task.type === 'exam' ? '📝 Exam' : '❓ Quiz'}{#if daysUntil !== null && daysUntil >= 0 && !done}
-              · {daysUntil === 0 ? 'today' : daysUntil === 1 ? '1 day' : `${daysUntil} days`}{/if}</span
+            >{task.type === 'exam' ? t('task.exam') : t('task.quiz')}{#if daysUntil !== null && daysUntil >= 0 && !done}
+              · {daysUntil === 0 ? t('task.examToday') : t('task.examDays', { count: daysUntil })}{/if}</span
           >
         {:else if task.type && task.type !== 'homework' && task.type !== 'other'}
-          <span class="chip">{task.type}</span>
+          <span class="chip">{t(`type.${task.type}` as const)}</span>
         {/if}
         {#if task.dueAt}
           <span class="chip" class:overdue class:today>{overdue ? '⚠ ' : ''}{formatDue(task.dueAt, store.now, store.settings.timeFormat)}</span>
@@ -156,12 +157,19 @@
           <span class="chip p-{task.priority}">{task.priority === 'low' ? '↓' : task.priority === 'high' ? '↑' : '‼'} {PRIORITY_LABEL[task.priority]}</span>
         {/if}
         {#if blockers.length}
-          <span class="chip waiting" title="Waiting on: {blockers.map((b) => b.title).join(', ')}"
-            >⏳ after {blockers[0].title}{blockers.length > 1 ? ` +${blockers.length - 1}` : ''}</span
+          <span class="chip waiting" title={t('task.waitingOn', { titles: blockers.map((b) => b.title).join(', ') })}
+            >⏳ {t('task.after', { title: blockers[0].title })}{blockers.length > 1 ? ` +${blockers.length - 1}` : ''}</span
           >
         {/if}
         {#if task.estimateMin || spentNow}
-          <span class="chip" class:timing title={spentNow ? `${formatMinutes(spentNow)} tracked${task.estimateMin ? ` of ~${formatMinutes(task.estimateMin)}` : ''}` : 'Estimate'}
+          <span
+            class="chip"
+            class:timing
+            title={spentNow
+              ? task.estimateMin
+                ? t('task.trackedOf', { spent: formatMinutes(spentNow), est: formatMinutes(task.estimateMin) })
+                : t('task.tracked', { spent: formatMinutes(spentNow) })
+              : t('task.estimate')}
             >⏱ {spentNow ? `${formatMinutes(spentNow)}${task.estimateMin ? ` / ${formatMinutes(task.estimateMin)}` : ''}` : formatMinutes(task.estimateMin!)}</span
           >
         {/if}
@@ -169,21 +177,21 @@
           <span class="chip" title={task.reminders.map(ruleLabel).join(', ')}>🔔{task.reminders.length > 1 ? ` ${task.reminders.length}` : ''}</span>
         {/if}
         {#if parent}
-          <span class="chip part" title="Step of: {parent.title}">🪜 {parent.title}</span>
+          <span class="chip part" title={t('task.stepOf', { title: parent.title })}>🪜 {parent.title}</span>
         {/if}
         {#if deck && !done}
-          <button type="button" class="chip deck" onclick={studyDeck} title="Study the {deck.name} deck">🃏 Study {deck.name}</button>
+          <button type="button" class="chip deck" onclick={studyDeck} title={t('task.studyDeck', { name: deck.name })}>🃏 {t('task.study', { name: deck.name })}</button>
         {/if}
         {#if task.attachments?.length}
           <span class="chip" title={task.attachments.map((a) => a.name).join(', ')}>📎{task.attachments.length > 1 ? ` ${task.attachments.length}` : ''}</span>
         {/if}
         {#if task.pinnedDay === store.today && task.dueAt && !today && !overdue}
-          <span class="chip planned" title="Planned for today (deadline unchanged)">📌 today</span>
+          <span class="chip planned" title={t('task.plannedTitle')}>📌 {t('task.planned')}</span>
         {/if}
         {#if task.source === 'schoology'}
-          {#if task.url}<a class="chip synced" href={task.url} target="_blank" rel="noopener noreferrer" title="Open in Schoology" onclick={(e) => e.stopPropagation()}
+          {#if task.url}<a class="chip synced" href={task.url} target="_blank" rel="noopener noreferrer" title={t('task.openSchoology')} onclick={(e) => e.stopPropagation()}
               >🔄 Schoology ↗</a
-            >{:else}<span class="chip synced" title="Synced from Schoology">🔄</span>{/if}
+            >{:else}<span class="chip synced" title={t('task.synced')}>🔄</span>{/if}
         {/if}
         {#if typeof task.score === 'number'}
           <span class="chip score" class:aced={task.score >= 95}>{task.score}%</span>
@@ -198,7 +206,7 @@
           <span class="chip tag">#{tag}</span>
         {/each}
         {#if task.deferredCount >= 3}
-          <span class="chip stale" title="Snoozed {task.deferredCount} times">💤 {task.deferredCount}</span>
+          <span class="chip stale" title={t('task.snoozedTimes', { count: task.deferredCount })}>💤 {task.deferredCount}</span>
         {/if}
       </div>
     {/if}
@@ -211,12 +219,12 @@
               <input type="checkbox" checked={s.done} onchange={() => store.toggleSubtask(task.id, s.id)} />
               <span>{s.title}</span>
             </label>
-            <button class="rm" onclick={() => store.removeSubtask(task.id, s.id)} aria-label="Remove subtask">×</button>
+            <button class="rm" onclick={() => store.removeSubtask(task.id, s.id)} aria-label={t('task.removeSubtask')}>×</button>
           </li>
         {/each}
         <li>
           <form onsubmit={addSub}>
-            <input class="sub-input" placeholder="Add subtask…" bind:value={newSub} />
+            <input class="sub-input" placeholder={t('task.addSubtask')} bind:value={newSub} />
           </form>
         </li>
       </ul>
@@ -226,7 +234,12 @@
     <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
     <div class="actions" onclick={(e) => e.stopPropagation()}>
       <div class="snooze-wrap">
-        <button class="btn ghost sm icon" title="Snooze (s)" aria-label="Snooze" onclick={() => (ui.snoozeMenuFor = ui.snoozeMenuFor === task.id ? null : task.id)}>💤</button>
+        <button
+          class="btn ghost sm icon"
+          title={t('task.snoozeKey')}
+          aria-label={t('task.snooze')}
+          onclick={() => (ui.snoozeMenuFor = ui.snoozeMenuFor === task.id ? null : task.id)}>💤</button
+        >
         {#if ui.snoozeMenuFor === task.id}
           <SnoozeMenu taskId={task.id} onclose={() => (ui.snoozeMenuFor = null)} />
         {/if}
@@ -234,19 +247,19 @@
       <button
         class="btn ghost sm icon"
         class:timing
-        title={timing ? 'Stop timer' : 'Start timer'}
-        aria-label={timing ? 'Stop timer' : 'Start timer'}
+        title={timing ? t('task.stopTimer') : t('task.startTimer')}
+        aria-label={timing ? t('task.stopTimer') : t('task.startTimer')}
         aria-pressed={timing}
         onclick={() => (timing ? store.stopTimer(task.id) : store.startTimer(task.id))}>{timing ? '⏹' : '▶'}</button
       >
-      <button class="btn ghost sm icon" title="Focus" aria-label="Focus on this task" onclick={() => store.go('focus', { taskId: task.id })}>🎯</button>
-      <button class="btn ghost sm icon" title="Edit (e)" aria-label="Edit" onclick={open}>✎</button>
-      <button class="btn ghost sm icon del" title="Delete" aria-label="Delete" onclick={() => store.deleteTask(task.id)}>🗑</button>
+      <button class="btn ghost sm icon" title={t('task.focus')} aria-label={t('task.focusOn')} onclick={() => store.go('focus', { taskId: task.id })}>🎯</button>
+      <button class="btn ghost sm icon" title={t('task.editKey')} aria-label={t('common.edit')} onclick={open}>✎</button>
+      <button class="btn ghost sm icon del" title={t('common.delete')} aria-label={t('common.delete')} onclick={() => store.deleteTask(task.id)}>🗑</button>
     </div>
   {:else}
     <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
     <div class="actions" onclick={(e) => e.stopPropagation()}>
-      <button class="btn ghost sm icon del" title="Delete" aria-label="Delete" onclick={() => store.deleteTask(task.id)}>🗑</button>
+      <button class="btn ghost sm icon del" title={t('common.delete')} aria-label={t('common.delete')} onclick={() => store.deleteTask(task.id)}>🗑</button>
     </div>
   {/if}
 </div>
@@ -329,7 +342,7 @@
     gap: 8px;
   }
   .title {
-    text-align: left;
+    text-align: start;
     font-weight: 500;
     font-size: 15px;
     color: var(--text);
@@ -348,7 +361,7 @@
   .compact.selected .actions {
     display: flex;
     position: absolute;
-    right: 6px;
+    inset-inline-end: 6px;
     top: 4px;
     background: var(--bg-elev);
     border-radius: 8px;
@@ -360,6 +373,9 @@
     background-size: 0% 1.5px;
     background-position: 0 58%;
     transition: background-size 320ms 80ms var(--ease);
+  }
+  :global([dir='rtl']) .strike {
+    background-position: 100% 58%;
   }
   .done .strike {
     background-size: 100% 1.5px;

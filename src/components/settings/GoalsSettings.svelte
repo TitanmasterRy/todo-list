@@ -2,6 +2,7 @@
   // Settings → Goals and timer: daily goal and Pomodoro lengths.
   import { store } from '../../lib/store.svelte';
   import { set } from './settings';
+  import { t } from '../../lib/i18n/index.svelte';
   const s = $derived(store.settings);
   const breaks = $derived((store.stats.breaks ?? []).filter((b) => !b.deleted && b.to >= store.today));
   let bFrom = $state('');
@@ -14,7 +15,7 @@
 </script>
 
 <section class="card">
-  <h2>Goals and timer</h2>
+  <h2>{t('settings.goals')}</h2>
   <div class="row">
     <label for="goal">Daily goal (tasks)</label>
     <input
@@ -66,7 +67,7 @@
 </section>
 
 <section class="card" aria-labelledby="breaks-h">
-  <h2 id="breaks-h">Break mode</h2>
+  <h2 id="breaks-h">{t('settings.breaks')}</h2>
   <p class="help">Add school breaks and holidays. Days inside a break don't count against your streak, so a week off doesn't cost you a 40-day run.</p>
   {#if breaks.length}
     <ul class="breaks">

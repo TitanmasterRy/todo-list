@@ -2,19 +2,17 @@
   // Settings → Adding tasks: auto-describe.
   import { store } from '../../lib/store.svelte';
   import { set } from './settings';
+  import { t } from '../../lib/i18n/index.svelte';
   const s = $derived(store.settings);
 </script>
 
 <section class="card">
-  <h2>Adding tasks</h2>
+  <h2>{t('settings.adding')}</h2>
   <div class="row">
-    <label for="autod">Auto-describe new tasks (plan, steps, estimate)</label>
+    <label for="autod">{t('settings.autoDescribe')}</label>
     <input id="autod" type="checkbox" class="switch" checked={s.autoDescribe} onchange={(e) => set('autoDescribe', (e.target as HTMLInputElement).checked)} />
   </div>
-  <p class="help">
-    Works offline from the task title and course. Toggle it per task with the “auto plan” chip under quick add. Paste several lines into quick add to create one task per line; tap
-    🎤 to dictate.
-  </p>
+  <p class="help">{t('settings.autoDescribeHelp')}</p>
 </section>
 
 <style>

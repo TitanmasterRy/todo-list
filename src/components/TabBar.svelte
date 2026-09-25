@@ -1,13 +1,14 @@
 <script lang="ts">
   import { fly } from 'svelte/transition';
   import { store, VIEWS } from '../lib/store.svelte';
+  import { t } from '../lib/i18n/index.svelte';
   const tabs = VIEWS.filter((v) => ['today', 'upcoming', 'courses', 'inbox', 'stats'].includes(v.id));
   const more = $derived(VIEWS.filter((v) => ['focus', 'tools', 'schoology', 'play', 'settings'].includes(v.id) && (v.id !== 'play' || store.settings.economyEnabled)));
   let open = $state(false);
   const moreActive = $derived(more.some((v) => v.id === store.view));
 </script>
 
-<nav class="tabbar" aria-label="Main">
+<nav class="tabbar" aria-label={t('nav.main')}>
   {#each tabs as v (v.id)}
     <button
       class:active={store.view === v.id}
@@ -22,9 +23,9 @@
       <span class="lbl">{v.label}</span>
     </button>
   {/each}
-  <button class:active={moreActive} onclick={() => (open = !open)} aria-label="More" aria-expanded={open} aria-haspopup="menu">
+  <button class:active={moreActive} onclick={() => (open = !open)} aria-label={t('nav.more')} aria-expanded={open} aria-haspopup="menu">
     <span class="ico" aria-hidden="true">{moreActive ? VIEWS.find((v) => v.id === store.view)?.icon : '⋯'}</span>
-    <span class="lbl">{moreActive ? VIEWS.find((v) => v.id === store.view)?.label : 'More'}</span>
+    <span class="lbl">{moreActive ? VIEWS.find((v) => v.id === store.view)?.label : t('nav.more')}</span>
   </button>
 </nav>
 {#if open}
@@ -85,7 +86,7 @@
   .more {
     display: none;
     position: fixed;
-    right: 8px;
+    inset-inline-end: 8px;
     bottom: calc(var(--tabbar-h) + 8px + env(safe-area-inset-bottom));
     background: var(--bg-elev-2);
     border: 1px solid var(--border-strong);
@@ -104,7 +105,7 @@
     border-radius: 8px;
     font-size: 15px;
     color: var(--text);
-    text-align: left;
+    text-align: start;
   }
   .more button.active {
     background: color-mix(in srgb, var(--accent) 16%, transparent);

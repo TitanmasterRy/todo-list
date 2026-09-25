@@ -1,21 +1,29 @@
 // Per-task reminder rules and when they fire. Rules are relative to the due date so they move with it.
 import { addDaysKey, dueKey, fromKey, isDateOnly } from './dates';
 import type { ReminderRule, Task } from './types';
+import { intlLocale, t, type MessageKey } from './i18n/index.svelte';
 
+// `label` follows the app language
+const preset = (key: MessageKey, rule: ReminderRule) => ({
+  rule,
+  get label() {
+    return t(key);
+  },
+});
 export const REMINDER_PRESETS: { label: string; rule: ReminderRule }[] = [
-  { label: 'At due time', rule: { before: 0 } },
-  { label: '10 min before', rule: { before: 10 } },
-  { label: '30 min before', rule: { before: 30 } },
-  { label: '1 hour before', rule: { before: 60 } },
-  { label: '3 hours before', rule: { before: 180 } },
-  { label: '1 day before', rule: { before: 1440 } },
-  { label: 'The night before (8 pm)', rule: { nightBefore: true } },
-  { label: 'Morning of (8 am)', rule: { morningOf: true } },
+  preset('remind.atDue', { before: 0 }),
+  preset('remind.10min', { before: 10 }),
+  preset('remind.30min', { before: 30 }),
+  preset('remind.1h', { before: 60 }),
+  preset('remind.3h', { before: 180 }),
+  preset('remind.1day', { before: 1440 }),
+  preset('remind.nightBefore', { nightBefore: true }),
+  preset('remind.morningOf', { morningOf: true }),
 ];
 
 export function ruleLabel(r: ReminderRule): string {
-  if ('at' in r) return new Date(r.at).toLocaleString([], { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
-  return REMINDER_PRESETS.find((p) => JSON.stringify(p.rule) === JSON.stringify(r))?.label ?? ('before' in r ? `${r.before} min before` : 'Reminder');
+  if ('at' in r) return new Date(r.at).toLocaleString(intlLocale() === 'en' ? [] : intlLocale(), { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
+  return REMINDER_PRESETS.find((p) => JSON.stringify(p.rule) === JSON.stringify(r))?.label ?? ('before' in r ? t('remind.minBefore', { n: r.before }) : t('remind.reminder'));
 }
 
 export function ruleKey(r: ReminderRule): string {

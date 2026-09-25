@@ -1,8 +1,46 @@
 // Date helpers. All "day keys" are local-time YYYY-MM-DD strings.
+// User-facing formatters follow the app language: English keeps the hand-written short forms ("Tomorrow 8pm",
+// "Oct 5"), other languages use Intl with the browser's region ("mañana 17:00", "5 oct").
+import { intlLocale, locale, t } from './i18n/index.svelte';
 
 export const DAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 export const DAY_SHORT = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 export const MONTH_SHORT = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+const formats = new Map<string, Intl.DateTimeFormat>();
+function dtf(opts: Intl.DateTimeFormatOptions): Intl.DateTimeFormat {
+  const id = `${intlLocale()}|${JSON.stringify(opts)}`;
+  let f = formats.get(id);
+  if (!f) formats.set(id, (f = new Intl.DateTimeFormat(intlLocale(), opts)));
+  return f;
+}
+// any date with the wanted weekday (2026-01-04 was a Sunday)
+const onWeekday = (dow: number) => new Date(2026, 0, 4 + dow);
+
+/** Weekday name for 0 (Sunday) – 6 in the app language: "Mon" / "lun", or "Monday" / "lunes" with `long`. */
+export function dayName(dow: number, width: 'short' | 'long' = 'short'): string {
+  if (locale() === 'en') return (width === 'long' ? DAY_NAMES : DAY_SHORT)[dow];
+  return dtf({ weekday: width }).format(onWeekday(dow));
+}
+
+/** Short month name for 0 – 11: "Oct" / "oct". */
+export function monthName(month: number, width: 'short' | 'long' = 'short'): string {
+  if (locale() === 'en' && width === 'short') return MONTH_SHORT[month];
+  return dtf({ month: width }).format(new Date(2026, month, 1));
+}
+
+/** "Oct 5" / "5 oct" (with the year when it's not the current one). */
+export function formatMonthDay(d: Date, now: Date = new Date()): string {
+  const withYear = d.getFullYear() !== now.getFullYear();
+  if (locale() === 'en') return `${MONTH_SHORT[d.getMonth()]} ${d.getDate()}${withYear ? ` ${d.getFullYear()}` : ''}`;
+  return dtf(withYear ? { day: 'numeric', month: 'short', year: 'numeric' } : { day: 'numeric', month: 'short' }).format(d);
+}
+
+/** "Monday, Oct 5" / "lunes, 5 oct". */
+export function formatWeekdayDate(d: Date): string {
+  if (locale() === 'en') return `${DAY_NAMES[d.getDay()]}, ${MONTH_SHORT[d.getMonth()]} ${d.getDate()}`;
+  return dtf({ weekday: 'long', day: 'numeric', month: 'short' }).format(d);
+}
 
 export function pad(n: number, w = 2): string {
   return String(n).padStart(w, '0');
@@ -127,6 +165,7 @@ export function formatTime(d: Date, timeFormat: '12h' | '24h' = '12h'): string {
   const h = d.getHours();
   const m = d.getMinutes();
   if (timeFormat === '24h') return `${pad(h)}:${pad(m)}`;
+  if (locale() !== 'en') return dtf(m === 0 ? { hour: 'numeric', hour12: true } : { hour: 'numeric', minute: '2-digit', hour12: true }).format(d);
   const ampm = h >= 12 ? 'pm' : 'am';
   const hh = h % 12 === 0 ? 12 : h % 12;
   return m === 0 ? `${hh}${ampm}` : `${hh}:${pad(m)}${ampm}`;
@@ -139,16 +178,12 @@ export function formatDue(dueAt: string | undefined, now: Date = new Date(), tim
   const today = todayKey(now);
   const delta = diffDays(today, key);
   let day: string;
-  if (delta === 0) day = 'Today';
-  else if (delta === 1) day = 'Tomorrow';
-  else if (delta === -1) day = 'Yesterday';
-  else if (delta < -1 && delta > -7) day = `${-delta} days ago`;
-  else if (delta > 1 && delta < 7) day = DAY_SHORT[fromKey(key).getDay()];
-  else {
-    const d = fromKey(key);
-    day = `${MONTH_SHORT[d.getMonth()]} ${d.getDate()}`;
-    if (d.getFullYear() !== now.getFullYear()) day += ` ${d.getFullYear()}`;
-  }
+  if (delta === 0) day = t('date.today');
+  else if (delta === 1) day = t('date.tomorrow');
+  else if (delta === -1) day = t('date.yesterday');
+  else if (delta < -1 && delta > -7) day = locale() === 'en' ? `${-delta} days ago` : relativeDays(delta);
+  else if (delta > 1 && delta < 7) day = dayName(fromKey(key).getDay());
+  else day = formatMonthDay(fromKey(key), now);
   if (!isDateOnly(dueAt)) {
     day += ` ${formatTime(new Date(dueAt), timeFormat)}`;
   }
@@ -159,6 +194,11 @@ export function formatDayHeading(key: string, now: Date = new Date()): string {
   const today = todayKey(now);
   const delta = diffDays(today, key);
   const d = fromKey(key);
+  if (locale() !== 'en') {
+    const md = dtf({ weekday: 'short', day: 'numeric', month: 'short' }).format(d);
+    if (delta >= -1 && delta <= 1) return `${t(delta === 0 ? 'date.today' : delta === 1 ? 'date.tomorrow' : 'date.yesterday')} · ${md}`;
+    return `${dayName(d.getDay(), 'long')} · ${dtf({ day: 'numeric', month: 'short' }).format(d)}`;
+  }
   const md = `${DAY_SHORT[d.getDay()]}, ${MONTH_SHORT[d.getMonth()]} ${d.getDate()}`;
   if (delta === 0) return `Today · ${md}`;
   if (delta === 1) return `Tomorrow · ${md}`;
@@ -166,12 +206,20 @@ export function formatDayHeading(key: string, now: Date = new Date()): string {
   return `${DAY_NAMES[d.getDay()]} · ${MONTH_SHORT[d.getMonth()]} ${d.getDate()}`;
 }
 
+const relFormats = new Map<string, Intl.RelativeTimeFormat>();
+/** "3 days ago" / "hace 3 días" / "en 2 días" via Intl.RelativeTimeFormat. */
+export function relativeDays(delta: number): string {
+  let f = relFormats.get(intlLocale());
+  if (!f) relFormats.set(intlLocale(), (f = new Intl.RelativeTimeFormat(intlLocale(), { numeric: 'auto' })));
+  return f.format(delta, 'day');
+}
+
 export function formatMinutes(min: number): string {
-  if (!min) return '0m';
-  if (min < 60) return `${min}m`;
+  if (!min) return t('duration.m', { m: 0 });
+  if (min < 60) return t('duration.m', { m: min });
   const h = Math.floor(min / 60);
   const m = min % 60;
-  return m ? `${h}h ${m}m` : `${h}h`;
+  return m ? t('duration.hm', { h, m }) : t('duration.h', { h });
 }
 
 export function isoNow(): string {

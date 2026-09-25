@@ -5,7 +5,8 @@
   import { REMINDER_PRESETS, ruleKey, ruleLabel } from '../lib/remind';
   import { wouldCycle, dependents } from '../lib/deps';
   import { describeRecurrence } from '../lib/recurrence';
-  import { isDateOnly, dueKey, combineDateTime, pad, DAY_SHORT, fromKey } from '../lib/dates';
+  import { isDateOnly, dueKey, combineDateTime, pad, dayName, fromKey } from '../lib/dates';
+  import { t } from '../lib/i18n/index.svelte';
   import { toasts } from '../lib/toast.svelte';
   import { uid } from '../lib/id';
   import PlanItOut from './PlanItOut.svelte';
@@ -67,7 +68,7 @@
   }
   // "due next class": the next time this task's course meets (Tools → Timetable)
   const nextClass = $derived(courseId && store.schedule ? nextMeeting(store.schedule, courseId, store.today, store.stats.breaks) : undefined);
-  const nextClassLabel = $derived(nextClass ? `${DAY_SHORT[fromKey(nextClass.key).getDay()]} ${formatHM(nextClass.start, store.settings.timeFormat)}` : '');
+  const nextClassLabel = $derived(nextClass ? `${dayName(fromKey(nextClass.key).getDay())} ${formatHM(nextClass.start, store.settings.timeFormat)}` : '');
   let templateName = $state('');
   let showTemplate = $state(false);
   let titleInput: HTMLInputElement | undefined = $state();
@@ -84,7 +85,7 @@
     e?.preventDefault();
     if (!original) return onclose();
     if (!title.trim()) {
-      toasts.push({ message: 'Title is required', kind: 'warn' });
+      toasts.push({ message: t('editor.titleRequired'), kind: 'warn' });
       return;
     }
     let dueAt: string | undefined;
@@ -143,8 +144,8 @@
     if (!original) return;
     const name = templateName.trim() || title.trim();
     if (!name) return;
-    const t = store.saveTemplate({ ...original, title: title.trim(), subtasks }, name);
-    toasts.push({ message: `Saved template @${t.name}`, detail: 'Use it in quick add with @' + t.name, kind: 'success' });
+    const tp = store.saveTemplate({ ...original, title: title.trim(), subtasks }, name);
+    toasts.push({ message: t('editor.templateSaved', { name: tp.name }), detail: t('editor.templateSavedDetail', { name: tp.name }), kind: 'success' });
     showTemplate = false;
   }
 
@@ -164,25 +165,25 @@
 
 <div class="modal-backdrop" onclick={onclose} onkeydown={onKey} role="presentation">
   <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_noninteractive_element_interactions -->
-  <form use:focusTrap class="modal" aria-label="Edit task" onclick={(e) => e.stopPropagation()} onsubmit={save}>
+  <form use:focusTrap class="modal" aria-label={t('editor.label')} onclick={(e) => e.stopPropagation()} onsubmit={save}>
     {#if !original}
-      <p>Task not found.</p>
+      <p>{t('editor.notFound')}</p>
     {:else}
       <div class="field">
-        <input class="input title" bind:this={titleInput} bind:value={title} placeholder="Task title" aria-label="Title" />
+        <input class="input title" bind:this={titleInput} bind:value={title} placeholder={t('editor.titlePh')} aria-label={t('editor.title')} />
       </div>
       <div class="row">
         <div class="field">
-          <label for="ed-course">Course</label>
+          <label for="ed-course">{t('inbox.course')}</label>
           <select id="ed-course" class="select" bind:value={courseId}>
-            <option value="">None</option>
+            <option value="">{t('common.none')}</option>
             {#each store.activeCourses as c (c.id)}
               <option value={c.id}>{c.emoji ? c.emoji + ' ' : ''}{c.name}</option>
             {/each}
           </select>
         </div>
         <div class="field">
-          <label for="ed-priority">Priority</label>
+          <label for="ed-priority">{t('inbox.priority')}</label>
           <select id="ed-priority" class="select" bind:value={priority}>
             {#each PRIORITIES as p}
               <option value={p}>{PRIORITY_LABEL[p]}</option>
@@ -190,18 +191,18 @@
           </select>
         </div>
         <div class="field">
-          <label for="ed-type">Type</label>
+          <label for="ed-type">{t('inbox.type')}</label>
           <select id="ed-type" class="select" bind:value={type}>
             <option value="">—</option>
-            {#each TASK_TYPES as t}
-              <option value={t}>{t}</option>
+            {#each TASK_TYPES as ty}
+              <option value={ty}>{t(`type.${ty}` as const)}</option>
             {/each}
           </select>
         </div>
       </div>
       <div class="row">
         <div class="field">
-          <label for="ed-date">Due date</label>
+          <label for="ed-date">{t('editor.dueDate')}</label>
           <input id="ed-date" class="input" type="date" bind:value={dateKey} />
           {#if nextClass}
             <button
@@ -210,53 +211,43 @@
               onclick={() => {
                 dateKey = nextClass.key;
                 time = nextClass.start;
-              }}>Next class: {nextClassLabel}</button
+              }}>{t('editor.nextClass', { when: nextClassLabel })}</button
             >
           {/if}
         </div>
         <div class="field">
-          <label for="ed-time">Time</label>
+          <label for="ed-time">{t('editor.time')}</label>
           <input id="ed-time" class="input" type="time" bind:value={time} disabled={!dateKey} />
         </div>
         <div class="field">
-          <label for="ed-est">Estimate (min)</label>
+          <label for="ed-est">{t('editor.estimate')}</label>
           <input id="ed-est" class="input" type="number" min="0" step="5" bind:value={estimate} placeholder="45" />
         </div>
         <div class="field">
-          <label for="ed-weight">Weight %</label>
+          <label for="ed-weight">{t('editor.weight')}</label>
           <input id="ed-weight" class="input" type="number" min="0" max="100" bind:value={weight} placeholder="10" />
         </div>
         <div class="field">
-          <label for="ed-score">Score %</label>
-          <input
-            id="ed-score"
-            class="input"
-            type="number"
-            min="0"
-            max="200"
-            step="0.5"
-            bind:value={score}
-            placeholder="—"
-            title="Grade earned, for the grade calculator in Tools"
-          />
+          <label for="ed-score">{t('editor.score')}</label>
+          <input id="ed-score" class="input" type="number" min="0" max="200" step="0.5" bind:value={score} placeholder="—" title={t('editor.scoreTitle')} />
         </div>
       </div>
       <div class="field">
-        <label for="ed-tags">Tags</label>
-        <input id="ed-tags" class="input" bind:value={tags} placeholder="reading, lab" />
+        <label for="ed-tags">{t('editor.tags')}</label>
+        <input id="ed-tags" class="input" bind:value={tags} placeholder={t('editor.tagsPh')} />
       </div>
       <div class="field">
-        <label for="ed-notes">Notes (markdown)</label>
-        <textarea id="ed-notes" class="textarea" bind:value={notes} placeholder="Details, links, page numbers…"></textarea>
+        <label for="ed-notes">{t('editor.notes')}</label>
+        <textarea id="ed-notes" class="textarea" bind:value={notes} placeholder={t('editor.notesPh')}></textarea>
       </div>
       <div class="field">
-        <label for="ed-sub">Subtasks</label>
+        <label for="ed-sub">{t('editor.subtasks')}</label>
         <ul class="subs">
           {#each subtasks as s, i (s.id)}
             <li>
-              <input type="checkbox" bind:checked={s.done} aria-label="Done" />
-              <input class="input" bind:value={s.title} aria-label="Subtask title" />
-              <button type="button" class="btn ghost sm icon" aria-label="Remove" onclick={() => (subtasks = subtasks.filter((_, j) => j !== i))}>×</button>
+              <input type="checkbox" bind:checked={s.done} aria-label={t('common.done')} />
+              <input class="input" bind:value={s.title} aria-label={t('editor.subtaskTitle')} />
+              <button type="button" class="btn ghost sm icon" aria-label={t('editor.remove')} onclick={() => (subtasks = subtasks.filter((_, j) => j !== i))}>×</button>
             </li>
           {/each}
         </ul>
@@ -265,7 +256,7 @@
             id="ed-sub"
             class="input"
             bind:value={newSub}
-            placeholder="Add subtask"
+            placeholder={t('editor.addSubtask')}
             onkeydown={(e) => {
               if (e.key === 'Enter') {
                 e.preventDefault();
@@ -273,49 +264,48 @@
               }
             }}
           />
-          <button type="button" class="btn sm" onclick={addSub}>Add</button>
+          <button type="button" class="btn sm" onclick={addSub}>{t('common.add')}</button>
         </div>
       </div>
       <div class="field">
-        <label for="ed-rec">Repeat</label>
+        <label for="ed-rec">{t('editor.repeat')}</label>
         <div class="row">
           <select id="ed-rec" class="select" bind:value={recKind}>
-            <option value="">Never</option>
-            <option value="daily">Every day</option>
-            <option value="weekdays">Weekdays</option>
-            <option value="weekly">Weekly on…</option>
-            <option value="everyNDays">Every N days</option>
-            <option value="monthly">Monthly (same date)</option>
-            <option value="monthlyNth">Monthly on the…</option>
+            <option value="">{t('editor.never')}</option>
+            <option value="daily">{t('rec.daily')}</option>
+            <option value="weekdays">{t('rec.weekdays')}</option>
+            <option value="weekly">{t('editor.weeklyOn')}</option>
+            <option value="everyNDays">{t('editor.everyNDays')}</option>
+            <option value="monthly">{t('editor.monthlySame')}</option>
+            <option value="monthlyNth">{t('editor.monthlyOn')}</option>
           </select>
           {#if recKind === 'weekly'}
-            <label class="inl">every <input class="input n" type="number" min="1" max="8" bind:value={recWeeks} aria-label="Every N weeks" /> wk</label>
+            <label class="inl"
+              >{t('editor.every')} <input class="input n" type="number" min="1" max="8" bind:value={recWeeks} aria-label={t('editor.everyNWeeks')} /> {t('editor.wk')}</label
+            >
           {/if}
           {#if recKind === 'monthlyNth'}
-            <select class="select" bind:value={recNth} aria-label="Which week">
-              <option value="1">1st</option><option value="2">2nd</option><option value="3">3rd</option><option value="4">4th</option><option value="-1">last</option>
+            <select class="select" bind:value={recNth} aria-label={t('editor.whichWeek')}>
+              <option value="1">{t('rec.nth1')}</option><option value="2">{t('rec.nth2')}</option><option value="3">{t('rec.nth3')}</option><option value="4"
+                >{t('rec.nth4')}</option
+              ><option value="-1">{t('rec.last')}</option>
             </select>
-            <select class="select" bind:value={recWeekday} aria-label="Weekday">
-              {#each ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'] as d, i (d)}<option value={String(i)}>{d}</option>{/each}
+            <select class="select" bind:value={recWeekday} aria-label={t('editor.weekday')}>
+              {#each [0, 1, 2, 3, 4, 5, 6] as i (i)}<option value={String(i)}>{dayName(i, 'long')}</option>{/each}
             </select>
           {/if}
           {#if recKind === 'everyNDays'}
-            <input class="input" type="number" min="1" bind:value={recN} aria-label="Every N days" />
+            <input class="input" type="number" min="1" bind:value={recN} aria-label={t('editor.everyNDays')} />
           {/if}
           {#if recKind}
-            <input class="input" type="date" bind:value={recUntil} aria-label="Until" title="Repeat until" />
+            <input class="input" type="date" bind:value={recUntil} aria-label={t('editor.until')} title={t('editor.repeatUntil')} />
           {/if}
         </div>
         {#if recKind === 'weekly'}
           <div class="days">
-            {#each ['S', 'M', 'T', 'W', 'T', 'F', 'S'] as d, i}
-              <button
-                type="button"
-                class="day"
-                class:on={recDays.includes(i)}
-                onclick={() => toggleDay(i)}
-                aria-pressed={recDays.includes(i)}
-                aria-label={['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'][i]}>{d}</button
+            {#each [0, 1, 2, 3, 4, 5, 6] as i}
+              <button type="button" class="day" class:on={recDays.includes(i)} onclick={() => toggleDay(i)} aria-pressed={recDays.includes(i)} aria-label={dayName(i, 'long')}
+                >{dayName(i).slice(0, 1).toUpperCase()}</button
               >
             {/each}
           </div>
@@ -330,35 +320,40 @@
             onclick={() => {
               store.skipOccurrence(taskId);
               onclose();
-            }}>Skip this one</button
+            }}>{t('snooze.skip')}</button
           >
         </div>
       {/if}
       <div class="field">
-        <label for="ed-block">Waiting on</label>
+        <label for="ed-block">{t('editor.waitingOn')}</label>
         {#if blockedBy.length}
           <ul class="chips">
             {#each blockedBy as id (id)}
               {@const b = store.taskById(id)}
               <li class="chip" class:done={!!b?.completedAt}>
-                {b ? b.title : 'Deleted task'}{b?.completedAt ? ' ✓' : ''}
-                <button type="button" class="x" onclick={() => (blockedBy = blockedBy.filter((x) => x !== id))} aria-label="Remove {b?.title ?? 'task'}">×</button>
+                {b ? b.title : t('editor.deletedTask')}{b?.completedAt ? ' ✓' : ''}
+                <button
+                  type="button"
+                  class="x"
+                  onclick={() => (blockedBy = blockedBy.filter((x) => x !== id))}
+                  aria-label={t('editor.removeBlocker', { title: b?.title ?? t('editor.task') })}>×</button
+                >
               </li>
             {/each}
           </ul>
         {/if}
         <div class="addsub">
-          <select id="ed-block" class="select" bind:value={blockerPick} aria-label="Task that must be done first">
-            <option value="">Pick a task that must be done first…</option>
-            {#each blockerChoices as t (t.id)}<option value={t.id}>{t.title}{t.dueAt ? ` · ${t.dueAt.slice(5, 10)}` : ''}</option>{/each}
+          <select id="ed-block" class="select" bind:value={blockerPick} aria-label={t('editor.blockerLabel')}>
+            <option value="">{t('editor.blockerPick')}</option>
+            {#each blockerChoices as bc (bc.id)}<option value={bc.id}>{bc.title}{bc.dueAt ? ` · ${bc.dueAt.slice(5, 10)}` : ''}</option>{/each}
           </select>
-          <button type="button" class="btn sm" onclick={addBlocker} disabled={!blockerPick}>Add</button>
+          <button type="button" class="btn sm" onclick={addBlocker} disabled={!blockerPick}>{t('common.add')}</button>
         </div>
-        {#if waitingOnMe.length}<p class="muted">Finishing this unblocks: {waitingOnMe.map((t) => t.title).join(', ')}</p>{/if}
+        {#if waitingOnMe.length}<p class="muted">{t('editor.unblocks', { titles: waitingOnMe.map((w) => w.title).join(', ') })}</p>{/if}
       </div>
       <PlanItOut {taskId} {title} {dateKey} type={(type || '') as TaskType | ''} onchain={(id) => (blockedBy = [...new Set([...blockedBy, id])])} />
       <div class="field">
-        <span class="lbl" id="ed-rem-l">Reminders</span>
+        <span class="lbl" id="ed-rem-l">{t('editor.reminders')}</span>
         <div class="chips" role="group" aria-labelledby="ed-rem-l">
           {#each REMINDER_PRESETS as p (p.label)}
             <button
@@ -371,36 +366,36 @@
             >
           {/each}
           {#each reminders.filter((r) => 'at' in r) as r (ruleKey(r))}
-            <span class="chip on">{ruleLabel(r)} <button type="button" class="x" onclick={() => toggleReminder(r)} aria-label="Remove reminder">×</button></span>
+            <span class="chip on">{ruleLabel(r)} <button type="button" class="x" onclick={() => toggleReminder(r)} aria-label={t('editor.removeReminder')}>×</button></span>
           {/each}
         </div>
         <div class="addsub">
-          <input class="input" type="datetime-local" bind:value={reminderAt} aria-label="Remind me at" />
-          <button type="button" class="btn sm" onclick={addReminderAt} disabled={!reminderAt}>Add time</button>
+          <input class="input" type="datetime-local" bind:value={reminderAt} aria-label={t('editor.remindAt')} />
+          <button type="button" class="btn sm" onclick={addReminderAt} disabled={!reminderAt}>{t('editor.addTime')}</button>
         </div>
-        {#if !dateKey}<p class="muted">Set a due date to use reminders relative to it.</p>{/if}
+        {#if !dateKey}<p class="muted">{t('editor.needDate')}</p>{/if}
       </div>
       <Attachments {taskId} />
       <div class="field">
-        <label for="ed-spent">Time spent (min)</label>
+        <label for="ed-spent">{t('editor.spent')}</label>
         <input id="ed-spent" class="input n2" type="number" min="0" step="5" bind:value={spent} placeholder="0" />
-        <span class="muted">Tracked by the task timer and Focus Pomodoros.</span>
+        <span class="muted">{t('editor.spentHint')}</span>
       </div>
       {#if showTemplate}
         <div class="field tpl">
-          <label for="ed-tpl">Template name</label>
+          <label for="ed-tpl">{t('editor.templateName')}</label>
           <div class="row">
             <input id="ed-tpl" class="input" bind:value={templateName} placeholder={title.trim().replace(/\s+/g, '-').toLowerCase()} />
-            <button type="button" class="btn" onclick={saveAsTemplate}>Save template</button>
+            <button type="button" class="btn" onclick={saveAsTemplate}>{t('editor.saveTemplate')}</button>
           </div>
         </div>
       {/if}
       <div class="actions">
-        <button type="button" class="btn ghost" onclick={() => (showTemplate = !showTemplate)}>Save as template</button>
-        <button type="button" class="btn danger" onclick={del}>Delete</button>
+        <button type="button" class="btn ghost" onclick={() => (showTemplate = !showTemplate)}>{t('editor.saveAsTemplate')}</button>
+        <button type="button" class="btn danger" onclick={del}>{t('common.delete')}</button>
         <span class="grow"></span>
-        <button type="button" class="btn" onclick={onclose}>Cancel</button>
-        <button type="submit" class="btn primary">Save <span class="kbd">⌘↵</span></button>
+        <button type="button" class="btn" onclick={onclose}>{t('common.cancel')}</button>
+        <button type="submit" class="btn primary">{t('common.save')} <span class="kbd">⌘↵</span></button>
       </div>
     {/if}
   </form>

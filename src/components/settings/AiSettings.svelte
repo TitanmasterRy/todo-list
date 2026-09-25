@@ -7,6 +7,7 @@
   import { PROVIDERS, providerInfo, cleanKey } from '../../lib/ai-providers';
   import type { AiProvider } from '../../lib/types';
   import { set } from './settings';
+  import { t } from '../../lib/i18n/index.svelte';
   const s = $derived(store.settings);
   const provider = $derived(currentProvider());
   const pInfo = $derived(providerInfo(provider));
@@ -73,7 +74,7 @@
 </script>
 
 <section class="card">
-  <h2>AI helper <span class="chip optional">optional</span></h2>
+  <h2>{t('settings.ai')} <span class="chip optional">{t('settings.optional')}</span></h2>
   <p class="help">
     Powers “Ask the tutor”, notecard generation, photo transcription and answer keys. Keys stay in this browser and go only to the provider you pick. <strong>Free options:</strong> Google
     Gemini and Groq have free tiers, OpenRouter has free models, and Ollama runs on your own computer.
