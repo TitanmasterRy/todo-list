@@ -16,7 +16,6 @@
   const loadSchoology = () => import('./views/SchoologyView.svelte');
   const loadSettings = () => import('./views/SettingsView.svelte');
   const loadPlay = () => import('./views/PlayView.svelte');
-  import { startSchoologySync } from './lib/schoologySync.svelte';
   import { startReminders } from './lib/reminders';
   import { startLocalBackup } from './lib/localBackup.svelte';
   import FeedbackLayer from './components/FeedbackLayer.svelte';
@@ -33,7 +32,6 @@
   import DailyPrompts from './components/DailyPrompts.svelte';
   import BulkBar from './components/BulkBar.svelte';
   import { ui } from './lib/ui.svelte';
-  import { startSync } from './lib/gist.svelte';
   import { startAccount } from './lib/account.svelte';
   import { startEconomy } from './lib/economy.svelte';
   import { startSocial } from './lib/social/links';
@@ -44,9 +42,10 @@
     void store.init().then(() => {
       promptAtStartup();
       startEconomy();
-      startSync();
+      void import('./lib/gist.svelte').then((m) => m.startSync());
       void startAccount();
-      startSchoologySync();
+      // Schoology and Gist sync load right after the first render (they watch for setup done later, too)
+      void import('./lib/schoologySync.svelte').then((m) => m.startSchoologySync());
       // Canvas feed sync (its code loads only when a feed is connected)
       if (hasSecret('canvasFeedUrl')) void import('./lib/canvasSync.svelte').then((m) => m.startCanvasSync());
       startReminders();

@@ -2,6 +2,7 @@
 
 ## Roadmap pass 6: languages, sharing, practice tests, Canvas, smarter sync
 
+- **Languages:** Spanish (Settings → Language, or Auto), including Spanish dates in quick add ("leer capítulo 3 mañana a las 5 !alta"); dates and numbers follow your region; right-to-left layout support.
 - **Smarter sync:** tasks remember when each field changed, so edits to different fields on two devices both survive.
 - **Practice tests** (Tools → Practice test): take Quiz maker sets like a real test, review, turn misses into notecards, and track scores over time.
 - **Periodic table** (Tools → Compute) with electron configurations, a molar mass calculator and element notecards.
