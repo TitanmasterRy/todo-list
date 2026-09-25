@@ -1,15 +1,18 @@
 <script lang="ts">
-  import { store, byDueThenOrder, byOrder } from '../lib/store.svelte';
+  import { onDestroy } from 'svelte';
+  import { store } from '../lib/store.svelte';
   import { ui } from '../lib/ui.svelte';
-  import type { Task, TaskType } from '../lib/types';
+  import type { TaskType } from '../lib/types';
   import { TASK_TYPES } from '../lib/types';
-  import { dueKey } from '../lib/dates';
+  import { applyFilter, EMPTY_FILTER, isFiltered, LIST_PRESETS, type FilterSort, type FilterStatus, type SavedList, type TaskFilter } from '../lib/filters';
+  import { uid } from '../lib/id';
+  import { toasts } from '../lib/toast.svelte';
   import QuickAdd from '../components/QuickAdd.svelte';
   import TaskItem from '../components/TaskItem.svelte';
   import Sortable from '../components/Sortable.svelte';
 
-  type Status = 'open' | 'done' | 'all';
-  type Sort = 'due' | 'manual' | 'priority' | 'created';
+  type Status = FilterStatus;
+  type Sort = FilterSort;
   let status = $state<Status>('open');
   let courseId = $state('');
   let tag = $state('');
@@ -17,7 +20,13 @@
   let from = $state('');
   let to = $state('');
   let sort = $state<Sort>('due');
+  let dueWindow = $state<'' | 'overdue' | '7' | '14' | '30'>('');
+  let prio = $state<'' | 'high' | 'urgent'>('');
+  let blocked = $state<'' | 'hide' | 'only'>('');
   let searchInput: HTMLInputElement | undefined = $state();
+  let saving = $state(false);
+  let listName = $state('');
+  let listEmoji = $state('📋');
 
   $effect(() => {
     if (ui.search && searchInput) {
@@ -26,59 +35,82 @@
     }
   });
 
-  const prioRank = { urgent: 0, high: 1, normal: 2, low: 3 } as const;
-  const q = $derived(ui.searchQuery.trim().toLowerCase());
-  const live = (t: Task) => !t.completedAt || store.lingering.has(t.id);
-  const filtered = $derived.by(() => {
-    let list = store.tasks.filter((t) => !t.archived);
-    if (status === 'open') list = list.filter(live);
-    else if (status === 'done') list = list.filter((t) => t.completedAt);
-    if (courseId === 'none') list = list.filter((t) => !t.courseId);
-    else if (courseId) list = list.filter((t) => t.courseId === courseId);
-    if (tag) list = list.filter((t) => t.tags.includes(tag));
-    if (type) list = list.filter((t) => t.type === type);
-    if (from) list = list.filter((t) => t.dueAt && dueKey(t.dueAt) >= from);
-    if (to) list = list.filter((t) => t.dueAt && dueKey(t.dueAt) <= to);
-    if (q) {
-      list = list.filter((t) => {
-        const c = store.courseById(t.courseId)?.name ?? '';
-        const hay = `${t.title} ${t.notes ?? ''} ${t.tags.map((x) => '#' + x).join(' ')} ${c} ${t.subtasks.map((s) => s.title).join(' ')}`.toLowerCase();
-        return q.split(/\s+/).every((w) => hay.includes(w));
-      });
-    }
-    switch (sort) {
-      case 'manual':
-        return list.sort(byOrder);
-      case 'priority':
-        return list.sort((a, b) => prioRank[a.priority] - prioRank[b.priority] || byDueThenOrder(a, b));
-      case 'created':
-        return list.sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1));
-      default:
-        return list.sort((a, b) => {
-          if (!!a.dueAt !== !!b.dueAt) return a.dueAt ? -1 : 1;
-          return byDueThenOrder(a, b);
-        });
-    }
+  const filter = $derived<TaskFilter>({
+    status,
+    courseId,
+    tag,
+    type,
+    from,
+    to,
+    q: ui.searchQuery,
+    sort,
+    ...(dueWindow === 'overdue' ? { overdue: true } : dueWindow ? { withinDays: Number(dueWindow) } : {}),
+    ...(prio === 'urgent' ? { priorities: ['urgent'] } : prio === 'high' ? { priorities: ['urgent', 'high'] } : {}),
+    ...(blocked ? { blocked } : {}),
   });
+  const filtered = $derived(
+    applyFilter(store.tasks, filter, { today: store.today, courseName: (id) => store.courseById(id)?.name ?? '', lingering: store.lingering, byId: store.byId }),
+  );
   const ids = $derived(filtered.map((t) => t.id));
-  const hasFilters = $derived(!!(courseId || tag || type || from || to || q || status !== 'open'));
+  const hasFilters = $derived(isFiltered(filter));
+  const activeList = $derived(store.settings.smartLists.find((l) => l.id === ui.inboxList));
+
+  /** Load a saved list's filter into the controls. */
+  function load(f: TaskFilter) {
+    status = f.status;
+    courseId = f.courseId;
+    tag = f.tag;
+    type = f.type;
+    from = f.from;
+    to = f.to;
+    sort = f.sort;
+    ui.searchQuery = f.q;
+    dueWindow = f.overdue ? 'overdue' : f.withinDays !== undefined ? (String(f.withinDays) as typeof dueWindow) : '';
+    prio = f.priorities?.length === 1 && f.priorities[0] === 'urgent' ? 'urgent' : f.priorities?.length ? 'high' : '';
+    blocked = f.blocked ?? '';
+  }
+  $effect(() => {
+    void ui.inboxListNonce;
+    const l = store.settings.smartLists.find((x) => x.id === ui.inboxList);
+    if (l) load(l.filter);
+  });
+
+  function saveList(e: SubmitEvent) {
+    e.preventDefault();
+    const name = listName.trim();
+    if (!name) return;
+    const l: SavedList = { id: uid('list'), name: name.slice(0, 40), emoji: listEmoji || '📋', filter: $state.snapshot(filter) as TaskFilter };
+    store.updateSettings({ smartLists: [...store.settings.smartLists, l] });
+    ui.inboxList = l.id;
+    saving = false;
+    listName = '';
+    toasts.push({ message: `Saved list “${l.name}”`, detail: 'It’s in the sidebar now.', kind: 'success', emoji: l.emoji });
+  }
+  function usePreset(p: (typeof LIST_PRESETS)[number]) {
+    load({ ...EMPTY_FILTER, ...p.filter });
+    listName = p.name;
+    listEmoji = p.emoji;
+    saving = true;
+  }
+  function deleteList(id: string) {
+    store.updateSettings({ smartLists: store.settings.smartLists.filter((l) => l.id !== id) });
+    if (ui.inboxList === id) ui.inboxList = null;
+  }
+
+  // leaving the Inbox closes the saved list, so key 4 / the sidebar open the plain Inbox next time
+  onDestroy(() => (ui.inboxList = null));
 
   function clear() {
-    status = 'open';
-    courseId = '';
-    tag = '';
-    type = '';
-    from = '';
-    to = '';
-    ui.searchQuery = '';
+    load(EMPTY_FILTER);
+    ui.inboxList = null;
   }
 </script>
 
 <div class="page">
   <header class="page-head">
     <div>
-      <h1>Inbox</h1>
-      <div class="sub">Everything, with filters.</div>
+      <h1>{activeList ? `${activeList.emoji} ${activeList.name}` : 'Inbox'}</h1>
+      <div class="sub">{activeList ? 'Saved list' : 'Everything, with filters.'}</div>
     </div>
     <div class="grow"></div>
     <button class="btn sm" class:primary={store.bulkMode} onclick={() => (store.bulkMode ? store.clearSelection() : (store.bulkMode = true))}
@@ -122,8 +154,41 @@
       <option value="manual">Sort: manual</option>
       <option value="created">Sort: newest</option>
     </select>
+    <select class="select" bind:value={dueWindow} aria-label="Due dueWindow">
+      <option value="">Any due date</option>
+      <option value="overdue">Overdue</option>
+      <option value="7">Next 7 days</option>
+      <option value="14">Next 14 days</option>
+      <option value="30">Next 30 days</option>
+    </select>
+    <select class="select" bind:value={prio} aria-label="Priority">
+      <option value="">Any priority</option>
+      <option value="high">High or urgent</option>
+      <option value="urgent">Urgent</option>
+    </select>
+    <select class="select" bind:value={blocked} aria-label="Waiting tasks">
+      <option value="">Waiting: show</option>
+      <option value="hide">Hide waiting</option>
+      <option value="only">Only waiting</option>
+    </select>
     {#if hasFilters}<button class="btn ghost sm" onclick={clear}>Clear</button>{/if}
+    {#if activeList}
+      <button class="btn ghost sm" onclick={() => deleteList(activeList.id)}>Delete list</button>
+    {:else}
+      <button class="btn sm" onclick={() => (saving = !saving)} aria-expanded={saving}>☆ Save as list</button>
+    {/if}
   </div>
+  {#if saving}
+    <form class="card savelist" onsubmit={saveList}>
+      <input class="input em" bind:value={listEmoji} maxlength="4" aria-label="List emoji" />
+      <input class="input" bind:value={listName} placeholder="List name, e.g. Exams in the next 14 days" aria-label="List name" />
+      <button class="btn primary" type="submit" disabled={!listName.trim()}>Save</button>
+      <div class="presets">
+        <span class="muted">Ideas:</span>
+        {#each LIST_PRESETS as p (p.name)}<button type="button" class="chip" onclick={() => usePreset(p)}>{p.emoji} {p.name}</button>{/each}
+      </div>
+    </form>
+  {/if}
 
   <div class="section-title"><span>{status === 'done' ? 'Completed' : status === 'all' ? 'All tasks' : 'Open'}</span><span class="count">{filtered.length}</span></div>
   {#if sort === 'manual' && status === 'open'}
@@ -149,6 +214,32 @@
 </div>
 
 <style>
+  .savelist {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: center;
+    margin-bottom: 12px;
+  }
+  .savelist .input:not(.em) {
+    flex: 1;
+    min-width: 200px;
+  }
+  .savelist .em {
+    width: 56px;
+    text-align: center;
+  }
+  .presets {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    align-items: center;
+    width: 100%;
+  }
+  .muted {
+    font-size: 12px;
+    color: var(--text-muted);
+  }
   .filters {
     display: flex;
     flex-wrap: wrap;

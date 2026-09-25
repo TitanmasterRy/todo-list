@@ -118,6 +118,10 @@ export function normalizeTask(t: Partial<Task>): Task {
     syncedAt: t.syncedAt,
     gradedXpAt: t.gradedXpAt,
     autoDescribed: t.autoDescribed,
+    blockedBy: Array.isArray(t.blockedBy) ? t.blockedBy.filter((x): x is string => typeof x === 'string') : undefined,
+    reminders: Array.isArray(t.reminders) ? t.reminders.filter((r) => r && typeof r === 'object') : undefined,
+    timeSpentMin: typeof t.timeSpentMin === 'number' && t.timeSpentMin >= 0 ? t.timeSpentMin : undefined,
+    timerStartedAt: typeof t.timerStartedAt === 'string' ? t.timerStartedAt : undefined,
   };
 }
 

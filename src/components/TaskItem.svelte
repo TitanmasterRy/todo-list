@@ -4,6 +4,8 @@
   import { ui } from '../lib/ui.svelte';
   import { formatDue, formatMinutes, isOverdue, isDueToday, dueKey, diffDays } from '../lib/dates';
   import { describeRecurrence } from '../lib/recurrence';
+  import { openBlockers } from '../lib/deps';
+  import { ruleLabel } from '../lib/remind';
   import Checkbox from './Checkbox.svelte';
   import SnoozeMenu from './SnoozeMenu.svelte';
 
@@ -25,6 +27,12 @@
   const subDone = $derived(task.subtasks.filter((s) => s.done).length);
   const daysUntil = $derived(task.dueAt ? diffDays(store.today, dueKey(task.dueAt)) : null);
   const isFrog = $derived(task.frog && task.frogDate === store.today);
+  const blockers = $derived(done || !task.blockedBy?.length ? [] : openBlockers(task, store.byId));
+  const timing = $derived(!!task.timerStartedAt);
+  // live minutes for a running timer (store.now ticks every 30 s)
+  const spentNow = $derived(
+    (task.timeSpentMin ?? 0) + (task.timerStartedAt ? Math.max(0, Math.floor((store.now.getTime() - new Date(task.timerStartedAt).getTime()) / 60_000)) : 0),
+  );
   let expanded = $state(false);
   let newSub = $state('');
 
@@ -67,6 +75,7 @@
   class:checked
   class:compact
   class:frog={isFrog}
+  class:blocked={blockers.length > 0}
   data-task-id={task.id}
   role="group"
   aria-label={task.title}
@@ -136,8 +145,18 @@
         {#if task.priority !== 'normal'}
           <span class="chip p-{task.priority}">{task.priority === 'low' ? '↓' : task.priority === 'high' ? '↑' : '‼'} {PRIORITY_LABEL[task.priority]}</span>
         {/if}
-        {#if task.estimateMin}
-          <span class="chip">⏱ {formatMinutes(task.estimateMin)}</span>
+        {#if blockers.length}
+          <span class="chip waiting" title="Waiting on: {blockers.map((b) => b.title).join(', ')}"
+            >⏳ after {blockers[0].title}{blockers.length > 1 ? ` +${blockers.length - 1}` : ''}</span
+          >
+        {/if}
+        {#if task.estimateMin || spentNow}
+          <span class="chip" class:timing title={spentNow ? `${formatMinutes(spentNow)} tracked${task.estimateMin ? ` of ~${formatMinutes(task.estimateMin)}` : ''}` : 'Estimate'}
+            >⏱ {spentNow ? `${formatMinutes(spentNow)}${task.estimateMin ? ` / ${formatMinutes(task.estimateMin)}` : ''}` : formatMinutes(task.estimateMin!)}</span
+          >
+        {/if}
+        {#if task.reminders?.length}
+          <span class="chip" title={task.reminders.map(ruleLabel).join(', ')}>🔔{task.reminders.length > 1 ? ` ${task.reminders.length}` : ''}</span>
         {/if}
         {#if task.pinnedDay === store.today && task.dueAt && !today && !overdue}
           <span class="chip planned" title="Planned for today (deadline unchanged)">📌 today</span>
@@ -193,6 +212,14 @@
           <SnoozeMenu taskId={task.id} onclose={() => (ui.snoozeMenuFor = null)} />
         {/if}
       </div>
+      <button
+        class="btn ghost sm icon"
+        class:timing
+        title={timing ? 'Stop timer' : 'Start timer'}
+        aria-label={timing ? 'Stop timer' : 'Start timer'}
+        aria-pressed={timing}
+        onclick={() => (timing ? store.stopTimer(task.id) : store.startTimer(task.id))}>{timing ? '⏹' : '▶'}</button
+      >
       <button class="btn ghost sm icon" title="Focus" aria-label="Focus on this task" onclick={() => store.go('focus', { taskId: task.id })}>🎯</button>
       <button class="btn ghost sm icon" title="Edit (e)" aria-label="Edit" onclick={open}>✎</button>
       <button class="btn ghost sm icon del" title="Delete" aria-label="Delete" onclick={() => store.deleteTask(task.id)}>🗑</button>
@@ -206,6 +233,27 @@
 </div>
 
 <style>
+  .task.blocked .title {
+    color: var(--text-muted);
+  }
+  .chip.waiting {
+    border-style: dashed;
+  }
+  .timing {
+    color: var(--accent-text);
+    border-color: var(--accent);
+  }
+  .actions .timing {
+    animation: pulse 1.6s ease-in-out infinite;
+  }
+  @keyframes pulse {
+    50% {
+      opacity: 0.55;
+    }
+  }
+  :global(.reduced-motion) .actions .timing {
+    animation: none;
+  }
   .task {
     display: flex;
     align-items: flex-start;

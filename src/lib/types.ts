@@ -1,3 +1,5 @@
+import type { SavedList } from './filters';
+
 export type Priority = 'low' | 'normal' | 'high' | 'urgent';
 
 export type TaskType = 'homework' | 'reading' | 'exam' | 'project' | 'quiz' | 'other';
@@ -23,11 +25,16 @@ export interface Subtask {
 }
 
 export interface Recurrence {
-  kind: 'daily' | 'weekly' | 'everyNDays' | 'weekdays';
-  n?: number; // everyNDays
+  kind: 'daily' | 'weekly' | 'everyNDays' | 'weekdays' | 'monthly' | 'monthlyNth';
+  n?: number; // everyNDays: days; weekly: every n weeks (default 1)
   days?: number[]; // 0–6 for weekly
+  nth?: number; // monthlyNth: 1–4, or -1 for the last
+  weekday?: number; // monthlyNth: 0–6
   until?: string;
 }
+
+/** When to remind about a task: minutes before it's due, the night before, the morning of, or a fixed time. */
+export type ReminderRule = { before: number } | { nightBefore: true } | { morningOf: true } | { at: string };
 
 export interface Task {
   id: string;
@@ -59,6 +66,10 @@ export interface Task {
   syncedAt?: string;
   gradedXpAt?: string; // when grade XP was awarded (once per task)
   autoDescribed?: boolean;
+  blockedBy?: string[]; // ids of tasks that must be done first
+  reminders?: ReminderRule[];
+  timeSpentMin?: number; // tracked time
+  timerStartedAt?: string; // a running timer (ISO)
 }
 
 export interface Stats {
@@ -232,6 +243,7 @@ export interface Settings {
   lastLocalBackupAt?: string;
   dailyCapacityMin: number; // planner: minutes of homework you can do per day
   targetGrade: number; // grade calculator default target %
+  smartLists: SavedList[]; // saved Inbox filters shown in the sidebar
   economyEnabled: boolean; // coins, shop, casino, arcade
   casinoEnabled: boolean;
   casinoBreakMin: number; // remind to take a homework break after N minutes of casino play (0 = off)
@@ -316,6 +328,7 @@ export const DEFAULT_SETTINGS: Settings = {
   localBackupEnabled: false,
   dailyCapacityMin: 180,
   targetGrade: 90,
+  smartLists: [],
   economyEnabled: true,
   casinoEnabled: true,
   casinoBreakMin: 20,

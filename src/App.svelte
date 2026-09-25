@@ -4,7 +4,6 @@
   import Sidebar from './components/Sidebar.svelte';
   import TabBar from './components/TabBar.svelte';
   import Toasts from './components/Toasts.svelte';
-  import TaskEditor from './components/TaskEditor.svelte';
   import TodayView from './views/TodayView.svelte';
   import UpcomingView from './views/UpcomingView.svelte';
   import CoursesView from './views/CoursesView.svelte';
@@ -23,9 +22,11 @@
   import { init as initSpotify } from './lib/spotify.svelte';
   import FeedbackLayer from './components/FeedbackLayer.svelte';
   import Keyboard from './components/Keyboard.svelte';
-  import CommandPalette from './components/CommandPalette.svelte';
-  import ShortcutSheet from './components/ShortcutSheet.svelte';
-  import Onboarding from './components/Onboarding.svelte';
+  // dialogs load the first time they open
+  const loadEditor = () => import('./components/TaskEditor.svelte');
+  const loadPalette = () => import('./components/CommandPalette.svelte');
+  const loadShortcuts = () => import('./components/ShortcutSheet.svelte');
+  const loadOnboarding = () => import('./components/Onboarding.svelte');
   import DailyPrompts from './components/DailyPrompts.svelte';
   import BulkBar from './components/BulkBar.svelte';
   import { ui } from './lib/ui.svelte';
@@ -139,17 +140,19 @@
   <CoinPops />
   <Keyboard />
   {#if store.editingTaskId}
-    <TaskEditor taskId={store.editingTaskId} onclose={() => (store.editingTaskId = null)} />
+    {#await loadEditor() then m}
+      {#if store.editingTaskId}<m.default taskId={store.editingTaskId} onclose={() => (store.editingTaskId = null)} />{/if}
+    {/await}
   {/if}
   {#if ui.palette}
-    <CommandPalette />
+    {#await loadPalette() then m}<m.default />{/await}
   {/if}
   {#if ui.shortcuts}
-    <ShortcutSheet />
+    {#await loadShortcuts() then m}<m.default />{/await}
   {/if}
   <DailyPrompts />
   {#if !store.settings.onboarded}
-    <Onboarding />
+    {#await loadOnboarding() then m}<m.default />{/await}
   {/if}
 {/if}
 

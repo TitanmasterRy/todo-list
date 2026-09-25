@@ -1,6 +1,7 @@
 // "What should I do now?": rank open tasks by how much doing them now helps.
 import { dueKey, diffDays, isDateOnly, parseDue } from './dates';
 import type { Priority, Task } from './types';
+import { isBlocked } from './deps';
 
 export interface Pick {
   task: Task;
@@ -77,8 +78,9 @@ export function scoreTask(t: Task, now: Date, opts: { today: string; minutesFree
 
 /** Best tasks to do now, highest score first. */
 export function whatNow(tasks: Task[], now: Date, opts: { today: string; minutesFree?: number; limit?: number }): Pick[] {
+  const byId = new Map(tasks.map((t) => [t.id, t]));
   return tasks
-    .filter((t) => !t.completedAt && !t.archived)
+    .filter((t) => !t.completedAt && !t.archived && !isBlocked(t, byId))
     .map((t) => scoreTask(t, now, opts))
     .sort((a, b) => b.score - a.score || (a.task.dueAt ?? '9').localeCompare(b.task.dueAt ?? '9') || a.task.order - b.task.order)
     .slice(0, opts.limit ?? 3);

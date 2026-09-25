@@ -159,7 +159,11 @@
           <div class="meta">
             {#if course}<span class="chip"><span class="dot"></span>{course.emoji ?? ''} {course.name}</span>{/if}
             {#if task.dueAt}<span class="chip">📅 {formatDue(task.dueAt, store.now, store.settings.timeFormat)}</span>{/if}
-            {#if task.estimateMin}<span class="chip">⏱ {formatMinutes(task.estimateMin)}</span>{/if}
+            {#if task.estimateMin || task.timeSpentMin}<span class="chip" title="Tracked / estimated"
+                >⏱ {task.timeSpentMin ? `${formatMinutes(task.timeSpentMin)} tracked` : ''}{task.timeSpentMin && task.estimateMin ? ' of ' : ''}{task.estimateMin
+                  ? `~${formatMinutes(task.estimateMin)}`
+                  : ''}</span
+              >{/if}
             {#if task.priority !== 'normal'}<span class="chip p-{task.priority}">{task.priority}</span>{/if}
             {#each task.tags as t}<span class="chip">#{t}</span>{/each}
           </div>

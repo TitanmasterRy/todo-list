@@ -33,6 +33,15 @@
   <button role="menuitem" onclick={() => pick(tomorrow, 'Snoozed to tomorrow')}>Tomorrow <span>{dayName(tomorrow)}</span></button>
   <button role="menuitem" onclick={() => pick(weekend, 'Snoozed to the weekend')}>This weekend <span>{dayName(weekend)}</span></button>
   <button role="menuitem" onclick={() => pick(nextWeek, 'Snoozed to next week')}>Next week <span>{dayName(nextWeek)}</span></button>
+  {#if store.taskById(taskId)?.recurrence}
+    <button
+      role="menuitem"
+      onclick={() => {
+        store.skipOccurrence(taskId);
+        onclose();
+      }}>Skip this one <span>🔁</span></button
+    >
+  {/if}
   {#if picking}
     <form
       class="pick"

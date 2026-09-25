@@ -21,12 +21,39 @@ export function nextOccurrenceKey(rec: Recurrence, anchorKey: string, afterKey: 
     }
     case 'weekly': {
       const days = rec.days && rec.days.length ? [...rec.days].sort() : [fromKey(anchorKey).getDay()];
+      const every = Math.max(1, rec.n ?? 1);
+      // weeks count from the anchor's week (Sunday start); only every n-th week is eligible
+      const weekOf = (k: string) => Math.floor((fromKey(k).getTime() / 86_400_000 + 4) / 7); // epoch day 0 was a Thursday
+      const anchorWeek = weekOf(anchorKey);
       let k = addDaysKey(afterKey, 1);
-      for (let i = 0; i < 8; i++) {
-        if (days.includes(fromKey(k).getDay())) break;
+      for (let i = 0; i < 7 * every + 7; i++) {
+        if (days.includes(fromKey(k).getDay()) && (((weekOf(k) - anchorWeek) % every) + every) % every === 0) break;
         k = addDaysKey(k, 1);
       }
       next = k;
+      break;
+    }
+    case 'monthly': {
+      // same day of the month as the anchor (clamped to short months: the 31st becomes the 30th, 28th/29th)
+      const day = fromKey(anchorKey).getDate();
+      const a = fromKey(afterKey);
+      for (let m = 0; m < 3 && !next; m++) {
+        const y = a.getFullYear();
+        const mo = a.getMonth() + m;
+        const last = new Date(y, mo + 1, 0).getDate();
+        const cand = dateKeyOf(new Date(y, mo, Math.min(day, last)));
+        if (cand > afterKey) next = cand;
+      }
+      break;
+    }
+    case 'monthlyNth': {
+      const a = fromKey(afterKey);
+      const wd = rec.weekday ?? fromKey(anchorKey).getDay();
+      const nth = rec.nth ?? Math.ceil(fromKey(anchorKey).getDate() / 7);
+      for (let m = 0; m < 3 && !next; m++) {
+        const cand = nthWeekdayKey(a.getFullYear(), a.getMonth() + m, wd, nth);
+        if (cand && cand > afterKey) next = cand;
+      }
       break;
     }
     case 'everyNDays': {
@@ -41,6 +68,24 @@ export function nextOccurrenceKey(rec: Recurrence, anchorKey: string, afterKey: 
   }
   if (next && rec.until && next > rec.until) return undefined;
   return next;
+}
+
+function dateKeyOf(d: Date): string {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+/** Key of the n-th (1–5, or -1 = last) weekday of a month; undefined when that month has no 5th one. */
+export function nthWeekdayKey(year: number, month: number, weekday: number, nth: number): string | undefined {
+  const first = new Date(year, month, 1);
+  const norm = new Date(first.getFullYear(), first.getMonth(), 1);
+  if (nth === -1) {
+    const last = new Date(norm.getFullYear(), norm.getMonth() + 1, 0);
+    const back = (last.getDay() - weekday + 7) % 7;
+    return dateKeyOf(new Date(last.getFullYear(), last.getMonth(), last.getDate() - back));
+  }
+  const offset = (weekday - norm.getDay() + 7) % 7;
+  const d = new Date(norm.getFullYear(), norm.getMonth(), 1 + offset + (nth - 1) * 7);
+  return d.getMonth() === norm.getMonth() ? dateKeyOf(d) : undefined;
 }
 
 /** Build the next instance of a recurring task when `task` is completed. Returns undefined if the series has ended. */
@@ -67,13 +112,18 @@ export function spawnNextInstance(task: Task, now: Date = new Date(), newId: str
     frog: false,
     frogDate: undefined,
     archived: false,
+    timeSpentMin: undefined,
+    timerStartedAt: undefined,
     subtasks: task.subtasks.map((s, i) => ({ ...s, id: `${newId}_s${i}`, done: false })),
   };
 }
 
+const ORD = ['', '1st', '2nd', '3rd', '4th', '5th'];
+
 export function describeRecurrence(rec: Recurrence | undefined): string {
   if (!rec) return '';
   const names = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+  const long = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
   let s = '';
   switch (rec.kind) {
     case 'daily':
@@ -82,8 +132,17 @@ export function describeRecurrence(rec: Recurrence | undefined): string {
     case 'weekdays':
       s = 'Weekdays';
       break;
-    case 'weekly':
-      s = rec.days && rec.days.length ? `Every ${rec.days.map((d) => names[d]).join(', ')}` : 'Weekly';
+    case 'weekly': {
+      const every = (rec.n ?? 1) > 1 ? (rec.n === 2 ? 'Every other week' : `Every ${rec.n} weeks`) : '';
+      const days = rec.days && rec.days.length ? rec.days.map((d) => names[d]).join(', ') : '';
+      s = every ? `${every}${days ? ` on ${days}` : ''}` : days ? `Every ${days}` : 'Weekly';
+      break;
+    }
+    case 'monthly':
+      s = 'Monthly';
+      break;
+    case 'monthlyNth':
+      s = `Every ${rec.nth === -1 ? 'last' : ORD[rec.nth ?? 1]} ${long[rec.weekday ?? 1]}`;
       break;
     case 'everyNDays':
       s = `Every ${rec.n ?? 1} days`;

@@ -122,3 +122,13 @@ describe('deletions and wallets across devices', () => {
     expect(b.ledger).toHaveLength(1);
   });
 });
+
+describe('new task fields survive import and sync', () => {
+  it('keeps dependencies, reminders and tracked time', () => {
+    const b = parseBundle({
+      tasks: [{ id: 'a', title: 'A', blockedBy: ['b', 7], reminders: [{ before: 30 }, { nightBefore: true }], timeSpentMin: 45, timerStartedAt: '2026-09-24T10:00:00.000Z' }],
+      courses: [],
+    });
+    expect(b.tasks[0]).toMatchObject({ blockedBy: ['b'], reminders: [{ before: 30 }, { nightBefore: true }], timeSpentMin: 45, timerStartedAt: '2026-09-24T10:00:00.000Z' });
+  });
+});

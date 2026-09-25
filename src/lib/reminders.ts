@@ -1,6 +1,46 @@
 // Due-soon browser notifications and a morning digest. Runs a check every minute while the app is open.
 import { store } from './store.svelte';
 import { dueKey, isDateOnly, formatDue } from './dates';
+import { dueReminders } from './remind';
+import { toasts } from './toast.svelte';
+
+// per-task reminders already delivered (kept across reloads so a refresh doesn't repeat them)
+const SENT_KEY = 'homework-todo:reminders-sent';
+function loadSent(): Set<string> {
+  try {
+    return new Set(JSON.parse(localStorage.getItem(SENT_KEY) ?? '[]') as string[]);
+  } catch {
+    return new Set();
+  }
+}
+const sentReminders = loadSent();
+function saveSent(): void {
+  try {
+    localStorage.setItem(SENT_KEY, JSON.stringify([...sentReminders].slice(-300)));
+  } catch {
+    /* ignore */
+  }
+}
+
+/** Per-task reminders: a notification when allowed, an in-app toast either way. */
+function checkTaskReminders(): void {
+  const due = dueReminders(store.openTasks, new Date(), sentReminders);
+  for (const r of due) {
+    sentReminders.add(r.key);
+    const when = r.task.dueAt ? formatDue(r.task.dueAt, new Date(), store.settings.timeFormat) : '';
+    const course = store.courseById(r.task.courseId)?.name;
+    notify(`⏰ ${r.task.title}`, [when && `Due ${when}`, course].filter(Boolean).join(' · ') || 'Reminder', r.key);
+    toasts.push({
+      message: `Reminder: ${r.task.title}`,
+      detail: when ? `Due ${when}` : undefined,
+      kind: 'info',
+      emoji: '⏰',
+      timeout: 12000,
+      action: { label: 'Focus', onClick: () => store.go('focus', { taskId: r.task.id }) },
+    });
+  }
+  if (due.length) saveSent();
+}
 
 const notified = new Set<string>();
 let timer: ReturnType<typeof setInterval> | undefined;
@@ -27,6 +67,7 @@ function notify(title: string, body: string, tag: string): void {
 
 function check(): void {
   const s = store.settings;
+  checkTaskReminders();
   if (!notificationsSupported() || Notification.permission !== 'granted') return;
   const now = Date.now();
   if (s.notifyDueSoon) {

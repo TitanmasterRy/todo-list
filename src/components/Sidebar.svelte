@@ -26,6 +26,24 @@
       </li>
     {/each}
   </ul>
+  {#if store.settings.smartLists.length}
+    <div class="courses">
+      <div class="head">Lists</div>
+      {#each store.settings.smartLists as l (l.id)}
+        <button
+          class="course"
+          class:active={store.view === 'inbox' && ui.inboxList === l.id}
+          onclick={() => {
+            ui.inboxList = l.id;
+            ui.inboxListNonce++;
+            if (store.view !== 'inbox') store.go('inbox');
+          }}
+        >
+          <span class="lbl">{l.emoji} {l.name}</span>
+        </button>
+      {/each}
+    </div>
+  {/if}
   {#if store.activeCourses.length}
     <div class="courses">
       <div class="head">Courses</div>

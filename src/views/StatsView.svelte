@@ -3,11 +3,13 @@
   import { ui } from '../lib/ui.svelte';
   import { BADGES, levelProgress, xpForLevel } from '../lib/gamification';
   import { TITLE_TEXT } from '../lib/economy';
+  import { estimateAccuracy } from '../lib/estimates';
   import { endOfWeekKey, dueKey, formatMinutes, daysAgoKey } from '../lib/dates';
   import Heatmap from '../components/Heatmap.svelte';
   import GoalRing from '../components/GoalRing.svelte';
 
   const lp = $derived(levelProgress(store.stats.xp));
+  const accuracy = $derived(estimateAccuracy(store.completedTasks));
   const earned = $derived(new Set(store.stats.badges));
   const weekEnd = $derived(endOfWeekKey(store.today, store.settings.weekStart));
   const byCourse = $derived.by(() => {
@@ -65,6 +67,13 @@
         <div class="v">{store.stats.xp}<span class="unit">XP</span></div>
         <div class="bar"><div class="fill" style="width:{lp.pct * 100}%"></div></div>
         <div class="s">{lp.needed - lp.into} XP to level {lp.level + 1} ({xpForLevel(lp.level)} total)</div>
+      </div>
+    {/if}
+    {#if accuracy}
+      <div class="card tile">
+        <div class="k">Estimates</div>
+        <div class="v">×{accuracy.medianRatio}<span class="unit">actual ÷ estimate</span></div>
+        <div class="s">{accuracy.message} Based on {accuracy.n} timed tasks.</div>
       </div>
     {/if}
     <div class="card tile ring">

@@ -10,7 +10,7 @@ import { applyFont } from './fonts';
 import { review as reviewCard } from './flashcards';
 import type { ExternalAssignment, SyncDiff } from './schoology';
 import { autoDescribe } from './autodescribe';
-import { spawnNextInstance } from './recurrence';
+import { nextOccurrenceKey, spawnNextInstance } from './recurrence';
 import { undo } from './undo.svelte';
 import { emit } from './events';
 import { toasts } from './toast.svelte';
@@ -390,6 +390,7 @@ class Store {
 
   /** Complete a task: stats, XP, streak, badges, recurrence, undo. */
   completeTask(id: string): void {
+    if (this.tasks.find((t) => t.id === id)?.timerStartedAt) this.stopTimer(id);
     const task = this.tasks.find((t) => t.id === id);
     if (!task || task.completedAt) return;
     const completedAt = new Date();
@@ -783,6 +784,61 @@ class Store {
       dueAt = n.toISOString();
     }
     this.updateTask(id, { dueAt, pinnedDay: undefined }, { undoable: true, label: `Rescheduled “${task.title}”` });
+  }
+
+  // ---------- dependencies ----------
+  /** Map of all tasks by id (for blocker lookups). */
+  byId = $derived(new Map(this.tasks.map((t) => [t.id, t])));
+
+  // ---------- recurrence ----------
+  /** Skip the current occurrence of a repeating task: move it to the next date without completing it. */
+  skipOccurrence(id: string): void {
+    const task = this.tasks.find((t) => t.id === id);
+    if (!task?.recurrence) return;
+    const from = task.dueAt ? dueKey(task.dueAt) : this.today;
+    const next = nextOccurrenceKey(task.recurrence, from, from);
+    if (!next) {
+      toasts.push({ message: 'This was the last one in the series', kind: 'info' });
+      return;
+    }
+    let dueAt: string = next;
+    if (task.dueAt && !isDateOnly(task.dueAt)) {
+      const d = new Date(task.dueAt);
+      const n = new Date(next + 'T00:00:00');
+      n.setHours(d.getHours(), d.getMinutes(), 0, 0);
+      dueAt = n.toISOString();
+    }
+    this.updateTask(
+      id,
+      { dueAt, pinnedDay: undefined, subtasks: task.subtasks.map((st) => ({ ...st, done: false })) },
+      { undoable: true, label: `Skipped “${task.title}” to ${next}` },
+    );
+  }
+
+  // ---------- time tracking ----------
+  runningTimer = $derived(this.tasks.find((t) => t.timerStartedAt && !t.completedAt));
+
+  startTimer(id: string): void {
+    const running = this.runningTimer;
+    if (running && running.id !== id) this.stopTimer(running.id);
+    const t = this.tasks.find((x) => x.id === id);
+    if (!t || t.timerStartedAt) return;
+    this.updateTask(id, { timerStartedAt: isoNow() });
+  }
+
+  /** Stop a task's timer and add the elapsed minutes. Returns the minutes added. */
+  stopTimer(id: string): number {
+    const t = this.tasks.find((x) => x.id === id);
+    if (!t?.timerStartedAt) return 0;
+    const min = Math.round((Date.now() - new Date(t.timerStartedAt).getTime()) / 60_000);
+    this.updateTask(id, { timerStartedAt: undefined, timeSpentMin: (t.timeSpentMin ?? 0) + Math.max(0, min) });
+    return min;
+  }
+
+  addTimeSpent(id: string, minutes: number): void {
+    const t = this.tasks.find((x) => x.id === id);
+    if (!t || minutes <= 0) return;
+    this.updateTask(id, { timeSpentMin: (t.timeSpentMin ?? 0) + Math.round(minutes) });
   }
 
   /** Move a task earlier or later by whole days (keyboard [ and ]). Undated tasks start from today. */

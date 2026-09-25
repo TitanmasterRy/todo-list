@@ -8,8 +8,8 @@
   import { toasts } from '../lib/toast.svelte';
   import { formatMinutes, dueKey } from '../lib/dates';
   import { backupFilename, downloadJSON } from '../lib/backup';
-  import WeeklyReview from './WeeklyReview.svelte';
-  import SemesterSetup from './SemesterSetup.svelte';
+  const loadReview = () => import('./WeeklyReview.svelte');
+  const loadSetup = () => import('./SemesterSetup.svelte');
 
   let note = $state('');
 
@@ -154,10 +154,10 @@
 {/if}
 
 {#if ui.weeklyReview}
-  <WeeklyReview />
+  {#await loadReview() then m}<m.default />{/await}
 {/if}
 {#if ui.semesterSetup}
-  <SemesterSetup />
+  {#await loadSetup() then m}<m.default />{/await}
 {/if}
 
 <style>

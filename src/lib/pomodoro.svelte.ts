@@ -79,6 +79,7 @@ class Pomodoro {
     const sessions = Math.floor(this.elapsed / (25 * 60));
     for (let i = 0; i < sessions; i++) store.recordPomodoro();
     const min = Math.round(this.elapsed / 60);
+    if (store.focusTaskId) store.addTimeSpent(store.focusTaskId, min);
     this.reset();
     return min;
   }
@@ -99,6 +100,7 @@ class Pomodoro {
       if (natural) {
         this.sessions += 1;
         if (this.customMin >= 20) store.recordPomodoro();
+        if (store.focusTaskId) store.addTimeSpent(store.focusTaskId, this.customMin);
         playSound('timerDone');
         toasts.push({ message: `${this.customMin} min timer done`, kind: 'success', emoji: '⏰' });
         this.notify('Timer done', `${this.customMin} minutes are up.`);
@@ -110,6 +112,8 @@ class Pomodoro {
       if (natural) {
         this.sessions += 1;
         store.recordPomodoro();
+        // the minutes count toward the task you're focusing on
+        if (store.focusTaskId) store.addTimeSpent(store.focusTaskId, store.settings.pomodoroWorkMin);
         playSound('timerDone');
         toasts.push({ message: 'Pomodoro done', detail: 'Take a break. You earned it.', kind: 'success', emoji: '🍅' });
         this.notify('Pomodoro done', 'Time for a break.');

@@ -193,6 +193,31 @@ export function parseQuickAdd(input: string, ctx: ParserContext = {}): ParsedQui
     out.recurrence = { kind: 'everyNDays', n: 2 };
     chips.push({ kind: 'recurrence', label: '🔁 every 2 days' });
   });
+  // "every 2nd tuesday", "every last friday" (monthly on the n-th weekday)
+  take(new RegExp(`(?:^|\\s)every (1st|first|2nd|second|3rd|third|4th|fourth|last) (${DAY_RE})(?=\\s)`, 'i'), (m) => {
+    const nth = { '1st': 1, first: 1, '2nd': 2, second: 2, '3rd': 3, third: 3, '4th': 4, fourth: 4, last: -1 }[m[1].toLowerCase()] ?? 1;
+    const weekday = DAYS[m[2].toLowerCase()];
+    out.recurrence = { kind: 'monthlyNth', nth, weekday };
+    chips.push({ kind: 'recurrence', label: `🔁 every ${m[1].toLowerCase()} ${DAY_LABEL[weekday]}` });
+  });
+  // "every other tue" / "every other week" / "every 3 weeks"
+  take(new RegExp(`(?:^|\\s)every other (${DAY_RE})(?=\\s)`, 'i'), (m) => {
+    const d = DAYS[m[1].toLowerCase()];
+    out.recurrence = { kind: 'weekly', days: [d], n: 2 };
+    chips.push({ kind: 'recurrence', label: `🔁 every other ${DAY_LABEL[d]}` });
+  });
+  take(/(?:^|\s)every other week(?=\s)/i, () => {
+    out.recurrence = { kind: 'weekly', n: 2 };
+    chips.push({ kind: 'recurrence', label: '🔁 every other week' });
+  });
+  take(/(?:^|\s)every (\d+) weeks(?=\s)/i, (m) => {
+    out.recurrence = { kind: 'weekly', n: Math.max(1, parseInt(m[1], 10)) };
+    chips.push({ kind: 'recurrence', label: `🔁 every ${m[1]} weeks` });
+  });
+  take(/(?:^|\s)(monthly|every month)(?=\s)/i, () => {
+    out.recurrence = { kind: 'monthly' };
+    chips.push({ kind: 'recurrence', label: '🔁 monthly' });
+  });
   take(new RegExp(`(?:^|\\s)every ((?:(?:${DAY_RE})(?:,?\\s|,))*(?:${DAY_RE}))(?=\\s)`, 'i'), (m) => {
     const days = m[1]
       .toLowerCase()
