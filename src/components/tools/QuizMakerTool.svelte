@@ -5,6 +5,8 @@
   import { uid } from '../../lib/id';
   import {
     SUBJECTS,
+    QUIZSETS_KEY,
+    loadQuizSets,
     newQuestion,
     isComplete,
     toQuizlet,
@@ -23,19 +25,11 @@
     type Difficulty,
   } from '../../lib/quizmaker';
 
-  const KEY = 'homework-todo:quizsets';
-  function load(): QuizSet[] {
-    try {
-      return JSON.parse(localStorage.getItem(KEY) ?? '[]') as QuizSet[];
-    } catch {
-      return [];
-    }
-  }
-  let sets = $state<QuizSet[]>(load());
+  let sets = $state<QuizSet[]>(loadQuizSets());
   let currentId = $state<string | null>(null);
   const current = $derived(sets.find((s) => s.id === currentId) ?? null);
   function persist() {
-    localStorage.setItem(KEY, JSON.stringify(sets));
+    localStorage.setItem(QUIZSETS_KEY, JSON.stringify(sets));
   }
   function touch() {
     if (!current) return;

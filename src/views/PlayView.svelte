@@ -6,7 +6,7 @@
   import ArcadeTab from '../components/play/ArcadeTab.svelte';
   import WalletTab from '../components/play/WalletTab.svelte';
 
-  type Tab = 'shop' | 'casino' | 'arcade' | 'study' | 'wallet';
+  type Tab = 'shop' | 'casino' | 'arcade' | 'study' | 'stars' | 'wallet';
   const TAB_KEY = 'homework-todo:play-tab';
   let tab = $state<Tab>(
     ((): Tab => {
@@ -24,6 +24,7 @@
         { id: 'casino', label: 'Casino', icon: '🎰' },
         { id: 'arcade', label: 'Arcade', icon: '🕹️' },
         { id: 'study', label: 'Study games', icon: '🧠' },
+        { id: 'stars', label: 'Star map', icon: '🌌' },
         { id: 'wallet', label: 'Wallet', icon: '👛' },
       ] as { id: Tab; label: string; icon: string }[]
     ).filter((t) => t.id !== 'casino' || store.settings.casinoEnabled),
@@ -69,6 +70,12 @@
   {:else if active === 'study'}
     {#await import('../components/play/StudyTab.svelte')}
       <p class="sub">Loading study games…</p>
+    {:then m}
+      <m.default />
+    {/await}
+  {:else if active === 'stars'}
+    {#await import('../components/play/StarMapTab.svelte')}
+      <p class="sub">Loading the star map…</p>
     {:then m}
       <m.default />
     {/await}

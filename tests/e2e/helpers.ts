@@ -45,6 +45,28 @@ export async function seedCoins(page: Page, amount: number, currency: 'coins' | 
   await expect(page.locator('.shell')).toBeVisible();
 }
 
+/** Merge task completion counts per day ("YYYY-MM-DD" → n) into the saved stats, then reload. */
+export async function seedCompletions(page: Page, days: Record<string, number>): Promise<void> {
+  await page.evaluate(
+    (byDay) =>
+      new Promise<void>((resolve) => {
+        const r = indexedDB.open('homework-todo');
+        r.onsuccess = () => {
+          const tx = r.result.transaction('meta', 'readwrite');
+          const get = tx.objectStore('meta').get('stats');
+          get.onsuccess = () => {
+            const stats = (get.result ?? {}) as { completionsByDay?: Record<string, number> };
+            tx.objectStore('meta').put({ ...stats, completionsByDay: { ...stats.completionsByDay, ...byDay } }, 'stats');
+          };
+          tx.oncomplete = () => resolve();
+        };
+      }),
+    days,
+  );
+  await page.reload();
+  await expect(page.locator('.shell')).toBeVisible();
+}
+
 /** Add a notecard deck straight to IndexedDB, then reload. */
 export async function seedDeck(page: Page, name: string, cards: [string, string][]): Promise<void> {
   await page.evaluate(

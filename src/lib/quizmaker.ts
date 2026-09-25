@@ -28,6 +28,18 @@ export interface QuizSet {
   updatedAt: string;
 }
 
+/** Where Tools → Quiz maker keeps its sets (this browser only). Play → Quiz race reads them too. */
+export const QUIZSETS_KEY = 'homework-todo:quizsets';
+
+export function loadQuizSets(): QuizSet[] {
+  try {
+    const sets = JSON.parse(localStorage.getItem(QUIZSETS_KEY) ?? '[]') as QuizSet[];
+    return Array.isArray(sets) ? sets : [];
+  } catch {
+    return [];
+  }
+}
+
 export const SUBJECTS = [
   'Math',
   'Science',
