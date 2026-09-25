@@ -115,6 +115,8 @@ export function spawnNextInstance(task: Task, now: Date = new Date(), newId: str
     timeSpentMin: undefined,
     timerStartedAt: undefined,
     doing: undefined,
+    fieldAt: undefined, // a new occurrence starts its own field history
+    fieldBase: undefined,
     attachments: undefined, // files belong to the one occurrence they were added to
     subtasks: task.subtasks.map((s, i) => ({ ...s, id: `${newId}_s${i}`, done: false })),
   };

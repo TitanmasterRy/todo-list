@@ -148,3 +148,28 @@ describe('timetable in bundles', () => {
     expect(bundlesDiffer(base, withOld)).toBe(true);
   });
 });
+
+describe('field-level task merge in bundles', () => {
+  it('keeps a due-date change from one device and a notes change from another', async () => {
+    const { stampChanges } = await import('./fieldmerge');
+    const t0 = stampChanges(undefined, {
+      id: 't',
+      title: 'Lab',
+      tags: [],
+      priority: 'normal',
+      subtasks: [],
+      createdAt: '2026-10-01T00:00:00.000Z',
+      updatedAt: '2026-10-01T00:00:00.000Z',
+      order: 1,
+      deferredCount: 0,
+    });
+    const phone = stampChanges(t0, { ...t0, dueAt: '2026-10-09', updatedAt: '2026-10-02T08:00:00.000Z' }, '2026-10-02T08:00:00.000Z');
+    const laptop = stampChanges(t0, { ...t0, notes: 'Bring goggles', updatedAt: '2026-10-02T09:00:00.000Z' }, '2026-10-02T09:00:00.000Z');
+    const b = (tasks: (typeof t0)[]) => parseBundle({ tasks, courses: [] });
+    const { merged, conflicts } = mergeBundles(b([phone]), b([laptop]));
+    expect(conflicts).toEqual([]);
+    expect(merged.tasks[0]).toMatchObject({ dueAt: '2026-10-09', notes: 'Bring goggles' });
+    // and the result survives another round trip
+    expect(parseBundle(JSON.parse(JSON.stringify(merged))).tasks[0].fieldAt).toEqual(merged.tasks[0].fieldAt);
+  });
+});

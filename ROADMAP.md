@@ -255,7 +255,7 @@ Each ships as a standalone HTML file in `public/games/`, so they double as examp
 - [ ] Optional end-to-end encryption of the account copy with a passphrase.
 - [ ] Sign in with Google / Apple / GitHub (Supabase OAuth providers).
 
-- [ ] Field-level merge so two devices editing different fields both win.
+- [x] Field-level merge so two devices editing different fields both win. (Tasks track when each field changed; older tasks start tracking on their next save.)
 - [ ] Dropbox / OneDrive / pick-a-file sync.
 - [ ] Per-task edit history.
 - [x] Import from Todoist (and any CSV).

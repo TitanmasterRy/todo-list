@@ -1,6 +1,7 @@
 import type { ExportBundle, Task, Course, Template, Stats, DayNote, Deck, Card, Tombstone, LedgerEntry, SchoolSchedule } from './types';
 import { DEFAULT_STATS } from './types';
 import { mergeBreaks } from './gamification';
+import { mergeTask } from './fieldmerge';
 
 /** Tombstones older than this are forgotten (every device has synced by then). */
 export const TOMBSTONE_DAYS = 60;
@@ -170,6 +171,8 @@ export function normalizeTask(t: Partial<Task>): Task {
     timerStartedAt: typeof t.timerStartedAt === 'string' ? t.timerStartedAt : undefined,
     doing: t.doing === true ? true : undefined,
     deckId: typeof t.deckId === 'string' ? t.deckId : undefined,
+    fieldAt: t.fieldAt && typeof t.fieldAt === 'object' ? Object.fromEntries(Object.entries(t.fieldAt).filter(([, v]) => typeof v === 'string')) : undefined,
+    fieldBase: typeof t.fieldBase === 'string' ? t.fieldBase : undefined,
     parentId: typeof t.parentId === 'string' ? t.parentId : undefined,
     attachments: Array.isArray(t.attachments)
       ? t.attachments
@@ -198,10 +201,18 @@ export function mergeBundles(local: ExportBundle, remote: ExportBundle, now: Dat
       continue;
     }
     if (l.updatedAt === r.updatedAt) continue;
-    const ls = Math.floor(new Date(l.updatedAt).getTime() / 1000);
-    const rs = Math.floor(new Date(r.updatedAt).getTime() / 1000);
-    if (ls === rs && JSON.stringify(l) !== JSON.stringify(r)) conflicts.push(r.id);
-    if (r.updatedAt > l.updatedAt) tasks.set(r.id, r);
+    if (!l.fieldBase && !r.fieldBase) {
+      // tasks from before field tracking: whole-task last-write-wins (a clash within one second is a conflict)
+      const ls = Math.floor(new Date(l.updatedAt).getTime() / 1000);
+      const rs = Math.floor(new Date(r.updatedAt).getTime() / 1000);
+      if (ls === rs && JSON.stringify(l) !== JSON.stringify(r)) conflicts.push(r.id);
+      if (r.updatedAt > l.updatedAt) tasks.set(r.id, r);
+      continue;
+    }
+    // field by field: edits to different fields on two devices both survive
+    const m = mergeTask(l, r);
+    if (m.conflict) conflicts.push(r.id);
+    tasks.set(r.id, m.task);
   }
   const courses = new Map<string, Course>();
   for (const c of [...remote.courses, ...local.courses]) {

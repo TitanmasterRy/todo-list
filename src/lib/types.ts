@@ -76,6 +76,8 @@ export interface Task {
   deckId?: string; // notecard deck to study for this task (exam prep sessions)
   parentId?: string; // milestone or study session of this bigger task
   attachments?: AttachmentMeta[]; // files kept on this device (metadata syncs, the files don't)
+  fieldAt?: Record<string, string>; // when each field last changed (field-level sync merge)
+  fieldBase?: string; // fields without a fieldAt entry date from this
 }
 
 /** A school break (inclusive dates). Removed ones keep `deleted` so the removal syncs. */

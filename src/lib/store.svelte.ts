@@ -19,6 +19,7 @@ import type {
   TombstoneKind,
 } from './types';
 import { buildBundle, mergeTombstones, TRASH_DAYS, type BundleData } from './backup';
+import { stampChanges } from './fieldmerge';
 import { DEFAULT_STATS } from './types';
 import { uid } from './id';
 import { addDaysKey, dueKey, isDueToday, isOverdue, isoNow, todayKey, daysAgoKey, startOfWeekKey as startOfWeekKeyFn } from './dates';
@@ -139,6 +140,7 @@ export class Store {
       if (this.tombstones.length !== tombstones.length) void db.putTombstones($state.snapshot(this.tombstones) as Tombstone[]);
       this.ledger = ledger.sort((a, b) => (a.at < b.at ? -1 : a.at > b.at ? 1 : 0));
       this.tasks = tasks;
+      this.rememberSaved(tasks);
       this.courses = courses;
       this.templates = templates;
       this.decks = decks;
@@ -205,13 +207,33 @@ export class Store {
   // ---------- persistence helpers ----------
   /** @internal */
   persistTask(task: Task): void {
-    db.putTask($state.snapshot(task) as Task).catch((e) => console.error('save failed', e));
+    db.putTask(this.stamp(task)).catch((e) => console.error('save failed', e));
     emit('changed', { reason: 'task' });
   }
   /** @internal */
   persistTasks(tasks: Task[]): void {
-    db.putTasks(tasks.map((t) => $state.snapshot(t) as Task)).catch((e) => console.error('save failed', e));
+    db.putTasks(tasks.map((t) => this.stamp(t))).catch((e) => console.error('save failed', e));
     emit('changed', { reason: 'tasks' });
+  }
+
+  /** Last saved copy of each task, to see which fields a save changed (field-level sync merge). */
+  private saved = new Map<string, Task>();
+  /** Note which fields changed since the last save (Task.fieldAt), and keep the in-memory task in step. */
+  private stamp(task: Task): Task {
+    const snap = $state.snapshot(task) as Task;
+    const next = stampChanges(this.saved.get(snap.id), snap, snap.updatedAt);
+    this.saved.set(next.id, next);
+    if (next !== snap) {
+      const live = this.tasks.find((t) => t.id === next.id);
+      if (live) {
+        live.fieldAt = next.fieldAt;
+        live.fieldBase = next.fieldBase;
+      }
+    }
+    return next;
+  }
+  private rememberSaved(tasks: Task[]): void {
+    this.saved = new Map(tasks.map((t) => [t.id, $state.snapshot(t) as Task]));
   }
   /** @internal */
   persistStats(): void {
@@ -761,6 +783,7 @@ export class Store {
     this.tombstones = data.tombstones ?? [];
     this.ledger = data.ledger ?? [];
     this.tasks = data.tasks;
+    this.rememberSaved(data.tasks);
     this.courses = data.courses;
     this.templates = data.templates;
     this.decks = data.decks ?? [];
