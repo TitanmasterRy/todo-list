@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Add to Homework To-Do</title>
+    <style>
+      body {
+        font:
+          14px system-ui,
+          sans-serif;
+        width: 320px;
+        margin: 12px;
+        color: #171923;
+      }
+      label {
+        display: block;
+        font-size: 12px;
+        color: #5b6270;
+        margin: 8px 0 4px;
+      }
+      input {
+        width: 100%;
+        box-sizing: border-box;
+        padding: 7px 9px;
+        border: 1px solid #c9cedb;
+        border-radius: 8px;
+        font: inherit;
+      }
+      button {
+        margin-top: 10px;
+        width: 100%;
+        padding: 8px;
+        border: 0;
+        border-radius: 8px;
+        background: #6c5ce7;
+        color: #fff;
+        font: inherit;
+        font-weight: 600;
+        cursor: pointer;
+      }
+      .hint {
+        font-size: 12px;
+        color: #5b6270;
+        margin-top: 8px;
+      }
+      a {
+        color: #5b4bd6;
+      }
+      @media (prefers-color-scheme: dark) {
+        body {
+          background: #171a21;
+          color: #e8eaf0;
+        }
+        input {
+          background: #0f1115;
+          color: inherit;
+          border-color: #3a4150;
+        }
+        label,
+        .hint {
+          color: #9aa1b2;
+        }
+        a {
+          color: #a99cf5;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <form id="f">
+      <label for="title">Task</label>
+      <input id="title" autocomplete="off" />
+      <label for="when">When (optional)</label>
+      <input id="when" placeholder="tomorrow, fri 3pm, next week…" autocomplete="off" />
+      <button type="submit">Add to Homework To-Do</button>
+    </form>
+    <p class="hint">Opens the app with this task ready to add. <a href="options.html" target="_blank">Set your app's address</a></p>
+    <script src="shared.js"></script>
+    <script src="popup.js"></script>
+  </body>
+</html>

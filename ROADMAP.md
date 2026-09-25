@@ -231,7 +231,7 @@ Each ships as a standalone HTML file in `public/games/`, so they double as examp
 - [ ] Seasonal events with themed shop items and games.
 - [ ] Focus-mode companions (a cat that sleeps while the timer runs).
 - [ ] Widgets for the phone home screen (via Capacitor).
-- [ ] Voice commands ("Hey, add read chapter four for tomorrow").
+- [x] Voice commands ("Hey, add read chapter four for tomorrow"). (The quick-add mic turns speech into quick-add syntax: number words, times, "high priority", "takes 30 minutes".)
 - [ ] Wearable timer (smartwatch notification when a Pomodoro ends).
 - [x] Printable weekly planner PDF. (Upcoming → Print week; save as PDF from the print dialog.)
 - [ ] "Study buddy" matching within a class code.
@@ -244,7 +244,7 @@ Each ships as a standalone HTML file in `public/games/`, so they double as examp
 - [ ] Share files into the app (PDFs straight to the reader).
 - [ ] Swipe to complete/snooze with haptics.
 - [ ] Capacitor wrap for iOS/Android.
-- [ ] Browser extension: add the current page as a task.
+- [x] Browser extension: add the current page as a task. (`extension/`: toolbar button, right-click menu, Alt+Shift+H.)
 - [ ] Skeleton loading and virtual scrolling for large lists.
 - [x] "What's new" after updates, from the changelog.
 - [ ] Shareable weekly review and stats cards.

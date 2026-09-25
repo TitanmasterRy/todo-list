@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { voiceToQuickAdd } from '../lib/voice';
   import { store, type NewTaskInput } from '../lib/store.svelte';
   import { parseQuickAdd } from '../lib/parser';
   import { ui } from '../lib/ui.svelte';
@@ -48,6 +49,8 @@
     };
     rec.onend = () => {
       listening = false;
+      // "add read chapter four for tomorrow at five p.m." → "read chapter 4 tomorrow at 5pm"
+      if (text) text = voiceToQuickAdd(text);
       input?.focus();
     };
     rec.onerror = () => (listening = false);

@@ -1,0 +1,15 @@
+{
+  "manifest_version": 3,
+  "name": "Homework To-Do: add this page",
+  "short_name": "Homework",
+  "version": "1.0.0",
+  "description": "Add the page you're on (an assignment, a reading, a video) to Homework To-Do as a task.",
+  "action": { "default_popup": "popup.html", "default_title": "Add to Homework To-Do", "default_icon": { "128": "icon-128.png" } },
+  "icons": { "128": "icon-128.png" },
+  "permissions": ["activeTab", "contextMenus", "storage"],
+  "background": { "service_worker": "background.js" },
+  "options_page": "options.html",
+  "commands": {
+    "_execute_action": { "suggested_key": { "default": "Alt+Shift+H" }, "description": "Add this page as a task" }
+  }
+}
