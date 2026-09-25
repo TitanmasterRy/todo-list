@@ -95,7 +95,7 @@ function identify(ev: ParsedEvent): { externalId: string; kind: 'assignment' | '
 
 /** Split "Title (Course)" or "Course: Title" into parts. */
 export function splitTitle(summary: string): { title: string; courseName?: string } {
-  let s = summary.trim();
+  const s = summary.trim();
   // Title (Course Name) — only treat a trailing parenthetical as a course if it looks like one (not a page range, etc.)
   const paren = /^(.*\S)\s*\(([^()]{2,80})\)\s*$/.exec(s);
   if (paren && !/^\d+[\d\s\-–,.]*$/.test(paren[2]) && !/^(due|late|optional|extra credit|draft)\b/i.test(paren[2])) {

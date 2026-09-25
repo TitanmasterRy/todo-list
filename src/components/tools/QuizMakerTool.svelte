@@ -4,7 +4,7 @@
   import { aiAvailable, generateQuiz } from '../../lib/ai';
   import { uid } from '../../lib/id';
   import {
-    SUBJECTS, newQuestion, isComplete, correctText, toQuizlet, toBlooket, toGimkit, toKahoot, toWorksheet, toCards, fromCards, toQTIZip, parseQuizText, download,
+    SUBJECTS, newQuestion, isComplete, toQuizlet, toBlooket, toGimkit, toKahoot, toWorksheet, toCards, fromCards, toQTIZip, parseQuizText, download,
     type QuizSet, type Question, type QuestionType, type Difficulty,
   } from '../../lib/quizmaker';
 

@@ -9,7 +9,7 @@ function pdfFile(name: string, bytes = 'hello', over: { type?: string } = {}): F
 
 describe('library', () => {
   beforeEach(() => {
-    indexedDB = new IDBFactory();
+    Object.assign(globalThis, { indexedDB: new IDBFactory() });
     lib.resetLibraryDBCache();
   });
   afterEach(() => {

@@ -47,10 +47,8 @@
     { id: 'connect', label: 'Connect' },
   ];
   const currentGroup = $derived(tabs.find((t) => t.id === tab)?.group ?? 'plan');
-  let group = $state<Group>('plan');
-  $effect(() => {
-    group = currentGroup;
-  });
+  // follows the selected tab, and can also be set directly by the group buttons
+  let group = $derived<Group>(currentGroup);
 
   // ---------- Planner ----------
   const capacity = $derived(store.settings.dailyCapacityMin || 180);

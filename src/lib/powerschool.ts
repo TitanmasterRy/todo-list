@@ -306,7 +306,7 @@ export function parsePowerSchoolHTML(html: string): PSImport {
 
 // ───────────────────────── plain-text parser ─────────────────────────
 
-const INLINE_TERM_RE = /(?:^|\s)((?:Q[1-9]|S[1-4]|T[1-6]|Y1|F[1-2]|E[1-4]|MP[1-9]|HEX[1-6]|SEM\s?[1-4]|TRI\s?[1-4]))\b\s*[:=\-]?\s*/gi;
+const INLINE_TERM_RE = /(?:^|\s)((?:Q[1-9]|S[1-4]|T[1-6]|Y1|F[1-2]|E[1-4]|MP[1-9]|HEX[1-6]|SEM\s?[1-4]|TRI\s?[1-4]))\b\s*[:=-]?\s*/gi;
 
 function splitColumns(line: string): string[] {
   return line.split(/\t+|\s{2,}/).map(collapse).filter(Boolean);

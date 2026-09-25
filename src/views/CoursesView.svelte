@@ -2,7 +2,7 @@
   import { store, byDueThenOrder } from '../lib/store.svelte';
   import { ui } from '../lib/ui.svelte';
   import type { Course, Task } from '../lib/types';
-  import { addDaysKey, dueKey, formatMinutes, endOfWeekKey } from '../lib/dates';
+  import { dueKey, formatMinutes, endOfWeekKey } from '../lib/dates';
   import QuickAdd from '../components/QuickAdd.svelte';
   import TaskItem from '../components/TaskItem.svelte';
   import Sortable from '../components/Sortable.svelte';

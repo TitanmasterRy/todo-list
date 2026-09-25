@@ -151,7 +151,7 @@ export function extractAssignmentsFromMail(messages: GmailMessage[], courses: { 
     const snippet = (msg.snippet ?? '').replace(/\s+/g, ' ').trim();
     const from = msg.from ?? '';
     const reasons: string[] = [];
-    let title = '';
+    let title: string;
     let dueAt: string | undefined;
     let confidence: Confidence;
 
@@ -182,7 +182,7 @@ export function extractAssignmentsFromMail(messages: GmailMessage[], courses: { 
       if (noisy && !subjKw.length) continue;
 
       let explicit = explicitDue(subject, now);
-      let stripFrom: 'subject' | 'none' = explicit ? 'subject' : 'none';
+      const stripFrom: 'subject' | 'none' = explicit ? 'subject' : 'none';
       if (!explicit) explicit = explicitDue(snippet, now);
       let looseTitle: string | undefined;
       if (explicit) {

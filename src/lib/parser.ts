@@ -212,7 +212,7 @@ export function parseQuickAdd(input: string, ctx: ParserContext = {}): ParsedQui
   take(new RegExp(`(?:^|\\s)(?:on |due )?(${MONTH_RE}) (\\d{1,2})(?:st|nd|rd|th)?(?:,? (\\d{4}))?(?=\\s)`, 'i'), (m) => {
     const month = MONTHS[m[1].toLowerCase().slice(0, 3)] ?? MONTHS[m[1].toLowerCase()];
     const day = +m[2];
-    let year = m[3] ? +m[3] : now.getFullYear();
+    const year = m[3] ? +m[3] : now.getFullYear();
     let d = new Date(year, month, day);
     if (!m[3] && d.getTime() < startOfDay(now).getTime() - 86400000 * 30) d = new Date(year + 1, month, day);
     setDate(d);
@@ -220,7 +220,7 @@ export function parseQuickAdd(input: string, ctx: ParserContext = {}): ParsedQui
   take(new RegExp(`(?:^|\\s)(?:on |due )?(\\d{1,2})(?:st|nd|rd|th)? (${MONTH_RE})(?:,? (\\d{4}))?(?=\\s)`, 'i'), (m) => {
     const month = MONTHS[m[2].toLowerCase().slice(0, 3)] ?? MONTHS[m[2].toLowerCase()];
     const day = +m[1];
-    let year = m[3] ? +m[3] : now.getFullYear();
+    const year = m[3] ? +m[3] : now.getFullYear();
     let d = new Date(year, month, day);
     if (!m[3] && d.getTime() < startOfDay(now).getTime() - 86400000 * 30) d = new Date(year + 1, month, day);
     setDate(d);

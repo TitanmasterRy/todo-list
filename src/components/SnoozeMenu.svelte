@@ -28,7 +28,7 @@
 </script>
 
 <svelte:window onclick={onclose} onkeydown={onKey} />
-<!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
+<!-- svelte-ignore a11y_click_events_have_key_events -->
 <div class="menu" role="menu" tabindex="-1" onclick={(e) => e.stopPropagation()}>
   <button role="menuitem" onclick={() => pick(tomorrow, 'Snoozed to tomorrow')}>Tomorrow <span>{dayName(tomorrow)}</span></button>
   <button role="menuitem" onclick={() => pick(weekend, 'Snoozed to the weekend')}>This weekend <span>{dayName(weekend)}</span></button>

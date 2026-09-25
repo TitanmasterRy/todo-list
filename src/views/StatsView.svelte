@@ -3,7 +3,7 @@
   import { ui } from '../lib/ui.svelte';
   import { BADGES, levelProgress, xpForLevel } from '../lib/gamification';
   import { TITLE_TEXT } from '../lib/economy';
-  import { addDaysKey, endOfWeekKey, dueKey, formatMinutes, daysAgoKey } from '../lib/dates';
+  import { endOfWeekKey, dueKey, formatMinutes, daysAgoKey } from '../lib/dates';
   import Heatmap from '../components/Heatmap.svelte';
   import GoalRing from '../components/GoalRing.svelte';
 

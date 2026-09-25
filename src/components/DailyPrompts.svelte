@@ -59,7 +59,6 @@
 
   const frogChoices = $derived([...store.todayTasks].sort((a, b) => (b.estimateMin ?? 0) - (a.estimateMin ?? 0) || byDueThenOrder(a, b)).slice(0, 6));
   const doneToday = $derived(store.tasks.filter((t) => t.completedAt && dueKey(t.completedAt) === store.today));
-  const xpToday = $derived(store.settings.gamification ? doneToday.length : 0);
   const openLeft = $derived(store.todayTasks.length);
 
   function pickFrog(id: string) {
@@ -75,9 +74,8 @@
 </script>
 
 {#if ui.frogPrompt}
-  <!-- svelte-ignore a11y_no_static_element_interactions, a11y_click_events_have_key_events -->
   <div class="modal-backdrop" onclick={() => (ui.frogPrompt = false)} role="presentation">
-    <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
+    <!-- svelte-ignore a11y_click_events_have_key_events -->
     <div use:focusTrap class="modal" role="dialog" aria-modal="true" aria-label="Eat the frog" tabindex="-1" onclick={(e) => e.stopPropagation()} in:fly={{ y: 20, duration: 250 }}>
       <h2>🐸 Eat the frog</h2>
       <p class="muted">Pick the hardest thing on today’s list. It gets pinned to the top and pays double XP.</p>
@@ -101,9 +99,8 @@
 {/if}
 
 {#if ui.recap}
-  <!-- svelte-ignore a11y_no_static_element_interactions, a11y_click_events_have_key_events -->
   <div class="modal-backdrop" onclick={() => (ui.recap = false)} role="presentation">
-    <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
+    <!-- svelte-ignore a11y_click_events_have_key_events -->
     <div use:focusTrap class="modal recap" role="dialog" aria-modal="true" aria-label="End of day recap" tabindex="-1" onclick={(e) => e.stopPropagation()} in:fly={{ y: 20, duration: 250 }}>
       <h2>🌙 Today’s recap</h2>
       <div class="stats">

@@ -1,6 +1,5 @@
 <script lang="ts">
   import { store, byDueThenOrder } from '../lib/store.svelte';
-  import { ui } from '../lib/ui.svelte';
   import { toasts } from '../lib/toast.svelte';
   import type { Task } from '../lib/types';
   import { addDaysKey, dueKey, isOverdue, isDueToday } from '../lib/dates';

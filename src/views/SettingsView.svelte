@@ -4,7 +4,6 @@
   import { toasts } from '../lib/toast.svelte';
   import { undo } from '../lib/undo.svelte';
   import type { SoundPack, Theme } from '../lib/types';
-  import { ACCENT_COLORS } from '../lib/colors';
   import { previewPack, playSound } from '../lib/sounds';
   import { backupFilename, downloadJSON, parseBundle } from '../lib/backup';
   import { sync, syncNow, checkToken, disconnect } from '../lib/gist.svelte';

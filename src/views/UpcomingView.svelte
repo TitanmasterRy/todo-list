@@ -1,7 +1,7 @@
 <script lang="ts">
   import { store, byDueThenOrder, byOrder } from '../lib/store.svelte';
   import type { Task } from '../lib/types';
-  import { addDaysKey, dueKey, formatDayHeading, formatMinutes, startOfWeekKey, fromKey, MONTH_SHORT, DAY_SHORT } from '../lib/dates';
+  import { addDaysKey, dueKey, formatDayHeading, formatMinutes, startOfWeekKey, fromKey, MONTH_SHORT } from '../lib/dates';
   import QuickAdd from '../components/QuickAdd.svelte';
   import TaskItem from '../components/TaskItem.svelte';
   import Sortable from '../components/Sortable.svelte';

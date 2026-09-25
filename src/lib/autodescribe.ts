@@ -276,10 +276,10 @@ export function autoDescribe(title: string, ctx: AutoDescribeContext = {}): Auto
   const cn = courseLabel(ctx.courseName);
   const t = cleanTitle(title);
 
-  let what = '';
-  let plan = '';
-  let tip = '';
-  let subtasks: string[] = [];
+  let what: string;
+  let plan: string;
+  let tip: string;
+  let subtasks: string[];
   const tags: string[] = [];
   let estimate = BASE_ESTIMATE[type];
 

@@ -25,7 +25,7 @@ interface Property {
 
 /** Unfold RFC 5545 folded lines (CRLF followed by a space or tab). Tolerates LF-only files and a BOM. */
 export function unfoldLines(text: string): string[] {
-  const clean = text.replace(/^﻿/, '').replace(/\r\n?/g, '\n');
+  const clean = text.replace(/^\uFEFF/, '').replace(/\r\n?/g, '\n');
   const out: string[] = [];
   for (const line of clean.split('\n')) {
     if ((line.startsWith(' ') || line.startsWith('\t')) && out.length) {

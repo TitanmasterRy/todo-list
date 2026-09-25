@@ -10,7 +10,7 @@ describe('buildICS', () => {
     expect(ics).toContain('BEGIN:VCALENDAR');
     expect(ics).toContain('DTSTART;VALUE=DATE:20260921');
     expect(ics).toContain('DTEND;VALUE=DATE:20260922');
-    expect(ics).toContain('SUMMARY:[History] Essay\\, draft\; final');
+    expect(ics).toContain('SUMMARY:[History] Essay\\, draft\\; final');
     expect(ics).toContain('CATEGORIES:History');
     expect(ics.endsWith('END:VCALENDAR\r\n')).toBe(true);
   });

@@ -5,12 +5,6 @@
   import { keymap } from '@codemirror/view';
   import { indentUnit } from '@codemirror/language';
   import { indentWithTab } from '@codemirror/commands';
-  import { javascript } from '@codemirror/lang-javascript';
-  import { python } from '@codemirror/lang-python';
-  import { html } from '@codemirror/lang-html';
-  import { css } from '@codemirror/lang-css';
-  import { java } from '@codemirror/lang-java';
-  import { cpp } from '@codemirror/lang-cpp';
   import { oneDark } from '@codemirror/theme-one-dark';
 
   import { LANGUAGES, deleteSnippet, languageExt, languageLabel, listSnippets, newSnippet, saveSnippet, type Snippet, type SnippetLanguage } from '../../lib/snippets';
@@ -110,24 +104,45 @@
   const langComp = new Compartment();
   const themeComp = new Compartment();
 
-  function langExt(l: SnippetLanguage): Extension {
+  // Language packages load on first use, so opening the editor doesn't download all six.
+  const langCache = new Map<SnippetLanguage, Extension>();
+  async function langExt(l: SnippetLanguage): Promise<Extension> {
+    const hit = langCache.get(l);
+    if (hit) return hit;
     const unit = indentUnit.of(l === 'python' ? '    ' : '  ');
+    let ext: Extension;
     switch (l) {
       case 'javascript':
-        return [javascript(), unit];
+        ext = (await import('@codemirror/lang-javascript')).javascript();
+        break;
       case 'typescript':
-        return [javascript({ typescript: true }), unit];
+        ext = (await import('@codemirror/lang-javascript')).javascript({ typescript: true });
+        break;
       case 'python':
-        return [python(), unit];
+        ext = (await import('@codemirror/lang-python')).python();
+        break;
       case 'html':
-        return [html(), unit];
+        ext = (await import('@codemirror/lang-html')).html();
+        break;
       case 'css':
-        return [css(), unit];
+        ext = (await import('@codemirror/lang-css')).css();
+        break;
       case 'java':
-        return [java(), unit];
+        ext = (await import('@codemirror/lang-java')).java();
+        break;
       case 'cpp':
-        return [cpp(), unit];
+        ext = (await import('@codemirror/lang-cpp')).cpp();
+        break;
     }
+    const full = [ext, unit];
+    langCache.set(l, full);
+    return full;
+  }
+  /** Load a language and apply it if it's still the one being edited. */
+  function applyLang(l: SnippetLanguage) {
+    void langExt(l).then((ext) => {
+      if (view && loadedLang === l) view.dispatch({ effects: langComp.reconfigure(ext) });
+    });
   }
   function isDark(): boolean {
     const root = document.documentElement;
@@ -164,7 +179,7 @@
       }
       return;
     }
-    const effects = s.language !== loadedLang ? [langComp.reconfigure(langExt(s.language))] : [];
+    const langChanged = s.language !== loadedLang;
     if (s.id !== loadedId) {
       loadedId = s.id;
       loadedLang = s.language;
@@ -174,10 +189,10 @@
           extensions: extensions(),
         }),
       );
-      view.dispatch({ effects: [langComp.reconfigure(langExt(s.language))] });
-    } else if (effects.length) {
+      applyLang(s.language);
+    } else if (langChanged) {
       loadedLang = s.language;
-      view.dispatch({ effects });
+      applyLang(s.language);
     }
   }
   function extensions(): Extension[] {

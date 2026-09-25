@@ -8,7 +8,6 @@
   import GamePlayer from './GamePlayer.svelte';
 
   let playing = $state<ArcadeGame | null>(null);
-  let filter = $state<'all' | 'mine'>('all');
   onMount(() => void arcade.load());
 
   const list = $derived.by(() => {

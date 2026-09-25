@@ -71,7 +71,7 @@
   });
 
   $effect(() => {
-    q;
+    void q;
     idx = 0;
   });
 
@@ -96,9 +96,7 @@
   }
 </script>
 
-<!-- svelte-ignore a11y_no_static_element_interactions, a11y_click_events_have_key_events -->
 <div class="modal-backdrop" onclick={close} role="presentation">
-  <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
   <div use:focusTrap class="modal palette" role="dialog" aria-modal="true" aria-label="Command palette" tabindex="-1" onclick={(e) => e.stopPropagation()} onkeydown={onKey}>
     <input class="input" bind:this={input} bind:value={q} placeholder="Type a command or task name…" aria-label="Command" role="combobox" aria-expanded="true" aria-controls="palette-list" aria-activedescendant={results[idx] ? `cmd-${results[idx].id}` : undefined} />
     <ul id="palette-list" role="listbox">

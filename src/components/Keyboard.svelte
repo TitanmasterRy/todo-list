@@ -31,17 +31,50 @@
 
   function closeAll(): boolean {
     let closed = false;
-    if (ui.palette) (ui.palette = false), (closed = true);
-    if (ui.shortcuts) (ui.shortcuts = false), (closed = true);
-    if (ui.snoozeMenuFor) (ui.snoozeMenuFor = null), (closed = true);
-    if (store.editingTaskId) (store.editingTaskId = null), (closed = true);
-    if (ui.courseEditor) (ui.courseEditor = null), (closed = true);
-    if (ui.weeklyReview) (ui.weeklyReview = false), (closed = true);
-    if (ui.semesterSetup) (ui.semesterSetup = false), (closed = true);
-    if (ui.frogPrompt) (ui.frogPrompt = false), (closed = true);
-    if (ui.recap) (ui.recap = false), (closed = true);
-    if (!closed && store.bulkMode) (store.clearSelection(), (closed = true));
-    if (!closed && store.selectedTaskId) (store.selectedTaskId = null), (closed = true);
+    if (ui.palette) {
+      ui.palette = false;
+      closed = true;
+    }
+    if (ui.shortcuts) {
+      ui.shortcuts = false;
+      closed = true;
+    }
+    if (ui.snoozeMenuFor) {
+      ui.snoozeMenuFor = null;
+      closed = true;
+    }
+    if (store.editingTaskId) {
+      store.editingTaskId = null;
+      closed = true;
+    }
+    if (ui.courseEditor) {
+      ui.courseEditor = null;
+      closed = true;
+    }
+    if (ui.weeklyReview) {
+      ui.weeklyReview = false;
+      closed = true;
+    }
+    if (ui.semesterSetup) {
+      ui.semesterSetup = false;
+      closed = true;
+    }
+    if (ui.frogPrompt) {
+      ui.frogPrompt = false;
+      closed = true;
+    }
+    if (ui.recap) {
+      ui.recap = false;
+      closed = true;
+    }
+    if (!closed && store.bulkMode) {
+      store.clearSelection();
+      closed = true;
+    }
+    if (!closed && store.selectedTaskId) {
+      store.selectedTaskId = null;
+      closed = true;
+    }
     return closed;
   }
 

@@ -63,7 +63,8 @@ class Pomodoro {
   }
 
   toggle(): void {
-    this.running ? this.pause() : this.start();
+    if (this.running) this.pause();
+    else this.start();
   }
 
   reset(): void {

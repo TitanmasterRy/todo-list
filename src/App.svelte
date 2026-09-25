@@ -10,10 +10,13 @@
   import CoursesView from './views/CoursesView.svelte';
   import InboxView from './views/InboxView.svelte';
   import FocusView from './views/FocusView.svelte';
-  import StatsView from './views/StatsView.svelte';
-  import SettingsView from './views/SettingsView.svelte';
-  import ToolsView from './views/ToolsView.svelte';
-  import SchoologyView from './views/SchoologyView.svelte';
+  import LazyView from './components/LazyView.svelte';
+  // less-used views load on first visit (keeps the first download small)
+  const loadStats = () => import('./views/StatsView.svelte');
+  const loadTools = () => import('./views/ToolsView.svelte');
+  const loadSchoology = () => import('./views/SchoologyView.svelte');
+  const loadSettings = () => import('./views/SettingsView.svelte');
+  const loadPlay = () => import('./views/PlayView.svelte');
   import { startSchoologySync } from './lib/schoologySync.svelte';
   import { startReminders } from './lib/reminders';
   import { startLocalBackup } from './lib/localBackup.svelte';
@@ -116,19 +119,15 @@
       {:else if store.view === 'focus'}
         <FocusView />
       {:else if store.view === 'stats'}
-        <StatsView />
+        <LazyView load={loadStats} />
       {:else if store.view === 'tools'}
-        <ToolsView />
+        <LazyView load={loadTools} />
       {:else if store.view === 'schoology'}
-        <SchoologyView />
+        <LazyView load={loadSchoology} />
       {:else if store.view === 'play' && store.settings.economyEnabled}
-        {#await import('./views/PlayView.svelte')}
-          <div class="page"><p class="muted">Loading…</p></div>
-        {:then m}
-          <m.default />
-        {/await}
+        <LazyView load={loadPlay} />
       {:else if store.view === 'settings'}
-        <SettingsView />
+        <LazyView load={loadSettings} />
       {/if}
     </main>
     <TabBar />
