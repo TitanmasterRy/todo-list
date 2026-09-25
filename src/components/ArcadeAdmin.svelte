@@ -224,7 +224,7 @@
     color: var(--text-muted);
   }
   .err {
-    color: var(--danger);
+    color: var(--danger-text);
     font-size: 13px;
     margin: 4px 0;
   }

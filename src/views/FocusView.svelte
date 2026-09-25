@@ -270,7 +270,7 @@
   }
   .presets .chip.on {
     border-color: var(--accent);
-    color: var(--accent);
+    color: var(--accent-text);
   }
   .custom {
     display: flex;

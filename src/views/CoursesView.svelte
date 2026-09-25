@@ -222,7 +222,7 @@
     gap: 4px;
   }
   .more {
-    color: var(--accent);
+    color: var(--accent-text);
     font-size: 13px;
     text-align: left;
     padding: 4px;

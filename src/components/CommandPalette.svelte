@@ -110,7 +110,6 @@
       run: () => (store.bulkMode ? store.clearSelection() : (store.bulkMode = true)),
     });
     list.push({ id: 'shortcuts', label: 'Keyboard shortcuts', icon: '⌨️', hint: '?', run: () => (ui.shortcuts = true) });
-    if (store.hasDemoData()) list.push({ id: 'demo', label: 'Clear demo data', icon: '🧹', run: () => void store.clearDemoData() });
     return list;
   });
 

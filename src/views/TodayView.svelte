@@ -254,7 +254,7 @@
     color: var(--text-faint);
   }
   .link {
-    color: var(--accent);
+    color: var(--accent-text);
     font-weight: 500;
   }
   .section-title.overdue span:first-child {

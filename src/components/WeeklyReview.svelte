@@ -154,11 +154,11 @@
     letter-spacing: 0;
   }
   .warn {
-    color: var(--warn);
+    color: var(--warn-text);
     font-size: 14px;
   }
   .link {
-    color: var(--accent);
+    color: var(--accent-text);
     font-weight: 500;
   }
   ul {

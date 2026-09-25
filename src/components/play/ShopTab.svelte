@@ -97,7 +97,7 @@
   }
   .own {
     margin-left: 6px;
-    color: var(--accent);
+    color: var(--accent-text);
   }
   .desc {
     font-size: 12px;
@@ -116,7 +116,7 @@
   }
   .got {
     font-size: 12px;
-    color: var(--success);
+    color: var(--success-text);
     font-weight: 700;
   }
   .muted {

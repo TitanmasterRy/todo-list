@@ -158,14 +158,14 @@
     transform: scale(0.96);
   }
   .k.op {
-    color: var(--accent);
+    color: var(--accent-text);
   }
   .k.fn {
     font-size: 13px;
   }
   .k.go {
     background: var(--accent);
-    color: #fff;
+    color: var(--accent-contrast, #fff);
     border-color: transparent;
   }
   .hist {

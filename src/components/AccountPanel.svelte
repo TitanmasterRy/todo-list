@@ -291,10 +291,10 @@
     min-width: 200px;
   }
   .status.ok {
-    color: var(--success);
+    color: var(--success-text);
   }
   .status.error {
-    color: var(--danger);
+    color: var(--danger-text);
   }
   .chip.optional {
     text-transform: uppercase;
@@ -338,7 +338,7 @@
   .link {
     background: none;
     padding: 0;
-    color: var(--accent);
+    color: var(--accent-text);
     font-size: 13px;
   }
   .link.small {
@@ -353,9 +353,9 @@
     background: var(--bg-sunken, var(--bg-elev));
   }
   .msg.ok {
-    color: var(--success);
+    color: var(--success-text);
   }
   .msg.error {
-    color: var(--danger);
+    color: var(--danger-text);
   }
 </style>

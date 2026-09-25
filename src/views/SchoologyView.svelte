@@ -316,10 +316,10 @@
     font-weight: 600;
   }
   .status.ok {
-    color: var(--success);
+    color: var(--success-text);
   }
   .status.error {
-    color: var(--danger);
+    color: var(--danger-text);
   }
   .muted {
     color: var(--text-muted);
@@ -327,7 +327,7 @@
     font-weight: 400;
   }
   .err {
-    color: var(--danger);
+    color: var(--danger-text);
     margin-bottom: 12px;
   }
   .setup h2,
@@ -412,7 +412,7 @@
     color: var(--text);
   }
   .warn {
-    color: var(--warn);
+    color: var(--warn-text);
     font-size: 12px;
   }
   .btns {
@@ -473,6 +473,6 @@
     margin-top: 16px;
   }
   .link {
-    color: var(--accent);
+    color: var(--accent-text);
   }
 </style>

@@ -6,7 +6,13 @@
   --bg-hover: #252a35;
   --text: #e8eaf0;
   --text-muted: #9aa1b2;
-  --text-faint: #6b7280;
+  --text-faint: var(--text-muted); /* kept as a token; separate faint grays failed 4.5:1 contrast */
+  --accent-contrast: #fff;
+  /* text versions of the signal colors, mixed toward the theme's text color so they pass 4.5:1 on its surfaces */
+  --accent-text: color-mix(in srgb, var(--accent) 70%, var(--text));
+  --success-text: color-mix(in srgb, var(--success) 60%, var(--text));
+  --danger-text: color-mix(in srgb, var(--danger) 75%, var(--text));
+  --warn-text: color-mix(in srgb, var(--warn) 55%, var(--text));
   --border: #2a2f3a;
   --border-strong: #3a4150;
   --danger: #ef4444;
@@ -35,7 +41,6 @@
   --bg-hover: #e9ecf3;
   --text: #171923;
   --text-muted: #5b6270;
-  --text-faint: #8b92a3;
   --border: #e1e4ec;
   --border-strong: #c9cedb;
   --overdue: #dc2626;
@@ -51,7 +56,6 @@
   --bg-hover: #252a35;
   --text: #e8eaf0;
   --text-muted: #9aa1b2;
-  --text-faint: #6b7280;
   --border: #2a2f3a;
   --border-strong: #3a4150;
   --overdue: #f87171;
@@ -134,7 +138,7 @@ button:disabled {
 }
 
 a {
-  color: var(--accent);
+  color: var(--accent-text);
 }
 
 :focus-visible {
@@ -180,14 +184,14 @@ a {
 .btn.primary {
   background: var(--accent);
   border-color: transparent;
-  color: #fff;
+  color: var(--accent-contrast, #fff);
 }
 .btn.primary:hover {
   filter: brightness(1.1);
   background: var(--accent);
 }
 .btn.danger {
-  color: var(--danger);
+  color: var(--danger-text);
   border-color: color-mix(in srgb, var(--danger) 40%, transparent);
 }
 .btn.danger:hover {
@@ -263,15 +267,16 @@ a {
   background: color-mix(in srgb, var(--overdue) 12%, transparent);
 }
 .chip.today {
-  color: var(--accent);
+  /* accent text on an accent tint needs darkening (light) or lightening (dark) to reach 4.5:1 */
+  color: var(--accent-text);
   border-color: color-mix(in srgb, var(--accent) 40%, transparent);
   background: color-mix(in srgb, var(--accent) 12%, transparent);
 }
 .chip.p-high {
-  color: var(--warn);
+  color: var(--warn-text);
 }
 .chip.p-urgent {
-  color: var(--danger);
+  color: var(--danger-text);
 }
 .chip.exam,
 .chip.quiz {

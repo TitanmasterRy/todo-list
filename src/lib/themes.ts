@@ -100,7 +100,6 @@ export const THEMES: ThemeDef[] = [
       '--border-strong': '#3a3a7a',
       '--text': '#e8f7ff',
       '--text-muted': '#8ea0c8',
-      '--text-faint': '#6a7aa8',
     },
   },
   {
@@ -185,6 +184,25 @@ export function themeById(id: ThemePack): ThemeDef {
 }
 
 /** Apply a theme pack's CSS variables to the root; `dark` says which palette is active. Accent override wins when the pack has no fixed accent. */
+function luminance(hex: string): number {
+  const h = hex.replace('#', '');
+  const full = h.length === 3 ? [...h].map((c) => c + c).join('') : h.slice(0, 6);
+  const [r, g, b] = [0, 2, 4].map((i) => parseInt(full.slice(i, i + 2), 16) / 255).map((c) => (c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4));
+  return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+}
+
+/** WCAG contrast ratio between two hex colors. */
+export function contrastRatio(a: string, b: string): number {
+  const [x, y] = [luminance(a), luminance(b)].sort((p, q) => q - p);
+  return (x + 0.05) / (y + 0.05);
+}
+
+/** Text color for buttons filled with the accent: white when it reads well, near-black otherwise. */
+export function accentContrast(accent: string): string {
+  if (!/^#[0-9a-f]{3,8}$/i.test(accent)) return '#ffffff';
+  return contrastRatio('#ffffff', accent) >= 4.5 || contrastRatio('#ffffff', accent) >= contrastRatio('#111111', accent) ? '#ffffff' : '#111111';
+}
+
 export function applyThemePack(id: ThemePack, dark: boolean, accent: string): void {
   if (typeof document === 'undefined') return;
   const root = document.documentElement;
@@ -200,5 +218,7 @@ export function applyThemePack(id: ThemePack, dark: boolean, accent: string): vo
   for (const [k, v] of Object.entries(vars)) root.style.setProperty(k, v);
   root.dataset.pack = id;
   // accent: pack accent unless the user picked a custom accent on a pack without a fixed one
-  if (!vars['--accent'] || id === 'classic') root.style.setProperty('--accent', accent);
+  const finalAccent = !vars['--accent'] || id === 'classic' ? accent : vars['--accent'];
+  root.style.setProperty('--accent', finalAccent);
+  root.style.setProperty('--accent-contrast', accentContrast(finalAccent));
 }

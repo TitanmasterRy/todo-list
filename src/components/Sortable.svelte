@@ -78,9 +78,9 @@
 
 <div class="sortable task-list" class:dragging={!!dnd.active && dnd.active.group === group} bind:this={el} role="list">
   {#each items as it, i (it.id)}
-    <!-- svelte-ignore a11y_no_static_element_interactions -->
     <div
       data-sort-row
+      role="listitem"
       class="row"
       class:ghost={dnd.active?.id === it.id}
       class:drop-before={showDrop && overIndex === i && !(isSource && dnd.active?.id === it.id)}
@@ -92,10 +92,10 @@
     </div>
   {/each}
   {#if showDrop && overIndex === items.length}
-    <div class="drop-line"></div>
+    <div class="drop-line" aria-hidden="true"></div>
   {/if}
   {#if items.length === 0 && placeholder}
-    <div class="placeholder" class:active={showDrop}>{placeholder}</div>
+    <div class="placeholder" class:active={showDrop} role="listitem">{placeholder}</div>
   {/if}
 </div>
 
@@ -138,7 +138,7 @@
   }
   .placeholder.active {
     border-color: var(--accent);
-    color: var(--accent);
+    color: var(--accent-text);
     background: color-mix(in srgb, var(--accent) 8%, transparent);
   }
 </style>

@@ -316,7 +316,7 @@
     font-size: 11px;
     text-transform: uppercase;
     letter-spacing: 0.1em;
-    color: var(--warn);
+    color: var(--warn-text);
     font-weight: 700;
   }
   .name {

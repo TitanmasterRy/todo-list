@@ -56,7 +56,7 @@ XP per task is not stored, so wins are ranked by a proxy: base XP for the priori
 
 ## No demo dataset
 
-The spec asked for a seeded demo dataset on first run. At the owner's request the seed was removed, so the app starts empty. The "Clear demo data" button remains in Settings and the command palette, shown only when `demo_`-prefixed records exist, so browsers that loaded the earlier build can still remove them.
+The spec asked for a seeded demo dataset on first run. At the owner's request the seed was removed, so the app starts empty. The "Clear demo data" button that stayed behind for browsers that loaded the earliest build has since been removed.
 
 ## Schoology integration
 

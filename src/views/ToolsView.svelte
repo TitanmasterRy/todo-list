@@ -601,7 +601,7 @@
     font-size: 13px;
   }
   .warn {
-    color: var(--warn);
+    color: var(--warn-text);
     font-size: 13px;
   }
   .capbar {
@@ -628,8 +628,10 @@
     justify-content: center;
     font-size: 12px;
     font-weight: 600;
-    mix-blend-mode: difference;
-    color: #fff;
+    color: var(--text);
+    text-shadow:
+      0 0 3px var(--bg-elev),
+      0 0 3px var(--bg-elev);
   }
   .week {
     display: flex;
@@ -664,7 +666,7 @@
     opacity: 1;
   }
   .day.today .dl {
-    color: var(--accent);
+    color: var(--accent-text);
     font-weight: 700;
   }
   .dm {
@@ -716,7 +718,7 @@
     font-weight: 800;
   }
   .exam.soon .days {
-    color: var(--danger);
+    color: var(--danger-text);
   }
   .et {
     font-weight: 600;
@@ -769,7 +771,7 @@
     font-weight: 500;
   }
   .link-title:hover {
-    color: var(--accent);
+    color: var(--accent-text);
   }
   .outlook {
     display: flex;
@@ -780,10 +782,10 @@
     margin-top: 8px;
   }
   .ok {
-    color: var(--success);
+    color: var(--success-text);
   }
   .bad {
-    color: var(--danger);
+    color: var(--danger-text);
   }
   .need strong {
     color: var(--text);

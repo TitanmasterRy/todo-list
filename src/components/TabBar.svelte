@@ -71,7 +71,7 @@
     font-weight: 600;
   }
   .tabbar button.active {
-    color: var(--accent);
+    color: var(--accent-text);
   }
   .tabbar .ico {
     font-size: 20px;

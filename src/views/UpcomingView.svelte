@@ -147,7 +147,7 @@
     color: var(--overdue);
   }
   .section-title.today span:first-child {
-    color: var(--accent);
+    color: var(--accent-text);
   }
   .section-title.weekend span:first-child {
     color: var(--text-faint);

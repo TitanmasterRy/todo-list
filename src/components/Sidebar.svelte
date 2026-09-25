@@ -85,7 +85,7 @@
     height: 26px;
     border-radius: 8px;
     background: var(--accent);
-    color: #fff;
+    color: var(--accent-contrast, #fff);
     display: grid;
     place-items: center;
     font-size: 15px;

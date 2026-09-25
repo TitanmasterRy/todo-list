@@ -140,7 +140,7 @@
     font-weight: 700;
   }
   .time.low {
-    color: var(--danger);
+    color: var(--danger-text);
   }
   iframe {
     width: 100%;

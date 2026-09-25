@@ -110,7 +110,7 @@
   .errs {
     margin-top: 10px;
     font-size: 13px;
-    color: var(--danger);
+    color: var(--danger-text);
   }
   .muted {
     color: var(--text-muted);

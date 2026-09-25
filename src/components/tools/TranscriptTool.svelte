@@ -118,7 +118,7 @@
     text-align: left;
   }
   .link:hover {
-    color: var(--accent);
+    color: var(--accent-text);
   }
   .print-only {
     display: none;

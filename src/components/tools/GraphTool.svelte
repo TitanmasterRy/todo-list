@@ -301,7 +301,7 @@
     padding: 6px 10px;
   }
   .err {
-    color: var(--warn);
+    color: var(--warn-text);
   }
   .plot {
     width: 100%;

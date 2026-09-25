@@ -194,7 +194,7 @@
     height: 54px;
     border-radius: 50%;
     background: var(--accent);
-    color: #fff;
+    color: var(--accent-contrast, #fff);
     font-size: 30px;
     line-height: 1;
     box-shadow: 0 8px 24px color-mix(in srgb, var(--accent) 45%, transparent);

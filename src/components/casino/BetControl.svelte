@@ -49,7 +49,7 @@
     border-radius: 50%;
     border: 3px dashed rgba(255, 255, 255, 0.7);
     background: var(--accent);
-    color: #fff;
+    color: var(--accent-contrast, #fff);
     font-weight: 700;
     font-size: 12px;
     box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
@@ -66,7 +66,7 @@
     transform: translateY(-3px);
   }
   .warn {
-    color: var(--danger);
+    color: var(--danger-text);
     font-size: 12px;
   }
 </style>

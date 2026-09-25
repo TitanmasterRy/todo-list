@@ -391,7 +391,7 @@
   }
   .types .chip.on {
     border-color: var(--accent);
-    color: var(--accent);
+    color: var(--accent-text);
   }
   .lbl {
     font-size: 12px;
@@ -488,7 +488,7 @@
     height: 24px;
     border-radius: 50%;
     background: var(--accent);
-    color: #fff;
+    color: var(--accent-contrast, #fff);
     display: grid;
     place-items: center;
     font-size: 12px;

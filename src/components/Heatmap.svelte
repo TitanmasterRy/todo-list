@@ -55,7 +55,9 @@
     <span><strong>{total}</strong> tasks completed in the last year</span>
     <span class="hover">{hover ? `${hover.count} on ${label(hover.key)}` : ''}</span>
   </div>
-  <div class="scroll">
+  <!-- focusable so keyboard users can scroll the year -->
+  <!-- svelte-ignore a11y_no_noninteractive_tabindex -->
+  <div class="scroll" tabindex="0" role="region" aria-label="Year of completions">
     <div class="months" style="--cols:{weeks}">
       {#each grid.months as m}
         <span style="grid-column:{m.col + 2}">{m.label}</span>

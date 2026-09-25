@@ -68,7 +68,8 @@
   class:compact
   class:frog={isFrog}
   data-task-id={task.id}
-  role="listitem"
+  role="group"
+  aria-label={task.title}
   onclick={onRowClick}
   ondblclick={open}
   style="--course:{course?.color ?? 'var(--accent)'}"
@@ -324,21 +325,21 @@
     color: var(--text-faint);
   }
   .chip.stale {
-    color: var(--warn);
+    color: var(--warn-text);
   }
   .chip.planned {
-    color: var(--accent);
+    color: var(--accent-text);
   }
   .chip.synced {
     text-decoration: none;
     color: var(--text-muted);
   }
   a.chip.synced:hover {
-    color: var(--accent);
+    color: var(--accent-text);
     border-color: var(--accent);
   }
   .chip.score {
-    color: var(--success);
+    color: var(--success-text);
     font-weight: 600;
   }
   .chip.score.aced {
@@ -412,7 +413,7 @@
     position: relative;
   }
   .del:hover {
-    color: var(--danger);
+    color: var(--danger-text);
   }
   @media (hover: none) {
     .actions {

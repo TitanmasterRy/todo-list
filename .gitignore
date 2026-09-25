@@ -5,3 +5,6 @@ dist-ssr
 .DS_Store
 .vite
 dev-dist
+test-results
+playwright-report
+.vitest

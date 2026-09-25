@@ -430,10 +430,10 @@
     color: var(--text-muted);
   }
   .status.ok {
-    color: var(--success);
+    color: var(--success-text);
   }
   .status.error {
-    color: var(--danger);
+    color: var(--danger-text);
   }
   .muted {
     color: var(--text-muted);
@@ -442,7 +442,7 @@
     margin: 0 0 8px;
   }
   .err {
-    color: var(--danger);
+    color: var(--danger-text);
     font-size: 13px;
     margin: 8px 0 0;
   }
@@ -483,7 +483,7 @@
     margin: 6px 0;
   }
   .link {
-    color: var(--accent);
+    color: var(--accent-text);
   }
   .scan {
     display: flex;
@@ -541,7 +541,7 @@
   }
   .open {
     font-size: 12px;
-    color: var(--accent);
+    color: var(--accent-text);
     white-space: nowrap;
   }
   .reason {
@@ -557,12 +557,12 @@
     letter-spacing: 0.06em;
   }
   .chip.conf.high {
-    color: var(--success);
+    color: var(--success-text);
     border-color: color-mix(in srgb, var(--success) 40%, transparent);
     background: color-mix(in srgb, var(--success) 12%, transparent);
   }
   .chip.conf.medium {
-    color: var(--warn);
+    color: var(--warn-text);
     border-color: color-mix(in srgb, var(--warn) 40%, transparent);
     background: color-mix(in srgb, var(--warn) 12%, transparent);
   }

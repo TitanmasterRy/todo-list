@@ -574,7 +574,7 @@
     background: var(--bg-elev-2);
   }
   .ext {
-    color: var(--accent);
+    color: var(--accent-text);
     font-weight: 600;
     margin-left: 4px;
   }
@@ -650,10 +650,10 @@
     display: block;
   }
   .line.err {
-    color: var(--danger);
+    color: var(--danger-text);
   }
   .line.warn {
-    color: var(--warn);
+    color: var(--warn-text);
   }
   .line.val {
     color: var(--text-muted);

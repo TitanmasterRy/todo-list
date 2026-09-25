@@ -142,11 +142,11 @@
     color: var(--text-muted);
   }
   .pos {
-    color: var(--success);
+    color: var(--success-text);
     font-weight: 700;
   }
   .neg {
-    color: var(--danger);
+    color: var(--danger-text);
     font-weight: 700;
   }
   .note {

@@ -311,7 +311,7 @@
   }
   .day.on {
     background: var(--accent);
-    color: #fff;
+    color: var(--accent-contrast, #fff);
     border-color: var(--accent);
   }
   .grow {

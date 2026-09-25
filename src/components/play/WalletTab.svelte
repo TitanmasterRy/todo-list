@@ -91,7 +91,7 @@
     color: var(--text-muted);
   }
   .amt.pos {
-    color: var(--success);
+    color: var(--success-text);
     font-weight: 700;
   }
   .muted {

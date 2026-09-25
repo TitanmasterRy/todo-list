@@ -267,13 +267,18 @@
     border-radius: 12px;
     border: 1px solid var(--border);
     background: var(--bg-elev-2);
-    opacity: 0.45;
-    filter: grayscale(1);
     transition: transform var(--dur) var(--spring);
   }
+  /* locked badges: gray, dashed and muted, but the text stays readable (no whole-card opacity) */
+  .badge:not(.on) {
+    border-style: dashed;
+    color: var(--text-muted);
+  }
+  .badge:not(.on) .medal {
+    filter: grayscale(1);
+    opacity: 0.45;
+  }
   .badge.on {
-    opacity: 1;
-    filter: none;
     border-color: color-mix(in srgb, var(--warn) 50%, var(--border));
   }
   .badge.on:hover {

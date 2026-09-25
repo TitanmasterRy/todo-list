@@ -236,7 +236,6 @@ export interface Settings {
   equippedFrame?: string;
   equippedConfetti?: string;
   onboarded: boolean;
-  demoSeeded: boolean;
   lastFrogPromptDate?: string;
   lastRecapDate?: string;
   lastWeeklyReviewDate?: string;
@@ -311,7 +310,6 @@ export const DEFAULT_SETTINGS: Settings = {
   casinoBreakMin: 20,
   arcadeAdmin: false,
   onboarded: false,
-  demoSeeded: false,
 };
 
 export const DEFAULT_STATS: Stats = {

@@ -130,11 +130,11 @@
     font-size: 15px;
   }
   .example b {
-    color: var(--accent);
+    color: var(--accent-text);
     font-weight: 600;
   }
   .plus {
-    color: var(--accent);
+    color: var(--accent-text);
     font-weight: 700;
     margin-right: 6px;
   }
@@ -166,7 +166,7 @@
   }
   .g.on {
     background: var(--accent);
-    color: #fff;
+    color: var(--accent-contrast, #fff);
     border-color: var(--accent);
   }
   .check {

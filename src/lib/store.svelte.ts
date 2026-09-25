@@ -1071,21 +1071,6 @@ class Store {
     await db.putTasks(updated.map((t) => $state.snapshot(t) as Task));
   }
 
-  async clearDemoData(): Promise<void> {
-    const demoTasks = this.tasks.filter((t) => t.id.startsWith('demo_'));
-    const demoCourses = this.courses.filter((c) => c.id.startsWith('demo_'));
-    this.tasks = this.tasks.filter((t) => !t.id.startsWith('demo_'));
-    this.courses = this.courses.filter((c) => !c.id.startsWith('demo_'));
-    await db.deleteTasks(demoTasks.map((t) => t.id));
-    await Promise.all(demoCourses.map((c) => db.deleteCourse(c.id)));
-    emit('changed', { reason: 'demo' });
-    toasts.push({ message: 'Demo data cleared', kind: 'success' });
-  }
-
-  hasDemoData(): boolean {
-    return this.tasks.some((t) => t.id.startsWith('demo_')) || this.courses.some((c) => c.id.startsWith('demo_'));
-  }
-
   async resetAll(): Promise<void> {
     await db.clearAllData();
     db.clearSettings();
@@ -1098,7 +1083,7 @@ class Store {
     this.tombstones = [];
     this.ledger = [];
     this.stats = structuredClone(DEFAULT_STATS);
-    this.settings = { ...db.loadSettings(), demoSeeded: true, onboarded: true };
+    this.settings = { ...db.loadSettings(), onboarded: true };
     db.saveSettings(this.settings);
     undo.stack = [];
     emit('changed', { reason: 'reset' });

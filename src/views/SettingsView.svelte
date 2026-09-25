@@ -773,9 +773,6 @@
       <button class="btn" onclick={archiveNow} disabled={!s.archiveAfterDays}>Archive now</button>
       <span class="muted">{archivedCount} archived (kept for stats)</span>
     </div>
-    {#if store.hasDemoData()}
-      <div class="btns"><button class="btn" onclick={() => void store.clearDemoData()}>Clear demo data</button></div>
-    {/if}
     {#if pwa.installEvent && !pwa.installed}
       <div class="btns"><button class="btn" onclick={() => void promptInstall()}>📱 Install app</button></div>
     {/if}
@@ -941,7 +938,7 @@
     cursor: not-allowed;
   }
   .link {
-    color: var(--accent);
+    color: var(--accent-text);
     font-weight: 500;
   }
   .custom {
@@ -1002,10 +999,10 @@
     min-width: 200px;
   }
   .status.ok {
-    color: var(--success);
+    color: var(--success-text);
   }
   .status.error {
-    color: var(--danger);
+    color: var(--danger-text);
   }
   .chip.optional {
     text-transform: uppercase;
@@ -1051,7 +1048,7 @@
   }
   .free {
     font-size: 11px;
-    color: var(--success);
+    color: var(--success-text);
     font-weight: 600;
   }
   .ok {

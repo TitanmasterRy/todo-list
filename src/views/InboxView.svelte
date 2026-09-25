@@ -135,7 +135,7 @@
   {:else}
     <div class="task-list" role="list">
       {#each filtered as task (task.id)}
-        <TaskItem {task} listIds={ids} />
+        <div role="listitem"><TaskItem {task} listIds={ids} /></div>
       {/each}
     </div>
   {/if}

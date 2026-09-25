@@ -201,7 +201,7 @@
   }
   .err {
     font-size: 12px;
-    color: var(--danger);
+    color: var(--danger-text);
     margin: 0;
   }
   .connect {

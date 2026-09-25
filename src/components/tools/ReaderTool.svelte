@@ -644,7 +644,7 @@
     font-variant-numeric: tabular-nums;
   }
   .btn.star {
-    color: var(--warn);
+    color: var(--warn-text);
     border-color: color-mix(in srgb, var(--warn) 50%, transparent);
   }
   .btn.on {
@@ -743,7 +743,7 @@
     border-top: 1px solid var(--border);
   }
   .pagelink {
-    color: var(--accent);
+    color: var(--accent-text);
     font-weight: 600;
     font-size: 12px;
     white-space: nowrap;

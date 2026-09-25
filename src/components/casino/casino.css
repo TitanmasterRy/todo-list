@@ -62,7 +62,7 @@
   font-variant-numeric: tabular-nums;
 }
 .cz-paytable .hit {
-  color: var(--accent);
+  color: var(--accent-text);
   font-weight: 700;
 }
 .cz-edge {
@@ -114,7 +114,7 @@
 }
 .cz-seg button.on {
   background: var(--accent);
-  color: #fff;
+  color: var(--accent-contrast, #fff);
 }
 @keyframes cz-pop {
   0% {

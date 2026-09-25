@@ -168,7 +168,7 @@
   }
   .subs .chip.on {
     border-color: var(--accent);
-    color: var(--accent);
+    color: var(--accent-text);
   }
   .topics {
     display: flex;
@@ -257,7 +257,7 @@
   .ans {
     margin: 4px 0 0;
     font-weight: 600;
-    color: var(--success);
+    color: var(--success-text);
   }
   .books {
     list-style: none;

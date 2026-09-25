@@ -57,7 +57,7 @@
     font-variant-numeric: tabular-nums;
   }
   .closed .lbl {
-    color: var(--accent);
+    color: var(--accent-text);
     font-size: 16px;
   }
 </style>

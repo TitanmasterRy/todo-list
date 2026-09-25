@@ -267,7 +267,7 @@
     box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 22%, transparent);
   }
   .plus {
-    color: var(--accent);
+    color: var(--accent-text);
     font-size: 20px;
     font-weight: 600;
   }
@@ -299,14 +299,14 @@
     font-weight: 500;
   }
   .chip.due {
-    color: var(--accent);
+    color: var(--accent-text);
   }
   .chip.course {
     color: var(--text);
     border-color: var(--accent);
   }
   .chip.priority {
-    color: var(--warn);
+    color: var(--warn-text);
   }
   .chip.faint {
     opacity: 0.6;
@@ -320,7 +320,7 @@
   }
   .chip.auto {
     cursor: pointer;
-    color: var(--accent);
+    color: var(--accent-text);
   }
   .chip.auto.off {
     color: var(--text-faint);
