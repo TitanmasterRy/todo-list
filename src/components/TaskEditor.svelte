@@ -5,10 +5,11 @@
   import { REMINDER_PRESETS, ruleKey, ruleLabel } from '../lib/remind';
   import { wouldCycle, dependents } from '../lib/deps';
   import { describeRecurrence } from '../lib/recurrence';
-  import { isDateOnly, dueKey, combineDateTime, pad } from '../lib/dates';
+  import { isDateOnly, dueKey, combineDateTime, pad, DAY_SHORT, fromKey } from '../lib/dates';
   import { toasts } from '../lib/toast.svelte';
   import { uid } from '../lib/id';
   import PlanItOut from './PlanItOut.svelte';
+  import { nextMeeting, formatHM } from '../lib/timetable';
   import Attachments from './Attachments.svelte';
 
   interface Props {
@@ -64,6 +65,9 @@
     reminders = [...reminders, { at: new Date(reminderAt).toISOString() }];
     reminderAt = '';
   }
+  // "due next class": the next time this task's course meets (Tools → Timetable)
+  const nextClass = $derived(courseId && store.schedule ? nextMeeting(store.schedule, courseId, store.today, store.stats.breaks) : undefined);
+  const nextClassLabel = $derived(nextClass ? `${DAY_SHORT[fromKey(nextClass.key).getDay()]} ${formatHM(nextClass.start, store.settings.timeFormat)}` : '');
   let templateName = $state('');
   let showTemplate = $state(false);
   let titleInput: HTMLInputElement | undefined = $state();
@@ -199,6 +203,16 @@
         <div class="field">
           <label for="ed-date">Due date</label>
           <input id="ed-date" class="input" type="date" bind:value={dateKey} />
+          {#if nextClass}
+            <button
+              type="button"
+              class="linkbtn"
+              onclick={() => {
+                dateKey = nextClass.key;
+                time = nextClass.start;
+              }}>Next class: {nextClassLabel}</button
+            >
+          {/if}
         </div>
         <div class="field">
           <label for="ed-time">Time</label>
@@ -502,5 +516,12 @@
   }
   .actions {
     flex-wrap: wrap;
+  }
+  .linkbtn {
+    display: block;
+    margin-top: 4px;
+    padding: 0;
+    font-size: 12px;
+    color: var(--accent-text);
   }
 </style>

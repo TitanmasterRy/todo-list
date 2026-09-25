@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { mergeBundles, parseBundle } from './backup';
+import { bundlesDiffer, mergeBundles, parseBundle } from './backup';
 import type { ExportBundle, Task } from './types';
 import { DEFAULT_STATS } from './types';
 
@@ -130,5 +130,21 @@ describe('new task fields survive import and sync', () => {
       courses: [],
     });
     expect(b.tasks[0]).toMatchObject({ blockedBy: ['b'], reminders: [{ before: 30 }, { nightBefore: true }], timeSpentMin: 45, timerStartedAt: '2026-09-24T10:00:00.000Z' });
+  });
+});
+
+describe('timetable in bundles', () => {
+  it('round-trips, merges last-write-wins, and counts as a change', async () => {
+    const { emptySchedule } = await import('./timetable');
+    const base = parseBundle({ tasks: [], courses: [] });
+    const older = { ...emptySchedule(), updatedAt: '2026-10-01T00:00:00Z', rotation: ['A', 'B'] };
+    const newer = { ...emptySchedule(), updatedAt: '2026-10-02T00:00:00Z', rotation: ['1', '2', '3'] };
+    const withOld = parseBundle({ ...base, schedule: older });
+    expect(withOld.schedule?.rotation).toEqual(['A', 'B']);
+    expect(parseBundle({ ...base, schedule: { bells: 'nope' } }).schedule).toBeUndefined();
+    const { merged } = mergeBundles(withOld, { ...base, schedule: newer });
+    expect(merged.schedule?.rotation).toEqual(['1', '2', '3']);
+    expect(mergeBundles(base, withOld).merged.schedule?.rotation).toEqual(['A', 'B']);
+    expect(bundlesDiffer(base, withOld)).toBe(true);
   });
 });

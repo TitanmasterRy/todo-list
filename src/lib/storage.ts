@@ -1,5 +1,5 @@
 import { openDB, type DBSchema, type IDBPDatabase } from 'idb';
-import type { ArcadeGame, AttachmentBlob, Card, Course, DayNote, Deck, LedgerEntry, Stats, Task, Template, Tombstone, Settings } from './types';
+import type { ArcadeGame, AttachmentBlob, Card, SchoolSchedule, Course, DayNote, Deck, LedgerEntry, Stats, Task, Template, Tombstone, Settings } from './types';
 import { DEFAULT_SETTINGS, DEFAULT_STATS } from './types';
 
 interface TodoDB extends DBSchema {
@@ -214,6 +214,15 @@ export async function putMeta(key: string, value: unknown): Promise<void> {
   await db.put('meta', value, key);
 }
 
+// ---------- School timetable ----------
+export async function getSchedule(): Promise<SchoolSchedule | undefined> {
+  return getMeta<SchoolSchedule>('schedule');
+}
+
+export async function putSchedule(s: SchoolSchedule): Promise<void> {
+  await putMeta('schedule', s);
+}
+
 // ---------- Attachments (files on tasks; this device only) ----------
 export async function putAttachment(a: AttachmentBlob): Promise<void> {
   const db = await getDB();
@@ -274,6 +283,7 @@ export async function replaceAll(data: {
   cards?: Card[];
   tombstones?: Tombstone[];
   ledger?: LedgerEntry[];
+  schedule?: SchoolSchedule;
 }): Promise<void> {
   const db = await getDB();
   const tx = db.transaction(['tasks', 'courses', 'templates', 'meta', 'dayNotes', 'decks', 'cards', 'ledger'], 'readwrite');
@@ -289,6 +299,7 @@ export async function replaceAll(data: {
   await Promise.all([
     ...(data.ledger ?? []).map((e) => ledger.put(e)),
     meta.put(data.tombstones ?? [], 'tombstones'),
+    data.schedule ? meta.put(data.schedule, 'schedule') : meta.delete('schedule'),
     ...(data.decks ?? []).map((d) => decks.put(d)),
     ...(data.cards ?? []).map((c) => cards.put(c)),
     ...data.tasks.map((t) => tasks.put(t)),

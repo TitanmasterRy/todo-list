@@ -6,6 +6,7 @@
   import TaskItem from '../components/TaskItem.svelte';
   import GoalRing from '../components/GoalRing.svelte';
   import WhatNow from '../components/WhatNow.svelte';
+  const loadNowCard = () => import('../components/NowCard.svelte');
   import QuestsCard from '../components/QuestsCard.svelte';
   import Sortable from '../components/Sortable.svelte';
 
@@ -73,6 +74,9 @@
       🏖️ <strong>{store.currentBreak.name || 'On break'}</strong> until {MONTH_SHORT[fromKey(store.currentBreak.to).getMonth()]}
       {fromKey(store.currentBreak.to).getDate()}. Your streak is paused, so enjoy it.
     </div>
+  {/if}
+  {#if store.schedule?.classes.length}
+    {#await loadNowCard() then m}<m.default />{/await}
   {/if}
   <WhatNow />
   <QuestsCard />

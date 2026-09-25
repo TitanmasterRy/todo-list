@@ -401,6 +401,50 @@ export const DEFAULT_STATS: Stats = {
   xpByDay: {},
 };
 
+// ---------- School timetable ----------
+/** One slot in a bell schedule: "Period 3", "Lunch". Times are local "HH:MM". */
+export interface BellPeriod {
+  id: string;
+  name: string;
+  start: string;
+  end: string;
+}
+
+/** A named set of periods ("Regular", "Early release", "Assembly"). */
+export interface BellSchedule {
+  id: string;
+  name: string;
+  periods: BellPeriod[];
+}
+
+/** A class meeting: this course in this period, on some rotation days (A/B) or weekdays. Empty lists mean every school day. */
+export interface ClassMeeting {
+  id: string;
+  courseId: string;
+  periodId: string;
+  rotationDays?: string[]; // e.g. ['A']
+  weekdays?: number[]; // 0 = Sunday
+  room?: string;
+  teacher?: string;
+}
+
+export interface DayOverride {
+  noSchool?: boolean; // snow day, holiday
+  bellId?: string; // a different bell schedule that day
+  rotation?: string; // force the rotation day (and continue counting from it)
+}
+
+export interface SchoolSchedule {
+  updatedAt: string;
+  bells: BellSchedule[]; // the first one is the regular schedule
+  schoolDays: number[]; // weekdays with school, default Mon–Fri
+  rotation: string[]; // day labels in order, e.g. ['A', 'B']; empty = no rotation
+  rotationStart?: string; // a school day (YYYY-MM-DD) that is rotation[0]
+  weekdayBells?: Record<number, string>; // e.g. every Wednesday uses the late-start bell
+  overrides: Record<string, DayOverride>; // by YYYY-MM-DD
+  classes: ClassMeeting[];
+}
+
 export interface ExportBundle {
   version: 1;
   exportedAt: string;
@@ -413,6 +457,7 @@ export interface ExportBundle {
   cards?: Card[];
   tombstones?: Tombstone[];
   ledger?: LedgerEntry[];
+  schedule?: SchoolSchedule;
   settings?: Partial<Settings>;
 }
 

@@ -1,6 +1,7 @@
-import type { ExportBundle, Task, Course, Template, Stats, DayNote, Deck, Card, Tombstone, LedgerEntry } from './types';
+import type { ExportBundle, Task, Course, Template, Stats, DayNote, Deck, Card, Tombstone, LedgerEntry, SchoolSchedule } from './types';
 import { DEFAULT_STATS } from './types';
 import { mergeBreaks } from './gamification';
+import { mergeSchedules } from './timetable';
 
 /** Tombstones older than this are forgotten (every device has synced by then). */
 export const TOMBSTONE_DAYS = 60;
@@ -17,6 +18,7 @@ export interface BundleData {
   cards?: Card[];
   tombstones?: Tombstone[];
   ledger?: LedgerEntry[];
+  schedule?: SchoolSchedule;
 }
 
 export function buildBundle(data: BundleData): ExportBundle {
@@ -32,6 +34,7 @@ export function buildBundle(data: BundleData): ExportBundle {
     cards: data.cards ?? [],
     tombstones: data.tombstones ?? [],
     ledger: data.ledger ?? [],
+    ...(data.schedule ? { schedule: data.schedule } : {}),
   };
 }
 
@@ -83,7 +86,47 @@ export function parseBundle(raw: unknown): ExportBundle {
   const ledger: LedgerEntry[] = Array.isArray(b.ledger)
     ? (b.ledger as LedgerEntry[]).filter((e) => e && typeof e.id === 'string' && typeof e.currency === 'string' && Number.isFinite(e.amount))
     : [];
-  return { version: 1, exportedAt: b.exportedAt ?? new Date().toISOString(), tasks, courses, templates, stats, dayNotes, decks, cards, tombstones, ledger, settings: b.settings };
+  const schedule = normalizeSchedule(b.schedule);
+  return {
+    version: 1,
+    exportedAt: b.exportedAt ?? new Date().toISOString(),
+    tasks,
+    courses,
+    templates,
+    stats,
+    dayNotes,
+    decks,
+    cards,
+    tombstones,
+    ledger,
+    ...(schedule ? { schedule } : {}),
+    settings: b.settings,
+  };
+}
+
+/** Keep a timetable only if it has the expected shape (anything odd is dropped rather than half-loaded). */
+export function normalizeSchedule(raw: unknown): SchoolSchedule | undefined {
+  if (!raw || typeof raw !== 'object') return undefined;
+  const s = raw as Partial<SchoolSchedule>;
+  if (!Array.isArray(s.bells) || !Array.isArray(s.classes)) return undefined;
+  const isStr = (x: unknown): x is string => typeof x === 'string';
+  const bells = s.bells
+    .filter((b) => b && isStr(b.id) && Array.isArray(b.periods))
+    .map((b) => ({
+      id: b.id,
+      name: String(b.name ?? ''),
+      periods: b.periods.filter((p) => p && isStr(p.id) && isStr(p.start) && isStr(p.end)).map((p) => ({ id: p.id, name: String(p.name ?? ''), start: p.start, end: p.end })),
+    }));
+  return {
+    updatedAt: isStr(s.updatedAt) ? s.updatedAt : new Date(0).toISOString(),
+    bells,
+    schoolDays: Array.isArray(s.schoolDays) ? s.schoolDays.filter((d) => Number.isInteger(d) && d >= 0 && d <= 6) : [1, 2, 3, 4, 5],
+    rotation: Array.isArray(s.rotation) ? s.rotation.filter(isStr) : [],
+    rotationStart: isStr(s.rotationStart) ? s.rotationStart : undefined,
+    weekdayBells: s.weekdayBells && typeof s.weekdayBells === 'object' ? s.weekdayBells : undefined,
+    overrides: s.overrides && typeof s.overrides === 'object' ? s.overrides : {},
+    classes: s.classes.filter((m) => m && isStr(m.id) && isStr(m.courseId) && isStr(m.periodId)),
+  };
 }
 
 export function normalizeTask(t: Partial<Task>): Task {
@@ -190,6 +233,7 @@ export function mergeBundles(local: ExportBundle, remote: ExportBundle, now: Dat
   // ledger entries are immutable, so a union by id is exact
   const ledger = new Map<string, LedgerEntry>();
   for (const e of [...(remote.ledger ?? []), ...(local.ledger ?? [])]) ledger.set(e.id, e);
+  const schedule = mergeSchedules(local.schedule, remote.schedule);
   const liveDecks = [...decks.values()].filter((d) => alive('deck', d.id, d.updatedAt));
   const deckIds = new Set(liveDecks.map((d) => d.id));
   return {
@@ -205,6 +249,7 @@ export function mergeBundles(local: ExportBundle, remote: ExportBundle, now: Dat
       cards: [...cards.values()].filter((c) => deckIds.has(c.deckId) && alive('card', c.id, c.updatedAt)),
       tombstones,
       ledger: [...ledger.values()].sort((a, b) => (a.at < b.at ? -1 : a.at > b.at ? 1 : 0)),
+      ...(schedule ? { schedule } : {}),
     },
     conflicts,
   };
@@ -227,6 +272,17 @@ export function mergeTombstones(a: Tombstone[], b: Tombstone[], now: Date = new 
 /** True when two bundles differ in anything sync carries (ignores exportedAt). */
 export function bundlesDiffer(a: ExportBundle, b: ExportBundle): boolean {
   const key = (x: ExportBundle) =>
-    JSON.stringify({ t: x.tasks, c: x.courses, tp: x.templates, n: x.dayNotes, s: x.stats, d: x.decks ?? [], k: x.cards ?? [], ts: x.tombstones ?? [], l: x.ledger ?? [] });
+    JSON.stringify({
+      t: x.tasks,
+      c: x.courses,
+      tp: x.templates,
+      n: x.dayNotes,
+      s: x.stats,
+      d: x.decks ?? [],
+      k: x.cards ?? [],
+      ts: x.tombstones ?? [],
+      l: x.ledger ?? [],
+      sc: x.schedule ?? null,
+    });
   return key(a) !== key(b);
 }

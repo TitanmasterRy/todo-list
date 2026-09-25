@@ -1,5 +1,22 @@
 import * as db from './storage';
-import type { BreakRange, Card, Course, DayNote, Deck, ExportBundle, LedgerEntry, Priority, Settings, Stats, Subtask, Task, Template, Tombstone, TombstoneKind } from './types';
+import type {
+  BreakRange,
+  Card,
+  Course,
+  DayNote,
+  Deck,
+  ExportBundle,
+  LedgerEntry,
+  Priority,
+  SchoolSchedule,
+  Settings,
+  Stats,
+  Subtask,
+  Task,
+  Template,
+  Tombstone,
+  TombstoneKind,
+} from './types';
 import { buildBundle, mergeTombstones, TRASH_DAYS, type BundleData } from './backup';
 import { DEFAULT_STATS } from './types';
 import { uid } from './id';
@@ -51,6 +68,7 @@ export class Store {
   dayNotes = $state<DayNote[]>([]);
   tombstones = $state<Tombstone[]>([]);
   ledger = $state<LedgerEntry[]>([]);
+  schedule = $state<SchoolSchedule | undefined>(undefined); // class timetable (Tools → Timetable)
   stats = $state<Stats>(structuredClone(DEFAULT_STATS));
   settings = $state<Settings>(db.loadSettings());
   ready = $state(false);
@@ -102,7 +120,7 @@ export class Store {
   // ---------- init ----------
   async init(): Promise<void> {
     try {
-      const [tasks, courses, templates, stats, notes, decks, cards, tombstones, ledger] = await Promise.all([
+      const [tasks, courses, templates, stats, notes, decks, cards, tombstones, ledger, schedule] = await Promise.all([
         db.getAllTasks(),
         db.getAllCourses(),
         db.getAllTemplates(),
@@ -112,7 +130,9 @@ export class Store {
         db.getAllCards(),
         db.getTombstones(),
         db.getLedger(),
+        db.getSchedule().catch(() => undefined),
       ]);
+      this.schedule = schedule;
       this.tombstones = mergeTombstones(tombstones, [], this.now);
       if (this.tombstones.length !== tombstones.length) void db.putTombstones($state.snapshot(this.tombstones) as Tombstone[]);
       this.ledger = ledger.sort((a, b) => (a.at < b.at ? -1 : a.at > b.at ? 1 : 0));
@@ -299,7 +319,16 @@ export class Store {
       cards: $state.snapshot(this.cards) as Card[],
       tombstones: $state.snapshot(this.tombstones) as Tombstone[],
       ledger: $state.snapshot(this.ledger) as LedgerEntry[],
+      schedule: this.schedule ? ($state.snapshot(this.schedule) as SchoolSchedule) : undefined,
     };
+  }
+
+  // ---------- timetable ----------
+  saveSchedule(next: SchoolSchedule): void {
+    const s = { ...(structuredClone($state.snapshot(next)) as SchoolSchedule), updatedAt: isoNow() };
+    this.schedule = s;
+    db.putSchedule(s).catch((e) => console.error(e));
+    emit('changed', { reason: 'schedule' });
   }
 
   // ---------- tasks ----------
@@ -702,6 +731,7 @@ export class Store {
     this.dayNotes = [];
     this.tombstones = [];
     this.ledger = [];
+    this.schedule = undefined;
     this.stats = structuredClone(DEFAULT_STATS);
     this.settings = { ...db.loadSettings(), onboarded: true };
     db.saveSettings(this.settings);
@@ -720,6 +750,7 @@ export class Store {
     this.cards = data.cards ?? [];
     this.stats = { ...structuredClone(DEFAULT_STATS), ...data.stats, dailyGoal: this.settings.dailyGoal };
     this.dayNotes = data.dayNotes;
+    this.schedule = data.schedule;
     await db.replaceAll({
       tasks: data.tasks,
       courses: data.courses,
@@ -730,6 +761,7 @@ export class Store {
       cards: data.cards ?? [],
       tombstones: data.tombstones ?? [],
       ledger: data.ledger ?? [],
+      schedule: data.schedule,
     });
   }
 
