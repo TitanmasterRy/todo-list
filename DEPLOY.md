@@ -32,7 +32,30 @@ Every host except GitHub Pages serves the site from the domain root, which is th
 | Variable | What it does |
 | --- | --- |
 | `VITE_BASE` | Base path (see above). |
+| `VITE_SUPABASE_URL` | Supabase project URL. Turns on email + password accounts (see [Accounts](#accounts-email--password-sync)). |
+| `VITE_SUPABASE_ANON_KEY` | Supabase *anon public* key. Safe to ship: row-level security keeps each user's data private. |
 | `VITE_ARCADE_MANIFEST` | URL of a `games.json` to load arcade games from instead of the bundled `games/games.json`. Lets you change games without redeploying. The URL must allow CORS. |
+
+## Accounts (email + password sync)
+
+People can create an account with an email and password on your site and have their data sync to every device. The site has no server of its own, so accounts run on a free [Supabase](https://supabase.com) project that you create once:
+
+1. Create a project at [supabase.com](https://supabase.com) (free tier).
+2. **SQL Editor → New query**, paste [`docs/supabase.sql`](docs/supabase.sql), **Run**. This creates the `user_data` table and the row-level-security rules that let each user touch only their own row.
+3. **Authentication → URL Configuration:** set **Site URL** to your deployed address (e.g. `https://my-homework.vercel.app/`) and add it under **Redirect URLs**. Confirmation and password-reset emails link back there.
+4. **Project Settings → API:** copy the **Project URL** and the **anon public** key.
+5. Set them as build environment variables on your host and redeploy:
+   ```
+   VITE_SUPABASE_URL=https://xxxx.supabase.co
+   VITE_SUPABASE_ANON_KEY=eyJ...
+   ```
+   (Vercel/Netlify/Render/Cloudflare: project settings → Environment variables. GitHub Pages: repository **Settings → Secrets and variables → Actions → Variables**, then they're passed in `deploy.yml`. Docker: `--build-arg`.)
+
+Users then see **Settings → Account → Create account**. Email confirmation is on by default (Authentication → Providers → Email); turn off "Confirm email" if you'd rather people start syncing immediately. Password resets use Supabase's built-in emails; for more than a few a day, add your own SMTP under Authentication → Emails.
+
+What syncs: tasks, courses, templates, notecards, day notes, stats, coins/chips/vouchers and deletions. Settings and API keys stay on each device. Merging uses the same rules as Gist and Drive sync, and writes are version-checked so two devices syncing at once can't overwrite each other.
+
+Without the build variables, anyone can still paste a project URL and anon key under **Settings → Account → Server** (useful for testing or self-hosting).
 
 ## Step by step
 

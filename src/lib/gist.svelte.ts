@@ -2,7 +2,7 @@
 import { store } from './store.svelte';
 import { on } from './events';
 import { toasts } from './toast.svelte';
-import { mergeBundles, parseBundle } from './backup';
+import { bundlesDiffer, mergeBundles, parseBundle } from './backup';
 import type { ExportBundle } from './types';
 
 const GIST_FILE = 'homework-todo.json';
@@ -86,8 +86,7 @@ export async function syncNow(opts: { pull?: boolean } = { pull: true }): Promis
         const remote = await fetchRemote(token, id);
         if (remote) {
           const { merged, conflicts } = mergeBundles(local, remote);
-          const changed = JSON.stringify({ t: merged.tasks, c: merged.courses, tp: merged.templates, n: merged.dayNotes, s: merged.stats, d: merged.decks, k: merged.cards }) !==
-            JSON.stringify({ t: local.tasks, c: local.courses, tp: local.templates, n: local.dayNotes, s: local.stats, d: local.decks, k: local.cards });
+          const changed = bundlesDiffer(merged, local);
           if (changed) {
             await store.loadBundle(merged);
             local = localBundle();

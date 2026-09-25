@@ -13,6 +13,7 @@
   import { MAX_FREEZES, ACCENT_UNLOCKS, levelTitle, COLLECTIBLES } from '../lib/gamification';
   import { testKey, currentProvider, currentModel, listModels, setModel as setAiModel } from '../lib/ai';
   import { PROVIDERS, providerInfo, cleanKey } from '../lib/ai-providers';
+  import AccountPanel from '../components/AccountPanel.svelte';
   import type { AiProvider } from '../lib/types';
   import ThemePicker from '../components/ThemePicker.svelte';
   import { notificationsSupported, requestNotifications } from '../lib/reminders';
@@ -419,8 +420,10 @@
     </ul>
   </section>
 
+  <AccountPanel />
+
   <section class="card">
-    <h2>Sync <span class="chip optional">optional</span></h2>
+    <h2>GitHub Gist sync <span class="chip optional">optional</span></h2>
     <p class="help">
       Keep your data in a <strong>private GitHub Gist</strong> so it follows you across devices. Create a
       <a href="https://github.com/settings/tokens/new?scopes=gist&description=Homework%20To-Do" target="_blank" rel="noopener noreferrer">personal access token</a>

@@ -175,6 +175,9 @@ export interface Settings {
   weekStart: 0 | 1; // 0 Sunday, 1 Monday
   timeFormat: '12h' | '24h';
   gamification: boolean;
+  accountUrl: string; // Supabase project URL override (else VITE_SUPABASE_URL)
+  accountAnonKey: string; // Supabase anon key override (else VITE_SUPABASE_ANON_KEY)
+  lastAccountSyncAt?: string;
   gistToken: string;
   gistId: string;
   lastExportAt?: string;
@@ -255,6 +258,8 @@ export const DEFAULT_SETTINGS: Settings = {
   weekStart: 1,
   timeFormat: '12h',
   gamification: true,
+  accountUrl: '',
+  accountAnonKey: '',
   gistToken: '',
   gistId: '',
   archiveAfterDays: 90,

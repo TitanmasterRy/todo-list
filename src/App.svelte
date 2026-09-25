@@ -27,10 +27,12 @@
   import BulkBar from './components/BulkBar.svelte';
   import { ui } from './lib/ui.svelte';
   import { startSync } from './lib/gist.svelte';
+  import { startAccount } from './lib/account.svelte';
 
   onMount(() => {
     void store.init().then(() => {
       startSync();
+      void startAccount();
       startSchoologySync();
       startReminders();
       void startLocalBackup();

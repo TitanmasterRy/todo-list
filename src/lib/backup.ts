@@ -197,3 +197,10 @@ export function mergeTombstones(a: Tombstone[], b: Tombstone[], now: Date = new 
   }
   return [...out.values()].map((t) => (t.task && t.deletedAt < trashCutoff ? { kind: t.kind, id: t.id, deletedAt: t.deletedAt } : t));
 }
+
+/** True when two bundles differ in anything sync carries (ignores exportedAt). */
+export function bundlesDiffer(a: ExportBundle, b: ExportBundle): boolean {
+  const key = (x: ExportBundle) =>
+    JSON.stringify({ t: x.tasks, c: x.courses, tp: x.templates, n: x.dayNotes, s: x.stats, d: x.decks ?? [], k: x.cards ?? [], ts: x.tombstones ?? [], l: x.ledger ?? [] });
+  return key(a) !== key(b);
+}

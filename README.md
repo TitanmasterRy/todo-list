@@ -38,6 +38,10 @@ The app is a PWA: after the first visit it loads offline, and browsers offer **I
 
 “Ask the tutor” and “Generate from notes” call the Anthropic API directly from your browser with a key you paste under **Settings → AI helper**. The key is stored only in localStorage and sent only to `api.anthropic.com`; you pay Anthropic for usage. Everything else in the app works without it.
 
+## Accounts: sign up with email and password (optional)
+
+**Settings → Account → Create account.** Type an email and a password (8+ characters) and your tasks, courses, notecards, stats and coins sync to every device you sign in on. Forgot your password? Use the link under the sign-in form. Accounts run on a free Supabase project the site admin sets up once: see [DEPLOY.md → Accounts](DEPLOY.md#accounts-email--password-sync).
+
 ## Setting up Gist sync (optional)
 
 Gist sync keeps your data in a **private GitHub Gist** so it follows you across devices. It is off until you add a token.

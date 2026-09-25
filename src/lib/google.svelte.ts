@@ -605,7 +605,7 @@ async function updateDriveFile(id: string, bundle: ExportBundle): Promise<string
 }
 
 function bundleKey(b: ExportBundle): string {
-  return JSON.stringify({ t: b.tasks, c: b.courses, tp: b.templates, n: b.dayNotes, s: b.stats, d: b.decks, k: b.cards });
+  return JSON.stringify({ t: b.tasks, c: b.courses, tp: b.templates, n: b.dayNotes, s: b.stats, d: b.decks ?? [], k: b.cards ?? [], ts: b.tombstones ?? [], l: b.ledger ?? [] });
 }
 
 /**
