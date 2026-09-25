@@ -194,6 +194,7 @@ export interface Settings {
   aiKeys: Partial<Record<AiProvider, string>>; // per-provider keys (browser only)
   aiModels: Partial<Record<AiProvider, string>>; // chosen model per provider
   aiBaseUrl: string; // custom OpenAI-compatible endpoint (ollama / lm studio / other)
+  aiModelCache: Partial<Record<AiProvider, string[]>>; // live model ids from the provider ("id|free" marks free OpenRouter models)
   weeklyXpGoal: number;
   themePack: ThemePack;
   timerPresets: { label: string; work: number; brk: number }[];
@@ -269,6 +270,7 @@ export const DEFAULT_SETTINGS: Settings = {
   aiKeys: {},
   aiModels: {},
   aiBaseUrl: '',
+  aiModelCache: {},
   weeklyXpGoal: 500,
   themePack: 'classic',
   timerPresets: [

@@ -2,15 +2,15 @@
 import type Anthropic from '@anthropic-ai/sdk';
 import { store } from './store.svelte';
 import type { AiProvider, TaskType } from './types';
-import { chatOpenAICompatible, providerInfo, type ChatImage, type ChatRequest } from './ai-providers';
+import { chatOpenAICompatible, cleanKey, listModelsOpenAICompatible, ModelNotFoundError, providerInfo, type ChatImage, type ChatRequest } from './ai-providers';
 
 export function currentProvider(): AiProvider {
   return store.settings.aiProvider || 'anthropic';
 }
 
 export function currentKey(provider: AiProvider = currentProvider()): string {
-  if (provider === 'anthropic') return store.settings.aiKeys.anthropic || store.settings.aiApiKey || '';
-  return store.settings.aiKeys[provider] || '';
+  if (provider === 'anthropic') return cleanKey(store.settings.aiKeys.anthropic || store.settings.aiApiKey || '');
+  return cleanKey(store.settings.aiKeys[provider] || '');
 }
 
 export function currentModel(provider: AiProvider = currentProvider()): string {
@@ -47,45 +47,106 @@ async function anthropicClient(): Promise<Anthropic> {
   return new AnthropicClient({ apiKey, dangerouslyAllowBrowser: true });
 }
 
+/** Models that get server-side refusal fallbacks (the API re-runs a declined request on another model). */
+function wantsFallbacks(model: string): boolean {
+  return model === 'claude-opus-5' || model === 'claude-fable-5-1';
+}
+
 async function askAnthropic(req: ChatRequest): Promise<string> {
   const { default: SDK } = await loadSdk();
+  const model = currentModel('anthropic');
+  const content: Anthropic.Beta.BetaContentBlockParam[] = [];
+  for (const img of req.images ?? []) {
+    const m = /^data:(image\/(?:jpeg|png|gif|webp));base64,(.*)$/.exec(img.dataUrl);
+    if (m) content.push({ type: 'image', source: { type: 'base64', media_type: m[1] as 'image/jpeg' | 'image/png' | 'image/gif' | 'image/webp', data: m[2] } });
+  }
+  content.push({ type: 'text', text: req.user });
+  const base: Anthropic.Beta.MessageCreateParamsNonStreaming = {
+    model,
+    // Current models think before answering, and thinking counts against max_tokens. A small cap
+    // (the old 16 for the key test, 2048 for answers) left nothing for the answer itself.
+    max_tokens: Math.max(req.maxTokens ?? 0, 16000),
+    system: req.system,
+    messages: [{ role: 'user', content }],
+    // effort isn't accepted by Haiku 4.5
+    ...(req.effort && !/haiku/.test(model) ? { output_config: { effort: req.effort } } : {}),
+  };
+  const client = await anthropicClient();
+  const send = (withFallbacks: boolean) =>
+    client.beta.messages.create(withFallbacks ? { ...base, betas: ['server-side-fallback-2026-07-01'], fallbacks: 'default' } : base);
   try {
-    const content: Anthropic.ContentBlockParam[] = [];
-    for (const img of req.images ?? []) {
-      const m = /^data:(image\/(?:jpeg|png|gif|webp));base64,(.*)$/.exec(img.dataUrl);
-      if (m) content.push({ type: 'image', source: { type: 'base64', media_type: m[1] as 'image/jpeg' | 'image/png' | 'image/gif' | 'image/webp', data: m[2] } });
+    let res: Anthropic.Beta.BetaMessage;
+    try {
+      res = await send(wantsFallbacks(model));
+    } catch (e) {
+      // if this key can't use the fallback beta, retry once without it
+      if (wantsFallbacks(model) && e instanceof SDK.BadRequestError && /fallback|beta/i.test(e.message)) res = await send(false);
+      else throw e;
     }
-    content.push({ type: 'text', text: req.user });
-    const res = await (await anthropicClient()).messages.create({
-      model: currentModel('anthropic'),
-      max_tokens: req.maxTokens ?? 2048,
-      system: req.system,
-      messages: [{ role: 'user', content }],
-    });
-    if (res.stop_reason === 'refusal') throw new Error('The model declined this request.');
-    return res.content
-      .filter((b): b is Anthropic.TextBlock => b.type === 'text')
+    const text = res.content
+      .filter((b): b is Anthropic.Beta.BetaTextBlock => b.type === 'text')
       .map((b) => b.text)
       .join('\n')
       .trim();
+    if (res.stop_reason === 'refusal') throw new Error('The model declined this request.');
+    if (!text && res.stop_reason === 'max_tokens') throw new Error('The response was cut off before any answer. Try a shorter request.');
+    return text;
   } catch (e) {
-    if (e instanceof SDK.AuthenticationError) throw new Error('API key rejected. Check it in Settings → AI helper.');
+    if (e instanceof SDK.AuthenticationError || e instanceof SDK.PermissionDeniedError) throw new Error('API key rejected. Check it in Settings → AI helper.');
+    if (e instanceof SDK.NotFoundError) throw new ModelNotFoundError(`Model “${model}” isn't available to this key.`);
     if (e instanceof SDK.RateLimitError) throw new Error('Rate limited. Try again in a moment.');
+    if (e instanceof SDK.APIConnectionError) throw new Error('Could not reach api.anthropic.com. Check your connection.');
     if (e instanceof SDK.APIError) throw new Error(`API error ${e.status}: ${e.message}`);
     throw e;
   }
 }
 
 /** Route a request to the configured provider. */
-export async function ask(system: string, user: string, maxTokens = 2048, images?: ChatImage[]): Promise<string> {
+export async function ask(system: string, user: string, maxTokens = 2048, images?: ChatImage[], effort?: ChatRequest['effort']): Promise<string> {
   const provider = currentProvider();
-  const req: ChatRequest = { system, user, maxTokens, images };
+  const req: ChatRequest = { system, user, maxTokens, images, effort };
   if (provider === 'anthropic') return askAnthropic(req);
+  const info = providerInfo(provider);
+  if (info.needsKey && !currentKey(provider)) throw new Error(`Add a ${info.name} API key in Settings → AI helper first.`);
+  return chatOpenAICompatible({ baseUrl: baseUrlFor(provider), apiKey: currentKey(provider) || undefined, model: currentModel(provider), provider }, req);
+}
+
+function baseUrlFor(provider: AiProvider): string {
   const info = providerInfo(provider);
   const baseUrl = provider === 'custom' ? store.settings.aiBaseUrl : provider === 'ollama' && store.settings.aiBaseUrl ? store.settings.aiBaseUrl : info.baseUrl;
   if (!baseUrl) throw new Error('Set the endpoint URL for your custom provider in Settings → AI helper.');
-  if (info.needsKey && !currentKey(provider)) throw new Error(`Add a ${info.name} API key in Settings → AI helper first.`);
-  return chatOpenAICompatible({ baseUrl, apiKey: currentKey(provider) || undefined, model: currentModel(provider), provider }, req);
+  return baseUrl;
+}
+
+/** Live model list for the current provider (also proves the key works). Cached in settings. */
+export async function listModels(provider: AiProvider = currentProvider()): Promise<{ id: string; free?: boolean }[]> {
+  let models: { id: string; free?: boolean }[];
+  if (provider === 'anthropic') {
+    const { default: SDK } = await loadSdk();
+    try {
+      const page = await (await anthropicClient()).models.list({ limit: 100 });
+      models = page.data.map((m) => ({ id: m.id }));
+    } catch (e) {
+      if (e instanceof SDK.AuthenticationError || e instanceof SDK.PermissionDeniedError) throw new Error('API key rejected. Check it in Settings → AI helper.');
+      if (e instanceof SDK.APIConnectionError) throw new Error('Could not reach api.anthropic.com. Check your connection.');
+      throw e;
+    }
+  } else {
+    models = await listModelsOpenAICompatible({ baseUrl: baseUrlFor(provider), apiKey: currentKey(provider) || undefined, provider });
+  }
+  if (models.length) store.updateSettings({ aiModelCache: { ...store.settings.aiModelCache, [provider]: models.map((m) => (m.free ? `${m.id}|free` : m.id)) } });
+  return models;
+}
+
+/** Pick a sensible replacement when the chosen model id no longer exists. */
+function pickReplacement(provider: AiProvider, models: { id: string; free?: boolean }[]): string | undefined {
+  const ids = models.map((m) => m.id);
+  const known = providerInfo(provider).models.map((m) => m.id).find((id) => ids.includes(id));
+  if (known) return known;
+  if (provider === 'openrouter') return models.find((m) => m.free)?.id ?? ids[0];
+  if (provider === 'gemini') return ids.find((id) => /gemini-.*flash/.test(id) && !/image|tts|audio|live|embedding/.test(id)) ?? ids[0];
+  if (provider === 'anthropic') return ids.find((id) => id.startsWith('claude-sonnet')) ?? ids[0];
+  return ids.find((id) => !/embed|whisper|tts|guard|audio|image/i.test(id)) ?? ids[0];
 }
 
 function parseJSON<T>(text: string): T {
@@ -161,9 +222,44 @@ export async function summarizeNotes(text: string): Promise<string> {
   return ask(system, text.slice(0, 20000), 3000);
 }
 
-/** Quick connectivity check. */
+/**
+ * Connectivity check: list models (proves the key), then send a tiny prompt (proves the model).
+ * If the chosen model has been retired or isn't available to this key, switch to one that is.
+ * Returns a note about what changed, if anything.
+ */
 export async function testKey(): Promise<string> {
-  return ask('Reply with the single word OK.', 'ping', 16);
+  const provider = currentProvider();
+  let models: { id: string; free?: boolean }[] = [];
+  try {
+    models = await listModels(provider);
+  } catch (e) {
+    // some OpenAI-compatible servers don't implement /models; a rejected key is still fatal
+    if (e instanceof Error && /rejected/i.test(e.message)) throw e;
+  }
+  let note = '';
+  const chosen = currentModel(provider);
+  if (models.length && provider !== 'custom' && !models.some((m) => m.id === chosen)) {
+    const next = pickReplacement(provider, models);
+    if (next) {
+      setModel(provider, next);
+      note = `“${chosen}” isn't available, switched to ${next}.`;
+    }
+  }
+  try {
+    await ask('Reply with the single word OK.', 'ping', 64, undefined, 'low');
+  } catch (e) {
+    if (!(e instanceof ModelNotFoundError) || !models.length) throw e;
+    const next = pickReplacement(provider, models.filter((m) => m.id !== currentModel(provider)));
+    if (!next) throw e;
+    setModel(provider, next);
+    note = `${e.message} Switched to ${next}.`;
+    await ask('Reply with the single word OK.', 'ping', 64, undefined, 'low');
+  }
+  return note;
+}
+
+export function setModel(provider: AiProvider, model: string): void {
+  store.updateSettings({ aiModels: { ...store.settings.aiModels, [provider]: model }, aiModel: provider === 'anthropic' ? model : store.settings.aiModel });
 }
 
 export interface QuizGenOptions {

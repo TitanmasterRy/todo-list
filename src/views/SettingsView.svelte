@@ -11,8 +11,8 @@
   import { pwa, promptInstall } from '../lib/pwa.svelte';
   import { pomodoro } from '../lib/pomodoro.svelte';
   import { MAX_FREEZES, ACCENT_UNLOCKS, levelTitle, COLLECTIBLES } from '../lib/gamification';
-  import { testKey, currentProvider, currentModel } from '../lib/ai';
-  import { PROVIDERS, providerInfo } from '../lib/ai-providers';
+  import { testKey, currentProvider, currentModel, listModels, setModel as setAiModel } from '../lib/ai';
+  import { PROVIDERS, providerInfo, cleanKey } from '../lib/ai-providers';
   import type { AiProvider } from '../lib/types';
   import ThemePicker from '../components/ThemePicker.svelte';
   import { notificationsSupported, requestNotifications } from '../lib/reminders';
@@ -45,8 +45,9 @@
     providerKey = '';
   }
   function saveKey() {
-    if (!providerKey.trim()) return;
-    store.updateSettings({ aiKeys: { ...store.settings.aiKeys, [provider]: providerKey.trim() } });
+    const key = cleanKey(providerKey);
+    if (!key) return;
+    store.updateSettings({ aiKeys: { ...store.settings.aiKeys, [provider]: key }, ...(provider === 'anthropic' ? { aiApiKey: '' } : {}) });
     providerKey = '';
     void connectAI();
   }
@@ -56,7 +57,36 @@
     store.updateSettings({ aiKeys: k, aiApiKey: provider === 'anthropic' ? '' : store.settings.aiApiKey });
   }
   function setModel(m: string) {
-    store.updateSettings({ aiModels: { ...store.settings.aiModels, [provider]: m }, aiModel: provider === 'anthropic' ? m : store.settings.aiModel });
+    setAiModel(provider, m);
+  }
+  /** Built-in models first, then any others the provider reported (live list, cached). */
+  const modelOptions = $derived.by(() => {
+    const builtIn = pInfo.models.map((m) => ({ id: m.id, label: `${m.label}${m.vision ? ' · vision' : ''}` }));
+    const live = (store.settings.aiModelCache[provider] ?? []).map((x) => {
+      const [id, free] = x.split('|');
+      return { id, label: `${id}${free ? ' (free)' : ''}` };
+    });
+    const known = new Set(builtIn.map((m) => m.id));
+    const liveIds = new Set(live.map((m) => m.id));
+    // hide built-ins the provider says don't exist (retired models), once we have a live list
+    const kept = live.length ? builtIn.filter((m) => liveIds.has(m.id)) : builtIn;
+    const extra = live.filter((m) => !known.has(m.id)).sort((a, b) => a.id.localeCompare(b.id));
+    const all = [...kept, ...extra];
+    const cur = currentModel();
+    if (!all.some((m) => m.id === cur)) all.unshift({ id: cur, label: `${cur} (current)` });
+    return all;
+  });
+  let modelsBusy = $state(false);
+  async function loadModels() {
+    modelsBusy = true;
+    try {
+      const list = await listModels();
+      toasts.push({ message: `${list.length} models available`, kind: 'success' });
+    } catch (err) {
+      toasts.push({ message: 'Could not load models', detail: err instanceof Error ? err.message : String(err), kind: 'warn', timeout: 9000 });
+    } finally {
+      modelsBusy = false;
+    }
   }
   import { schoology, syncNow as syncSchoology } from '../lib/schoologySync.svelte';
   let aiBusy = $state(false);
@@ -65,8 +95,8 @@
   async function connectAI() {
     aiBusy = true;
     try {
-      await testKey();
-      toasts.push({ message: `${pInfo.name} connected`, detail: `Model: ${currentModel()}`, kind: 'success', emoji: '✨' });
+      const note = await testKey();
+      toasts.push({ message: `${pInfo.name} connected`, detail: note || `Model: ${currentModel()}`, kind: 'success', emoji: '✨', timeout: note ? 8000 : 4000 });
     } catch (err) {
       toasts.push({ message: 'Check failed', detail: err instanceof Error ? err.message : String(err), kind: 'warn', timeout: 9000 });
     } finally {
@@ -289,9 +319,12 @@
       {#if provider === 'custom'}
         <input id="aimodel" class="input" value={currentModel()} placeholder="model name" onchange={(e) => setModel((e.target as HTMLInputElement).value.trim())} />
       {:else}
-        <select id="aimodel" class="select" value={currentModel()} onchange={(e) => setModel((e.target as HTMLSelectElement).value)}>
-          {#each pInfo.models as m (m.id)}<option value={m.id}>{m.label}{m.vision ? ' · vision' : ''}</option>{/each}
-        </select>
+        <span class="model-pick">
+          <select id="aimodel" class="select" value={currentModel()} onchange={(e) => setModel((e.target as HTMLSelectElement).value)}>
+            {#each modelOptions as m (m.id)}<option value={m.id}>{m.label}</option>{/each}
+          </select>
+          <button class="btn ghost sm" onclick={() => void loadModels()} disabled={modelsBusy || (pInfo.needsKey && !store.settings.aiKeys[provider] && !(provider === 'anthropic' && s.aiApiKey))} title="Fetch the current model list from the provider">{modelsBusy ? '…' : '↻ Load models'}</button>
+        </span>
       {/if}
     </div>
     {#if pInfo.needsKey}
@@ -516,6 +549,15 @@
 <style>
   section {
     margin-bottom: 12px;
+  }
+  .model-pick {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+    min-width: 0;
+  }
+  .model-pick .select {
+    max-width: 260px;
   }
   .trash {
     list-style: none;
