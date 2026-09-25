@@ -1,4 +1,6 @@
-// Minimal, safe markdown: escapes HTML first, then supports headings, bold, italic, code, links, lists, paragraphs.
+// Minimal, safe markdown: escapes HTML first, then supports headings, bold, italic, code, links, lists, paragraphs,
+// and LaTeX math ($…$, $$…$$) rendered by KaTeX.
+import { hasMath, renderTex, splitMath } from './math.svelte';
 function esc(s: string): string {
   return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
@@ -14,6 +16,18 @@ function inline(s: string): string {
 }
 
 export function renderMarkdown(src: string): string {
+  // math first: swap each formula for a placeholder so escaping and _italics_ can't touch the TeX
+  const formulas: { tex: string; display: boolean }[] = [];
+  if (hasMath(src)) {
+    src = splitMath(src)
+      .map((p) => ('text' in p ? p.text : `\ue000${formulas.push(p) - 1}\ue000`))
+      .join('');
+  }
+  const html = renderBlocks(src);
+  return formulas.length ? html.replace(/\ue000(\d+)\ue000/g, (_, i) => renderTex(formulas[+i].tex, formulas[+i].display)) : html;
+}
+
+function renderBlocks(src: string): string {
   const lines = esc(src).split(/\r?\n/);
   const out: string[] = [];
   let list: 'ul' | 'ol' | null = null;

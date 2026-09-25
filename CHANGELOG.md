@@ -7,6 +7,7 @@
 - **Grades:** a trend chart per course, what-if scores for work that isn't graded yet, and letter scales per course (+/−, 10-point, 7-point, pass/fail or custom).
 - **Plan my week** (Tools): spreads the next week's work over days by estimate and the time you have each day (earliest deadline first, after whatever it waits on), then pins each task to its day.
 - **Syllabus box** (Tools → Syllabus box): paste a syllabus and it finds the dates, titles and types (and breaks), ready to add as tasks. AI is optional.
+- **Math:** LaTeX in task notes, notecards and boss battle (`$x^2$`, `$$…$$`), rendered by KaTeX, which loads only when there's math ("$5" stays money).
 - **Study games:** a crossword built from a deck, and Quiz race against the ghost of your best run. **Star map** (Play) lights a star for every day you finished something.
 
 ## Roadmap pass 4: plan it out, attachments, course boards, background reminders, more games

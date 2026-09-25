@@ -97,7 +97,7 @@ Everything we could improve or add to Homework To-Do, grouped by area. Checked i
 - [x] Essay tools: word/page counter, outline template, readability.
 - [x] Unit converter.
 - [ ] Periodic table.
-- [ ] LaTeX math in notes and notecards (KaTeX).
+- [x] LaTeX math in notes and notecards (KaTeX). ($…$ and $$…$$; KaTeX loads only when there's math.)
 
 ## 🤖 AI (optional, bring your own key)
 

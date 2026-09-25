@@ -7,6 +7,7 @@
   import { playSound } from '../../lib/sounds';
   import { answerBattle, answerText, battleScore, BOSS_PHASES, bossPhase, hitFor, newBattle, pickChoices, PLAYER_HP, type Battle, type Choice } from '../../lib/studygames';
   import type { Card, Deck } from '../../lib/types';
+  import { renderTextWithMath } from '../../lib/math.svelte';
 
   interface Props {
     deck: Deck;
@@ -179,7 +180,7 @@
     {#if current}
       <div class="q">
         {#if current.frontImage}<img src={current.frontImage} alt="" />{/if}
-        <div class="qt" data-question>{current.front}</div>
+        <div class="qt" data-question>{@html renderTextWithMath(current.front)}</div>
       </div>
       <div class="choices">
         {#each choices as ch, i (ch.id)}

@@ -13,6 +13,7 @@
   import { uid } from '../../lib/id';
   import { aiAvailable, makeNotecards } from '../../lib/ai';
   import { playSound } from '../../lib/sounds';
+  import { renderTextWithMath } from '../../lib/math.svelte';
 
   let deckId = $state<string | null>(ui.openDeck);
   let newDeckName = $state('');
@@ -274,12 +275,14 @@
     {:else if current}
       <button class="flashcard" class:flipped onclick={() => (flipped = !flipped)} aria-label={flipped ? 'Showing back' : 'Show back'}>
         <span class="face front"
-          ><span class="lbl">Front</span>{#if current.frontImage}<img class="cimg" src={current.frontImage} alt="" />{/if}<span class="txt">{current.front}</span><span class="hint"
-            >tap or press space to flip</span
-          ></span
+          ><span class="lbl">Front</span>{#if current.frontImage}<img class="cimg" src={current.frontImage} alt="" />{/if}<span class="txt"
+            >{@html renderTextWithMath(current.front)}</span
+          ><span class="hint">tap or press space to flip</span></span
         >
         <span class="face back"
-          ><span class="lbl">Back</span>{#if current.backImage}<img class="cimg" src={current.backImage} alt="" />{/if}<span class="txt">{current.back}</span></span
+          ><span class="lbl">Back</span>{#if current.backImage}<img class="cimg" src={current.backImage} alt="" />{/if}<span class="txt"
+            >{@html renderTextWithMath(current.back)}</span
+          ></span
         >
       </button>
       <div class="answers" class:show={flipped}>
@@ -312,7 +315,7 @@
       <span class="muted">Mastery {(mastery(cards) * 100).toFixed(0)}%</span>
     </div>
     <form class="addcard" onsubmit={addOne}>
-      <input class="input" bind:value={front} placeholder="Front (term or question)" aria-label="Front" />
+      <input class="input" bind:value={front} placeholder="Front (term or question; $x^2$ for math)" aria-label="Front" />
       <label class="imgpick" title="Add a picture to the front"
         >{frontImage ? '🖼️✓' : '🖼️'}<input type="file" accept="image/*" onchange={(e) => pickImage(e, 'front')} aria-label="Front image" /></label
       >
@@ -360,8 +363,8 @@
       <ul class="cards">
         {#each cards as c (c.id)}
           <li class="b{c.box}">
-            <span class="f">{c.front}</span>
-            <span class="bk">{c.back}</span>
+            <span class="f">{@html renderTextWithMath(c.front)}</span>
+            <span class="bk">{@html renderTextWithMath(c.back)}</span>
             <span class="boxn" title={c.reps ? `Next review ${c.due}` : 'New'}>{c.reps ? formatInterval(Math.max(0, diffDays(store.today, c.due))) : 'new'}</span>
             <button class="btn ghost sm icon" aria-label="Delete card" onclick={() => store.deleteCard(c.id)}>×</button>
           </li>
