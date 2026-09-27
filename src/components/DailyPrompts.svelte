@@ -19,22 +19,15 @@
   onMount(() => {
     const hour = new Date().getHours();
     const s = store.settings;
-    // What's new after an update (once per changelog heading; skipped on a fresh install)
+    // Patch notes after an update: open them (with everything this device missed) once per new changelog heading.
+    // A fresh install just remembers the current one. The day's other prompts wait until the next visit.
     const wn = whatsNewAction(__CHANGELOG_HEAD__, s.lastSeenChangelog);
     if (wn !== 'none') store.updateSettings({ lastSeenChangelog: __CHANGELOG_HEAD__ });
-    if (wn === 'show')
-      setTimeout(
-        () =>
-          toasts.push({
-            message: tr('prompt.updated'),
-            detail: __CHANGELOG_HEAD__,
-            kind: 'info',
-            emoji: '✨',
-            timeout: 10000,
-            action: { label: tr('prompt.whatsNew'), onClick: () => (ui.whatsNew = true) },
-          }),
-        2000,
-      );
+    if (wn === 'show' && s.onboarded) {
+      ui.whatsNewSince = s.lastSeenChangelog ?? '';
+      setTimeout(() => (ui.whatsNew = true), 600);
+      return;
+    }
     // Frog prompt: first open of the day, morning-ish, and there is something to pick.
     if (s.lastFrogPromptDate !== store.today && hour < 14 && store.todayTasks.length >= 2 && !store.frogTask) {
       store.updateSettings({ lastFrogPromptDate: store.today });

@@ -692,6 +692,12 @@ const en = {
   // daily prompts
   'prompt.updated': 'Updated: see what’s new',
   'prompt.whatsNew': 'What’s new',
+  'patch.title': 'Patch notes',
+  'patch.new': 'New',
+  'patch.latest': 'Latest',
+  'patch.gotIt': 'Got it',
+  'patch.newCount': { one: '{count} update since your last visit', other: '{count} updates since your last visit' },
+  'patch.older': { one: 'Show {count} older update', other: 'Show {count} older updates' },
   'prompt.sunday': 'It’s Sunday. Run your weekly review?',
   'prompt.review': 'Review',
   'prompt.noBackup': 'No backup in 14 days',

@@ -693,6 +693,12 @@ const es: Dict = {
   // daily prompts
   'prompt.updated': 'Actualizada: mira las novedades',
   'prompt.whatsNew': 'Novedades',
+  'patch.title': 'Notas de la versión',
+  'patch.new': 'Nuevo',
+  'patch.latest': 'Última',
+  'patch.gotIt': 'Entendido',
+  'patch.newCount': { one: '{count} actualización desde tu última visita', other: '{count} actualizaciones desde tu última visita' },
+  'patch.older': { one: 'Mostrar {count} actualización anterior', other: 'Mostrar {count} actualizaciones anteriores' },
   'prompt.sunday': 'Es domingo. ¿Hacemos el repaso semanal?',
   'prompt.review': 'Repasar',
   'prompt.noBackup': 'Llevas 14 días sin copia de seguridad',

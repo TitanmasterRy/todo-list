@@ -23,7 +23,7 @@
   <div class="btns">
     <button class="btn" onclick={() => (ui.shortcuts = true)}>Keyboard shortcuts <span class="kbd">?</span></button>
     <button class="btn" onclick={() => store.updateSettings({ onboarded: false })}>Show welcome tour</button>
-    <button class="btn" onclick={() => (ui.whatsNew = true)}>✨ What’s new</button>
+    <button class="btn" onclick={() => (ui.whatsNew = true)}>📜 {t('patch.title')}</button>
   </div>
   <button class="ver" onclick={tap}>{__CHANGELOG_HEAD__}</button>
 </section>
