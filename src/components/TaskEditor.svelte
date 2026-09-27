@@ -12,6 +12,7 @@
   import PlanItOut from './PlanItOut.svelte';
   import { nextMeeting, formatHM } from '../lib/timetable';
   import Attachments from './Attachments.svelte';
+  import TaskHistory from './TaskHistory.svelte';
 
   interface Props {
     taskId: string;
@@ -407,6 +408,7 @@
         <input id="ed-spent" class="input n2" type="number" min="0" step="5" bind:value={spent} placeholder="0" />
         <span class="muted">{t('editor.spentHint')}</span>
       </div>
+      {#if original?.history?.length}<TaskHistory history={original.history} />{/if}
       {#if showTemplate}
         <div class="field tpl">
           <label for="ed-tpl">{t('editor.templateName')}</label>

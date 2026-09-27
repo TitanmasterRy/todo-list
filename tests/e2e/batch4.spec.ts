@@ -190,3 +190,18 @@ test('swipe a task right to complete it, left to snooze it (touch)', async ({ pa
   await expect(page.locator('.task.done', { hasText: 'Barely moved' })).toHaveCount(0);
   expect(errors).toEqual([]);
 });
+
+test('the task editor shows what changed and when', async ({ page }) => {
+  const errors = await openApp(page);
+  await addTask(page, 'History essay today');
+  await edit(page, 'History essay');
+  const form = page.getByRole('form', { name: 'Edit task' });
+  await form.getByLabel('Title', { exact: true }).fill('History essay final');
+  await form.getByLabel('Estimate (min)').fill('45');
+  await form.getByRole('button', { name: /^Save/ }).last().click();
+  await edit(page, 'History essay final');
+  await form.getByText(/History \(2 changes\)/).click();
+  await expect(form.locator('.hist')).toContainText('Title: “History essay final”');
+  await expect(form.locator('.hist')).toContainText(/Estimate \(min\): .* → 45/);
+  expect(errors).toEqual([]);
+});

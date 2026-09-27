@@ -20,6 +20,7 @@ import type {
 } from './types';
 import { buildBundle, mergeTombstones, TRASH_DAYS, type BundleData } from './backup';
 import { stampChanges } from './fieldmerge';
+import { recordHistory } from './history';
 import { DEFAULT_STATS } from './types';
 import { uid } from './id';
 import { addDaysKey, dueKey, isDueToday, isOverdue, isoNow, todayKey, daysAgoKey, startOfWeekKey as startOfWeekKeyFn } from './dates';
@@ -240,13 +241,17 @@ export class Store {
   /** Note which fields changed since the last save (Task.fieldAt), and keep the in-memory task in step. */
   private stamp(task: Task): Task {
     const snap = $state.snapshot(task) as Task;
-    const next = stampChanges(this.saved.get(snap.id), snap, snap.updatedAt);
+    const prev = this.saved.get(snap.id);
+    let next = stampChanges(prev, snap, snap.updatedAt);
+    const history = prev ? recordHistory(prev, snap, snap.updatedAt) : snap.history;
+    if (history !== snap.history) next = { ...next, history };
     this.saved.set(next.id, next);
     if (next !== snap) {
       const live = this.tasks.find((t) => t.id === next.id);
       if (live) {
         live.fieldAt = next.fieldAt;
         live.fieldBase = next.fieldBase;
+        live.history = next.history;
       }
     }
     return next;

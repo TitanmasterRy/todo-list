@@ -2,9 +2,10 @@
 // that edit different fields of the same task both keep their edit. Fields changed before tracking began
 // count as of `fieldBase`; tasks from older versions (no fieldBase) fall back to whole-task last-write-wins.
 import type { Task } from './types';
+import { mergeHistory } from './history';
 
 /** Bookkeeping, not content: never compared or merged field by field. */
-const META = new Set<keyof Task>(['id', 'updatedAt', 'fieldAt', 'fieldBase', 'createdAt']);
+const META = new Set<keyof Task>(['id', 'updatedAt', 'fieldAt', 'fieldBase', 'createdAt', 'history']);
 
 function same(a: unknown, b: unknown): boolean {
   return a === b || JSON.stringify(a) === JSON.stringify(b);
@@ -59,7 +60,13 @@ export function mergeTask(l: Task, r: Task): { task: Task; conflict: boolean } {
   }
   const bases = [l.fieldBase, r.fieldBase].filter((x): x is string => !!x).sort();
   return {
-    task: { ...(out as unknown as Task), fieldAt, fieldBase: bases[0], updatedAt: l.updatedAt > r.updatedAt ? l.updatedAt : r.updatedAt },
+    task: {
+      ...(out as unknown as Task),
+      fieldAt,
+      fieldBase: bases[0],
+      history: mergeHistory(l.history, r.history),
+      updatedAt: l.updatedAt > r.updatedAt ? l.updatedAt : r.updatedAt,
+    },
     conflict,
   };
 }

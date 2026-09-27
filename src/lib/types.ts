@@ -1,3 +1,4 @@
+import type { HistoryEntry } from './history';
 import type { SavedList } from './filters';
 
 export type Priority = 'low' | 'normal' | 'high' | 'urgent';
@@ -78,6 +79,7 @@ export interface Task {
   attachments?: AttachmentMeta[]; // files kept on this device (metadata syncs, the files don't)
   fieldAt?: Record<string, string>; // when each field last changed (field-level sync merge)
   fieldBase?: string; // fields without a fieldAt entry date from this
+  history?: HistoryEntry[]; // recent edits, newest last (lib/history.ts)
 }
 
 /** A school break (inclusive dates). Removed ones keep `deleted` so the removal syncs. */
