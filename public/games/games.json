@@ -226,6 +226,20 @@
         "arcade"
       ],
       "builtIn": true
+    },
+    {
+      "id": "glowgrid",
+      "title": "Glow Grid",
+      "emoji": "💠",
+      "description": "Drop glowing gem pieces on an 8×8 grid. Fill rows and columns to shatter them.",
+      "src": "glowgrid.html",
+      "cost": 1,
+      "minutes": 15,
+      "theme": "sleek",
+      "tags": [
+        "puzzle"
+      ],
+      "builtIn": true
     }
   ]
 }
