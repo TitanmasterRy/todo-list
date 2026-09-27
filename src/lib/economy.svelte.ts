@@ -7,6 +7,7 @@ import { ALL_DONE_BONUS, DEAL_DISCOUNT, dealOfDay, questsFor, type QuestDef } fr
 import { toasts } from './toast.svelte';
 import { MAX_FREEZES } from './gamification';
 import { playSound } from './sounds';
+import { startFactoryBridge } from './factory/bridge';
 import type { Currency, LedgerEntry } from './types';
 
 export interface Pop {
@@ -172,6 +173,7 @@ let started = false;
 export function startEconomy(): void {
   if (started) return;
   started = true;
+  startFactoryBridge();
 
   on('completed', ({ task, xp, ringClosed }) => {
     // a task pays coins once: reopening and re-completing it doesn't pay again (undo reverses the payment)

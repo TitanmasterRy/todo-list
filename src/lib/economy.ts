@@ -341,5 +341,7 @@ export function reasonLabel(e: LedgerEntry): string {
   if (r.startsWith('shop:')) return `Shop: ${shopItem(r.slice(5))?.name ?? r.slice(5)}`;
   if (r.startsWith('casino:')) return `Casino: ${r.slice(7)}`;
   if (r.startsWith('arcade:')) return `Arcade: ${r.slice(7)}`;
+  if (r === 'factory') return 'Factory market';
+  if (r.startsWith('factory:')) return `Factory supply: ${r.slice(8)}`;
   return r;
 }
