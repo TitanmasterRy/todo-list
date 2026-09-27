@@ -93,7 +93,7 @@
 {#if s.equippedTitle}
   <p class="muted">Your title: <strong>{TITLE_TEXT[s.equippedTitle]}</strong> (shown in the sidebar and on Stats).</p>
 {/if}
-<p class="muted">Coins only come from schoolwork: tasks, the daily ring, streaks, grades, notecards and Pomodoros. Chips can't be turned back into coins.</p>
+<p class="muted">Coins only come from schoolwork: tasks, the daily ring, streaks, grades, notecards and Pomodoros. Chips cash back at half value, a little a day (Wallet).</p>
 
 <style>
   .deal {

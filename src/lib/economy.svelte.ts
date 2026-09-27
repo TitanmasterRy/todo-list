@@ -2,7 +2,20 @@
 // and vouchers for the casino and arcade. All state lives in store.ledger so it syncs like everything else.
 import { store } from './store.svelte';
 import { on } from './events';
-import { balances, canBuy, CASINO_ACHIEVEMENTS, coinsForStreak, coinsForXp, owned, purchaseEntries, REWARDS, shopItem, type ShopItem } from './economy';
+import {
+  balances,
+  canBuy,
+  cashoutEntries,
+  cashoutQuote,
+  CASINO_ACHIEVEMENTS,
+  coinsForStreak,
+  coinsForXp,
+  owned,
+  purchaseEntries,
+  REWARDS,
+  shopItem,
+  type ShopItem,
+} from './economy';
 import { ALL_DONE_BONUS, DEAL_DISCOUNT, dealOfDay, questsFor, type QuestDef } from './quests';
 import { toasts } from './toast.svelte';
 import { MAX_FREEZES } from './gamification';
@@ -150,6 +163,18 @@ class Economy {
 
   resetSession(): void {
     this.session = { startedAt: 0, rounds: 0, wagered: 0, returned: 0, reminded: false };
+  }
+
+  // ---------- cashing chips back into coins ----------
+  /** Cash up to `chips` chips into coins (half value, daily limit). Returns the coins received. */
+  cashOut(chips: number): number {
+    if (!this.enabled) return 0;
+    const q = cashoutQuote(store.ledger, chips, store.today);
+    if (q.coins <= 0) return 0;
+    store.addLedger(cashoutEntries(q.coins));
+    this.pop(q.coins, 'coins');
+    playSound('pop');
+    return q.coins;
   }
 
   // ---------- arcade ----------

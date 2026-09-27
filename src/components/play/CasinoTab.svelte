@@ -114,8 +114,8 @@
       {/each}
     </div>
     <p class="muted">
-      Play chips only: no real money, and chips never turn back into coins. Every game shows its odds. A reminder pops up after {store.settings.casinoBreakMin || 'no'} minutes of play
-      (Settings → Economy).
+      Play chips only: no real money. Chips cash back into coins at half value, up to a daily limit (Wallet). Every game shows its odds. A reminder pops up after {store.settings
+        .casinoBreakMin || 'no'} minutes of play (Settings → Economy).
     </p>
   {/if}
 {/if}

@@ -36,7 +36,7 @@ export async function addTask(page: Page, text: string): Promise<void> {
 }
 
 /** Put coins (or vouchers) in the wallet directly (IndexedDB ledger), then reload. */
-export async function seedCoins(page: Page, amount: number, currency: 'coins' | 'vouchers' = 'coins'): Promise<void> {
+export async function seedCoins(page: Page, amount: number, currency: 'coins' | 'vouchers' | 'chips' = 'coins'): Promise<void> {
   await page.evaluate(
     ([n, cur]) =>
       new Promise<void>((resolve) => {

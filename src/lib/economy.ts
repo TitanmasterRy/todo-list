@@ -1,6 +1,9 @@
 // Coins economy: pure rules (catalog, rewards, balances). No real money anywhere: coins are earned
-// by doing schoolwork, chips are bought with coins and never convert back, vouchers pay for arcade games.
+// by doing schoolwork, chips are bought with coins (and can be cashed back at half value, a little a day),
+// vouchers pay for arcade games, and some games sell power-ups for coins.
 import type { Currency, LedgerCurrency, LedgerEntry } from './types';
+import { todayKey } from './dates';
+import { cleanText } from './b64url';
 
 export const CURRENCY_EMOJI: Record<Currency, string> = { coins: '🪙', chips: '🎰', vouchers: '🎟️' };
 export const CURRENCY_LABEL: Record<Currency, string> = { coins: 'Coins', chips: 'Chips', vouchers: 'Vouchers' };
@@ -49,8 +52,62 @@ export function balances(ledger: LedgerEntry[]): Record<Currency, number> & { it
 /** Lifetime coins earned (positive coin entries minus reversals of them). */
 export function lifetimeEarned(ledger: LedgerEntry[]): number {
   let n = 0;
-  for (const e of ledger) if (e.currency === 'coins' && !e.reason.startsWith('shop:')) n += e.amount;
+  for (const e of ledger) if (e.currency === 'coins' && !e.reason.startsWith('shop:') && !SPENDING.test(e.reason) && e.reason !== CASHOUT_REASON) n += e.amount;
   return Math.max(0, n);
+}
+/** Coins spent inside games (power-ups) aren't "earned" going backwards. */
+const SPENDING = /^(game|factory):/;
+
+// ---------- cashing chips back into coins ----------
+/** Chips per coin when cashing out. Buying is 10 chips per coin, so cashing out returns half. */
+export const CASHOUT_RATE = 20;
+/** At most this many coins a day from chips, so homework stays the way to earn. */
+export const CASHOUT_DAILY_MAX = 100;
+export const CASHOUT_REASON = 'cashout';
+
+/** Coins already cashed out on `day` (YYYY-MM-DD, local). */
+export function cashedOutOn(ledger: LedgerEntry[], day: string): number {
+  let n = 0;
+  for (const e of ledger) if (e.reason === CASHOUT_REASON && e.currency === 'coins' && e.amount > 0 && todayKey(new Date(e.at)) === day) n += e.amount;
+  return n;
+}
+
+/** What cashing out up to `chips` would give today: whole coins only, within the daily limit. */
+export function cashoutQuote(ledger: LedgerEntry[], chips: number, day: string): { coins: number; chips: number; leftToday: number } {
+  const leftToday = Math.max(0, CASHOUT_DAILY_MAX - cashedOutOn(ledger, day));
+  const have = Math.min(Math.max(0, Math.floor(chips)), balance(ledger, 'chips'));
+  const coins = Math.min(Math.floor(have / CASHOUT_RATE), leftToday);
+  return { coins, chips: coins * CASHOUT_RATE, leftToday };
+}
+
+export function cashoutEntries(coins: number): Omit<LedgerEntry, 'id' | 'at'>[] {
+  return [
+    { currency: 'chips', amount: -coins * CASHOUT_RATE, reason: CASHOUT_REASON },
+    { currency: 'coins', amount: coins, reason: CASHOUT_REASON },
+  ];
+}
+
+// ---------- coin power-ups in games ----------
+/** Most a game can charge for one power-up, and in one sitting. */
+export const POWERUP_MAX_COST = 50;
+export const POWERUP_SESSION_MAX = 200;
+
+export interface PowerupRequest {
+  id: string;
+  label: string;
+  cost: number;
+}
+
+/** Validate a game's `hwtodo:buy` message (it comes from a sandboxed, untrusted page). */
+export function parsePowerup(data: unknown): PowerupRequest | null {
+  if (!data || typeof data !== 'object') return null;
+  const d = data as Record<string, unknown>;
+  if (d.type !== 'hwtodo:buy') return null;
+  if (typeof d.id !== 'string' || !/^[a-z0-9-]{1,40}$/.test(d.id)) return null;
+  const label = cleanText(d.label, 60);
+  if (!label) return null;
+  if (typeof d.cost !== 'number' || !Number.isInteger(d.cost) || d.cost < 1 || d.cost > POWERUP_MAX_COST) return null;
+  return { id: d.id, label, cost: d.cost };
 }
 
 // ---------- shop ----------
@@ -338,6 +395,10 @@ export function reasonLabel(e: LedgerEntry): string {
   if (r === 'pomodoro') return 'Pomodoro finished';
   if (r === 'levelup') return 'Level up';
   if (r === 'booster') return 'Coin booster';
+  if (r === CASHOUT_REASON) return e.currency === 'coins' ? 'Chips cashed out' : 'Cashed out for coins';
+  if (r === 'admin') return 'Adjusted by the admin';
+  if (r.startsWith('game:')) return `Power-up: ${r.slice(5)}`;
+  if (r.startsWith('factory:')) return `Factory: ${r.slice(8)}`;
   if (r.startsWith('shop:')) return `Shop: ${shopItem(r.slice(5))?.name ?? r.slice(5)}`;
   if (r.startsWith('casino:')) return `Casino: ${r.slice(7)}`;
   if (r.startsWith('arcade:')) return `Arcade: ${r.slice(7)}`;
