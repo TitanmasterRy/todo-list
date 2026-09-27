@@ -51,6 +51,7 @@ Everything added since the roadmap was written, by area, with where to find it i
 - [x] Arcade games: Breakout, Sudoku, Hangman, Lights Out, Typing defense, Solitaire, Invaders, Lunar lander, Paper-plane glider, and the originals
 - [x] Study games from your decks: Boss battle, Match rush, Crossword, Quiz race (Play → Study games)
 - [x] Star map: a star for every day you finished something (Play → Star map)
+- [x] Orebelt factory idle game: miners, smelters to manufacturers, belts with throughput limits, a power grid with overclocking, milestones and a Launch Tower, offline progress; homework gives overclock shards, insight and boosts, and coins buy daily-limited supply drops (Play → Factory)
 
 ## ✅ Sharing and social (no server needed)
 

@@ -110,7 +110,7 @@
           {@const q = sellQty[i.id] ?? Math.min(have, 10)}
           <li>
             <FactoryIcon item={i.id} size={22} />
-            <span class="nm">{i.name}<span class="muted small"> · {fmt(have)} · {i.value} coin each</span></span>
+            <span class="nm">{i.name}<span class="muted small"> · {fmt(have)} · {i.value} coin{i.value === 1 ? '' : 's'} each</span></span>
             <label class="sr" for="ob-q-{i.id}">How many {i.name} to sell</label>
             <input
               id="ob-q-{i.id}"

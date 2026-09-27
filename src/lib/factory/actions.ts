@@ -94,9 +94,12 @@ export interface Pt {
 }
 
 /** A belt's route in tile units: out of the source's output side, one bend, into the destination's input side. */
-export function beltPath(src: Pick<Building, 'x' | 'y' | 'rot'>, dst: Pick<Building, 'x' | 'y' | 'rot'>): Pt[] {
+export function beltPath(src: Pick<Building, 'x' | 'y' | 'rot'>, dst: Pick<Building, 'x' | 'y' | 'rot'>, anySide = false): Pt[] {
   const [sx, sy] = DIRS[src.rot];
-  const [dx, dy] = DIRS[dst.rot];
+  // sinks (camp, depots) take belts on whichever side faces the source
+  const ex = src.x + 0.5 + sx * 0.5 - (dst.x + 0.5);
+  const ey = src.y + 0.5 + sy * 0.5 - (dst.y + 0.5);
+  const [dx, dy] = anySide && (ex || ey) ? (Math.abs(ex) >= Math.abs(ey) ? [-Math.sign(ex), 0] : [0, -Math.sign(ey)]) : DIRS[dst.rot];
   const a = { x: src.x + 0.5, y: src.y + 0.5 };
   const a1 = { x: a.x + sx * 0.5, y: a.y + sy * 0.5 };
   const d = { x: dst.x + 0.5, y: dst.y + 0.5 };

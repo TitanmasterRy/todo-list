@@ -227,41 +227,46 @@ export interface AwaySummary {
   simulated: number;
 }
 
-/** Tick-by-tick seconds before extrapolating the rest of a long absence. */
-export const CATCHUP_TICKS = 1200;
+/** Tick-by-tick seconds of warm-up before extrapolating a long absence, and the window each rate is measured over. */
+export const CATCHUP_TICKS = 900;
+export const MEASURE_TICKS = 300;
 
 /**
- * Fast-forward an absence: the first 20 minutes run tick by tick, then the rest is extrapolated from the steady rate
- * reached (the second half of the simulated stretch). Capped at 8 hours (plus any bought extra).
+ * Fast-forward an absence: the first 15 minutes run tick by tick (buffers fill, belts settle). The rest is extrapolated
+ * from the steady rate measured over the next 5 minutes, re-measured whenever a boost runs out so boosted rates aren't
+ * stretched past their end. Capped at 8 hours (plus any bought extra).
  */
-export function catchUp(s: FactoryState, seconds: number, maxTicks = CATCHUP_TICKS): AwaySummary {
+export function catchUp(s: FactoryState, seconds: number, warmUp = CATCHUP_TICKS): AwaySummary {
   const cap = OFFLINE_CAP + s.extraOffline;
   const total = Math.max(0, Math.min(Math.floor(seconds), cap));
   if (seconds > OFFLINE_CAP) s.extraOffline = 0; // the bought extra covers one long absence
   const before = { ...s.inv };
-  const sim = Math.min(total, maxTicks);
-  const half = Math.floor(sim / 2);
-  let mid: Inv = before;
-  for (let i = 0; i < sim; i++) {
-    if (i === half) mid = { ...s.inv };
-    tick(s, TICK);
-  }
-  const rest = total - sim;
-  if (rest > 0 && sim - half > 0) {
-    const window = sim - half;
+  let simulated = Math.min(total, warmUp);
+  for (let i = 0; i < simulated; i++) tick(s, TICK);
+  let rest = total - simulated;
+  while (rest > 0) {
+    const window = Math.min(rest, MEASURE_TICKS);
+    const mark = { ...s.inv };
+    for (let i = 0; i < window; i++) tick(s, TICK);
+    simulated += window;
+    rest -= window;
+    if (rest <= 0) break;
+    // extrapolate until the next boost runs out (or to the end)
+    const change = Math.min(s.boostLeft > 0 ? s.boostLeft : Infinity, s.rushLeft > 0 ? s.rushLeft : Infinity);
+    const span = Math.min(rest, change);
     for (const k of Object.keys(s.inv) as ItemId[]) {
-      const rate = ((s.inv[k] ?? 0) - (mid[k] ?? 0)) / window;
-      if (rate > 0) s.inv[k] = (s.inv[k] ?? 0) + rate * rest;
+      const rate = ((s.inv[k] ?? 0) - (mark[k] ?? 0)) / window;
+      if (rate > 0) s.inv[k] = (s.inv[k] ?? 0) + rate * span;
     }
-    // the factory kept running: count it as produced too
-    s.simTime += rest;
-    s.boostLeft = Math.max(0, s.boostLeft - rest);
-    s.rushLeft = Math.max(0, s.rushLeft - rest);
+    s.simTime += span;
+    s.boostLeft = Math.max(0, s.boostLeft - span);
+    s.rushLeft = Math.max(0, s.rushLeft - span);
+    rest -= span;
   }
   const gained: Inv = {};
   for (const k of Object.keys(s.inv) as ItemId[]) {
     const d = (s.inv[k] ?? 0) - (before[k] ?? 0);
     if (d > 0.5) gained[k] = d;
   }
-  return { seconds: total, gained, simulated: sim };
+  return { seconds: total, gained, simulated };
 }

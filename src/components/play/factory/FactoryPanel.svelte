@@ -184,7 +184,7 @@
           {#each v.rows as r (r.dir + r.item)}
             <tr class={r.dir}>
               <td
-                ><span class="dir" aria-label={r.dir === 'in' ? 'input' : 'output'}>{r.dir === 'in' ? '→' : '←'}</span><FactoryIcon item={r.item} size={16} />
+                ><span class="dir">{r.dir}</span><FactoryIcon item={r.item} size={16} />
                 {itemName(r.item)}</td
               >
               <td>{fmtRate(r.target)}</td>
@@ -391,7 +391,9 @@
   }
   .dir {
     display: inline-block;
-    width: 14px;
+    width: 26px;
+    font-size: 10px;
+    text-transform: uppercase;
     color: var(--f-muted);
   }
   tr.out .dir {

@@ -267,8 +267,11 @@
     grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
     gap: 8px;
   }
-  .tier.closed .ms {
-    opacity: 0.5;
+  .tier.closed .ms,
+  .ms.closed {
+    background: transparent;
+    border-style: dashed;
+    color: var(--f-muted);
   }
   .ms {
     display: grid;
@@ -277,9 +280,6 @@
   }
   .ms.done {
     border-color: #2c7a3a;
-  }
-  .ms.closed {
-    opacity: 0.55;
   }
   .ms header {
     display: flex;

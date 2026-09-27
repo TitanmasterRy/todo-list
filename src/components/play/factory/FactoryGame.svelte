@@ -105,7 +105,7 @@
       </div>
       <div class="h" title="Free overclock shards" data-shards>
         <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><path d="M8 1l4 5-4 9-4-9z" fill="#b15fd6" stroke="currentColor" stroke-width=".8" /></svg>
-        <span><strong>{hud.shards}</strong> shards</span>
+        <span><strong>{hud.shards}</strong> shard{hud.shards === 1 ? '' : 's'}</span>
       </div>
       <div class="h" title="Insight for research">
         <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"

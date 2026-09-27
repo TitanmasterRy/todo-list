@@ -1,5 +1,6 @@
+import AxeBuilder from '@axe-core/playwright';
 import { expect, test, type Page } from '@playwright/test';
-import { openApp, seedCoins } from './helpers';
+import { addTask, openApp, seedCoins } from './helpers';
 
 const tile = (page: Page, x: number, y: number) => page.locator(`.factory .tile[data-x="${x}"][data-y="${y}"]`);
 
@@ -91,4 +92,33 @@ test('factory works on a phone-sized screen @phone', async ({ page }) => {
   await tile(page, 4, 3).click();
   await expect(tile(page, 4, 3)).toHaveAttribute('data-building', 'miner1');
   expect(errors).toEqual([]);
+});
+
+test('finishing homework powers the factory: a shard, insight and a boost', async ({ page }) => {
+  const errors = await openApp(page);
+  await addTask(page, 'Factory homework');
+  await page.locator('.task', { hasText: 'Factory homework' }).getByRole('checkbox').click();
+  await page.waitForTimeout(300);
+  await page.goto('./?view=play');
+  await page.getByRole('tab', { name: /Factory/ }).click();
+  await expect(page.locator('[data-shards]')).toContainText('1 shard');
+  await expect(page.locator('.factory .hud')).toContainText('1 insight');
+  await expect(page.locator('.factory .hud')).toContainText('Boost');
+  expect(errors).toEqual([]);
+});
+
+test('every factory section has no serious accessibility violations', async ({ page }) => {
+  await openApp(page);
+  await seedCoins(page, 50);
+  await page.goto('./?view=play');
+  await page.getByRole('tab', { name: /Factory/ }).click();
+  await page.getByRole('toolbar', { name: 'Map tools' }).getByRole('button', { name: 'Build' }).click();
+  await page.locator('.factory .tile[data-x="2"][data-y="5"]').click();
+  for (const section of ['Factory', 'Production', 'Milestones', 'Supply & market']) {
+    await page.getByRole('tab', { name: section, exact: true }).click();
+    await page.waitForTimeout(300);
+    const results = await new AxeBuilder({ page }).include('.factory').withTags(['wcag2a', 'wcag2aa']).analyze();
+    const serious = results.violations.filter((v) => v.impact === 'serious' || v.impact === 'critical');
+    expect(serious.map((v) => `${section} ${v.id}: ${v.nodes.length} × ${v.nodes[0]?.target.join(' ')}`)).toEqual([]);
+  }
 });

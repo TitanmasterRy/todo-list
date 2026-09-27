@@ -41,6 +41,7 @@ export class FactoryCtl {
   rates = $state.raw<Rates>({ made: {}, used: {}, stocked: {} });
   message = $state<{ text: string; bad: boolean } | null>(null);
   private sinceSave = 0;
+  private samples = 0;
   private msgTimer: ReturnType<typeof setTimeout> | undefined;
 
   constructor(now = Date.now()) {
@@ -79,10 +80,13 @@ export class FactoryCtl {
   private record(rep: TickReport): void {
     this.report = rep;
     this.history = [...this.history, { cap: rep.power.capacity, use: Math.min(rep.power.demand, rep.power.capacity) }].slice(-HISTORY);
+    // a plain running average for the first samples, then an exponential one
+    this.samples++;
+    const a = Math.max(0.1, 1 / this.samples);
     const ema = (prev: Partial<Record<ItemId, number>>, now: Partial<Record<ItemId, number>>) => {
       const out: Partial<Record<ItemId, number>> = {};
       for (const k of new Set([...Object.keys(prev), ...Object.keys(now)]) as Set<ItemId>) {
-        const v = (prev[k] ?? 0) * 0.9 + (((now[k] ?? 0) * 60) / rep.dt) * 0.1;
+        const v = (prev[k] ?? 0) * (1 - a) + (((now[k] ?? 0) * 60) / rep.dt) * a;
         if (v > 0.01) out[k] = v;
       }
       return out;

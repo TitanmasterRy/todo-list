@@ -203,10 +203,13 @@ describe('offline progress', () => {
     expect(s.extraOffline).toBe(4 * 3600);
   });
 
-  it('counts boosts down while away', () => {
+  it('counts boosts down while away, and only extrapolates boosted rates while the boost lasts', () => {
     const s = line();
-    s.boostLeft = 600;
-    catchUp(s, 7200);
+    s.boostLeft = 1500; // boosted for 25 of the 180 minutes
+    const away = catchUp(s, 3 * 3600);
     expect(s.boostLeft).toBe(0);
+    const expected = 30 * 180 + 30 * 0.25 * 25;
+    expect(away.gained.ironOre!).toBeGreaterThan(expected - 25);
+    expect(away.gained.ironOre!).toBeLessThan(expected + 25);
   });
 });

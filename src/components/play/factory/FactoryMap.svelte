@@ -87,13 +87,16 @@
       const a = byId.get(bl.from);
       const b = byId.get(bl.to);
       if (!a || !b) return [];
-      const pts = beltPath(a, b);
+      const kind = BUILDING[b.type].kind;
+      const pts = beltPath(a, b, kind === 'camp' || kind === 'depot');
       const d = pts.map((p, i) => `${i ? 'L' : 'M'}${p.x} ${p.y}`).join(' ');
       const flow = rep?.belts[bl.id];
       return [{ id: bl.id, d, tier: bl.tier, rate: flow?.rate ?? 0, color: flow?.item ? ITEM[flow.item].color : '#888', full: (flow?.rate ?? 0) >= beltRate(bl.tier) * 0.98 }];
     });
     const nodes = NODES.map((n) => ({ ...n, locked: !u.resources.has(n.res), color: ITEM[RESOURCE_ITEM[n.res]].color }));
-    const palette = BUILDINGS.filter((b) => b.id !== 'camp').map((b) => ({ def: b, locked: !u.buildings.has(b.id), afford: has(s.inv, b.cost) }));
+    const palette = BUILDINGS.filter((b) => b.id !== 'camp')
+      .map((b) => ({ def: b, locked: !u.buildings.has(b.id), afford: has(s.inv, b.cost) }))
+      .sort((a, b) => Number(a.locked) - Number(b.locked));
     return { tiles, belts, nodes, palette, maxBelt: u.belt, beltFromName: beltFrom ? BUILDING[byId.get(beltFrom)?.type ?? 'camp'].name : '' };
   });
 
@@ -258,11 +261,6 @@
       onkeydown={onKey}
     >
       <svg class="layer" viewBox="0 0 {MAP_W} {MAP_H}" width={MAP_W * t} height={MAP_H * t} aria-hidden="true">
-        <defs>
-          <marker id="ob-arrow" viewBox="0 0 4 4" refX="2" refY="2" markerWidth="4" markerHeight="4" orient="auto">
-            <path d="M0 0 4 2 0 4z" fill="#f2b632" />
-          </marker>
-        </defs>
         {#each view.nodes as n (`${n.x},${n.y}`)}
           <g class="node" class:locked={n.locked} transform="translate({n.x} {n.y})">
             <rect x=".06" y=".06" width=".88" height=".88" rx=".22" fill={n.color} opacity=".28" />
@@ -283,7 +281,7 @@
         {#each view.belts as b (b.id)}
           <g class="belt tier{b.tier}">
             <path d={b.d} class="bed" fill="none" />
-            <path d={b.d} class="rail" fill="none" marker-end="url(#ob-arrow)" />
+            <path d={b.d} class="rail" fill="none" />
             {#if b.rate > 0.01}
               <path
                 d={b.d}
@@ -315,7 +313,7 @@
             onfocus={() => (cursor = { x: tile.x, y: tile.y })}
           >
             {#if tile.type}
-              <span class="bg" class:off={tile.off}><FactoryIcon building={tile.type} size={Math.round(t * 0.86)} /></span>
+              <span class="bg" class:off={tile.off}><FactoryIcon building={tile.type} size={Math.round(t * 0.76)} /></span>
               {#if tile.type !== 'camp' && tile.type !== 'depot'}
                 <span class="port" style="--dx: {DIRS[tile.rot][0]}; --dy: {DIRS[tile.rot][1]}; rotate: {tile.rot * 90}deg"></span>
               {/if}
@@ -472,6 +470,7 @@
     }
   }
   .map-wrap {
+    align-self: start;
     overflow: auto;
     max-height: min(68vh, 640px);
     border: 2px solid var(--f-line);
@@ -555,8 +554,8 @@
   .tile.has .bg {
     display: grid;
     place-items: center;
-    width: 94%;
-    height: 94%;
+    width: 82%;
+    height: 82%;
     border-radius: 7px;
     background: rgba(27, 31, 36, 0.78);
     box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08);

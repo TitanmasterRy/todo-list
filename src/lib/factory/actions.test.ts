@@ -69,6 +69,10 @@ describe('building', () => {
     const path = beltPath(b, { x: 5, y: 8, rot: 1 });
     expect(path[1]).toEqual({ x: 5.5, y: 6 }); // leaves from the south side
     expect(path.at(-1)).toEqual({ x: 5.5, y: 8.5 });
+    // sinks take the belt on the side facing it
+    const intoCamp = beltPath({ x: 5, y: 5, rot: 2 }, { x: 2, y: 5, rot: 0 }, true);
+    expect(intoCamp.at(-2)).toEqual({ x: 3, y: 5.5 });
+    expect(beltPath({ x: 5, y: 5, rot: 2 }, { x: 2, y: 5, rot: 0 }).at(-2)).toEqual({ x: 2, y: 5.5 });
   });
 });
 

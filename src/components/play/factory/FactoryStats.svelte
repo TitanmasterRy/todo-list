@@ -35,13 +35,20 @@
 
   const chart = $derived.by(() => {
     const h = ctl.history;
-    const max = Math.max(CAMP_POWER, ...h.map((x) => x.cap)) * 1.15;
+    const top = Math.max(CAMP_POWER, ...h.map((x) => x.cap)) * 1.1;
+    const step = [5, 10, 20, 25, 50, 100, 200, 250, 500, 1000, 2000, 5000, 10000].find((st) => top / st <= 4) ?? 20000;
+    const max = Math.ceil(top / step) * step;
     const n = Math.max(h.length - 1, 1);
     const x = (i: number) => PAD.l + (i / n) * (W - PAD.l - PAD.r);
     const y = (mw: number) => PAD.t + (1 - mw / max) * (H - PAD.t - PAD.b);
     const line = (key: 'cap' | 'use') => h.map((p, i) => `${i ? 'L' : 'M'}${x(i).toFixed(1)} ${y(p[key]).toFixed(1)}`).join(' ');
-    const ticks = [0, max / 2, max].map((mw) => ({ mw, y: y(mw) }));
-    return { h, cap: line('cap'), use: line('use'), ticks, x, y, n };
+    const ticks = Array.from({ length: Math.round(max / step) + 1 }, (_, i) => ({ mw: i * step, y: y(i * step) }));
+    // direct labels at the right end, nudged apart when the lines are close
+    const last = h.at(-1);
+    let capY = last ? y(last.cap) - 4 : 0;
+    let useY = last ? y(last.use) + 11 : 0;
+    if (last && useY - capY < 12) [capY, useY] = [Math.min(capY, useY - 12), Math.max(useY, capY + 12)];
+    return { h, cap: line('cap'), use: line('use'), ticks, x, y, n, capY: Math.max(PAD.t + 8, capY), useY: Math.min(H - PAD.b - 2, useY) };
   });
 
   function onMove(e: PointerEvent) {
@@ -88,6 +95,8 @@
         {#if chart.h.length > 1}
           <path d={chart.cap} class="ln" stroke="#14a3b1" />
           <path d={chart.use} class="ln" stroke="#e0701a" />
+          <text x={W - PAD.r - 2} y={chart.capY} text-anchor="end" class="dl">Capacity</text>
+          <text x={W - PAD.r - 2} y={chart.useY} text-anchor="end" class="dl">In use</text>
         {/if}
         {#if hover !== null && chart.h[hover]}
           {@const p = chart.h[hover]}
@@ -160,6 +169,7 @@
   <div class="bench">
     {#each v.bench as { r, can } (r.id)}
       <button class="btn" disabled={!can} aria-label="Craft {r.name}" onclick={() => ctl.run((s) => benchCraft(s, r.id))}>
+        <span class="bn">{r.name}</span>
         {#each Object.entries(r.in) as [k, n] (k)}<FactoryIcon item={k as ItemId} size={14} />{n}{/each}
         →
         {#each Object.entries(r.out) as [k, n] (k)}<FactoryIcon item={k as ItemId} size={14} />{n}{/each}
@@ -250,6 +260,11 @@
     fill: var(--f-muted);
     font-size: 9px;
   }
+  .dl {
+    fill: var(--f-text);
+    font-size: 9.5px;
+    font-weight: 600;
+  }
   .ln {
     fill: none;
     stroke-width: 2;
@@ -321,6 +336,10 @@
     border: 1px solid var(--f-line);
     background: var(--f-panel2);
     color: var(--f-text);
+  }
+  .bn {
+    font-weight: 700;
+    margin-right: 4px;
   }
   .btn:disabled {
     opacity: 0.45;
