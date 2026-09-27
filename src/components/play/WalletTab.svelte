@@ -8,7 +8,7 @@
     store.ledger
       .slice(-limit)
       .reverse()
-      .filter((e) => !e.currency.startsWith('item:') || e.reason.startsWith('shop:')),
+      .filter((e) => !e.currency.startsWith('item:') || e.reason.startsWith('shop:') || e.reason.startsWith('gift:')),
   );
   const EMOJI: Record<string, string> = { coins: '🪙', chips: '🎰', vouchers: '🎟️' };
   const earnedToday = $derived(

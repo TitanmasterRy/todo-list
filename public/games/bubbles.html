@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Bubble pop</title>
+<style>
+  :root { --accent: #ff6fae; }
+  html, body { margin: 0; height: 100%; background: linear-gradient(#ffe3f1, #e3f2ff); color: #5a3350; font: 15px system-ui, sans-serif; overflow: hidden; touch-action: none; user-select: none; }
+  canvas { display: block; width: 100vw; height: 100vh; cursor: crosshair; }
+  .hud { position: fixed; top: 10px; left: 12px; font-weight: 800; }
+  .center { position: fixed; inset: 0; display: grid; place-items: center; text-align: center; pointer-events: none; }
+  .center > div { background: rgba(255, 255, 255, 0.75); padding: 16px 22px; border-radius: 18px; }
+  .center button { pointer-events: auto; font: inherit; padding: 10px 20px; border-radius: 999px; border: 0; background: var(--accent); color: #fff; font-weight: 800; cursor: pointer; }
+  body.dark { background: linear-gradient(#2a1a2e, #1a2233); color: #ffd6ec; }
+  body.dark .center > div { background: rgba(0, 0, 0, 0.5); }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div class="hud">Score <span id="score">0</span> · <span id="lives">🫧🫧🫧🫧🫧</span> <span id="combo"></span></div>
+<div class="center" id="menu"><div><h2>🫧 Bubble pop</h2><p>Pop the bubbles before they float away.<br />Pop the same color in a row for a combo. Don't pop the spiky ones!<br />Click or tap, or move with the arrow keys and press Space.</p><button id="go">Start</button></div></div>
+<script>
+  const q = new URLSearchParams(location.search);
+  if (q.get('accent')) document.documentElement.style.setProperty('--accent', q.get('accent'));
+  if (q.get('dark') === '1') document.body.classList.add('dark');
+  const report = (score) => parent.postMessage({ type: 'hwtodo:score', score }, '*');
+  const c = document.getElementById('c'), x = c.getContext('2d'), $ = (id) => document.getElementById(id);
+  const COLORS = [['#ff8fc4', '🐰'], ['#8fd3ff', '🐳'], ['#ffd97a', '🐥'], ['#a8e6a1', '🐸'], ['#c9a8ff', '🦄']];
+  let W, H, bubbles, pops, score, lives, combo, lastColor, running = false, t = 0, cx, cy, keys = {};
+  function size() { W = c.width = innerWidth; H = c.height = innerHeight; cx = W / 2; cy = H / 2; }
+  addEventListener('resize', size); size();
+  function start() { bubbles = []; pops = []; score = 0; lives = 5; combo = 0; lastColor = -1; t = 0; running = true; $('menu').style.display = 'none'; hud(); }
+  function hud() { $('score').textContent = score; $('lives').textContent = '🫧'.repeat(Math.max(0, lives)) || '💔'; $('combo').textContent = combo > 1 ? `· combo ×${combo}` : ''; }
+  function spawn() {
+    const spiky = Math.random() < 0.1 + Math.min(0.1, t / 30000);
+    const k = Math.floor(Math.random() * COLORS.length);
+    const r = 22 + Math.random() * 20;
+    bubbles.push({ x: r + Math.random() * (W - 2 * r), y: H + r, r, v: 0.8 + Math.random() * 0.9 + t / 4000, k, spiky, wob: Math.random() * 6 });
+  }
+  function popAt(px, py) {
+    if (!running) return;
+    for (let i = bubbles.length - 1; i >= 0; i--) {
+      const b = bubbles[i];
+      if (Math.hypot(b.x - px, b.y - py) <= b.r + 6) {
+        bubbles.splice(i, 1);
+        pops.push({ x: b.x, y: b.y, r: b.r, life: 1, spiky: b.spiky });
+        if (b.spiky) { lives--; combo = 0; lastColor = -1; }
+        else { combo = b.k === lastColor ? combo + 1 : 1; lastColor = b.k; score += 10 * combo + Math.round(40 - b.r); }
+        hud();
+        if (lives <= 0) end();
+        return;
+      }
+    }
+  }
+  function end() { running = false; report(score); $('menu').style.display = 'grid'; $('menu').querySelector('h2').textContent = `🫧 Score ${score}`; $('go').textContent = 'Again'; }
+  function draw(b) {
+    x.save(); x.translate(b.x, b.y);
+    if (b.spiky) {
+      x.fillStyle = '#7a6f80'; x.beginPath();
+      for (let i = 0; i < 24; i++) { const a = (i / 24) * Math.PI * 2, rr = i % 2 ? b.r : b.r + 8; x.lineTo(Math.cos(a) * rr, Math.sin(a) * rr); }
+      x.closePath(); x.fill(); x.font = `${b.r}px system-ui`; x.textAlign = 'center'; x.textBaseline = 'middle'; x.fillText('😠', 0, 2);
+    } else {
+      const g = x.createRadialGradient(-b.r / 3, -b.r / 3, b.r / 6, 0, 0, b.r);
+      g.addColorStop(0, 'rgba(255,255,255,0.9)'); g.addColorStop(1, COLORS[b.k][0]);
+      x.fillStyle = g; x.globalAlpha = 0.85; x.beginPath(); x.arc(0, 0, b.r, 0, Math.PI * 2); x.fill(); x.globalAlpha = 1;
+      x.strokeStyle = 'rgba(255,255,255,0.8)'; x.lineWidth = 2; x.stroke();
+      x.font = `${b.r * 0.9}px system-ui`; x.textAlign = 'center'; x.textBaseline = 'middle'; x.fillText(COLORS[b.k][1], 0, 2);
+    }
+    x.restore();
+  }
+  function step() {
+    x.clearRect(0, 0, W, H);
+    if (running) {
+      t++;
+      if (keys.left) cx -= 8; if (keys.right) cx += 8; if (keys.up) cy -= 8; if (keys.down) cy += 8;
+      cx = Math.max(0, Math.min(W, cx)); cy = Math.max(0, Math.min(H, cy));
+      if (t % Math.max(18, 55 - Math.floor(t / 250)) === 0) spawn();
+      for (const b of bubbles) { b.y -= b.v; b.x += Math.sin((t + b.wob * 30) / 40) * 0.6; }
+      for (let i = bubbles.length - 1; i >= 0; i--) {
+        if (bubbles[i].y < -bubbles[i].r) { if (!bubbles[i].spiky) { lives--; combo = 0; lastColor = -1; hud(); } bubbles.splice(i, 1); }
+      }
+      if (lives <= 0) end();
+    }
+    (bubbles || []).forEach(draw);
+    pops = (pops || []).filter((p) => (p.life -= 0.05) > 0);
+    for (const p of pops) { x.strokeStyle = p.spiky ? `rgba(120,100,130,${p.life})` : `rgba(255,255,255,${p.life})`; x.lineWidth = 3; x.beginPath(); x.arc(p.x, p.y, p.r * (2 - p.life), 0, Math.PI * 2); x.stroke(); }
+    if (running) { x.strokeStyle = 'rgba(90,51,80,0.7)'; x.lineWidth = 2; x.beginPath(); x.arc(cx, cy, 12, 0, Math.PI * 2); x.moveTo(cx - 18, cy); x.lineTo(cx + 18, cy); x.moveTo(cx, cy - 18); x.lineTo(cx, cy + 18); x.stroke(); }
+    requestAnimationFrame(step);
+  }
+  addEventListener('pointerdown', (e) => { cx = e.clientX; cy = e.clientY; popAt(e.clientX, e.clientY); });
+  addEventListener('pointermove', (e) => { cx = e.clientX; cy = e.clientY; });
+  const map = { ArrowLeft: 'left', ArrowRight: 'right', ArrowUp: 'up', ArrowDown: 'down' };
+  addEventListener('keydown', (e) => { if (map[e.key]) { keys[map[e.key]] = true; e.preventDefault(); } if (e.key === ' ') { e.preventDefault(); running ? popAt(cx, cy) : start(); } });
+  addEventListener('keyup', (e) => { if (map[e.key]) keys[map[e.key]] = false; });
+  $('go').onclick = (e) => { e.stopPropagation(); start(); }; step();
+</script>
+</body>
+</html>

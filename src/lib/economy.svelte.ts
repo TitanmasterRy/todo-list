@@ -2,7 +2,7 @@
 // and vouchers for the casino and arcade. All state lives in store.ledger so it syncs like everything else.
 import { store } from './store.svelte';
 import { on } from './events';
-import { balances, canBuy, CASINO_ACHIEVEMENTS, coinsForStreak, coinsForXp, owned, purchaseEntries, REWARDS, shopItem, type ShopItem } from './economy';
+import { balances, BIG_WIN_MULTIPLE, canBuy, CASINO_ACHIEVEMENTS, coinsForStreak, coinsForXp, owned, purchaseEntries, REWARDS, shopItem, type ShopItem } from './economy';
 import { ALL_DONE_BONUS, DEAL_DISCOUNT, dealOfDay, questsFor, type QuestDef } from './quests';
 import { toasts } from './toast.svelte';
 import { MAX_FREEZES } from './gamification';
@@ -20,6 +20,8 @@ class Economy {
   wallet = $derived(balances(store.ledger));
   enabled = $derived(store.settings.economyEnabled);
   pops = $state<Pop[]>([]);
+  /** Bumped on a big payout or a level-up: App lazily shows the coin rain (skipped with reduced motion or confetti off). */
+  rain = $state(0);
 
   /** Casino session stats (reset when you leave the casino). */
   session = $state({ startedAt: 0, rounds: 0, wagered: 0, returned: 0, reminded: false });
@@ -29,6 +31,10 @@ class Economy {
     const p = { id: popId++, text: `${amount > 0 ? '+' : ''}${amount.toLocaleString()} ${emoji}` };
     this.pops = [...this.pops, p].slice(-4);
     setTimeout(() => (this.pops = this.pops.filter((x) => x.id !== p.id)), 1800);
+  }
+
+  celebrate(): void {
+    this.rain++;
   }
 
   hasEntry(reason: string, ref: string): boolean {
@@ -52,7 +58,7 @@ class Economy {
   });
 
   check(item: ShopItem, price?: number) {
-    return canBuy(store.ledger, item, { freezes: store.stats.streak.freezes, maxFreezes: MAX_FREEZES, price });
+    return canBuy(store.ledger, item, { freezes: store.stats.streak.freezes, maxFreezes: MAX_FREEZES, price, today: store.today });
   }
 
   buy(id: string, opts: { deal?: boolean } = {}): boolean {
@@ -137,6 +143,7 @@ class Economy {
     this.session.returned += amount;
     const bet = this.lastBet.get(game) ?? 0;
     if (bet > 0 && amount >= bet * 50) this.achieve('jackpot');
+    if (bet > 0 && amount >= bet * BIG_WIN_MULTIPLE) this.celebrate();
   }
 
   /** Add to a bet that's already running (blackjack double down). */
@@ -202,7 +209,10 @@ export function startEconomy(): void {
 
   on('levelup', ({ level }) => {
     const ref = `level:${level}`;
-    if (!economy.hasEntry('levelup', ref)) economy.earn(level * REWARDS.levelUpPerLevel, 'levelup', ref);
+    if (!economy.hasEntry('levelup', ref)) {
+      economy.earn(level * REWARDS.levelUpPerLevel, 'levelup', ref);
+      if (economy.enabled) economy.celebrate();
+    }
   });
 
   on('graded', ({ task, xp }) => economy.earn(coinsForXp(xp), 'grade', task.id));

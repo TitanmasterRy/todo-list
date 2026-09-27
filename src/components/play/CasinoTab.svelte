@@ -19,7 +19,8 @@
   import Wheel from '../casino/Wheel.svelte';
   import Scratch from '../casino/Scratch.svelte';
 
-  const GAMES: { id: string; name: string; emoji: string; blurb: string; comp: Component }[] = [
+  // the card-room games load when opened (their own chunk: poker evaluation, bots)
+  const GAMES: { id: string; name: string; emoji: string; blurb: string; comp?: Component; load?: () => Promise<{ default: Component }> }[] = [
     { id: 'slots', name: 'Slots', emoji: '🎰', blurb: 'Three reels, themed symbols', comp: Slots },
     { id: 'blackjack', name: 'Blackjack', emoji: '🃏', blurb: 'Beat the dealer to 21', comp: Blackjack },
     { id: 'roulette', name: 'Roulette', emoji: '🎡', blurb: 'European single zero', comp: Roulette },
@@ -33,6 +34,9 @@
     { id: 'dice', name: 'Dice', emoji: '🎯', blurb: 'Roll over or under', comp: Dice },
     { id: 'wheel', name: 'Big Six', emoji: '🎠', blurb: 'Money wheel', comp: Wheel },
     { id: 'scratch', name: 'Scratch cards', emoji: '🎟️', blurb: 'Match three', comp: Scratch },
+    { id: 'threecard', name: 'Three Card Poker', emoji: '🂱', blurb: 'Ante, Play and Pair Plus', load: () => import('../casino/ThreeCardPoker.svelte') },
+    { id: 'letitride', name: 'Let It Ride', emoji: '💵', blurb: 'Pull back two of three bets', load: () => import('../casino/LetItRide.svelte') },
+    { id: 'holdem', name: "Texas Hold'em", emoji: '🂡', blurb: 'Fixed-limit vs 1–3 bots', load: () => import('../casino/Holdem.svelte') },
   ];
   let current = $state<string | null>(null);
   const game = $derived(GAMES.find((g) => g.id === current));
@@ -91,8 +95,16 @@
         <span class="sess">Session: {economy.session.rounds} rounds · <span class:pos={net > 0} class:neg={net < 0}>{net > 0 ? '+' : ''}{net.toLocaleString()}</span></span>
       {/if}
     </div>
-    {@const G = game.comp}
-    <G />
+    {#if game.comp}
+      {@const G = game.comp}
+      <G />
+    {:else if game.load}
+      {#await game.load()}
+        <p class="muted">Loading {game.name}…</p>
+      {:then m}
+        <m.default />
+      {/await}
+    {/if}
   {:else}
     <div class="lobby">
       {#each GAMES as g (g.id)}

@@ -28,12 +28,13 @@
   const loadShortcuts = () => import('./components/ShortcutSheet.svelte');
   const loadOnboarding = () => import('./components/Onboarding.svelte');
   const loadUnlock = () => import('./components/UnlockDialog.svelte');
+  const loadRain = () => import('./components/CoinRain.svelte');
   import { hasSecret, promptAtStartup, vault } from './lib/secrets.svelte';
   import DailyPrompts from './components/DailyPrompts.svelte';
   import BulkBar from './components/BulkBar.svelte';
   import { ui } from './lib/ui.svelte';
   import { startAccount } from './lib/account.svelte';
-  import { startEconomy } from './lib/economy.svelte';
+  import { economy, startEconomy } from './lib/economy.svelte';
   import { startSocial } from './lib/social/links';
   import CoinPops from './components/CoinPops.svelte';
   import { t } from './lib/i18n/index.svelte';
@@ -157,6 +158,9 @@
   <Toasts />
   <FeedbackLayer />
   <CoinPops />
+  {#if economy.rain}
+    {#await loadRain() then m}<m.default tick={economy.rain} />{/await}
+  {/if}
   <Keyboard />
   {#if store.editingTaskId}
     {#await loadEditor() then m}
