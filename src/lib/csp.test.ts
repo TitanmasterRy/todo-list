@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { buildCsp, connectSources, hostAllowed, originOf } from './csp';
+import { blockedOrigin, buildCsp, connectSources, hostAllowed, originList, originOf } from './csp';
 import { PROVIDERS } from './ai-providers';
 import { PYODIDE_URL } from './coderunner';
 
@@ -70,5 +70,36 @@ describe('content security policy', () => {
     expect(hostAllowed('https://x.com:8443', ['https://x.com'])).toBe(false);
     expect(originOf('ftp://x')).toBeNull();
     expect(originOf('not a url')).toBeNull();
+  });
+
+  it('plays video from any https server and blob: (hls.js), without opening connect-src to them', () => {
+    const media = directive(csp, 'media-src');
+    expect(media).toContain('https:');
+    expect(media).toContain('blob:');
+    expect(media).not.toContain('http:');
+    expect(directive(csp, 'frame-src')).toContain('https:');
+    expect(hostAllowed('https://jellyfin.example.com', directive(csp, 'connect-src'))).toBe(false);
+  });
+
+  it('adds VITE_MEDIA_SERVERS origins to connect-src', () => {
+    const withMedia = buildCsp({ mediaServers: 'https://jellyfin.example.com/, https://emby.home.example:8920/emby http://192.168.1.5:8096 javascript:alert(1)' });
+    const connect = directive(withMedia, 'connect-src');
+    expect(connect).toContain('https://jellyfin.example.com');
+    expect(connect).toContain('https://emby.home.example:8920');
+    expect(connect).toContain('http://192.168.1.5:8096');
+    expect(hostAllowed('https://emby.home.example:8920', connect)).toBe(true);
+    expect(withMedia).not.toContain('javascript');
+    expect(withMedia).not.toMatch(/[<>"]/);
+    expect(originList('https://*.ts.net https://a.example.com/x/y')).toEqual(['https://*.ts.net', 'https://a.example.com']);
+    expect(originList('')).toEqual([]);
+  });
+
+  it('tells which origin a page policy blocks', () => {
+    const connect = ["'self'", 'https://jellyfin.example.com'];
+    expect(blockedOrigin('https://jellyfin.example.com/Users', connect, 'https://me.github.io')).toBeNull();
+    expect(blockedOrigin('https://other.example.com:8920/x', connect, 'https://me.github.io')).toBe('https://other.example.com:8920');
+    expect(blockedOrigin('https://me.github.io/x', connect, 'https://me.github.io')).toBeNull();
+    // no policy (dev server): nothing is blocked
+    expect(blockedOrigin('https://other.example.com', null, 'http://localhost:5173')).toBeNull();
   });
 });

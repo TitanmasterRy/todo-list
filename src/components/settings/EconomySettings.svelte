@@ -67,6 +67,49 @@
           />
         </div>
       {/if}
+      <h3 class="sub">Watch (Play → Watch)</h3>
+      <div class="row">
+        <label for="wring">Finish today's ring before watching</label>
+        <input id="wring" type="checkbox" class="switch" checked={s.watchRingFirst} onchange={(e) => set('watchRingFirst', (e.target as HTMLInputElement).checked)} />
+      </div>
+      <div class="row">
+        <label for="wvouch">Watch time costs vouchers: minutes per voucher (0 = free)</label>
+        <input
+          id="wvouch"
+          class="input num"
+          type="number"
+          min="0"
+          max="240"
+          step="5"
+          value={s.watchVoucherMin}
+          onchange={(e) => set('watchVoucherMin', Math.max(0, Math.min(240, Math.round(Number((e.target as HTMLInputElement).value) || 0))))}
+        />
+      </div>
+      <div class="row">
+        <label for="wlim">Watch time limit per day (minutes, 0 = none)</label>
+        <input
+          id="wlim"
+          class="input num"
+          type="number"
+          min="0"
+          max="720"
+          step="5"
+          value={s.watchDailyLimitMin}
+          onchange={(e) => set('watchDailyLimitMin', Math.max(0, Math.min(720, Math.round(Number((e.target as HTMLInputElement).value) || 0))))}
+        />
+      </div>
+      <div class="row">
+        <label for="wbrk">Study-break reminder after (minutes of watching, 0 = off)</label>
+        <input
+          id="wbrk"
+          class="input num"
+          type="number"
+          min="0"
+          max="240"
+          value={s.watchBreakMin}
+          onchange={(e) => set('watchBreakMin', Math.max(0, Math.min(240, Math.round(Number((e.target as HTMLInputElement).value) || 0))))}
+        />
+      </div>
     {/if}
   </fieldset>
   {#if s.economyEnabled}
@@ -88,8 +131,8 @@
       <button class="btn" type="submit">Set PIN</button>
     </form>
     <p class="help">
-      A PIN keeps these economy settings (casino on/off, time limit, reminders) from being changed without it. It's stored only in this browser as a hash: a speed bump, not a
-      security system.
+      A PIN keeps these economy settings (casino on/off, time limits, reminders, watch rules) from being changed without it. It's stored only in this browser as a hash: a speed
+      bump, not a security system.
     </p>
   {:else if ecoLocked}
     <form

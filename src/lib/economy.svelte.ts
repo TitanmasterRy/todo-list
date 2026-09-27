@@ -194,6 +194,13 @@ class Economy {
     return true;
   }
 
+  /** Play → Watch: one voucher for watch time (Settings → Economy sets how many minutes it buys). */
+  spendWatchVoucher(): boolean {
+    if (this.wallet.vouchers < 1) return false;
+    store.addLedger([{ currency: 'vouchers', amount: -1, reason: 'watch' }]);
+    return true;
+  }
+
   history(limit = 100): LedgerEntry[] {
     return store.ledger.slice(-limit).reverse();
   }

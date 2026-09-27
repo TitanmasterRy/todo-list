@@ -18,7 +18,8 @@ const changelogHead = (readFileSync(new URL('./CHANGELOG.md', import.meta.url), 
 
 // Content-Security-Policy as a <meta> in the production index.html (dev needs inline HMR scripts and ws:, so it
 // has none; the offline single-file build in vite.lite.config.ts inlines its scripts and has none either).
-// The host list lives in src/lib/csp.ts. VITE_CSP=off leaves it out; VITE_CSP_CONNECT adds origins.
+// The host list lives in src/lib/csp.ts. VITE_CSP=off leaves it out; VITE_CSP_CONNECT adds origins, and
+// VITE_MEDIA_SERVERS adds the owner's Jellyfin / Emby / video servers for Play → Watch (see WATCH.md).
 function cspMeta(): Plugin {
   let policy = '';
   return {
@@ -26,7 +27,7 @@ function cspMeta(): Plugin {
     apply: 'build',
     configResolved(config) {
       const env = { ...config.env, ...process.env } as Record<string, string | undefined>;
-      policy = env.VITE_CSP === 'off' ? '' : buildCsp({ supabaseUrl: env.VITE_SUPABASE_URL, arcadeManifest: env.VITE_ARCADE_MANIFEST, extraConnect: env.VITE_CSP_CONNECT });
+      policy = env.VITE_CSP === 'off' ? '' : buildCsp({ supabaseUrl: env.VITE_SUPABASE_URL, arcadeManifest: env.VITE_ARCADE_MANIFEST, extraConnect: env.VITE_CSP_CONNECT, mediaServers: env.VITE_MEDIA_SERVERS });
     },
     transformIndexHtml(html) {
       if (!policy) return html;

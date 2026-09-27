@@ -34,6 +34,10 @@ jobs:
           VITE_SUPABASE_URL: ${{ vars.VITE_SUPABASE_URL }}
           VITE_SUPABASE_ANON_KEY: ${{ vars.VITE_SUPABASE_ANON_KEY }}
           VITE_ARCADE_MANIFEST: ${{ vars.VITE_ARCADE_MANIFEST }}
+          # optional: extra origins the page may connect to (a relay, a custom AI endpoint), space separated
+          VITE_CSP_CONNECT: ${{ vars.VITE_CSP_CONNECT }}
+          # optional: your own Jellyfin / Emby / video servers for Play → Watch, e.g. https://jellyfin.example.com (see WATCH.md)
+          VITE_MEDIA_SERVERS: ${{ vars.VITE_MEDIA_SERVERS }}
           # optional: the hidden admin panel's passphrase hash (make one in the admin panel → Security)
           VITE_ADMIN_HASH: ${{ vars.VITE_ADMIN_HASH }}
       - uses: actions/configure-pages@v5
