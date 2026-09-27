@@ -102,13 +102,19 @@ merged into `main` and live on the GitHub Pages site. The full plan, including w
 - [x] Reminders through the service worker (work on Android; tapping opens the task)
 - [x] Today's count on the app icon; background morning digest on installed Chrome/Edge apps
 - [x] Works offline; one-file offline version (Settings → Data)
-- [x] "What's new" after updates
+- [x] Patch notes open after every update with everything this device missed (and in Settings → Help)
 
 ## ✅ Languages and accessibility
 
 - [x] Spanish (Settings → Language) everywhere except Play, including Spanish dates in quick add and Spanish auto plans for new tasks
 - [x] Dates and numbers in your region's format; right-to-left layout support
 - [x] High contrast, reading fonts, text size, confetti toggle, reduced motion; contrast checked in every theme
+
+## ✅ Watch
+
+- [x] Jellyfin/Emby: sign in, browse, continue watching, next up, play with resume (Play → Watch; see WATCH.md)
+- [x] Plex and any other site in a frame; YouTube, Vimeo, Twitch and more as embeds; direct video links and files
+- [x] Optional homework rules: ring first, vouchers for watch time, daily limit (Settings → Economy)
 
 ## ✅ Admin (hidden, for the site owner)
 
@@ -125,9 +131,6 @@ merged into `main` and live on the GitHub Pages site. The full plan, including w
 
 ## 🚧 Being built right now (next merge)
 
-- [ ] Spanish for the remaining screens (Stats, Tools, most Settings)
-- [ ] 🏭 Factory: an in-depth factory-building idle game with a coin shop (Play → Factory)
-- [ ] 📺 Watch: Jellyfin/Emby browsing and playback, Plex and other sites, video links and files (Play → Watch)
 - [ ] Case clicker game (original, like the CS:GO case clicker)
 - [ ] Casino visual overhaul: more eye candy on every casino game
 

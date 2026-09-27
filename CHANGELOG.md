@@ -1,5 +1,13 @@
 # Changelog
 
+## Roadmap pass 8: Orebelt factory, Watch, Spanish everywhere, patch notes
+
+- **🏭 Orebelt** (Play → Factory): a factory-building idle game. Mine ore, smelt and build parts through six tiers, route belts with throughput limits, run a power grid with overclocking, deliver to the Launch Tower, and keep producing while you're away. Finished homework gives shards, research and production boosts; coins buy a few daily supply drops.
+- **📺 Watch** (Play → Watch): sign in to your Jellyfin or Emby server to browse and play with resume across devices, show Plex or any other site, play YouTube/Vimeo/Twitch links, direct video links and files from your device. Optional homework rules: finish your ring first, vouchers for watch time, a daily limit. See WATCH.md.
+- **Español** now covers Stats, Tools, Settings, Schoology and every message (Play is still English).
+- **Patch notes** open by themselves after an update and show every update this device missed; they're always in Settings → Help.
+- Guides for coding agents and local models (AGENTS.md, LOCAL_LLM.md).
+
 ## Roadmap pass 7: admin panel, new games and casino tables, group projects, coins in games
 
 - **Hidden admin panel** (Ctrl+Alt+Shift+A, `?admin`, or tap the version in Settings → Help 7 times; see ADMIN.md): passphrase-protected; economy grants and undo, a site-wide announcement banner and feature switches, one-click publishing to GitHub, a data browser and debug tools.
