@@ -8,7 +8,7 @@
   import { activeSeason, daysLeft } from '../lib/seasons';
   import { site } from '../lib/site.svelte';
 
-  type Tab = 'shop' | 'casino' | 'arcade' | 'study' | 'stars' | 'pet' | 'garden' | 'dungeon' | 'boards' | 'wallet';
+  type Tab = 'shop' | 'casino' | 'arcade' | 'study' | 'stars' | 'pet' | 'garden' | 'dungeon' | 'boards' | 'factory' | 'wallet';
   // the newer tabs load on first open (each is its own chunk)
   const LAZY: Partial<Record<Tab, { load: () => Promise<{ default: import('svelte').Component }>; what: string }>> = {
     study: { load: () => import('../components/play/StudyTab.svelte'), what: 'study games' },
@@ -17,6 +17,7 @@
     garden: { load: () => import('../components/play/GardenTab.svelte'), what: 'the garden' },
     dungeon: { load: () => import('../components/play/DungeonTab.svelte'), what: 'the dungeon' },
     boards: { load: () => import('../components/play/LeaderboardsTab.svelte'), what: 'leaderboards' },
+    factory: { load: () => import('../components/play/factory/FactoryGame.svelte'), what: 'the factory' },
   };
   // a seasonal event (Halloween, winter, finals, summer) gives the page a themed look
   const event = $derived(activeSeason(store.today));
@@ -38,6 +39,7 @@
         { id: 'arcade', label: 'Arcade', icon: '🕹️' },
         { id: 'study', label: 'Study games', icon: '🧠' },
         { id: 'stars', label: 'Star map', icon: '🌌' },
+        { id: 'factory', label: 'Factory', icon: '🏭' },
         { id: 'pet', label: 'Pet', icon: '🐣' },
         { id: 'garden', label: 'Garden', icon: '🌱' },
         { id: 'dungeon', label: 'Dungeon', icon: '🏰' },

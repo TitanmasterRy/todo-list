@@ -62,6 +62,7 @@ merged into `main` and live on the GitHub Pages site. The full plan, including w
 - [x] Games can save progress and sell power-ups for coins (you confirm each one)
 - [x] Pet, Garden and Homework dungeon (Play); focus companion under the timer (Focus)
 - [x] Seasonal events with limited items and event quests; gifts for friends; opt-in leaderboards
+- [x] Orebelt factory idle game: miners, smelters to manufacturers, belts with throughput limits, a power grid with overclocking, milestones and a Launch Tower, offline progress; homework gives overclock shards, insight and boosts, and coins buy daily-limited supply drops (Play → Factory)
 
 ## ✅ Sharing and social (no server needed)
 
