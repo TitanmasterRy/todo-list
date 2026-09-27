@@ -1,5 +1,6 @@
 <script lang="ts">
-  import { CATEGORIES, convert, formatNumber } from '../../lib/units';
+  import { CATEGORIES, convert, formatNumber, type Unit } from '../../lib/units';
+  import { hasKey, t } from '../../lib/i18n/index.svelte';
 
   let cat = $state('length');
   const category = $derived(CATEGORIES.find((c) => c.id === cat)!);
@@ -17,29 +18,43 @@
   function swap() {
     [from, to] = [to, from];
   }
-  const label = (id: string) => category.units.find((u) => u.id === id)?.label ?? id;
+  // names in the app language when there is one (symbols like cm² stay as they are)
+  const unitName = (catId: string, u: Unit) => {
+    const k = `unit.${catId}.${u.id}`;
+    return hasKey(k) ? t(k) : u.label;
+  };
+  const catName = (id: string, fallback: string) => {
+    const k = `unit.${id}`;
+    return hasKey(k) ? t(k) : fallback;
+  };
+  const label = (id: string) => {
+    const u = category.units.find((x) => x.id === id);
+    return u ? unitName(cat, u) : id;
+  };
 </script>
 
 <section class="card">
-  <h2>Unit converter</h2>
-  <div class="cats" role="tablist" aria-label="Category">
-    {#each CATEGORIES as c (c.id)}<button role="tab" aria-selected={cat === c.id} class="chip" class:on={cat === c.id} onclick={() => pickCategory(c.id)}>{c.label}</button>{/each}
+  <h2>{t('tools.units')}</h2>
+  <div class="cats" role="tablist" aria-label={t('units.category')}>
+    {#each CATEGORIES as c (c.id)}<button role="tab" aria-selected={cat === c.id} class="chip" class:on={cat === c.id} onclick={() => pickCategory(c.id)}
+        >{catName(c.id, c.label)}</button
+      >{/each}
   </div>
   <div class="conv">
-    <input class="input" type="number" step="any" bind:value aria-label="Value" />
-    <select class="select" bind:value={from} aria-label="From unit"
-      >{#each category.units as u (u.id)}<option value={u.id}>{u.label}</option>{/each}</select
+    <input class="input" type="number" step="any" bind:value aria-label={t('units.value')} />
+    <select class="select" bind:value={from} aria-label={t('units.from')}
+      >{#each category.units as u (u.id)}<option value={u.id}>{unitName(cat, u)}</option>{/each}</select
     >
-    <button class="btn ghost" onclick={swap} aria-label="Swap units">⇄</button>
-    <select class="select" bind:value={to} aria-label="To unit"
-      >{#each category.units as u (u.id)}<option value={u.id}>{u.label}</option>{/each}</select
+    <button class="btn ghost" onclick={swap} aria-label={t('units.swap')}>⇄</button>
+    <select class="select" bind:value={to} aria-label={t('units.to')}
+      >{#each category.units as u (u.id)}<option value={u.id}>{unitName(cat, u)}</option>{/each}</select
     >
   </div>
   <p class="result" aria-live="polite">{formatNumber(Number(value))} {label(from)} = <strong>{formatNumber(result)}</strong> {label(to)}</p>
   <details>
-    <summary>All {category.label.toLowerCase()} units</summary>
+    <summary>{t('units.all', { category: catName(category.id, category.label).toLowerCase() })}</summary>
     <ul class="all">
-      {#each category.units as u (u.id)}<li><span>{u.label}</span><span>{formatNumber(convert(Number(value), cat, from, u.id))}</span></li>{/each}
+      {#each category.units as u (u.id)}<li><span>{unitName(cat, u)}</span><span>{formatNumber(convert(Number(value), cat, from, u.id))}</span></li>{/each}
     </ul>
   </details>
 </section>

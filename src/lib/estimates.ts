@@ -1,5 +1,6 @@
 // How your time estimates compare with the time you actually tracked.
 import type { Task } from './types';
+import { t as tr } from './i18n/index.svelte';
 
 export interface EstimateAccuracy {
   n: number;
@@ -16,8 +17,7 @@ export function estimateAccuracy(tasks: Task[]): EstimateAccuracy | null {
   const mid = Math.floor(ratios.length / 2);
   const median = ratios.length % 2 ? ratios[mid] : (ratios[mid - 1] + ratios[mid]) / 2;
   const pct = Math.round(Math.abs(median - 1) * 100);
-  const message =
-    pct < 10 ? 'Your estimates are spot on.' : median > 1 ? `Tasks usually take ${pct}% longer than you estimate.` : `Tasks usually take ${pct}% less time than you estimate.`;
+  const message = pct < 10 ? tr('est.spotOn') : median > 1 ? tr('est.longer', { pct }) : tr('est.shorter', { pct });
   return { n: ratios.length, medianRatio: Math.round(median * 100) / 100, message };
 }
 

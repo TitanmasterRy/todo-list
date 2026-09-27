@@ -8,7 +8,12 @@
   import { PROVIDERS, providerInfo, cleanKey } from '../../lib/ai-providers';
   import type { AiProvider } from '../../lib/types';
   import { set } from './settings';
-  import { t } from '../../lib/i18n/index.svelte';
+  import { hasKey as hasMessage, t } from '../../lib/i18n/index.svelte';
+  // provider notes in the app language (English text from ai-providers otherwise)
+  const noteFor = (id: string, fallback: string) => {
+    const k = `ai.note.${id}`;
+    return hasMessage(k) ? t(k) : fallback;
+  };
   const s = $derived(store.settings);
   const provider = $derived(currentProvider());
   const pInfo = $derived(providerInfo(provider));
@@ -33,10 +38,10 @@
   }
   /** Built-in models first, then any others the provider reported (live list, cached). */
   const modelOptions = $derived.by(() => {
-    const builtIn = pInfo.models.map((m) => ({ id: m.id, label: `${m.label}${m.vision ? ' · vision' : ''}` }));
+    const builtIn = pInfo.models.map((m) => ({ id: m.id, label: `${m.label}${m.vision ? ` · ${t('ai.vision')}` : ''}` }));
     const live = (store.settings.aiModelCache[provider] ?? []).map((x) => {
       const [id, free] = x.split('|');
-      return { id, label: `${id}${free ? ' (free)' : ''}` };
+      return { id, label: `${id}${free ? ` ${t('ai.freeParen')}` : ''}` };
     });
     const known = new Set(builtIn.map((m) => m.id));
     const liveIds = new Set(live.map((m) => m.id));
@@ -45,7 +50,7 @@
     const extra = live.filter((m) => !known.has(m.id)).sort((a, b) => a.id.localeCompare(b.id));
     const all = [...kept, ...extra];
     const cur = currentModel();
-    if (!all.some((m) => m.id === cur)) all.unshift({ id: cur, label: `${cur} (current)` });
+    if (!all.some((m) => m.id === cur)) all.unshift({ id: cur, label: `${cur} ${t('ai.current')}` });
     return all;
   });
   let modelsBusy = $state(false);
@@ -53,9 +58,9 @@
     modelsBusy = true;
     try {
       const list = await listModels();
-      toasts.push({ message: `${list.length} models available`, kind: 'success' });
+      toasts.push({ message: t('ai.models', { count: list.length }), kind: 'success' });
     } catch (err) {
-      toasts.push({ message: 'Could not load models', detail: err instanceof Error ? err.message : String(err), kind: 'warn', timeout: 9000 });
+      toasts.push({ message: t('ai.modelsFailed'), detail: err instanceof Error ? err.message : String(err), kind: 'warn', timeout: 9000 });
     } finally {
       modelsBusy = false;
     }
@@ -65,9 +70,15 @@
     aiBusy = true;
     try {
       const note = await testKey();
-      toasts.push({ message: `${pInfo.name} connected`, detail: note || `Model: ${currentModel()}`, kind: 'success', emoji: '✨', timeout: note ? 8000 : 4000 });
+      toasts.push({
+        message: t('ai.connected', { name: pInfo.name }),
+        detail: note || t('ai.model', { model: currentModel() }),
+        kind: 'success',
+        emoji: '✨',
+        timeout: note ? 8000 : 4000,
+      });
     } catch (err) {
-      toasts.push({ message: 'Check failed', detail: err instanceof Error ? err.message : String(err), kind: 'warn', timeout: 9000 });
+      toasts.push({ message: t('ai.checkFailed'), detail: err instanceof Error ? err.message : String(err), kind: 'warn', timeout: 9000 });
     } finally {
       aiBusy = false;
     }
@@ -77,25 +88,25 @@
 <section class="card">
   <h2>{t('settings.ai')} <span class="chip optional">{t('settings.optional')}</span></h2>
   <p class="help">
-    Powers “Ask the tutor”, notecard generation, photo transcription and answer keys. Keys stay in this browser and go only to the provider you pick. <strong>Free options:</strong> Google
-    Gemini and Groq have free tiers, OpenRouter has free models, and Ollama runs on your own computer.
+    {t('ai.help')} <strong>{t('ai.freeOptions')}</strong>
+    {t('ai.freeList')}
   </p>
-  <div class="providers" role="radiogroup" aria-label="AI provider">
+  <div class="providers" role="radiogroup" aria-label={t('ai.provider')}>
     {#each PROVIDERS as p (p.id)}
       <button class="prov" class:on={provider === p.id} role="radio" aria-checked={provider === p.id} onclick={() => setProvider(p.id)}>
         <span class="pn">{p.name}</span>
-        {#if p.free}<span class="free">free{p.needsKey ? ' tier' : ''}</span>{/if}
-        {#if hasKey(p.id)}<span class="ok">● key saved</span>{/if}
+        {#if p.free}<span class="free">{p.needsKey ? t('ai.freeTier') : t('ai.free')}</span>{/if}
+        {#if hasKey(p.id)}<span class="ok">● {t('ai.keySavedLower')}</span>{/if}
       </button>
     {/each}
   </div>
   <p class="help">
-    {pInfo.note}{#if pInfo.keyUrl}
-      <a href={pInfo.keyUrl} target="_blank" rel="noopener noreferrer">Get a key ↗</a>{/if}
+    {noteFor(pInfo.id, pInfo.note)}{#if pInfo.keyUrl}
+      <a href={pInfo.keyUrl} target="_blank" rel="noopener noreferrer">{t('ai.getKey')}</a>{/if}
   </p>
   {#if provider === 'custom' || provider === 'ollama'}
     <div class="row">
-      <label for="aibase">Endpoint URL</label>
+      <label for="aibase">{t('ai.endpoint')}</label>
       <input
         id="aibase"
         class="input"
@@ -106,19 +117,16 @@
     </div>
   {/if}
   <div class="row">
-    <label for="aimodel">Model</label>
+    <label for="aimodel">{t('ai.modelLabel')}</label>
     {#if provider === 'custom'}
-      <input id="aimodel" class="input" value={currentModel()} placeholder="model name" onchange={(e) => setModel((e.target as HTMLInputElement).value.trim())} />
+      <input id="aimodel" class="input" value={currentModel()} placeholder={t('ai.modelPh')} onchange={(e) => setModel((e.target as HTMLInputElement).value.trim())} />
     {:else}
       <span class="model-pick">
         <select id="aimodel" class="select" value={currentModel()} onchange={(e) => setModel((e.target as HTMLSelectElement).value)}>
           {#each modelOptions as m (m.id)}<option value={m.id}>{m.label}</option>{/each}
         </select>
-        <button
-          class="btn ghost sm"
-          onclick={() => void loadModels()}
-          disabled={modelsBusy || (pInfo.needsKey && !hasKey(provider))}
-          title="Fetch the current model list from the provider">{modelsBusy ? '…' : '↻ Load models'}</button
+        <button class="btn ghost sm" onclick={() => void loadModels()} disabled={modelsBusy || (pInfo.needsKey && !hasKey(provider))} title={t('ai.loadTitle')}
+          >{modelsBusy ? '…' : t('ai.load')}</button
         >
       </span>
     {/if}
@@ -126,9 +134,9 @@
   {#if pInfo.needsKey}
     {#if hasKey(provider)}
       <div class="btns">
-        <span class="status ok">Key saved</span>
-        <button class="btn sm" onclick={() => void connectAI()} disabled={aiBusy}>{aiBusy ? 'Testing…' : 'Test'}</button>
-        <button class="btn danger sm" onclick={removeKey}>Remove key</button>
+        <span class="status ok">{t('ai.keySaved')}</span>
+        <button class="btn sm" onclick={() => void connectAI()} disabled={aiBusy}>{aiBusy ? t('ai.testing') : t('ai.test')}</button>
+        <button class="btn danger sm" onclick={removeKey}>{t('ai.removeKey')}</button>
       </div>
     {:else}
       <form
@@ -138,12 +146,12 @@
           saveKey();
         }}
       >
-        <input class="input" type="password" bind:value={providerKey} placeholder="Paste API key" aria-label="API key" autocomplete="off" />
-        <button class="btn primary" type="submit" disabled={aiBusy || !providerKey.trim()}>{aiBusy ? 'Checking…' : 'Save and test'}</button>
+        <input class="input" type="password" bind:value={providerKey} placeholder={t('ai.pasteKey')} aria-label={t('ai.key')} autocomplete="off" />
+        <button class="btn primary" type="submit" disabled={aiBusy || !providerKey.trim()}>{aiBusy ? t('ai.checking') : t('ai.saveTest')}</button>
       </form>
     {/if}
   {:else}
-    <div class="btns"><button class="btn sm" onclick={() => void connectAI()} disabled={aiBusy}>{aiBusy ? 'Testing…' : 'Test connection'}</button></div>
+    <div class="btns"><button class="btn sm" onclick={() => void connectAI()} disabled={aiBusy}>{aiBusy ? t('ai.testing') : t('ai.testConnection')}</button></div>
   {/if}
   <AiUsage />
 </section>

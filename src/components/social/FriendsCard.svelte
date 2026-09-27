@@ -7,6 +7,7 @@
   import { startOfWeekKey } from '../../lib/dates';
   import { friends } from '../../lib/social/friends.svelte';
   import { account, accountConfig } from '../../lib/account.svelte';
+  import { formatNumber, t } from '../../lib/i18n/index.svelte';
 
   let name = $state(friends.profile.name);
   let emoji = $state(friends.profile.emoji);
@@ -33,12 +34,12 @@
     e.preventDefault();
     const { result, card } = friends.add(paste);
     const msg: Record<string, string> = {
-      added: `Added ${card?.name}`,
-      updated: `Updated ${card?.name}'s card`,
-      older: `You already have a newer card from ${card?.name}`,
-      self: "That's your own code",
-      full: 'Your friends list is full (50)',
-      invalid: "That isn't a friend code",
+      added: t('friends.added', { name: card?.name ?? '' }),
+      updated: t('friends.updated', { name: card?.name ?? '' }),
+      older: t('friends.older', { name: card?.name ?? '' }),
+      self: t('friends.self'),
+      full: t('friends.full'),
+      invalid: t('friends.invalid'),
     };
     toasts.push({ message: msg[result], kind: result === 'added' || result === 'updated' ? 'success' : 'warn', emoji: card?.emoji });
     if (result !== 'invalid') paste = '';
@@ -46,14 +47,14 @@
   async function copy(text: string, what: string) {
     try {
       await navigator.clipboard.writeText(text);
-      toasts.push({ message: `${what} copied`, kind: 'success', emoji: '📋' });
+      toasts.push({ message: t('friends.copied', { what }), kind: 'success', emoji: '📋' });
     } catch {
-      toasts.push({ message: "Couldn't copy: select it and copy it", kind: 'warn' });
+      toasts.push({ message: t('friends.copyFailed'), kind: 'warn' });
     }
   }
   async function share() {
     try {
-      await navigator.share({ title: 'My Homework To-Do friend card', text: `Add me on Homework To-Do: ${code}`, url: link });
+      await navigator.share({ title: t('friends.shareTitle'), text: t('friends.shareText', { code }), url: link });
     } catch {
       /* cancelled */
     }
@@ -62,9 +63,9 @@
     busy = true;
     try {
       const n = await friends.pull();
-      if (!quiet) toasts.push({ message: n ? `${n} friend card${n === 1 ? '' : 's'} updated` : 'Friend cards are up to date', kind: 'info' });
+      if (!quiet) toasts.push({ message: n ? t('friends.pulled', { count: n }) : t('friends.upToDate'), kind: 'info' });
     } catch (e) {
-      if (!quiet) toasts.push({ message: "Couldn't fetch live cards", detail: e instanceof Error ? e.message : String(e), kind: 'warn' });
+      if (!quiet) toasts.push({ message: t('friends.fetchFailed'), detail: e instanceof Error ? e.message : String(e), kind: 'warn' });
     } finally {
       busy = false;
     }
@@ -74,20 +75,19 @@
     try {
       if (on) await friends.enableLive();
       else await friends.disableLive();
-      toasts.push({ message: on ? 'Live card on: send friends a fresh code' : 'Live card off and deleted from the server', kind: 'success' });
+      toasts.push({ message: on ? t('friends.liveOn') : t('friends.liveOff'), kind: 'success' });
     } catch (e) {
-      toasts.push({ message: on ? "Couldn't turn on live updates" : "Couldn't delete the live card", detail: e instanceof Error ? e.message : String(e), kind: 'warn' });
+      toasts.push({ message: on ? t('friends.liveOnFailed') : t('friends.liveOffFailed'), detail: e instanceof Error ? e.message : String(e), kind: 'warn' });
     } finally {
       busy = false;
     }
   }
 </script>
 
-<section class="card block friends" aria-label="Friends">
-  <div class="block-title">Friends <span class="muted">streaks and this week's XP</span></div>
+<section class="card block friends" aria-label={t('friends.title')}>
+  <div class="block-title">{t('friends.title')} <span class="muted">{t('friends.sub')}</span></div>
   <p class="muted">
-    Swap friend codes to compare. A code holds only your name, emoji, streak, best streak, this week's XP, level and when it was made. No tasks, courses, grades or anything else,
-    and there's no server: friends see what you had when you made the code.
+    {t('friends.intro')}
   </p>
   {#if friends.profile.shareChips || friends.profile.shareScores}
     <p class="muted">
@@ -101,40 +101,48 @@
   {/if}
 
   <div class="me">
-    <label class="field">Emoji <input class="input emoji" bind:value={emoji} maxlength="8" onchange={saveProfile} aria-label="Your emoji" /></label>
-    <label class="field grow">Name friends see <input class="input" bind:value={name} maxlength="24" onchange={saveProfile} placeholder="Me" aria-label="Your name" /></label>
+    <label class="field">{t('friends.emoji')} <input class="input emoji" bind:value={emoji} maxlength="8" onchange={saveProfile} aria-label={t('friends.yourEmoji')} /></label>
+    <label class="field grow"
+      >{t('friends.nameSeen')}
+      <input class="input" bind:value={name} maxlength="24" onchange={saveProfile} placeholder={t('friends.me')} aria-label={t('friends.yourName')} /></label
+    >
   </div>
   <label class="field"
-    >My friend code
-    <input class="input mono" readonly value={code} aria-label="My friend code" onfocus={(e) => (e.currentTarget as HTMLInputElement).select()} />
+    >{t('friends.myCode')}
+    <input class="input mono" readonly value={code} aria-label={t('friends.myCode')} onfocus={(e) => (e.currentTarget as HTMLInputElement).select()} />
   </label>
   <div class="row">
-    <button class="btn sm primary" onclick={() => copy(code, 'Friend code')}>Copy code</button>
-    <button class="btn sm" onclick={() => copy(link, 'Friend link')}>Copy link</button>
-    {#if canShare}<button class="btn sm" onclick={share}>Share…</button>{/if}
+    <button class="btn sm primary" onclick={() => copy(code, t('friends.code'))}>{t('friends.copyCode')}</button>
+    <button class="btn sm" onclick={() => copy(link, t('friends.link'))}>{t('friends.copyLink')}</button>
+    {#if canShare}<button class="btn sm" onclick={share}>{t('card.share')}</button>{/if}
   </div>
 
-  <form class="row" onsubmit={add} aria-label="Add a friend">
-    <input class="input grow" bind:value={paste} placeholder="Paste a friend's code or link" aria-label="Paste a friend's code" />
-    <button class="btn" type="submit" disabled={!paste.trim()}>Add friend</button>
+  <form class="row" onsubmit={add} aria-label={t('friends.addLabel')}>
+    <input class="input grow" bind:value={paste} placeholder={t('friends.pastePh')} aria-label={t('friends.paste')} />
+    <button class="btn" type="submit" disabled={!paste.trim()}>{t('friends.add')}</button>
   </form>
 
   <div class="scroll">
-    <table class="board" aria-label="Friends leaderboard">
-      <thead><tr><th>#</th><th>Name</th><th>XP this week</th><th>Streak</th><th>Level</th><th>Updated</th><th></th></tr></thead>
+    <table class="board" aria-label={t('friends.board')}>
+      <thead
+        ><tr
+          ><th>#</th><th>{t('friends.name')}</th><th>{t('friends.weekXp')}</th><th>{t('today.streak')}</th><th>{t('friends.level')}</th><th>{t('friends.updatedCol')}</th><th
+          ></th></tr
+        ></thead
+      >
       <tbody>
         {#each rows as r (r.card.id)}
           <tr class:me={r.me}>
             <td>{r.rank}</td>
-            <td>{r.card.emoji} {r.card.name}{r.me ? ' (you)' : ''}</td>
+            <td>{r.card.emoji} {r.card.name}{r.me ? ` ${t('friends.you')}` : ''}</td>
             <td
-              >{r.weekXp.toLocaleString()}{#if r.lastWeek && !r.me}<span class="muted" title="This card is from an earlier week"> · last week</span>{/if}</td
+              >{formatNumber(r.weekXp)}{#if r.lastWeek && !r.me}<span class="muted" title={t('friends.earlierWeek')}> · {t('friends.lastWeek')}</span>{/if}</td
             >
-            <td>🔥 {r.card.streak} <span class="muted">best {r.card.best}</span></td>
+            <td>🔥 {r.card.streak} <span class="muted">{t('friends.best', { n: r.card.best })}</span></td>
             <td>{r.card.lvl}</td>
-            <td class:stale={r.stale}>{r.me ? 'now' : ago(r.card.at)}{r.card.pid && !r.me ? ' · live' : ''}</td>
+            <td class:stale={r.stale}>{r.me ? t('friends.now') : ago(r.card.at)}{r.card.pid && !r.me ? ` · ${t('friends.live')}` : ''}</td>
             <td>
-              {#if !r.me}<button class="btn ghost sm" onclick={() => friends.remove(r.card.id)} aria-label="Remove {r.card.name}">✕</button>{/if}
+              {#if !r.me}<button class="btn ghost sm" onclick={() => friends.remove(r.card.id)} aria-label={t('editor.removeBlocker', { title: r.card.name })}>✕</button>{/if}
             </td>
           </tr>
         {/each}
@@ -142,27 +150,27 @@
     </table>
   </div>
   {#if !friends.list.length}
-    <p class="muted">No friends yet. Send your code, and paste theirs above.</p>
+    <p class="muted">{t('friends.none')}</p>
   {:else if anyStale}
-    <p class="nudge">⏳ Some cards are a few days old or from last week. Swap fresh codes to see where everyone is now.</p>
+    <p class="nudge">⏳ {t('friends.staleNudge')}</p>
   {/if}
 
   {#if liveAvailable}
     <details class="live">
-      <summary>Live updates (optional, uses this site's account server)</summary>
+      <summary>{t('friends.liveTitle')}</summary>
       <p class="muted">
-        With an account, your card is also kept in one row on the site's server under a random id, so friends who have your code see it update without a new code. Only that card is
-        stored; anyone with the id can read it, and only you can change it. Turning it off deletes the row.
+        {t('friends.liveIntro')}
       </p>
       {#if !account.userId}
-        <p class="muted">Sign in first (Settings → Account).</p>
+        <p class="muted">{t('friends.signIn')}</p>
       {:else}
         <label class="check"
-          ><input type="checkbox" checked={friends.liveOn} disabled={busy} onchange={(e) => toggleLive((e.currentTarget as HTMLInputElement).checked)} /> Keep my card live</label
+          ><input type="checkbox" checked={friends.liveOn} disabled={busy} onchange={(e) => toggleLive((e.currentTarget as HTMLInputElement).checked)} />
+          {t('friends.keepLive')}</label
         >
         {#if friends.liveError}<p class="muted">{friends.liveError}</p>{/if}
       {/if}
-      {#if friends.list.some((f) => f.card.pid)}<button class="btn sm" onclick={() => pull()} disabled={busy}>Refresh live cards</button>{/if}
+      {#if friends.list.some((f) => f.card.pid)}<button class="btn sm" onclick={() => pull()} disabled={busy}>{t('friends.refresh')}</button>{/if}
     </details>
   {/if}
 </section>

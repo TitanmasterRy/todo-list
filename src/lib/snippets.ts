@@ -1,5 +1,6 @@
 // Code snippets for the Code tool. Persisted in localStorage only.
 import { uid } from './id';
+import { t } from './i18n/index.svelte';
 
 export type SnippetLanguage = 'javascript' | 'typescript' | 'python' | 'html' | 'css' | 'java' | 'cpp';
 
@@ -169,7 +170,7 @@ export function deleteSnippet(id: string): void {
 export function newSnippet(language: SnippetLanguage): Snippet {
   return {
     id: uid('snip'),
-    name: `Untitled ${languageLabel(language)}`,
+    name: t('code.untitled', { lang: languageLabel(language) }),
     language,
     code: STARTERS[language],
     updatedAt: Date.now(),

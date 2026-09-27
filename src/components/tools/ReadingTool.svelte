@@ -2,6 +2,7 @@
   // Reading time: estimate a reading from pages or words, then create the task with the estimate.
   import { store } from '../../lib/store.svelte';
   import { formatMinutes } from '../../lib/dates';
+  import { t } from '../../lib/i18n/index.svelte';
 
   let mode = $state<'pages' | 'words'>('pages');
   let from = $state('');
@@ -21,7 +22,7 @@
     mode === 'pages' ? Math.round(pageCount * (parseFloat(minPerPage) || 0)) : Math.round((parseInt(words, 10) || 0) / Math.max(1, parseInt(wpm, 10) || 200)),
   );
   const pomodoros = $derived(Math.ceil(readMinutes / Math.max(1, store.settings.pomodoroWorkMin)));
-  const suggestedTitle = $derived(from && to ? `Read pp. ${from}–${to}` : pageCount ? `Read ${pageCount} pages` : words ? 'Reading' : '');
+  const suggestedTitle = $derived(from && to ? t('read.pp', { from, to }) : pageCount ? t('read.pages', { count: pageCount }) : words ? t('read.reading') : '');
   function createReading() {
     const title = readTitle.trim() || suggestedTitle;
     if (!title || !readMinutes) return;
@@ -31,57 +32,57 @@
 </script>
 
 <section class="card">
-  <h2>Reading time</h2>
-  <p class="help">Estimate how long a reading will take, then create the task with the estimate filled in.</p>
+  <h2>{t('tools.reading')}</h2>
+  <p class="help">{t('read.help')}</p>
   <div class="modes" role="tablist">
-    <button role="tab" aria-selected={mode === 'pages'} class:on={mode === 'pages'} onclick={() => (mode = 'pages')}>Pages</button>
-    <button role="tab" aria-selected={mode === 'words'} class:on={mode === 'words'} onclick={() => (mode = 'words')}>Words</button>
+    <button role="tab" aria-selected={mode === 'pages'} class:on={mode === 'pages'} onclick={() => (mode = 'pages')}>{t('read.modePages')}</button>
+    <button role="tab" aria-selected={mode === 'words'} class:on={mode === 'words'} onclick={() => (mode = 'words')}>{t('read.modeWords')}</button>
   </div>
   {#if mode === 'pages'}
     <div class="grid2">
-      <label>From page <input class="input" type="number" min="1" bind:value={from} placeholder="112" /></label>
-      <label>To page <input class="input" type="number" min="1" bind:value={to} placeholder="140" /></label>
-      <label>or page count <input class="input" type="number" min="1" bind:value={pages} placeholder="28" disabled={!!(from && to)} /></label>
+      <label>{t('read.fromPage')} <input class="input" type="number" min="1" bind:value={from} placeholder="112" /></label>
+      <label>{t('read.toPage')} <input class="input" type="number" min="1" bind:value={to} placeholder="140" /></label>
+      <label>{t('read.orCount')} <input class="input" type="number" min="1" bind:value={pages} placeholder="28" disabled={!!(from && to)} /></label>
       <label
-        >Minutes per page
+        >{t('read.minPerPage')}
         <select class="select" bind:value={minPerPage}>
-          <option value="1.5">1.5 · novel / easy</option>
-          <option value="2">2 · light textbook</option>
-          <option value="3">3 · textbook</option>
-          <option value="4">4 · dense textbook</option>
-          <option value="6">6 · journal article, notes</option>
+          <option value="1.5">1.5 · {t('read.novel')}</option>
+          <option value="2">2 · {t('read.light')}</option>
+          <option value="3">3 · {t('read.textbook')}</option>
+          <option value="4">4 · {t('read.dense')}</option>
+          <option value="6">6 · {t('read.article')}</option>
         </select>
       </label>
     </div>
   {:else}
     <div class="grid2">
-      <label>Words <input class="input" type="number" min="1" bind:value={words} placeholder="5000" /></label>
+      <label>{t('read.modeWords')} <input class="input" type="number" min="1" bind:value={words} placeholder="5000" /></label>
       <label
-        >Words per minute
+        >{t('read.wpm')}
         <select class="select" bind:value={wpm}>
-          <option value="250">250 · skim</option>
-          <option value="200">200 · normal</option>
-          <option value="120">120 · study, taking notes</option>
+          <option value="250">250 · {t('read.skim')}</option>
+          <option value="200">200 · {t('read.normal')}</option>
+          <option value="120">120 · {t('read.study')}</option>
         </select>
       </label>
     </div>
   {/if}
   <div class="result">
     <div class="big">{readMinutes ? formatMinutes(readMinutes) : '—'}</div>
-    {#if readMinutes}<div class="muted">≈ {pomodoros} pomodoro{pomodoros === 1 ? '' : 's'} of {store.settings.pomodoroWorkMin} min</div>{/if}
+    {#if readMinutes}<div class="muted">≈ {t('read.pomodoros', { count: pomodoros, min: store.settings.pomodoroWorkMin })}</div>{/if}
   </div>
   <div class="grid2">
-    <label>Title <input class="input" bind:value={readTitle} placeholder={suggestedTitle || 'Read chapter 4'} /></label>
+    <label>{t('editor.title')} <input class="input" bind:value={readTitle} placeholder={suggestedTitle || t('read.titlePh')} /></label>
     <label
-      >Course
+      >{t('inbox.course')}
       <select class="select" bind:value={readCourse}>
-        <option value="">None</option>
+        <option value="">{t('common.none')}</option>
         {#each store.activeCourses as c (c.id)}<option value={c.id}>{c.emoji ?? ''} {c.name}</option>{/each}
       </select>
     </label>
-    <label>Due <input class="input" type="date" bind:value={readDue} min={store.today} /></label>
+    <label>{t('read.due')} <input class="input" type="date" bind:value={readDue} min={store.today} /></label>
   </div>
-  <button class="btn primary" onclick={createReading} disabled={!readMinutes || !(readTitle.trim() || suggestedTitle)}>Create reading task</button>
+  <button class="btn primary" onclick={createReading} disabled={!readMinutes || !(readTitle.trim() || suggestedTitle)}>{t('read.create')}</button>
 </section>
 
 <style>

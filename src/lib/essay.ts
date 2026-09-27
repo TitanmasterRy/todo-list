@@ -1,3 +1,4 @@
+import { t } from './i18n/index.svelte';
 // Essay statistics: counts, page and time estimates, readability, and gentle style flags.
 
 const STOP = new Set(
@@ -109,10 +110,10 @@ export function analyzeEssay(text: string): EssayStats {
 }
 
 export function easeLabel(score: number): string {
-  if (score >= 80) return 'Easy (grade 5–6)';
-  if (score >= 70) return 'Fairly easy (grade 7)';
-  if (score >= 60) return 'Plain English (grades 8–9)';
-  if (score >= 50) return 'Fairly hard (grades 10–12)';
-  if (score >= 30) return 'Hard (college)';
-  return 'Very hard (graduate)';
+  if (score >= 80) return t('essay.ease80');
+  if (score >= 70) return t('essay.ease70');
+  if (score >= 60) return t('essay.ease60');
+  if (score >= 50) return t('essay.ease50');
+  if (score >= 30) return t('essay.ease30');
+  return t('essay.ease0');
 }

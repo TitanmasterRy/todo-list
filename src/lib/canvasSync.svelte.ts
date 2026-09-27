@@ -8,6 +8,7 @@ import { fetchFeed, shortenCourseName } from './schoologySync.svelte';
 import { COURSE_COLORS, COURSE_EMOJIS } from './colors';
 import { hasSecret, isLocked, useSecret } from './secrets.svelte';
 import { on } from './events';
+import { t as tr } from './i18n/index.svelte';
 
 const INTERVAL_MS = 30 * 60 * 1000;
 
@@ -60,13 +61,13 @@ export async function syncCanvas(opts: { quiet?: boolean } = {}): Promise<void> 
   if (opts.quiet && isLocked('canvasFeedUrl')) return; // picked up after unlocking
   canvas.status = 'syncing';
   try {
-    const url = await useSecret('canvasFeedUrl', { interactive: !opts.quiet, reason: 'Canvas sync' });
+    const url = await useSecret('canvasFeedUrl', { interactive: !opts.quiet, reason: tr('canvas.unlock') });
     const r = applyCanvasText(await fetchFeed(url, store.settings.schoologyProxy));
-    if (!opts.quiet || r.created) toasts.push({ message: `Canvas: ${r.created} new, ${r.updated} updated`, kind: 'success', emoji: '🎨' });
+    if (!opts.quiet || r.created) toasts.push({ message: tr('canvas.imported', { created: r.created, updated: r.updated }), kind: 'success', emoji: '🎨' });
   } catch (e) {
     canvas.status = 'error';
     canvas.lastError = e instanceof Error ? e.message : String(e);
-    if (!opts.quiet) toasts.push({ message: 'Canvas sync failed', detail: canvas.lastError, kind: 'warn', timeout: 9000 });
+    if (!opts.quiet) toasts.push({ message: tr('canvas.failed'), detail: canvas.lastError, kind: 'warn', timeout: 9000 });
   }
 }
 

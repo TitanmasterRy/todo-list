@@ -5,10 +5,15 @@
   import { store } from '../../lib/store.svelte';
   import { ui } from '../../lib/ui.svelte';
   import { toasts } from '../../lib/toast.svelte';
-  import { correctText, loadQuizSets, type Question, type QuizSet } from '../../lib/quizmaker';
+  import { correctText, loadQuizSets, SUBJECTS, type Question, type QuizSet } from '../../lib/quizmaker';
   import { addAttempt, answered, gradeTest, loadAttempts, pointsOf, summaryOf, testable, type Attempt, type Graded, type Response } from '../../lib/practicetest';
   import { formatTime } from '../../lib/studygames';
   import { renderMarkdown } from '../../lib/markdown';
+  import { formatDate } from '../../lib/dates';
+  import { t } from '../../lib/i18n/index.svelte';
+
+  const subjectNames = $derived(t('quiz.subjects').split('|'));
+  const subjectName = (s: string) => subjectNames[SUBJECTS.indexOf(s)] ?? s;
 
   // "Why?" on a missed question: an AI explanation of the mistake (when a key is set), which can become a notecard
   let aiOk = $state(false);
@@ -34,10 +39,10 @@
   function whyToCard(q: Question) {
     const text = why[q.id]?.text;
     if (!set || !text) return;
-    const name = `${set.title} — missed`;
+    const name = t('practice.missedDeck', { title: set.title });
     const deck = store.decks.find((d) => d.name === name) ?? store.addDeck(name);
     store.addCards(deck.id, [{ front: q.prompt, back: `${correctText(q)}\n\n${text}` }]);
-    toasts.push({ message: `Saved to “${deck.name}”`, kind: 'success', emoji: '🃏' });
+    toasts.push({ message: t('practice.saved', { deck: deck.name }), kind: 'success', emoji: '🃏' });
   }
 
   const sets = loadQuizSets().filter((s) => testable(s).length);
@@ -82,7 +87,7 @@
 
   function submit(timeUp = false) {
     if (phase !== 'test') return;
-    if (!timeUp && unanswered && !confirm(`${unanswered} question${unanswered === 1 ? ' is' : 's are'} blank. Hand it in anyway?`)) return;
+    if (!timeUp && unanswered && !confirm(t('practice.blank', { count: unanswered }))) return;
     clearInterval(tick);
     graded = gradeTest(questions, responses, overrides);
     const a: Attempt = {
@@ -95,7 +100,7 @@
     };
     attempts = addAttempt(attempts, setId!, a);
     phase = 'done';
-    if (timeUp) toasts.push({ message: 'Time’s up', detail: 'Your test was handed in.', kind: 'info', emoji: '⏰' });
+    if (timeUp) toasts.push({ message: t('practice.timeUp'), detail: t('practice.handedIn'), kind: 'info', emoji: '⏰' });
   }
 
   // counting a short answer as right after the fact updates the grade and the saved attempt
@@ -116,17 +121,17 @@
   function missedToCards() {
     if (!set || !graded) return;
     const missed = questions.filter((q) => graded!.results.find((r) => r.id === q.id && !r.correct));
-    const name = `${set.title} — missed`;
+    const name = t('practice.missedDeck', { title: set.title });
     const deck = store.decks.find((d) => d.name === name) ?? store.addDeck(name);
     const added = store.addCards(
       deck.id,
       missed.map((q) => ({ front: q.prompt, back: correctText(q) + (q.explanation ? `\n${q.explanation}` : '') })),
     );
     toasts.push({
-      message: `Added ${added.length} notecard${added.length === 1 ? '' : 's'} to “${deck.name}”`,
+      message: t('practice.added', { count: added.length, deck: deck.name }),
       kind: 'success',
       emoji: '🃏',
-      action: { label: 'Study', onClick: () => ((ui.openDeck = deck.id), (ui.toolsTab = 'notecards')) },
+      action: { label: t('tools.gStudy'), onClick: () => ((ui.openDeck = deck.id), (ui.toolsTab = 'notecards')) },
     });
   }
 
@@ -141,15 +146,19 @@
 
 <section class="card">
   {#if phase === 'pick'}
-    <h2>📝 Practice test</h2>
-    <p class="help">Take a Quiz maker set like a real test, then review what you missed. Scores are kept on this device so you can see yourself improve.</p>
+    <h2>📝 {t('tools.practice')}</h2>
+    <p class="help">{t('practice.help')}</p>
     {#if !sets.length}
-      <p class="muted">No quiz sets yet. Make one in <button class="link" onclick={() => (ui.toolsTab = 'quiz')}>Quiz maker</button> (by hand or with AI), then come back.</p>
+      <p class="muted">
+        {t('practice.none')} <button class="link" onclick={() => (ui.toolsTab = 'quiz')}>{t('tools.quiz')}</button>
+        {t('practice.none2')}
+      </p>
     {:else}
       <div class="opts">
-        <label class="chk"><input type="checkbox" bind:checked={shuffle} /> Shuffle questions</label>
+        <label class="chk"><input type="checkbox" bind:checked={shuffle} /> {t('practice.shuffle')}</label>
         <label class="chk"
-          >Time limit <input class="input n" type="number" min="0" step="5" bind:value={limitMin} placeholder="none" aria-label="Time limit in minutes" /> min</label
+          >{t('practice.limit')}
+          <input class="input n" type="number" min="0" step="5" bind:value={limitMin} placeholder={t('practice.noLimit')} aria-label={t('practice.limitLabel')} /> min</label
         >
       </div>
       <ul class="sets">
@@ -158,10 +167,12 @@
           <li class:picked={s.id === setId}>
             <div class="info">
               <strong>{s.title}</strong>
-              <span class="muted">{testable(s).length} questions · {s.subject}{sum.count ? ` · ${sum.count} attempt${sum.count === 1 ? '' : 's'}` : ''}</span>
+              <span class="muted"
+                >{t('quiz.nQuestions', { count: testable(s).length })} · {subjectName(s.subject)}{sum.count ? ` · ${t('practice.attempts', { count: sum.count })}` : ''}</span
+              >
             </div>
-            {#if sum.count}<span class="score">last {sum.last}% · best {sum.best}%</span>{/if}
-            <button class="btn sm primary" onclick={() => start(s)}>Start</button>
+            {#if sum.count}<span class="score">{t('practice.lastBest', { last: sum.last ?? 0, best: sum.best ?? 0 })}</span>{/if}
+            <button class="btn sm primary" onclick={() => start(s)}>{t('focus.start')}</button>
           </li>
         {/each}
       </ul>
@@ -170,18 +181,20 @@
     <div class="bar">
       <h2>{set.title}</h2>
       <span class="grow"></span>
-      <span class="clock" class:low={limitMs && left < 60_000} role="timer" aria-live="off">{limitMs ? `⏳ ${formatTime(left)} left` : `⏱ ${formatTime(elapsed)}`}</span>
+      <span class="clock" class:low={limitMs && left < 60_000} role="timer" aria-live="off"
+        >{limitMs ? `⏳ ${t('practice.left', { time: formatTime(left) })}` : `⏱ ${formatTime(elapsed)}`}</span
+      >
     </div>
     <ol class="qs">
       {#each questions as q, i (q.id)}
         <li class="q" aria-labelledby="pq-{q.id}">
-          <p id="pq-{q.id}" class="prompt"><span class="num">{i + 1}.</span> {q.prompt} <span class="pts">({pointsOf(q)} pt{pointsOf(q) === 1 ? '' : 's'})</span></p>
+          <p id="pq-{q.id}" class="prompt"><span class="num">{i + 1}.</span> {q.prompt} <span class="pts">({t('practice.pts', { count: pointsOf(q) })})</span></p>
           {#if q.type === 'short' || q.type === 'fill'}
             <input
               class="input"
               value={(responses[q.id] as string) ?? ''}
               oninput={(e) => (responses[q.id] = e.currentTarget.value)}
-              aria-label="Answer to question {i + 1}"
+              aria-label={t('practice.answerTo', { n: i + 1 })}
               autocomplete="off"
             />
           {:else}
@@ -193,30 +206,30 @@
                   {o}</label
                 >
               {/each}
-              {#if q.correct.length > 1}<span class="muted">Pick all that apply.</span>{/if}
+              {#if q.correct.length > 1}<span class="muted">{t('practice.pickAll')}</span>{/if}
             </div>
           {/if}
         </li>
       {/each}
     </ol>
     <div class="bar">
-      <span class="muted">{questions.length - unanswered} of {questions.length} answered</span>
+      <span class="muted">{t('practice.answered', { n: questions.length - unanswered, total: questions.length })}</span>
       <span class="grow"></span>
-      <button class="btn ghost" onclick={() => (clearInterval(tick), (phase = 'pick'))}>Quit</button>
-      <button class="btn primary" onclick={() => submit()}>Hand it in</button>
+      <button class="btn ghost" onclick={() => (clearInterval(tick), (phase = 'pick'))}>{t('practice.quit')}</button>
+      <button class="btn primary" onclick={() => submit()}>{t('practice.handIn')}</button>
     </div>
   {:else if phase === 'done' && set && graded}
     <div class="result" role="status">
       <div class="big">{graded.pct}%</div>
       <div>
         <strong>{set.title}</strong>
-        <div class="muted">{graded.earned} of {graded.total} points · {formatTime(history[history.length - 1]?.ms ?? 0)}</div>
+        <div class="muted">{t('practice.points', { n: graded.earned, total: graded.total })} · {formatTime(history[history.length - 1]?.ms ?? 0)}</div>
       </div>
     </div>
     {#if history.length > 1}
-      <figure class="hist" aria-label="Scores over your last {Math.min(10, history.length)} attempts">
+      <figure class="hist" aria-label={t('practice.history', { n: Math.min(10, history.length) })}>
         {#each history.slice(-10) as a, i (a.at)}
-          <div class="col" title="{new Date(a.at).toLocaleDateString()}: {a.pct}%">
+          <div class="col" title="{formatDate(new Date(a.at))}: {a.pct}%">
             <span class="v">{a.pct}</span>
             <span class="b" class:last={i === Math.min(10, history.length) - 1} style="height:{Math.max(4, a.pct)}%"></span>
           </div>
@@ -228,41 +241,41 @@
         {@const r = resultOf(q.id)}
         <li class="q" class:right={r?.correct} class:wrong={!r?.correct}>
           <p class="prompt"><span class="num">{r?.correct ? '✓' : '✗'} {i + 1}.</span> {q.prompt}</p>
-          <p class="ans">Your answer: <strong>{shown(q, responses[q.id])}</strong></p>
-          {#if !r?.correct}<p class="ans">Correct: <strong>{correctText(q)}</strong></p>{/if}
+          <p class="ans">{t('practice.yours')} <strong>{shown(q, responses[q.id])}</strong></p>
+          {#if !r?.correct}<p class="ans">{t('practice.correct')} <strong>{correctText(q)}</strong></p>{/if}
           {#if q.explanation}<p class="muted">{q.explanation}</p>{/if}
           {#if !r?.correct && aiOk}
             {@const w = why[q.id]}
             {#if w?.text}
               <div class="why">{@html renderMarkdown(w.text)}</div>
-              <button class="link small" onclick={() => whyToCard(q)}>🃏 Save as a notecard</button>
+              <button class="link small" onclick={() => whyToCard(q)}>🃏 {t('practice.saveCard')}</button>
             {:else if w?.error}
               <p class="err">{w.error}</p>
             {:else}
-              <button class="btn sm ghost" onclick={() => explain(q)} disabled={w?.busy}>{w?.busy ? 'Thinking…' : '✨ Explain my mistake'}</button>
+              <button class="btn sm ghost" onclick={() => explain(q)} disabled={w?.busy}>{w?.busy ? t('study.thinking') : t('practice.explain')}</button>
             {/if}
           {/if}
           {#if (q.type === 'short' || q.type === 'fill') && answered(q, responses[q.id])}
-            <button class="link small" onclick={() => override(q, !r?.correct)}>{r?.correct ? 'Actually, count it wrong' : 'My answer means the same: count it right'}</button>
+            <button class="link small" onclick={() => override(q, !r?.correct)}>{r?.correct ? t('practice.countWrong') : t('practice.countRight')}</button>
           {/if}
         </li>
       {/each}
     </ol>
     <div class="bar">
-      <button class="btn ghost" onclick={() => (phase = 'pick')}>All tests</button>
+      <button class="btn ghost" onclick={() => (phase = 'pick')}>{t('practice.all')}</button>
       <span class="grow"></span>
       {#if graded.results.some((x) => !x.correct)}
-        <button class="btn" onclick={missedToCards}>🃏 Missed → notecards</button>
+        <button class="btn" onclick={missedToCards}>🃏 {t('practice.missedCards')}</button>
         <button
           class="btn"
           onclick={() =>
             start(
               set!,
               graded!.results.filter((x) => !x.correct).map((x) => x.id),
-            )}>Retake missed</button
+            )}>{t('practice.retakeMissed')}</button
         >
       {/if}
-      <button class="btn primary" onclick={() => start(set!)}>Retake</button>
+      <button class="btn primary" onclick={() => start(set!)}>{t('practice.retake')}</button>
     </div>
   {/if}
 </section>

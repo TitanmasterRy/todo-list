@@ -128,7 +128,7 @@ Settings → AI helper. Pick a provider and paste its key (stored only in your b
 
 ## Languages
 
-**Settings → Language:** Auto (follows the browser), English or Español. The switch is instant, sets `<html lang dir>`, and dates, times and numbers follow your region through `Intl` ("mañana 17:00", "5 oct", "hace 3 días"). In Spanish, quick add understands Spanish too: `Leer capítulo 3 mañana a las 5 #historia !alta`, `el viernes`, `pasado mañana`, `la próxima semana`, `en 3 días`, `15 de octubre`, `cada lunes y miércoles`. The app shell and the everyday screens are translated; Tools, Play, Stats and some Settings sections are still English. A **right-to-left layout** switch in the same section previews RTL until an RTL language is added.
+**Settings → Language:** Auto (follows the browser), English or Español. The switch is instant, sets `<html lang dir>`, and dates, times and numbers follow your region through `Intl` ("mañana 17:00", "5 oct", "hace 3 días"). In Spanish, quick add understands Spanish too: `Leer capítulo 3 mañana a las 5 #historia !alta`, `el viernes`, `pasado mañana`, `la próxima semana`, `en 3 días`, `15 de octubre`, `cada lunes y miércoles`. Everything except Play is translated (the Study help reference sheets are English content), and new tasks get their auto plan in Spanish. A **right-to-left layout** switch in the same section previews RTL until an RTL language is added.
 
 Adding a language:
 

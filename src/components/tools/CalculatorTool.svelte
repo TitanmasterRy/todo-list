@@ -1,5 +1,6 @@
 <script lang="ts">
   import { evaluate, formatNumber, MathError, FUNCTIONS } from '../../lib/mathparser';
+  import { t } from '../../lib/i18n/index.svelte';
 
   let expr = $state('');
   let angle = $state<'rad' | 'deg'>('deg');
@@ -44,8 +45,8 @@
 
 <section class="card calc">
   <div class="head">
-    <h2>Calculator</h2>
-    <div class="modes" role="radiogroup" aria-label="Angle unit">
+    <h2>{t('tools.calculator')}</h2>
+    <div class="modes" role="radiogroup" aria-label={t('calc.angle')}>
       <button role="radio" aria-checked={angle === 'deg'} class:on={angle === 'deg'} onclick={() => (angle = 'deg')}>deg</button>
       <button role="radio" aria-checked={angle === 'rad'} class:on={angle === 'rad'} onclick={() => (angle = 'rad')}>rad</button>
     </div>
@@ -56,7 +57,7 @@
       bind:this={input}
       bind:value={expr}
       placeholder="2^10 / 4, sin(30), sqrt(2)x, 5!, 15% * 80"
-      aria-label="Expression"
+      aria-label={t('calc.expr')}
       autocomplete="off"
       spellcheck="false"
       data-calc
@@ -89,10 +90,15 @@
     </ul>
   {/if}
   <details class="help">
-    <summary>Functions and syntax</summary>
+    <summary>{t('calc.syntax')}</summary>
     <p>
-      {FUNCTIONS.join(', ')}. Constants: pi, e, tau. <code>ans</code> is the last result. Implicit multiplication works (<code>2pi</code>, <code>3(4+1)</code>). <code>x!</code>
-      factorial, <code>7 % 3</code> modulo, <code>50%</code> percent, <code>^</code> power.
+      {FUNCTIONS.join(', ')}. {t('calc.constants')} <code>ans</code>
+      {t('calc.ans')}
+      {t('calc.implicit')} (<code>2pi</code>, <code>3(4+1)</code>). <code>x!</code>
+      {t('calc.factorial')}, <code>7 % 3</code>
+      {t('calc.modulo')}, <code>50%</code>
+      {t('calc.percent')}, <code>^</code>
+      {t('calc.power')}.
     </p>
   </details>
 </section>

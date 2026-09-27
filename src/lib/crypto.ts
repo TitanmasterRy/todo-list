@@ -2,6 +2,7 @@
 // every message gets a fresh 12-byte IV. GCM authenticates, so a wrong passphrase (or a tampered copy)
 // fails to decrypt instead of producing garbage. Used for the key vault (secrets.svelte.ts) and for the
 // end-to-end encrypted sync copy (syncCrypto.ts). Pure functions; runs in browsers and in Node 20+.
+import { t as tr } from './i18n/index.svelte';
 
 /** OWASP's current recommendation for PBKDF2-HMAC-SHA256 (the floor this app accepts is 310,000). */
 export const PBKDF2_ITERATIONS = 600_000;
@@ -11,7 +12,7 @@ const IV_BYTES = 12;
 
 /** Thrown when a passphrase doesn't open the data (GCM authentication failed). */
 export class WrongPassphraseError extends Error {
-  constructor(message = 'That passphrase is not right.') {
+  constructor(message = tr('crypto.wrong')) {
     super(message);
     this.name = 'WrongPassphraseError';
   }
@@ -34,7 +35,7 @@ export interface EncryptedEnvelope extends Sealed {
 
 function subtle(): SubtleCrypto {
   const s = globalThis.crypto?.subtle;
-  if (!s) throw new Error('This browser has no WebCrypto (it needs a secure https:// page).');
+  if (!s) throw new Error(tr('crypto.none'));
   return s;
 }
 
@@ -122,6 +123,6 @@ export async function openJSON(env: EncryptedEnvelope, passphrase: string, keyFo
   try {
     return JSON.parse(text);
   } catch {
-    throw new Error('The decrypted data is not valid JSON.');
+    throw new Error(tr('crypto.json'));
   }
 }

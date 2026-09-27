@@ -6,8 +6,8 @@
   import { ui } from '../lib/ui.svelte';
   import { renderMarkdown } from '../lib/markdown';
   import { allSections, unseenCount } from '../lib/whatsnew';
-  import { t } from '../lib/i18n/index.svelte';
   import changelog from '../../CHANGELOG.md?raw';
+  import { locale, t } from '../lib/i18n/index.svelte';
 
   const sections = allSections(changelog);
   const unseen = ui.whatsNewSince ? unseenCount(sections, ui.whatsNewSince) : 0;
@@ -34,6 +34,7 @@
     <header>
       <h2 id="wn-h">📜 {t('patch.title')}</h2>
       {#if unseen}<p class="sub">{t('patch.newCount', { count: unseen })}</p>{/if}
+      {#if locale() !== 'en'}<p class="en">{t('whatsnew.english')}</p>{/if}
     </header>
     <div class="list">
       {#each shown as s, i (s.title)}
@@ -67,6 +68,11 @@
     color: var(--accent-text);
     font-size: 13px;
     font-weight: 600;
+    margin: 4px 0 0;
+  }
+  .en {
+    color: var(--text-muted);
+    font-size: 12px;
     margin: 4px 0 0;
   }
   .list {

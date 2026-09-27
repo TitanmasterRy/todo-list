@@ -8,6 +8,7 @@
   import ReadingTool from '../components/tools/ReadingTool.svelte';
   import CalendarExportTool from '../components/tools/CalendarExportTool.svelte';
   import { ui } from '../lib/ui.svelte';
+  import { t } from '../lib/i18n/index.svelte';
 
   import ScanTool from '../components/tools/ScanTool.svelte';
 
@@ -46,40 +47,41 @@
   $effect(() => {
     if (ui.toolsTab && ui.toolsTab !== tab) tab = ui.toolsTab as Tab;
   });
-  const tabs: { id: Tab; label: string; icon: string; group: Group }[] = [
-    { id: 'planner', label: 'Plan my day', icon: '🗓️', group: 'plan' },
-    { id: 'week', label: 'Plan my week', icon: '📅', group: 'plan' },
-    { id: 'timetable', label: 'Timetable', icon: '🏫', group: 'plan' },
-    { id: 'syllabus', label: 'Syllabus box', icon: '📋', group: 'plan' },
-    { id: 'reading', label: 'Reading time', icon: '📖', group: 'plan' },
-    { id: 'calendar', label: 'Calendar export', icon: '📆', group: 'plan' },
-    { id: 'grades', label: 'Grade calculator', icon: '🎯', group: 'grades' },
-    { id: 'transcript', label: 'Transcript', icon: '🎓', group: 'grades' },
-    { id: 'powerschool', label: 'PowerSchool import', icon: '🏫', group: 'grades' },
-    { id: 'notecards', label: 'Notecards', icon: '🃏', group: 'study' },
-    { id: 'quiz', label: 'Quiz maker', icon: '🎮', group: 'study' },
-    { id: 'practice', label: 'Practice test', icon: '📝', group: 'study' },
-    { id: 'scan', label: 'Scan paper', icon: '📷', group: 'study' },
-    { id: 'reader', label: 'Book reader', icon: '📚', group: 'study' },
-    { id: 'study', label: 'Study help', icon: '💡', group: 'study' },
-    { id: 'essay', label: 'Essay tools', icon: '📝', group: 'study' },
-    { id: 'citations', label: 'Citations', icon: '🔖', group: 'study' },
-    { id: 'calculator', label: 'Calculator', icon: '🧮', group: 'compute' },
-    { id: 'graph', label: 'Graphing', icon: '📈', group: 'compute' },
-    { id: 'units', label: 'Unit converter', icon: '📏', group: 'compute' },
-    { id: 'elements', label: 'Periodic table', icon: '⚗️', group: 'compute' },
-    { id: 'code', label: 'Code editor', icon: '💻', group: 'compute' },
-    { id: 'google', label: 'Google (Gmail, Classroom, Calendar, Drive)', icon: '🟢', group: 'connect' },
-    { id: 'canvas', label: 'Canvas', icon: '🎨', group: 'connect' },
-    { id: 'class', label: 'Class mode', icon: '🧑‍🏫', group: 'connect' },
-  ];
-  const groups: { id: Group; label: string }[] = [
-    { id: 'plan', label: 'Plan' },
-    { id: 'grades', label: 'Grades' },
-    { id: 'study', label: 'Study' },
-    { id: 'compute', label: 'Compute' },
-    { id: 'connect', label: 'Connect' },
-  ];
+  // labels follow the app language
+  const tabs: { id: Tab; label: string; icon: string; group: Group }[] = $derived([
+    { id: 'planner', label: t('tools.planner'), icon: '🗓️', group: 'plan' },
+    { id: 'week', label: t('tools.week'), icon: '📅', group: 'plan' },
+    { id: 'timetable', label: t('tools.timetable'), icon: '🏫', group: 'plan' },
+    { id: 'syllabus', label: t('tools.syllabus'), icon: '📋', group: 'plan' },
+    { id: 'reading', label: t('tools.reading'), icon: '📖', group: 'plan' },
+    { id: 'calendar', label: t('tools.calendar'), icon: '📆', group: 'plan' },
+    { id: 'grades', label: t('tools.grades'), icon: '🎯', group: 'grades' },
+    { id: 'transcript', label: t('tools.transcript'), icon: '🎓', group: 'grades' },
+    { id: 'powerschool', label: t('tools.powerschool'), icon: '🏫', group: 'grades' },
+    { id: 'notecards', label: t('tools.notecards'), icon: '🃏', group: 'study' },
+    { id: 'quiz', label: t('tools.quiz'), icon: '🎮', group: 'study' },
+    { id: 'practice', label: t('tools.practice'), icon: '📝', group: 'study' },
+    { id: 'scan', label: t('tools.scan'), icon: '📷', group: 'study' },
+    { id: 'reader', label: t('tools.reader'), icon: '📚', group: 'study' },
+    { id: 'study', label: t('tools.study'), icon: '💡', group: 'study' },
+    { id: 'essay', label: t('tools.essay'), icon: '📝', group: 'study' },
+    { id: 'citations', label: t('tools.citations'), icon: '🔖', group: 'study' },
+    { id: 'calculator', label: t('tools.calculator'), icon: '🧮', group: 'compute' },
+    { id: 'graph', label: t('tools.graph'), icon: '📈', group: 'compute' },
+    { id: 'units', label: t('tools.units'), icon: '📏', group: 'compute' },
+    { id: 'elements', label: t('tools.elements'), icon: '⚗️', group: 'compute' },
+    { id: 'code', label: t('tools.code'), icon: '💻', group: 'compute' },
+    { id: 'google', label: t('tools.google'), icon: '🟢', group: 'connect' },
+    { id: 'canvas', label: t('tools.canvas'), icon: '🎨', group: 'connect' },
+    { id: 'class', label: t('tools.class'), icon: '🧑‍🏫', group: 'connect' },
+  ]);
+  const groups: { id: Group; label: string }[] = $derived([
+    { id: 'plan', label: t('tools.gPlan') },
+    { id: 'grades', label: t('tools.gGrades') },
+    { id: 'study', label: t('tools.gStudy') },
+    { id: 'compute', label: t('tools.gCompute') },
+    { id: 'connect', label: t('tools.gConnect') },
+  ]);
   const currentGroup = $derived(tabs.find((t) => t.id === tab)?.group ?? 'plan');
   // follows the selected tab, and can also be set directly by the group buttons
   let group = $derived<Group>(currentGroup);
@@ -88,12 +90,12 @@
 <div class="page">
   <header class="page-head">
     <div>
-      <h1>Tools</h1>
-      <div class="sub">Little helpers for planning, grades, reading and calendars.</div>
+      <h1>{t('nav.tools')}</h1>
+      <div class="sub">{t('tools.sub')}</div>
     </div>
   </header>
 
-  <div class="groups" role="tablist" aria-label="Tool groups">
+  <div class="groups" role="tablist" aria-label={t('tools.groups')}>
     {#each groups as g (g.id)}
       <button
         role="tab"
@@ -107,7 +109,7 @@
       >
     {/each}
   </div>
-  <div class="tabs" role="tablist" aria-label="Tools">
+  <div class="tabs" role="tablist" aria-label={t('nav.tools')}>
     {#each tabs.filter((t) => t.group === group) as t (t.id)}
       <button role="tab" aria-selected={tab === t.id} class:on={tab === t.id} onclick={() => (tab = t.id)}><span aria-hidden="true">{t.icon}</span> {t.label}</button>
     {/each}
@@ -125,61 +127,61 @@
     <NotecardsTool />
   {:else if tab === 'study'}
     {#await import('../components/tools/StudyHelpTool.svelte')}
-      <div class="card muted">Loading study help…</div>
+      <div class="card muted">{t('tools.loadingStudy')}</div>
     {:then m}
       <m.default />
     {/await}
   {:else if tab === 'timetable'}
     {#await import('../components/tools/TimetableTool.svelte')}
-      <div class="card muted">Loading…</div>
+      <div class="card muted">{t('common.loading')}</div>
     {:then m}
       <m.default />
     {/await}
   {:else if tab === 'canvas'}
     {#await import('../components/tools/CanvasTool.svelte')}
-      <div class="card muted">Loading…</div>
+      <div class="card muted">{t('common.loading')}</div>
     {:then m}
       <m.default />
     {/await}
   {:else if tab === 'elements'}
     {#await import('../components/tools/PeriodicTableTool.svelte')}
-      <div class="card muted">Loading…</div>
+      <div class="card muted">{t('common.loading')}</div>
     {:then m}
       <m.default />
     {/await}
   {:else if tab === 'practice'}
     {#await import('../components/tools/PracticeTestTool.svelte')}
-      <div class="card muted">Loading…</div>
+      <div class="card muted">{t('common.loading')}</div>
     {:then m}
       <m.default />
     {/await}
   {:else if tab === 'week'}
     {#await import('../components/tools/WeekPlanTool.svelte')}
-      <div class="card muted">Loading…</div>
+      <div class="card muted">{t('common.loading')}</div>
     {:then m}
       <m.default />
     {/await}
   {:else if tab === 'syllabus'}
     {#await import('../components/tools/SyllabusTool.svelte')}
-      <div class="card muted">Loading…</div>
+      <div class="card muted">{t('common.loading')}</div>
     {:then m}
       <m.default />
     {/await}
   {:else if tab === 'essay'}
     {#await import('../components/tools/EssayTool.svelte')}
-      <div class="card muted">Loading…</div>
+      <div class="card muted">{t('common.loading')}</div>
     {:then m}
       <m.default />
     {/await}
   {:else if tab === 'citations'}
     {#await import('../components/tools/CitationTool.svelte')}
-      <div class="card muted">Loading…</div>
+      <div class="card muted">{t('common.loading')}</div>
     {:then m}
       <m.default />
     {/await}
   {:else if tab === 'units'}
     {#await import('../components/tools/UnitTool.svelte')}
-      <div class="card muted">Loading…</div>
+      <div class="card muted">{t('common.loading')}</div>
     {:then m}
       <m.default />
     {/await}
@@ -189,37 +191,37 @@
     <ScanTool />
   {:else if tab === 'reader'}
     {#await import('../components/tools/ReaderTool.svelte')}
-      <div class="card muted">Loading reader…</div>
+      <div class="card muted">{t('tools.loadingReader')}</div>
     {:then m}
       <m.default />
     {/await}
   {:else if tab === 'code'}
     {#await import('../components/tools/CodeTool.svelte')}
-      <div class="card muted">Loading editor…</div>
+      <div class="card muted">{t('tools.loadingEditor')}</div>
     {:then m}
       <m.default />
     {/await}
   {:else if tab === 'google'}
     {#await import('../components/GoogleTools.svelte')}
-      <div class="card muted">Loading…</div>
+      <div class="card muted">{t('common.loading')}</div>
     {:then m}
       <m.default />
     {/await}
   {:else if tab === 'quiz'}
     {#await import('../components/tools/QuizMakerTool.svelte')}
-      <div class="card muted">Loading…</div>
+      <div class="card muted">{t('common.loading')}</div>
     {:then m}
       <m.default />
     {/await}
   {:else if tab === 'powerschool'}
     {#await import('../components/tools/PowerSchoolTool.svelte')}
-      <div class="card muted">Loading…</div>
+      <div class="card muted">{t('common.loading')}</div>
     {:then m}
       <m.default />
     {/await}
   {:else if tab === 'class'}
     {#await import('../components/social/ClassMode.svelte')}
-      <div class="card muted">Loading…</div>
+      <div class="card muted">{t('common.loading')}</div>
     {:then m}
       <m.default />
     {/await}

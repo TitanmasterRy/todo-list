@@ -91,7 +91,7 @@
       on('studied', (e) => {
         if (!store.settings.gamification) return;
         toasts.push({
-          message: `+${e.xp} XP · ${e.clearedAll ? 'Deck cleared!' : 'Study session'}`,
+          message: `+${e.xp} XP · ${e.clearedAll ? tr('grade.deckClearedBang') : tr('grade.studySession')}`,
           detail: `${e.correct}/${e.reviewed} cards right`,
           kind: 'xp',
           combo: e.clearedAll ? 4 : 0,
@@ -102,8 +102,8 @@
       on('collectible', (c) => {
         enqueue(() => {
           toasts.push({
-            message: `Mystery reward: ${c.emoji} ${c.name}`,
-            detail: c.kind === 'title' ? 'A new title for your profile. See Settings → Collection.' : 'A new sticker for your collection.',
+            message: tr('fb.mystery', { reward: `${c.emoji} ${c.name}` }),
+            detail: c.kind === 'title' ? tr('fb.newTitle') : tr('fb.newSticker'),
             kind: 'badge',
             emoji: '🎁',
             timeout: 7000,

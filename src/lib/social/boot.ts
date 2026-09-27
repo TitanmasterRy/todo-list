@@ -6,6 +6,7 @@ import { toasts } from '../toast.svelte';
 import { paramFrom } from '../b64url';
 import { CLASS_SUBS_KEY, FRIEND_LIVE_KEY, ROOM_KEY } from './links';
 import { socialUi } from './state.svelte';
+import { t } from '../i18n/index.svelte';
 
 let started = false;
 
@@ -43,7 +44,7 @@ async function openLink(): Promise<{ room: boolean }> {
     const { decodeRoom } = await import('../studyroom');
     const room = decodeRoom(value);
     if (!room) {
-      toasts.push({ message: "That study-room link doesn't work", detail: 'Ask for a fresh link.', kind: 'warn' });
+      toasts.push({ message: t('room.badLink'), detail: t('room.badLinkDetail'), kind: 'warn' });
       return { room: false };
     }
     const { studyRoom } = await import('./room.svelte');
@@ -51,19 +52,19 @@ async function openLink(): Promise<{ room: boolean }> {
     if (studyRoom.room?.id !== room.id || studyRoom.room.start !== room.start) studyRoom.join(room);
     socialUi.roomOpen = true;
     store.go('focus');
-    toasts.push({ message: `Joined ${room.name}`, detail: 'Everyone with the link sees the same timer.', kind: 'success', emoji: '👥' });
+    toasts.push({ message: t('room.joined', { name: room.name }), detail: t('room.joinedDetail'), kind: 'success', emoji: '👥' });
     return { room: true };
   }
   if (kind === 'friend') {
     const { friends } = await import('./friends.svelte');
     const { result, card } = friends.add(value);
     const msg: Record<string, string> = {
-      added: `Added ${card?.name} as a friend`,
-      updated: `Updated ${card?.name}'s card`,
-      older: `You already have a newer card from ${card?.name}`,
-      self: "That's your own friend code",
-      full: 'Your friends list is full',
-      invalid: "That friend link doesn't work",
+      added: t('friends.addedFriend', { name: card?.name ?? '' }),
+      updated: t('friends.updated', { name: card?.name ?? '' }),
+      older: t('friends.older', { name: card?.name ?? '' }),
+      self: t('friends.selfLink'),
+      full: t('friends.fullShort'),
+      invalid: t('friends.badLink'),
     };
     toasts.push({ message: msg[result], kind: result === 'added' || result === 'updated' ? 'success' : 'warn', emoji: card?.emoji ?? '👋' });
     store.go('stats');

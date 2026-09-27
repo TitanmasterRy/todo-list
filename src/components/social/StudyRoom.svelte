@@ -8,9 +8,11 @@
   import { studyRoom } from '../../lib/social/room.svelte';
   import { socialUi } from '../../lib/social/state.svelte';
   import { account, accountConfig } from '../../lib/account.svelte';
+  import { formatClock } from '../../lib/dates';
+  import { t } from '../../lib/i18n/index.svelte';
 
   const s = store.settings;
-  let name = $state('Study room');
+  let name = $state(t('focus.studyRoom'));
   let work = $state(s.pomodoroWorkMin);
   let brk = $state(s.pomodoroBreakMin);
   let long = $state(s.pomodoroLongBreakMin);
@@ -29,11 +31,11 @@
   const nextLabel = $derived.by(() => {
     if (!room || !st) return '';
     if (st.phase === 'done') return '';
-    if (st.phase === 'waiting') return `Round 1 focus starts at ${new Date(st.endsAt).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}`;
-    if (st.phase !== 'work') return `Then round ${st.round + 1}: focus ${room.work} min`;
-    if (room.rounds && st.round >= room.rounds) return 'Then the room ends';
+    if (st.phase === 'waiting') return t('room.startsAt', { time: formatClock(new Date(st.endsAt), { hour: 'numeric', minute: '2-digit' }) });
+    if (st.phase !== 'work') return t('room.thenRound', { n: st.round + 1, min: room.work });
+    if (room.rounds && st.round >= room.rounds) return t('room.thenEnds');
     const longNext = room.every > 0 && room.long > 0 && st.round % room.every === 0;
-    return `Then a ${longNext ? `${room.long} min long` : `${room.brk} min`} break`;
+    return longNext ? t('room.thenLong', { min: room.long }) : t('room.thenBreak', { min: room.brk });
   });
 
   function create(e: SubmitEvent) {
@@ -45,7 +47,7 @@
     e.preventDefault();
     const r = decodeRoom(joinInput);
     if (!r) {
-      toasts.push({ message: "That isn't a study-room link", detail: 'Paste the whole link someone shared.', kind: 'warn' });
+      toasts.push({ message: t('room.notLink'), detail: t('room.notLinkDetail'), kind: 'warn' });
       return;
     }
     void requestNotifications();
@@ -55,54 +57,56 @@
   async function copy() {
     try {
       await navigator.clipboard.writeText(link);
-      toasts.push({ message: 'Room link copied', detail: 'Send it to your study group.', kind: 'success', emoji: '🔗' });
+      toasts.push({ message: t('room.copied'), detail: t('room.copiedDetail'), kind: 'success', emoji: '🔗' });
     } catch {
-      toasts.push({ message: "Couldn't copy: select the link and copy it", kind: 'warn' });
+      toasts.push({ message: t('room.copyFailed'), kind: 'warn' });
     }
   }
   async function share() {
     try {
-      await navigator.share({ title: room?.name ?? 'Study room', text: `Join my study room "${room?.name}"`, url: link });
+      await navigator.share({ title: room?.name ?? t('focus.studyRoom'), text: t('room.shareText', { name: room?.name ?? '' }), url: link });
     } catch {
       /* cancelled */
     }
   }
 </script>
 
-<section class="card room" aria-label="Study room">
+<section class="card room" aria-label={t('focus.studyRoom')}>
   <div class="head">
-    <h2>👥 Study room</h2>
+    <h2>👥 {t('focus.studyRoom')}</h2>
     <div class="grow"></div>
-    <button class="btn ghost sm" onclick={() => (socialUi.roomOpen = false)} aria-label="Hide study room">Hide</button>
+    <button class="btn ghost sm" onclick={() => (socialUi.roomOpen = false)} aria-label={t('room.hide')}>{t('common.hide')}</button>
   </div>
 
   {#if room && st}
     <div class="live" data-phase={st.phase} data-ends-at={st.endsAt}>
       <div class="rname">{room.name}</div>
       <div class="phase" aria-live="polite">
-        {PHASE_LABEL[st.phase]}{st.phase !== 'waiting' && st.phase !== 'done' ? ` · round ${st.round}${room.rounds ? ` of ${room.rounds}` : ''}` : ''}
+        {PHASE_LABEL[st.phase]}{st.phase !== 'waiting' && st.phase !== 'done'
+          ? ` · ${room.rounds ? t('room.roundOf', { n: st.round, total: room.rounds }) : t('room.round', { n: st.round })}`
+          : ''}
       </div>
-      <div class="left" aria-label="Time left">{formatLeft(st.left)}</div>
+      <div class="left" aria-label={t('room.timeLeft')}>{formatLeft(st.left)}</div>
       <div class="bar" aria-hidden="true"><div class="fill" style="width:{pct * 100}%"></div></div>
       {#if nextLabel}<div class="muted">{nextLabel}</div>{/if}
     </div>
     <label class="field"
-      >Room link
-      <input class="input" readonly value={link} aria-label="Room link" onfocus={(e) => (e.currentTarget as HTMLInputElement).select()} />
+      >{t('room.link')}
+      <input class="input" readonly value={link} aria-label={t('room.link')} onfocus={(e) => (e.currentTarget as HTMLInputElement).select()} />
     </label>
     <div class="row">
-      <button class="btn primary sm" onclick={copy}>Copy link</button>
-      {#if canShare}<button class="btn sm" onclick={share}>Share…</button>{/if}
+      <button class="btn primary sm" onclick={copy}>{t('friends.copyLink')}</button>
+      {#if canShare}<button class="btn sm" onclick={share}>{t('card.share')}</button>{/if}
       <label class="check"
-        ><input type="checkbox" checked={studyRoom.chime} onchange={(e) => studyRoom.setChime((e.currentTarget as HTMLInputElement).checked)} /> Chime at each change</label
+        ><input type="checkbox" checked={studyRoom.chime} onchange={(e) => studyRoom.setChime((e.currentTarget as HTMLInputElement).checked)} /> {t('room.chime')}</label
       >
       <div class="grow"></div>
-      <button class="btn ghost sm danger" onclick={() => studyRoom.leave()}>Leave room</button>
+      <button class="btn ghost sm danger" onclick={() => studyRoom.leave()}>{t('room.leave')}</button>
     </div>
     <div class="who">
       {#if studyRoom.people}
-        <strong>In the room:</strong>
-        {studyRoom.people.join(', ') || 'just you'}
+        <strong>{t('room.inRoom')}</strong>
+        {studyRoom.people.join(', ') || t('room.justYou')}
       {:else if canPresence}
         <form
           class="row"
@@ -111,46 +115,43 @@
             void studyRoom.setPresence(true, presenceName);
           }}
         >
-          <input class="input sm" bind:value={presenceName} maxlength="24" placeholder="Your name" aria-label="Name to show in the room" />
-          <button class="btn sm" type="submit">Show who's in</button>
+          <input class="input sm" bind:value={presenceName} maxlength="24" placeholder={t('friends.yourName')} aria-label={t('room.nameLabel')} />
+          <button class="btn sm" type="submit">{t('room.showWho')}</button>
         </form>
-        <p class="muted">Uses this site's account server (Supabase Realtime) to share the name you type with others in the room while you're here. Nothing is stored.</p>
+        <p class="muted">{t('room.presenceHelp')}</p>
       {:else}
         <p class="muted">
-          There's no server behind rooms, so the app can't see who else opened the link. Everyone just runs the same clock.{accountConfig()
-            ? ' Sign in to an account (Settings → Account) to see who’s in.'
-            : ''}
+          {t('room.noServerHelp')}{accountConfig() ? ` ${t('room.signIn')}` : ''}
         </p>
       {/if}
-      {#if studyRoom.people}<button class="btn ghost sm" onclick={() => studyRoom.setPresence(false, presenceName)}>Stop sharing my name</button>{/if}
+      {#if studyRoom.people}<button class="btn ghost sm" onclick={() => studyRoom.setPresence(false, presenceName)}>{t('room.stopSharing')}</button>{/if}
       {#if studyRoom.presenceError}<p class="muted">{studyRoom.presenceError}</p>{/if}
     </div>
   {:else}
     <p class="muted">
-      A Pomodoro timer your friends join from a link: everyone sees the same phase and time left. The link holds the room's name, start time and lengths; there's no server, so it
-      works offline and nobody else learns who joined.
+      {t('room.help')}
     </p>
-    <form class="create" onsubmit={create} aria-label="Create a study room">
-      <label class="field wide">Room name <input class="input" bind:value={name} maxlength={ROOM_LIMITS.name} /></label>
-      <label class="field">Focus (min) <input class="input" type="number" min="1" max="180" bind:value={work} /></label>
-      <label class="field">Break (min) <input class="input" type="number" min="1" max="60" bind:value={brk} /></label>
-      <label class="field">Long break (min) <input class="input" type="number" min="0" max="120" bind:value={long} /></label>
-      <label class="field">Long break every <input class="input" type="number" min="0" max="12" bind:value={every} /></label>
-      <label class="field">Rounds (0 = no end) <input class="input" type="number" min="0" max="48" bind:value={rounds} /></label>
+    <form class="create" onsubmit={create} aria-label={t('room.create')}>
+      <label class="field wide">{t('room.name')} <input class="input" bind:value={name} maxlength={ROOM_LIMITS.name} /></label>
+      <label class="field">{t('room.focusMin')} <input class="input" type="number" min="1" max="180" bind:value={work} /></label>
+      <label class="field">{t('room.breakMin')} <input class="input" type="number" min="1" max="60" bind:value={brk} /></label>
+      <label class="field">{t('room.longMin')} <input class="input" type="number" min="0" max="120" bind:value={long} /></label>
+      <label class="field">{t('room.longEvery')} <input class="input" type="number" min="0" max="12" bind:value={every} /></label>
+      <label class="field">{t('room.rounds')} <input class="input" type="number" min="0" max="48" bind:value={rounds} /></label>
       <label class="field"
-        >Starts
+        >{t('room.starts')}
         <select class="select" bind:value={startIn}>
-          <option value={0}>Now</option>
-          <option value={1}>In 1 minute</option>
-          <option value={5}>In 5 minutes</option>
-          <option value={10}>In 10 minutes</option>
+          <option value={0}>{t('room.now')}</option>
+          <option value={1}>{t('room.inMin', { count: 1 })}</option>
+          <option value={5}>{t('room.inMin', { count: 5 })}</option>
+          <option value={10}>{t('room.inMin', { count: 10 })}</option>
         </select>
       </label>
-      <button class="btn primary" type="submit">Create room</button>
+      <button class="btn primary" type="submit">{t('room.createBtn')}</button>
     </form>
-    <form class="row joinf" onsubmit={join} aria-label="Join a study room">
-      <input class="input grow" bind:value={joinInput} placeholder="Paste a study-room link" aria-label="Study-room link" />
-      <button class="btn" type="submit" disabled={!joinInput.trim()}>Join</button>
+    <form class="row joinf" onsubmit={join} aria-label={t('room.joinLabel')}>
+      <input class="input grow" bind:value={joinInput} placeholder={t('room.pastePh')} aria-label={t('room.pasteLabel')} />
+      <button class="btn" type="submit" disabled={!joinInput.trim()}>{t('room.join')}</button>
     </form>
   {/if}
 </section>

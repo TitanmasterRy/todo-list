@@ -4,6 +4,7 @@
   import { ui } from '../lib/ui.svelte';
 
   import { COURSE_COLORS, COURSE_EMOJIS as EMOJIS } from '../lib/colors';
+  import { t } from '../lib/i18n/index.svelte';
 
   const editing = $derived(ui.courseEditor && ui.courseEditor !== 'new' ? store.courseById(ui.courseEditor) : undefined);
   // svelte-ignore state_referenced_locally
@@ -60,56 +61,57 @@
 
 <div class="modal-backdrop" onclick={close} onkeydown={onKey} role="presentation">
   <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_noninteractive_element_interactions -->
-  <form use:focusTrap class="modal" aria-label={editing ? 'Edit course' : 'New course'} onclick={(e) => e.stopPropagation()} onsubmit={save}>
-    <h2>{editing ? 'Edit course' : 'New course'}</h2>
+  <form use:focusTrap class="modal" aria-label={editing ? t('courses.edit') : t('courses.new')} onclick={(e) => e.stopPropagation()} onsubmit={save}>
+    <h2>{editing ? t('courses.edit') : t('courses.new')}</h2>
     <div class="field">
-      <label for="c-name">Name</label>
-      <input id="c-name" class="input" bind:this={input} bind:value={name} placeholder="Calc II" />
+      <label for="c-name">{t('friends.name')}</label>
+      <input id="c-name" class="input" bind:this={input} bind:value={name} placeholder={t('ce.namePh')} />
     </div>
     <div class="field">
-      <label for="c-color">Color</label>
+      <label for="c-color">{t('ce.color')}</label>
       <div class="swatches" id="c-color">
         {#each COURSE_COLORS as c}
-          <button type="button" class="sw" class:on={color === c} style="background:{c}" onclick={() => (color = c)} aria-label="Color {c}" aria-pressed={color === c}></button>
+          <button type="button" class="sw" class:on={color === c} style="background:{c}" onclick={() => (color = c)} aria-label={t('ce.colorN', { c })} aria-pressed={color === c}
+          ></button>
         {/each}
-        <input type="color" bind:value={color} aria-label="Custom color" class="custom" />
+        <input type="color" bind:value={color} aria-label={t('ce.custom')} class="custom" />
       </div>
     </div>
     <div class="field">
-      <label for="c-emoji">Emoji</label>
+      <label for="c-emoji">{t('friends.emoji')}</label>
       <div class="emojis">
         {#each EMOJIS as e}
           <button type="button" class="em" class:on={emoji === e} onclick={() => (emoji = emoji === e ? '' : e)} aria-pressed={emoji === e}>{e}</button>
         {/each}
-        <input id="c-emoji" class="input em-input" bind:value={emoji} placeholder="or type" maxlength="4" />
+        <input id="c-emoji" class="input em-input" bind:value={emoji} placeholder={t('ce.orType')} maxlength="4" />
       </div>
     </div>
     <div class="row">
       <div class="field">
-        <label for="c-term">Term</label>
-        <input id="c-term" class="input" bind:value={term} placeholder="Fall 2026" />
+        <label for="c-term">{t('ps.term')}</label>
+        <input id="c-term" class="input" bind:value={term} placeholder={t('ce.termPh')} />
       </div>
       <div class="field">
-        <label for="c-credits">Credits</label>
+        <label for="c-credits">{t('gpa.creditsCol')}</label>
         <input id="c-credits" class="input" type="number" min="0" step="0.5" bind:value={credits} placeholder="1" />
       </div>
       <div class="field">
-        <label for="c-final">Final grade % (override)</label>
-        <input id="c-final" class="input" type="number" min="0" max="120" step="0.1" bind:value={finalGrade} placeholder="from calculator" />
+        <label for="c-final">{t('ce.final')}</label>
+        <input id="c-final" class="input" type="number" min="0" max="120" step="0.1" bind:value={finalGrade} placeholder={t('ce.fromCalc')} />
       </div>
     </div>
     <div class="field">
-      <label for="c-schoology">Name in Schoology (for sync matching)</label>
+      <label for="c-schoology">{t('ce.schoology')}</label>
       <input id="c-schoology" class="input" bind:value={schoologyName} placeholder="AP Calculus BC - Period 3" />
     </div>
     {#if editing}
-      <label class="check"><input type="checkbox" bind:checked={archived} /> Archived (hidden from lists, tasks kept)</label>
+      <label class="check"><input type="checkbox" bind:checked={archived} /> {t('ce.archived')}</label>
     {/if}
     <div class="actions">
-      {#if editing}<button type="button" class="btn danger" onclick={del}>Delete course</button>{/if}
+      {#if editing}<button type="button" class="btn danger" onclick={del}>{t('ce.delete')}</button>{/if}
       <span class="grow"></span>
-      <button type="button" class="btn" onclick={close}>Cancel</button>
-      <button type="submit" class="btn primary">{editing ? 'Save' : 'Create'}</button>
+      <button type="button" class="btn" onclick={close}>{t('common.cancel')}</button>
+      <button type="submit" class="btn primary">{editing ? t('common.save') : t('cards.create')}</button>
     </div>
   </form>
 </div>

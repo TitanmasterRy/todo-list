@@ -4,20 +4,21 @@
   import { ui } from '../lib/ui.svelte';
   import { toasts } from '../lib/toast.svelte';
   import { COURSE_COLORS, COURSE_EMOJIS } from '../lib/colors';
+  import { t } from '../lib/i18n/index.svelte';
 
   interface Row {
     name: string;
     emoji: string;
     color: string;
   }
-  const presets: Row[] = [
-    { name: 'Math', emoji: '📐', color: COURSE_COLORS[1] },
-    { name: 'Science', emoji: '🧪', color: COURSE_COLORS[3] },
-    { name: 'English', emoji: '✍️', color: COURSE_COLORS[5] },
-    { name: 'History', emoji: '🏛️', color: COURSE_COLORS[6] },
-    { name: 'Language', emoji: '🗣️', color: COURSE_COLORS[8] },
-    { name: 'CS', emoji: '💻', color: COURSE_COLORS[0] },
-  ];
+  const presets: Row[] = $derived([
+    { name: t('study.math'), emoji: '📐', color: COURSE_COLORS[1] },
+    { name: t('study.science'), emoji: '🧪', color: COURSE_COLORS[3] },
+    { name: t('sem.english'), emoji: '✍️', color: COURSE_COLORS[5] },
+    { name: t('sem.history'), emoji: '🏛️', color: COURSE_COLORS[6] },
+    { name: t('sem.language'), emoji: '🗣️', color: COURSE_COLORS[8] },
+    { name: t('study.cs'), emoji: '💻', color: COURSE_COLORS[0] },
+  ]);
   let rows = $state<Row[]>(
     Array.from({ length: 4 }, (_, i) => ({ name: '', emoji: COURSE_EMOJIS[i % COURSE_EMOJIS.length], color: COURSE_COLORS[(i * 3) % COURSE_COLORS.length] })),
   );
@@ -49,7 +50,7 @@
     const valid = rows.filter((r) => r.name.trim());
     if (!valid.length) return;
     for (const r of valid) store.addCourse({ name: r.name.trim(), color: r.color, emoji: r.emoji || undefined });
-    toasts.push({ message: `Created ${valid.length} course${valid.length > 1 ? 's' : ''}`, kind: 'success', emoji: '🎓' });
+    toasts.push({ message: t('sem.created', { count: valid.length }), kind: 'success', emoji: '🎓' });
     ui.semesterSetup = false;
     store.go('courses', { courseId: null });
   }
@@ -60,9 +61,9 @@
 
 <div class="modal-backdrop" onclick={close} role="presentation">
   <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_noninteractive_element_interactions -->
-  <form use:focusTrap class="modal setup" aria-label="Semester setup" onclick={(e) => e.stopPropagation()} onsubmit={create}>
-    <h2>🎓 Semester setup</h2>
-    <p class="muted">Add all your courses at once. Pick a color and emoji for each so they’re easy to spot.</p>
+  <form use:focusTrap class="modal setup" aria-label={t('courses.semesterSetup')} onclick={(e) => e.stopPropagation()} onsubmit={create}>
+    <h2>🎓 {t('courses.semesterSetup')}</h2>
+    <p class="muted">{t('sem.help')}</p>
     <div class="presets">
       {#each presets as p}
         <button type="button" class="chip" style="border-color:{p.color}" onclick={() => usePreset(p)}>{p.emoji} {p.name}</button>
@@ -71,28 +72,26 @@
     <div class="rows">
       {#each rows as r, i (i)}
         <div class="row">
-          <input class="input em" bind:value={r.emoji} aria-label="Emoji" maxlength="4" />
+          <input class="input em" bind:value={r.emoji} aria-label={t('friends.emoji')} maxlength="4" />
           {#if i === 0}
-            <input class="input" bind:this={first} bind:value={r.name} placeholder="Course name" aria-label="Course name" />
+            <input class="input" bind:this={first} bind:value={r.name} placeholder={t('sem.name')} aria-label={t('sem.name')} />
           {:else}
-            <input class="input" bind:value={r.name} placeholder="Course name" aria-label="Course name" />
+            <input class="input" bind:value={r.name} placeholder={t('sem.name')} aria-label={t('sem.name')} />
           {/if}
-          <input type="color" bind:value={r.color} aria-label="Color" class="color" />
-          <button type="button" class="btn ghost sm icon" aria-label="Remove row" onclick={() => (rows = rows.filter((_, j) => j !== i))}>×</button>
+          <input type="color" bind:value={r.color} aria-label={t('ce.color')} class="color" />
+          <button type="button" class="btn ghost sm icon" aria-label={t('sem.removeRow')} onclick={() => (rows = rows.filter((_, j) => j !== i))}>×</button>
         </div>
       {/each}
     </div>
-    <button type="button" class="btn ghost sm" onclick={addRow}>+ Add row</button>
+    <button type="button" class="btn ghost sm" onclick={addRow}>{t('sem.addRow')}</button>
     <details class="paste">
-      <summary>Paste a list instead</summary>
-      <textarea class="textarea" bind:value={paste} placeholder="One course per line, or comma separated"></textarea>
-      <button type="button" class="btn sm" onclick={fromPaste}>Fill rows</button>
+      <summary>{t('sem.paste')}</summary>
+      <textarea class="textarea" bind:value={paste} placeholder={t('sem.pastePh')}></textarea>
+      <button type="button" class="btn sm" onclick={fromPaste}>{t('sem.fill')}</button>
     </details>
     <div class="actions">
-      <button type="button" class="btn" onclick={close}>Cancel</button>
-      <button type="submit" class="btn primary" disabled={!rows.some((r) => r.name.trim())}
-        >Create {rows.filter((r) => r.name.trim()).length || ''} course{rows.filter((r) => r.name.trim()).length === 1 ? '' : 's'}</button
-      >
+      <button type="button" class="btn" onclick={close}>{t('common.cancel')}</button>
+      <button type="submit" class="btn primary" disabled={!rows.some((r) => r.name.trim())}>{t('sem.create', { count: rows.filter((r) => r.name.trim()).length })}</button>
     </div>
   </form>
 </div>

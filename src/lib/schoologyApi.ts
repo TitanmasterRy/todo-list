@@ -3,6 +3,7 @@
 import type { TaskType } from './types';
 import type { ExternalAssignment } from './schoology';
 import { inferType } from './schoology';
+import { t as tr } from './i18n/index.svelte';
 
 export const API_BASE = 'https://api.schoology.com/v1';
 
@@ -75,7 +76,7 @@ export async function apiGet<T>(creds: SchoologyCreds, path: string, query: Reco
   for (const [k, v] of Object.entries(query)) url.searchParams.set(k, v);
   const auth = await oauthHeader('GET', url.toString(), creds.key, creds.secret);
   const res = await fetch(proxied(creds.proxy, url.toString()), { headers: { Authorization: auth, Accept: 'application/json', 'X-Schoology-Authorization': auth } });
-  if (res.status === 401) throw new Error('Schoology rejected the key/secret (401). Copy them again from app.schoology.com/api.');
+  if (res.status === 401) throw new Error(tr('sgy.rejected'));
   if (res.status === 403) throw new Error('Schoology refused (403). Your school may have disabled API access for students.');
   if (!res.ok) throw new Error(`Schoology API ${res.status}`);
   return (await res.json()) as T;

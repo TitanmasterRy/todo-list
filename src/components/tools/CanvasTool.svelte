@@ -5,6 +5,8 @@
   import { forgetSecret, hasSecret, secret } from '../../lib/secrets.svelte';
   import { isCanvasFeedUrl } from '../../lib/canvas';
   import { applyCanvasText, canvas, startCanvasSync, syncCanvas } from '../../lib/canvasSync.svelte';
+  import { formatDateTime } from '../../lib/dates';
+  import { t } from '../../lib/i18n/index.svelte';
 
   let url = $state(secret('canvasFeedUrl'));
   let proxy = $state(store.settings.schoologyProxy);
@@ -25,9 +27,9 @@
     if (!f) return;
     try {
       const r = applyCanvasText(await f.text());
-      toasts.push({ message: `Canvas: ${r.created} new, ${r.updated} updated`, detail: `${r.total} in the file`, kind: 'success', emoji: '🎨' });
+      toasts.push({ message: t('canvas.imported', { created: r.created, updated: r.updated }), detail: t('canvas.inFile', { n: r.total }), kind: 'success', emoji: '🎨' });
     } catch (err) {
-      toasts.push({ message: 'Couldn’t read that file', detail: err instanceof Error ? err.message : String(err), kind: 'warn' });
+      toasts.push({ message: t('common.readFailed'), detail: err instanceof Error ? err.message : String(err), kind: 'warn' });
     }
   }
 </script>
@@ -35,63 +37,61 @@
 <section class="card">
   <h2>🎨 Canvas</h2>
   <p class="help">
-    In Canvas, open <strong>Calendar</strong> and click <strong>Calendar Feed</strong> (bottom right), then copy the link. Assignments show up here with their course, due date and a
-    link back. Your own notes, completions and deletions stay yours.
+    {t('canvas.help')}
   </p>
   {#if connected}
     <div class="row">
       <span class="status {canvas.status}">
         {canvas.status === 'syncing'
-          ? 'Syncing…'
+          ? t('sync.syncing')
           : canvas.status === 'error'
-            ? `Error: ${canvas.lastError}`
+            ? t('sync.error', { error: canvas.lastError ?? '' })
             : store.settings.lastCanvasSync
-              ? `Synced ${new Date(store.settings.lastCanvasSync).toLocaleString()}`
-              : 'Connected'}
+              ? t('sync.syncedAt', { when: formatDateTime(new Date(store.settings.lastCanvasSync)) })
+              : t('sync.connected')}
       </span>
-      <span class="muted">· {synced} task{synced === 1 ? '' : 's'} from Canvas</span>
+      <span class="muted">· {t('canvas.count', { count: synced })}</span>
       <span class="grow"></span>
-      <button class="btn sm" onclick={() => void syncCanvas()} disabled={canvas.status === 'syncing'}>Sync now</button>
+      <button class="btn sm" onclick={() => void syncCanvas()} disabled={canvas.status === 'syncing'}>{t('sync.now')}</button>
       <button
         class="btn sm ghost"
         onclick={() => {
           forgetSecret('canvasFeedUrl');
           url = '';
-        }}>Disconnect</button
+        }}>{t('sync.disconnect')}</button
       >
     </div>
   {/if}
   <form class="grid" onsubmit={save}>
     <label
-      >Feed link
+      >{t('canvas.feed')}
       <input
         class="input"
         bind:value={url}
         placeholder="https://yourschool.instructure.com/feeds/calendars/user_….ics"
-        aria-label="Canvas feed link"
+        aria-label={t('canvas.feedLabel')}
         autocomplete="off"
         spellcheck="false"
       />
     </label>
-    {#if url && !valid}<p class="warn">That doesn’t look like a Canvas calendar feed (it ends in /feeds/calendars/user_….ics).</p>{/if}
+    {#if url && !valid}<p class="warn">{t('canvas.invalid')}</p>{/if}
     <label
-      >CORS proxy prefix (optional, shared with Schoology)
-      <input class="input" bind:value={proxy} placeholder="https://my-relay.workers.dev/?url=" aria-label="CORS proxy prefix" autocomplete="off" />
+      >{t('canvas.proxy')}
+      <input class="input" bind:value={proxy} placeholder="https://my-relay.workers.dev/?url=" aria-label={t('sync.proxyLabel')} autocomplete="off" />
     </label>
     <label class="chk"
-      ><input type="checkbox" checked={!!store.settings.canvasIncludeEvents} onchange={(e) => store.updateSettings({ canvasIncludeEvents: e.currentTarget.checked })} /> Also add calendar
-      events (not just assignments)</label
+      ><input type="checkbox" checked={!!store.settings.canvasIncludeEvents} onchange={(e) => store.updateSettings({ canvasIncludeEvents: e.currentTarget.checked })} />
+      {t('canvas.events')}</label
     >
     <div class="row">
-      <button class="btn primary" type="submit" disabled={!valid || canvas.status === 'syncing'}>{connected ? 'Save and sync' : 'Connect'}</button>
-      <label class="btn ghost file">Or upload the .ics file<input type="file" accept=".ics,text/calendar" onchange={upload} hidden /></label>
+      <button class="btn primary" type="submit" disabled={!valid || canvas.status === 'syncing'}>{connected ? t('sync.saveSync') : t('sync.connect')}</button>
+      <label class="btn ghost file">{t('canvas.upload')}<input type="file" accept=".ics,text/calendar" onchange={upload} hidden /></label>
     </div>
   </form>
   <p class="muted">
-    Browsers usually can't read Canvas feeds directly, so syncing goes through your CORS relay (see DEPLOY.md; the relay allows *.instructure.com, and your school's own Canvas
-    address with EXTRA_FEED_HOSTS). The feed link is private: it stays on this device and is covered by the key lock.
+    {t('canvas.relay')}
   </p>
-  <p class="muted">Microsoft Teams Assignments has no calendar feed yet; add those with the Syllabus box or quick add.</p>
+  <p class="muted">{t('canvas.teams')}</p>
 </section>
 
 <style>

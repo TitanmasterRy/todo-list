@@ -5,6 +5,7 @@
   import { addDaysKey, dueKey } from '../../lib/dates';
   import { buildICS } from '../../lib/ics';
   import { downloadText } from '../../lib/download';
+  import { t } from '../../lib/i18n/index.svelte';
 
   let includeDone = $state(false);
   let horizon = $state<'all' | '30' | '90'>('all');
@@ -19,8 +20,8 @@
   function exportICS() {
     downloadText('homework-todo.ics', buildICS(calTasks, store.courses), 'text/calendar');
     toasts.push({
-      message: `Exported ${calTasks.length} event${calTasks.length === 1 ? '' : 's'}`,
-      detail: 'Import homework-todo.ics into your calendar app.',
+      message: t('ics.exported', { count: calTasks.length }),
+      detail: t('cmd.icsDetail'),
       kind: 'success',
       emoji: '📆',
     });
@@ -28,30 +29,29 @@
 </script>
 
 <section class="card">
-  <h2>Calendar export</h2>
+  <h2>{t('tools.calendar')}</h2>
   <p class="help">
-    Download an <code>.ics</code> file of your due dates and import it into Google Calendar, Apple Calendar, or Outlook. Exams and quizzes get a reminder one day before. Re-export after
-    changes; most calendars update events with the same id on re-import.
+    {t('ics.help')}
   </p>
   <div class="grid2">
     <label
-      >Range
+      >{t('ics.range')}
       <select class="select" bind:value={horizon}>
-        <option value="30">Next 30 days</option>
-        <option value="90">Next 90 days</option>
-        <option value="all">Everything</option>
+        <option value="30">{t('inbox.nextDays', { n: 30 })}</option>
+        <option value="90">{t('inbox.nextDays', { n: 90 })}</option>
+        <option value="all">{t('ics.everything')}</option>
       </select>
     </label>
-    <label class="check"><input type="checkbox" bind:checked={includeDone} /> Include completed tasks</label>
+    <label class="check"><input type="checkbox" bind:checked={includeDone} /> {t('ics.includeDone')}</label>
   </div>
-  <p class="muted">{calTasks.length} event{calTasks.length === 1 ? '' : 's'} will be exported.</p>
-  <button class="btn primary" onclick={exportICS} disabled={!calTasks.length}>Download homework-todo.ics</button>
+  <p class="muted">{t('ics.willExport', { count: calTasks.length })}</p>
+  <button class="btn primary" onclick={exportICS} disabled={!calTasks.length}>{t('ics.download')}</button>
   <details class="how">
-    <summary>How to import</summary>
+    <summary>{t('ics.how')}</summary>
     <ul>
-      <li><strong>Google Calendar:</strong> Settings → Import &amp; export → Import → choose the file and a calendar.</li>
-      <li><strong>Apple Calendar:</strong> File → Import, or open the file on iPhone and tap Add All.</li>
-      <li><strong>Outlook:</strong> File → Open &amp; Export → Import/Export → Import an iCalendar file.</li>
+      <li><strong>Google Calendar:</strong> {t('ics.howGoogle')}</li>
+      <li><strong>Apple Calendar:</strong> {t('ics.howApple')}</li>
+      <li><strong>Outlook:</strong> {t('ics.howOutlook')}</li>
     </ul>
   </details>
 </section>
@@ -68,10 +68,6 @@
     font-size: 13px;
     color: var(--text-muted);
     margin: 4px 0 10px;
-  }
-  .help code {
-    font-family: var(--mono);
-    font-size: 12px;
   }
   .muted {
     color: var(--text-muted);

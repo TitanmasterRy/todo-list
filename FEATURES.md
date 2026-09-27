@@ -106,7 +106,7 @@ merged into `main` and live on the GitHub Pages site. The full plan, including w
 
 ## ✅ Languages and accessibility
 
-- [x] Spanish (Settings → Language), including Spanish dates in quick add
+- [x] Spanish (Settings → Language) everywhere except Play, including Spanish dates in quick add and Spanish auto plans for new tasks
 - [x] Dates and numbers in your region's format; right-to-left layout support
 - [x] High contrast, reading fonts, text size, confetti toggle, reduced motion; contrast checked in every theme
 

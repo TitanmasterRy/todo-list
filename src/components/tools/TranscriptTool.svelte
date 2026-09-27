@@ -4,6 +4,7 @@
   import { letterOn, scaleFor, summarize } from '../../lib/grades';
   import { gpa, groupByTerm, pointsFor, transcriptCSV, type TranscriptRow } from '../../lib/gpa';
   import { downloadText } from '../../lib/download';
+  import { t } from '../../lib/i18n/index.svelte';
 
   const rows = $derived.by((): TranscriptRow[] =>
     store.courses.map((c) => {
@@ -12,7 +13,7 @@
       const grade = typeof c.finalGrade === 'number' ? c.finalGrade : calc;
       return {
         courseId: c.id,
-        name: `${c.emoji ? c.emoji + ' ' : ''}${c.name}${c.archived ? ' (archived)' : ''}`,
+        name: `${c.emoji ? c.emoji + ' ' : ''}${c.name}${c.archived ? ` ${t('inbox.archived')}` : ''}`,
         term: c.term ?? '',
         credits: c.credits ?? 1,
         grade,
@@ -28,24 +29,24 @@
 <section class="card transcript" id="transcript">
   <div class="head">
     <div>
-      <h2>Transcript</h2>
-      <p class="help">Grades come from the grade calculator, or a final-grade override set on the course. Set credits and term on each course (Courses → edit).</p>
+      <h2>{t('tools.transcript')}</h2>
+      <p class="help">{t('gpa.help')}</p>
     </div>
     <div class="btns no-print">
-      <button class="btn sm" onclick={() => downloadText('transcript.csv', transcriptCSV(rows), 'text/csv')} disabled={!rows.length}>Export CSV</button>
-      <button class="btn sm" onclick={() => window.print()} disabled={!rows.length}>Print / PDF</button>
+      <button class="btn sm" onclick={() => downloadText('transcript.csv', transcriptCSV(rows), 'text/csv')} disabled={!rows.length}>{t('gpa.csv')}</button>
+      <button class="btn sm" onclick={() => window.print()} disabled={!rows.length}>{t('gpa.print')}</button>
     </div>
   </div>
   {#if !rows.length}
-    <p class="help">No courses yet.</p>
+    <p class="help">{t('courses.none')}.</p>
   {/if}
-  {#each terms as t (t.term)}
-    {@const g = gpa(t.rows)}
-    <h3>{t.term} <span class="muted">{g.gpa === null ? 'no grades yet' : `GPA ${g.gpa.toFixed(2)}`} · {g.credits} credit{g.credits === 1 ? '' : 's'}</span></h3>
+  {#each terms as tm (tm.term)}
+    {@const g = gpa(tm.rows)}
+    <h3>{tm.term} <span class="muted">{g.gpa === null ? t('gpa.noGrades') : `GPA ${g.gpa.toFixed(2)}`} · {t('gpa.credits', { count: g.credits })}</span></h3>
     <table>
-      <thead><tr><th>Course</th><th>Credits</th><th>Grade</th><th>Letter</th><th>Points</th></tr></thead>
+      <thead><tr><th>{t('inbox.course')}</th><th>{t('gpa.creditsCol')}</th><th>{t('gpa.grade')}</th><th>{t('gpa.letter')}</th><th>{t('gpa.points')}</th></tr></thead>
       <tbody>
-        {#each t.rows as r (r.courseId)}
+        {#each tm.rows as r (r.courseId)}
           <tr>
             <td><button class="link no-print" onclick={() => (ui.courseEditor = r.courseId)}>{r.name}</button><span class="print-only">{r.name}</span></td>
             <td>{r.credits}</td>
@@ -59,9 +60,9 @@
   {/each}
   {#if rows.length}
     <div class="summary">
-      <span>Cumulative GPA</span>
+      <span>{t('gpa.cumulative')}</span>
       <strong>{overall.gpa === null ? '—' : overall.gpa.toFixed(2)}</strong>
-      <span class="muted">{overall.gradedCredits} of {overall.credits} credits graded · 4.0 scale (A 4.0, A− 3.7, B+ 3.3 …)</span>
+      <span class="muted">{t('gpa.graded', { n: overall.gradedCredits, total: overall.credits })}</span>
     </div>
   {/if}
 </section>

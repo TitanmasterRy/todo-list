@@ -1,5 +1,6 @@
 // Shareable weekly stats card: a PNG with this week's numbers (never task titles), drawn on a canvas.
-import { addDaysKey, dueKey, fromKey, DAY_SHORT, MONTH_SHORT } from './dates';
+import { addDaysKey, dayName, dueKey, formatMonthDay, fromKey } from './dates';
+import { formatNumber, t } from './i18n/index.svelte';
 import type { Course, Stats, Task } from './types';
 
 export interface WeekSummary {
@@ -35,7 +36,7 @@ export function weekSummary(stats: Stats, tasks: Task[], courses: Course[], toda
   return { from, to: today, done, xp, streak, ringDays: days.filter((d) => d.count >= (dailyGoal || 3)).length, days, topCourses, level: stats.level };
 }
 
-const md = (k: string) => `${MONTH_SHORT[fromKey(k).getMonth()]} ${fromKey(k).getDate()}`;
+const md = (k: string) => formatMonthDay(fromKey(k), fromKey(k));
 
 /** Draw the card (1080×1080, square for stories and chats). */
 export function drawStatCard(ctx: CanvasRenderingContext2D, s: WeekSummary, opts: { accent: string; name?: string; showCourses: boolean }): void {
@@ -51,16 +52,16 @@ export function drawStatCard(ctx: CanvasRenderingContext2D, s: WeekSummary, opts
   const font = (w: number, px: number) => `${w} ${px}px system-ui, -apple-system, "Segoe UI", Roboto, sans-serif`;
   ctx.fillStyle = '#ffffff';
   ctx.font = font(800, 64);
-  ctx.fillText(opts.name ? `${opts.name}'s week` : 'My homework week', 80, 150);
+  ctx.fillText(opts.name ? t('card.nameWeek', { name: opts.name }) : t('card.title'), 80, 150);
   ctx.fillStyle = '#b9b4d0';
   ctx.font = font(500, 34);
   ctx.fillText(`${md(s.from)} – ${md(s.to)}`, 80, 205);
 
   const tiles: [string, string][] = [
-    [String(s.done), s.done === 1 ? 'task done' : 'tasks done'],
-    [`🔥 ${s.streak}`, 'day streak'],
-    [`${s.ringDays}/7`, 'goal days'],
-    [s.xp.toLocaleString(), 'XP earned'],
+    [String(s.done), t('card.tasksDone', { count: s.done })],
+    [`🔥 ${s.streak}`, t('card.dayStreak')],
+    [`${s.ringDays}/7`, t('card.goalDays')],
+    [formatNumber(s.xp), t('card.xp')],
   ];
   tiles.forEach(([v, l], i) => {
     const x = 80 + (i % 2) * 470;
@@ -88,7 +89,7 @@ export function drawStatCard(ctx: CanvasRenderingContext2D, s: WeekSummary, opts
     ctx.fillStyle = '#b9b4d0';
     ctx.font = font(500, 26);
     ctx.textAlign = 'center';
-    ctx.fillText(DAY_SHORT[fromKey(d.key).getDay()], x + 30, baseY + 40);
+    ctx.fillText(dayName(fromKey(d.key).getDay()), x + 30, baseY + 40);
     if (d.count) {
       ctx.fillStyle = '#ffffff';
       ctx.fillText(String(d.count), x + 30, baseY - h - 14);
@@ -99,12 +100,12 @@ export function drawStatCard(ctx: CanvasRenderingContext2D, s: WeekSummary, opts
   if (opts.showCourses && s.topCourses.length) {
     ctx.fillStyle = '#b9b4d0';
     ctx.font = font(500, 28);
-    ctx.fillText(`Most done: ${s.topCourses.map((c) => `${c.emoji ? c.emoji + ' ' : ''}${c.name} (${c.count})`).join(' · ')}`.slice(0, 70), 80, 1000);
+    ctx.fillText(t('card.most', { courses: s.topCourses.map((c) => `${c.emoji ? c.emoji + ' ' : ''}${c.name} (${c.count})`).join(' · ') }).slice(0, 70), 80, 1000);
   }
   ctx.fillStyle = '#8f89ab';
   ctx.font = font(600, 26);
   ctx.textAlign = 'right';
-  ctx.fillText(`Level ${s.level} · Homework To-Do`, W - 80, H - 40);
+  ctx.fillText(`${t('stats.level', { level: s.level })} · Homework To-Do`, W - 80, H - 40);
   ctx.textAlign = 'left';
 }
 

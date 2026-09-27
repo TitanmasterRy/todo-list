@@ -6,7 +6,7 @@
 
 <section class="card">
   <h2>{t('settings.themePack')}</h2>
-  <p class="help">Each pack changes colors, corners, the completion sound, the particles that fly out of the checkbox, and the confetti.</p>
+  <p class="help">{t('packs.help')}</p>
   <ThemePicker />
 </section>
 

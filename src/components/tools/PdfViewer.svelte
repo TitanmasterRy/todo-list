@@ -3,6 +3,7 @@
   // pdf.js itself is loaded lazily so the rest of the app never pays for it.
   import { onDestroy } from 'svelte';
   import type { PDFDocumentLoadingTask, PDFDocumentProxy, RenderTask, TextLayer } from 'pdfjs-dist';
+  import { t } from '../../lib/i18n/index.svelte';
 
   let {
     blob,
@@ -188,18 +189,18 @@
 <div class="viewer" bind:this={wrapEl}>
   {#if error}
     <div class="err" role="alert">
-      <strong>Couldn’t open this PDF.</strong>
+      <strong>{t('pdf.failed')}</strong>
       <span>{error}</span>
     </div>
   {:else}
     {#if loading || rendering}
-      <div class="status" aria-live="polite">{loading ? 'Opening…' : 'Rendering…'}</div>
+      <div class="status" aria-live="polite">{loading ? t('pdf.opening') : t('pdf.rendering')}</div>
     {/if}
     <div
       class="page"
       style="--scale-factor:{scale}; width:{cssW ? cssW + 'px' : '100%'}; height:{cssH ? cssH + 'px' : 'auto'}"
       role="document"
-      aria-label="Page {page} of {pageCount}"
+      aria-label={t('pdf.page', { page, count: pageCount })}
     >
       <canvas bind:this={canvasEl} style="width:{cssW ? cssW + 'px' : '100%'}; height:{cssH ? cssH + 'px' : 'auto'}"></canvas>
       <div class="textLayer" bind:this={textEl}></div>

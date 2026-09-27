@@ -1,5 +1,6 @@
 <script lang="ts">
   import { onMount } from 'svelte';
+  import { t } from '../../lib/i18n/index.svelte';
   import { compile, formatNumber, MathError } from '../../lib/mathparser';
 
   const COLORS = ['#6c5ce7', '#ef4444', '#10b981', '#f59e0b', '#0ea5e9', '#ec4899'];
@@ -198,8 +199,8 @@
 
 <section class="card graph">
   <div class="head">
-    <h2>Graphing</h2>
-    <div class="modes" role="radiogroup" aria-label="Angle unit">
+    <h2>{t('tools.graph')}</h2>
+    <div class="modes" role="radiogroup" aria-label={t('calc.angle')}>
       <button role="radio" aria-checked={angle === 'rad'} class:on={angle === 'rad'} onclick={() => (angle = 'rad')}>rad</button>
       <button role="radio" aria-checked={angle === 'deg'} class:on={angle === 'deg'} onclick={() => (angle = 'deg')}>deg</button>
     </div>
@@ -207,19 +208,19 @@
   <div class="fns">
     {#each fns as f, i (i)}
       <div class="fn" style="--c:{COLORS[i % COLORS.length]}">
-        <input type="checkbox" bind:checked={f.on} aria-label="Show function {i + 1}" />
+        <input type="checkbox" bind:checked={f.on} aria-label={t('graph.show', { n: i + 1 })} />
         <span class="y">y =</span>
-        <input class="input" bind:value={f.expr} placeholder="e.g. 2x + 1, cos(x), abs(x)-3" spellcheck="false" />
+        <input class="input" bind:value={f.expr} placeholder={t('graph.ph')} spellcheck="false" />
         {#if errors[i]}<span class="err" title={errors[i]}>⚠</span>{/if}
-        <button class="btn ghost sm icon" aria-label="Remove" onclick={() => (fns = fns.filter((_, j) => j !== i))}>×</button>
+        <button class="btn ghost sm icon" aria-label={t('editor.remove')} onclick={() => (fns = fns.filter((_, j) => j !== i))}>×</button>
       </div>
     {/each}
-    {#if fns.length < 6}<button class="btn ghost sm" onclick={() => (fns = [...fns, { expr: '', on: true }])}>+ Add function</button>{/if}
+    {#if fns.length < 6}<button class="btn ghost sm" onclick={() => (fns = [...fns, { expr: '', on: true }])}>{t('graph.add')}</button>{/if}
   </div>
   <canvas
     bind:this={canvas}
     class="plot"
-    aria-label="Graph"
+    aria-label={t('graph.label')}
     onpointermove={dragMove}
     onpointerdown={down}
     onpointerup={up}
@@ -234,15 +235,15 @@
       x = {formatNumber(trace.x, 5)}
       {#each trace.ys as y, i}{#if y !== null}<span style="color:{COLORS[i % COLORS.length]}"> · y{i + 1} = {Number.isFinite(y) ? formatNumber(y, 6) : '—'}</span>{/if}{/each}
     {:else}
-      Hover to trace · drag to pan · scroll to zoom
+      {t('graph.hint')}
     {/if}
   </div>
   <div class="ctrls">
-    <button class="btn sm" onclick={() => zoom(1 / 1.5)}>Zoom in</button>
-    <button class="btn sm" onclick={() => zoom(1.5)}>Zoom out</button>
-    <button class="btn sm" onclick={reset}>Reset</button>
-    <label>x <input class="input num" type="number" bind:value={xmin} /> to <input class="input num" type="number" bind:value={xmax} /></label>
-    <label>y <input class="input num" type="number" bind:value={ymin} /> to <input class="input num" type="number" bind:value={ymax} /></label>
+    <button class="btn sm" onclick={() => zoom(1 / 1.5)}>{t('graph.zoomIn')}</button>
+    <button class="btn sm" onclick={() => zoom(1.5)}>{t('graph.zoomOut')}</button>
+    <button class="btn sm" onclick={reset}>{t('focus.reset')}</button>
+    <label>x <input class="input num" type="number" bind:value={xmin} /> {t('graph.to')} <input class="input num" type="number" bind:value={xmax} /></label>
+    <label>y <input class="input num" type="number" bind:value={ymin} /> {t('graph.to')} <input class="input num" type="number" bind:value={ymax} /></label>
   </div>
 </section>
 

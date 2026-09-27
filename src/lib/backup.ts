@@ -3,6 +3,7 @@ import { DEFAULT_STATS } from './types';
 import { mergeBreaks } from './gamification';
 import { mergeTask } from './fieldmerge';
 import { normalizeHistory } from './history';
+import { t as tr } from './i18n/index.svelte';
 
 /** Tombstones older than this are forgotten (every device has synced by then). */
 export const TOMBSTONE_DAYS = 60;
@@ -60,7 +61,7 @@ export function backupFilename(now: Date = new Date()): string {
 export function parseBundle(raw: unknown): ExportBundle {
   if (!raw || typeof raw !== 'object') throw new Error('Not a JSON object');
   const b = raw as Partial<ExportBundle>;
-  if (!Array.isArray(b.tasks) || !Array.isArray(b.courses)) throw new Error('Missing tasks or courses');
+  if (!Array.isArray(b.tasks) || !Array.isArray(b.courses)) throw new Error(tr('backup.missing'));
   const tasks: Task[] = b.tasks.map((t) => normalizeTask(t as Partial<Task>));
   const courses: Course[] = b.courses
     .filter((c): c is Course => !!c && typeof (c as Course).id === 'string' && typeof (c as Course).name === 'string')
@@ -134,7 +135,7 @@ export function normalizeSchedule(raw: unknown): SchoolSchedule | undefined {
 }
 
 export function normalizeTask(t: Partial<Task>): Task {
-  if (!t || typeof t.id !== 'string' || typeof t.title !== 'string') throw new Error('Task missing id or title');
+  if (!t || typeof t.id !== 'string' || typeof t.title !== 'string') throw new Error(tr('backup.task'));
   const now = new Date().toISOString();
   return {
     id: t.id,

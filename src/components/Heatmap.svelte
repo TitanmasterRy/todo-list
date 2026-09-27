@@ -1,6 +1,7 @@
 <script lang="ts">
   // GitHub-style year heatmap of completions per day.
-  import { addDaysKey, dateKey, fromKey, startOfDay, addDays, MONTH_SHORT, DAY_SHORT } from '../lib/dates';
+  import { addDaysKey, dateKey, fromKey, startOfDay, addDays, dayName, formatFullDate, monthName } from '../lib/dates';
+  import { t } from '../lib/i18n/index.svelte';
 
   interface Props {
     data: Record<string, number>;
@@ -26,7 +27,7 @@
         const key = dateKey(d);
         if (r === 0 && d.getMonth() !== lastMonth) {
           lastMonth = d.getMonth();
-          if (c === 0 || d.getDate() <= 7) months.push({ label: MONTH_SHORT[d.getMonth()], col: c });
+          if (c === 0 || d.getDate() <= 7) months.push({ label: monthName(d.getMonth()), col: c });
         }
         col.push({ key, count: data[key] ?? 0, future: key > endKey });
       }
@@ -42,22 +43,21 @@
       .filter(([k]) => k > addDaysKey(endKey, -365))
       .reduce((a, [, v]) => a + v, 0),
   );
-  const rowLabels = $derived(Array.from({ length: 7 }, (_, r) => DAY_SHORT[(r + weekStart) % 7]));
+  const rowLabels = $derived(Array.from({ length: 7 }, (_, r) => dayName((r + weekStart) % 7)));
 
   function label(key: string): string {
-    const d = fromKey(key);
-    return `${DAY_SHORT[d.getDay()]}, ${MONTH_SHORT[d.getMonth()]} ${d.getDate()}, ${d.getFullYear()}`;
+    return formatFullDate(fromKey(key));
   }
 </script>
 
 <div class="heatmap">
   <div class="head">
-    <span><strong>{total}</strong> tasks completed in the last year</span>
-    <span class="hover">{hover ? `${hover.count} on ${label(hover.key)}` : ''}</span>
+    <span><strong>{total}</strong> {t('heat.total', { count: total })}</span>
+    <span class="hover">{hover ? t('heat.onDay', { n: hover.count, date: label(hover.key) }) : ''}</span>
   </div>
   <!-- focusable so keyboard users can scroll the year -->
   <!-- svelte-ignore a11y_no_noninteractive_tabindex -->
-  <div class="scroll" tabindex="0" role="region" aria-label="Year of completions">
+  <div class="scroll" tabindex="0" role="region" aria-label={t('heat.year')}>
     <div class="months" style="--cols:{weeks}">
       {#each grid.months as m}
         <span style="grid-column:{m.col + 2}">{m.label}</span>
@@ -69,7 +69,7 @@
           <span class:show={r % 2 === 0}>{l}</span>
         {/each}
       </div>
-      <div class="grid" role="img" aria-label="Completion heatmap">
+      <div class="grid" role="img" aria-label={t('heat.label')}>
         {#each grid.cols as col}
           <div class="col">
             {#each col as cell}
@@ -77,7 +77,7 @@
               <div
                 class="cell l{level(cell.count)}"
                 class:future={cell.future}
-                title="{cell.count} on {label(cell.key)}"
+                title={t('heat.onDay', { n: cell.count, date: label(cell.key) })}
                 onmouseover={() => (hover = cell.future ? null : { key: cell.key, count: cell.count })}
                 onmouseout={() => (hover = null)}
               ></div>
@@ -88,9 +88,9 @@
     </div>
   </div>
   <div class="legend">
-    <span>Less</span>
+    <span>{t('heat.less')}</span>
     {#each [0, 1, 2, 3, 4] as l}<span class="cell l{l}"></span>{/each}
-    <span>More</span>
+    <span>{t('heat.more')}</span>
   </div>
 </div>
 

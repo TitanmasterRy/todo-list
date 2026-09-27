@@ -18,6 +18,7 @@
     syncNow,
     validateCredentials,
   } from '../lib/account.svelte';
+  import { formatDateTime } from '../lib/dates';
 
   let mode = $state<'signin' | 'signup' | 'forgot'>('signin');
   let email = $state('');
@@ -51,26 +52,26 @@
     if (mode === 'forgot') {
       void run(async () => {
         await sendPasswordReset(email);
-        return 'If that email has an account, a reset link is on its way. Open it on this device.';
+        return t('acct.resetSent');
       });
       return;
     }
     if (mode === 'signup') {
       const bad = validateCredentials(email, password);
       if (bad) return void (message = { kind: 'error', text: bad });
-      if (password !== password2) return void (message = { kind: 'error', text: 'The passwords don’t match.' });
+      if (password !== password2) return void (message = { kind: 'error', text: t('acct.mismatch') });
       void run(async () => {
         const r = await signUp(email, password);
         password = password2 = '';
-        if (r === 'confirmEmail') return `Almost done: we sent a confirmation link to ${email.trim()}. Open it, then sign in here.`;
-        toasts.push({ message: 'Account created', detail: 'Your tasks now sync to this account.', kind: 'success', emoji: '☁️' });
+        if (r === 'confirmEmail') return t('acct.confirmSent', { email: email.trim() });
+        toasts.push({ message: t('acct.created'), detail: t('acct.createdDetail'), kind: 'success', emoji: '☁️' });
       });
       return;
     }
     void run(async () => {
       await signIn(email, password);
       password = '';
-      toasts.push({ message: 'Signed in', detail: 'Syncing your data…', kind: 'success', emoji: '☁️' });
+      toasts.push({ message: t('google.signedInShort'), detail: t('acct.syncing'), kind: 'success', emoji: '☁️' });
     });
   }
 
@@ -79,20 +80,20 @@
     store.updateSettings({ accountUrl: serverUrl.trim(), accountAnonKey: serverKey.trim() });
     void run(async () => {
       await reconfigure();
-      return accountConfig() ? 'Server saved.' : 'Server cleared.';
+      return accountConfig() ? t('acct.serverSaved') : t('acct.serverCleared');
     });
   }
 
   const statusText = $derived(
     account.status === 'syncing'
-      ? 'Syncing…'
+      ? t('sync.syncing')
       : account.status === 'error'
-        ? `Error: ${account.lastError}`
+        ? t('sync.error', { error: account.lastError ?? '' })
         : account.pending
-          ? 'Changes pending'
+          ? t('gist.pending')
           : account.lastSyncAt
-            ? `Up to date · ${new Date(account.lastSyncAt).toLocaleString()}`
-            : 'Signed in',
+            ? `${t('gist.upToDate')} · ${formatDateTime(new Date(account.lastSyncAt))}`
+            : t('google.signedInShort'),
   );
 </script>
 
@@ -101,16 +102,12 @@
 
   {#if !configured}
     <p class="help">
-      Sign up with an email and password to keep your tasks, courses, notecards, stats and coins in sync on every device. Accounts need a free <a
-        href="https://supabase.com"
-        target="_blank"
-        rel="noopener noreferrer">Supabase</a
-      >
-      project, which the site admin sets up once (see <code>DEPLOY.md → Accounts</code>).
+      {t('acct.intro1')} <a href="https://supabase.com" target="_blank" rel="noopener noreferrer">Supabase</a>
+      {t('acct.intro2')} <code>DEPLOY.md → Accounts</code>).
     </p>
   {:else if account.userId}
-    <div class="row"><span>Signed in as</span><strong class="grow-r">{account.email}</strong></div>
-    <div class="row"><span>Status</span><span class="status {account.status}">{statusText}</span></div>
+    <div class="row"><span>{t('acct.as')}</span><strong class="grow-r">{account.email}</strong></div>
+    <div class="row"><span>{t('gist.status')}</span><span class="status {account.status}">{statusText}</span></div>
     {#if account.recovering}
       <form
         class="btns"
@@ -119,27 +116,34 @@
           void run(async () => {
             await changePassword(newPassword);
             newPassword = '';
-            return 'Password updated.';
+            return t('acct.passUpdated');
           });
         }}
       >
-        <input class="input" type="password" bind:value={newPassword} placeholder="New password (min {MIN_PASSWORD})" autocomplete="new-password" aria-label="New password" />
-        <button class="btn primary" type="submit" disabled={busy}>Set new password</button>
+        <input
+          class="input"
+          type="password"
+          bind:value={newPassword}
+          placeholder={t('acct.newPassPh', { n: MIN_PASSWORD })}
+          autocomplete="new-password"
+          aria-label={t('acct.newPass')}
+        />
+        <button class="btn primary" type="submit" disabled={busy}>{t('acct.setPass')}</button>
       </form>
     {/if}
     <div class="btns">
-      <button class="btn" onclick={() => void syncNow({ pull: true, interactive: true })} disabled={account.status === 'syncing'}>Sync now</button>
-      {#if !account.recovering}<button class="btn ghost sm" onclick={() => (account.recovering = true)}>Change password</button>{/if}
+      <button class="btn" onclick={() => void syncNow({ pull: true, interactive: true })} disabled={account.status === 'syncing'}>{t('sync.now')}</button>
+      {#if !account.recovering}<button class="btn ghost sm" onclick={() => (account.recovering = true)}>{t('acct.changePass')}</button>{/if}
       <button
         class="btn ghost sm"
         onclick={() =>
           void run(async () => {
             await signOut();
-            return 'Signed out. Your data stays on this device.';
-          })}>Sign out</button
+            return t('acct.signedOut');
+          })}>{t('google.signOut')}</button
       >
       {#if !confirmDelete}
-        <button class="btn ghost sm" onclick={() => (confirmDelete = true)}>Delete synced copy…</button>
+        <button class="btn ghost sm" onclick={() => (confirmDelete = true)}>{t('acct.deleteCopy')}</button>
       {:else}
         <button
           class="btn danger sm"
@@ -147,15 +151,15 @@
             void run(async () => {
               await deleteServerData();
               confirmDelete = false;
-              return 'Synced copy deleted from the server. This device keeps its data.';
-            })}>Really delete server copy</button
+              return t('acct.copyDeleted');
+            })}>{t('acct.reallyDelete')}</button
         >
-        <button class="btn ghost sm" onclick={() => (confirmDelete = false)}>Cancel</button>
+        <button class="btn ghost sm" onclick={() => (confirmDelete = false)}>{t('common.cancel')}</button>
       {/if}
     </div>
-    <p class="help">Syncs on load and a few seconds after every change. Settings and API keys stay on each device; everything else syncs.</p>
+    <p class="help">{t('acct.syncHelp')}</p>
   {:else}
-    <div class="tabs" role="tablist" aria-label="Account">
+    <div class="tabs" role="tablist" aria-label={t('settings.account')}>
       <button
         role="tab"
         aria-selected={mode === 'signin'}
@@ -163,7 +167,7 @@
         onclick={() => {
           mode = 'signin';
           message = null;
-        }}>Sign in</button
+        }}>{t('acct.signIn')}</button
       >
       <button
         role="tab"
@@ -172,17 +176,17 @@
         onclick={() => {
           mode = 'signup';
           message = null;
-        }}>Create account</button
+        }}>{t('acct.create')}</button
       >
     </div>
     <form class="auth" onsubmit={submit}>
       <label>
-        <span>Email</span>
-        <input class="input" type="email" bind:value={email} autocomplete="email" required placeholder="you@example.com" />
+        <span>{t('acct.email')}</span>
+        <input class="input" type="email" bind:value={email} autocomplete="email" required placeholder={t('acct.emailPh')} />
       </label>
       {#if mode !== 'forgot'}
         <label>
-          <span>Password</span>
+          <span>{t('acct.password')}</span>
           <input
             class="input"
             type="password"
@@ -190,19 +194,19 @@
             autocomplete={mode === 'signup' ? 'new-password' : 'current-password'}
             required
             minlength={mode === 'signup' ? MIN_PASSWORD : undefined}
-            placeholder={mode === 'signup' ? `At least ${MIN_PASSWORD} characters` : ''}
+            placeholder={mode === 'signup' ? t('acct.atLeast', { n: MIN_PASSWORD }) : ''}
           />
         </label>
       {/if}
       {#if mode === 'signup'}
         <label>
-          <span>Confirm password</span>
+          <span>{t('acct.confirmPass')}</span>
           <input class="input" type="password" bind:value={password2} autocomplete="new-password" required />
         </label>
       {/if}
       <div class="btns">
         <button class="btn primary" type="submit" disabled={busy}>
-          {busy ? 'Working…' : mode === 'signup' ? 'Create account' : mode === 'forgot' ? 'Send reset link' : 'Sign in'}
+          {busy ? t('scan.working') : mode === 'signup' ? t('acct.create') : mode === 'forgot' ? t('acct.sendReset') : t('acct.signIn')}
         </button>
         {#if mode === 'signin'}
           <button
@@ -211,7 +215,7 @@
             onclick={() => {
               mode = 'forgot';
               message = null;
-            }}>Forgot password?</button
+            }}>{t('acct.forgot')}</button
           >
         {:else if mode === 'forgot'}
           <button
@@ -220,12 +224,12 @@
             onclick={() => {
               mode = 'signin';
               message = null;
-            }}>Back to sign in</button
+            }}>{t('acct.back')}</button
           >
         {/if}
       </div>
     </form>
-    <p class="help">When you sign in, this device's data is merged with your account's, so nothing is lost.</p>
+    <p class="help">{t('acct.merge')}</p>
   {/if}
 
   {#if message}
@@ -233,18 +237,21 @@
   {/if}
 
   <button class="link small" onclick={() => (showServer = !showServer)} aria-expanded={showServer}>
-    {showServer ? '▾' : '▸'} Server {configuredAtBuild() ? '(set by this site)' : configured ? '(custom)' : '(not set up)'}
+    {showServer ? '▾' : '▸'}
+    {t('acct.server')}
+    {configuredAtBuild() ? t('acct.bySite') : configured ? t('acct.custom') : t('acct.notSet')}
   </button>
   {#if showServer}
     <form class="server" onsubmit={saveServer}>
       <p class="help">
-        For site admins or self-hosters: paste your Supabase project URL and <em>anon public</em> key (Project Settings → API).
-        {#if configuredAtBuild()}This site already has a server configured; fields here override it for this browser only.{/if}
-        Run <code>docs/supabase.sql</code> once in the project's SQL editor first.
+        {t('acct.admin')}
+        {#if configuredAtBuild()}{t('acct.override')}{/if}
+        {t('acct.run1')} <code>docs/supabase.sql</code>
+        {t('acct.run2')}
       </p>
-      <input class="input" bind:value={serverUrl} placeholder="https://xxxx.supabase.co" aria-label="Supabase project URL" />
-      <input class="input" bind:value={serverKey} placeholder="anon public key" aria-label="Supabase anon key" />
-      <div class="btns"><button class="btn sm" type="submit" disabled={busy}>Save server</button></div>
+      <input class="input" bind:value={serverUrl} placeholder="https://xxxx.supabase.co" aria-label={t('acct.url')} />
+      <input class="input" bind:value={serverKey} placeholder={t('acct.keyPh')} aria-label={t('acct.keyLabel')} />
+      <div class="btns"><button class="btn sm" type="submit" disabled={busy}>{t('acct.saveServer')}</button></div>
     </form>
   {/if}
 </section>
