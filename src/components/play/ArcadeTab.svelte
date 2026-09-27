@@ -4,6 +4,7 @@
   import { economy } from '../../lib/economy.svelte';
   import { store } from '../../lib/store.svelte';
   import { toasts } from '../../lib/toast.svelte';
+  import { ui } from '../../lib/ui.svelte';
   import type { ArcadeGame } from '../../lib/types';
   import GamePlayer from './GamePlayer.svelte';
 
@@ -39,7 +40,7 @@
 {:else if !list.length}
   <div class="card">
     <p>No arcade games yet.</p>
-    <p class="muted">Site admins add games by putting HTML files in <code>public/games/</code> and listing them in <code>games.json</code>, or from Settings → Arcade admin.</p>
+    <p class="muted">Site admins add games by putting HTML files in <code>public/games/</code> and listing them in <code>games.json</code>, or from the admin panel.</p>
   </div>
 {:else}
   <div class="games">
@@ -62,7 +63,7 @@
     {/each}
   </div>
 {/if}
-{#if arcade.errors.length && store.settings.arcadeAdmin}
+{#if arcade.errors.length && ui.adminUnlocked}
   <div class="card errs">
     <strong>games.json problems</strong>
     <ul>

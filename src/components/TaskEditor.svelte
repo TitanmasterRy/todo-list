@@ -140,6 +140,30 @@
     newSub = '';
   }
 
+  // ✨ Break it down: AI suggests steps (and fills an empty estimate, type and notes). Only shown with an AI key.
+  let aiOk = $state(false);
+  let aiBusy = $state(false);
+  void import('../lib/ai').then((m) => (aiOk = m.aiAvailable()));
+  async function breakDown() {
+    if (!title.trim() || aiBusy) return;
+    aiBusy = true;
+    try {
+      const { planTask } = await import('../lib/ai');
+      const p = await planTask(title.trim(), store.courseById(courseId || undefined)?.name);
+      const have = new Set(subtasks.map((s) => s.title.trim().toLowerCase()));
+      const fresh = p.subtasks.map((s) => s.trim()).filter((s) => s && !have.has(s.toLowerCase()));
+      subtasks = [...subtasks, ...fresh.map((s) => ({ id: uid('s'), title: s, done: false }))];
+      if (!estimate) estimate = String(p.estimateMin);
+      if (!type) type = p.type;
+      if (!notes.trim() && p.notes) notes = p.notes;
+      toasts.push({ message: t('editor.brokeDown', { count: fresh.length }), kind: 'success', emoji: '✨' });
+    } catch (e) {
+      toasts.push({ message: t('editor.breakDownFailed'), detail: e instanceof Error ? e.message : String(e), kind: 'warn' });
+    } finally {
+      aiBusy = false;
+    }
+  }
+
   function saveAsTemplate() {
     if (!original) return;
     const name = templateName.trim() || title.trim();
@@ -265,6 +289,8 @@
             }}
           />
           <button type="button" class="btn sm" onclick={addSub}>{t('common.add')}</button>
+          {#if aiOk}<button type="button" class="btn sm" onclick={breakDown} disabled={aiBusy || !title.trim()}>{aiBusy ? t('editor.breakingDown') : t('editor.breakDown')}</button
+            >{/if}
         </div>
       </div>
       <div class="field">

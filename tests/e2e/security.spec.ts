@@ -59,8 +59,13 @@ test('HTML previews and JavaScript still run under the policy (sandbox page, wor
 });
 
 test('an uploaded arcade game runs its inline script in the sandbox and can report a score', async ({ page }) => {
-  const errors = await openApp(page, { arcadeAdmin: true });
-  await openSettings(page);
+  const errors = await openApp(page);
+  await page.goto('./?admin');
+  const admin = page.getByRole('dialog', { name: /Admin/ });
+  await admin.getByLabel('New admin passphrase').fill('owner passphrase 1');
+  await admin.getByLabel('Repeat admin passphrase').fill('owner passphrase 1');
+  await admin.getByRole('button', { name: 'Set passphrase' }).click();
+  await admin.getByRole('tab', { name: /Arcade/ }).click();
   const game = `<!doctype html><html><body><p id="msg">loading</p><script>
     document.getElementById('msg').textContent = 'inline script ran';
     let blocked = 'no';
@@ -74,7 +79,7 @@ test('an uploaded arcade game runs its inline script in the sandbox and can repo
   await expect(frame.locator('#msg')).toHaveText('inline script ran');
   await expect(frame.locator('body')).toHaveAttribute('data-storage', 'SecurityError');
   await expect(page.locator('.toast', { hasText: 'New high score in mini game' })).toBeVisible();
-  await page.getByRole('button', { name: 'Close' }).click();
+  await page.getByText('Close', { exact: true }).click();
   expect(errors.filter((e) => !/sandboxed/.test(e))).toEqual([]);
 });
 

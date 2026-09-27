@@ -67,10 +67,6 @@
           />
         </div>
       {/if}
-      <div class="row">
-        <label for="adm">Show arcade admin (add games)</label>
-        <input id="adm" type="checkbox" class="switch" checked={s.arcadeAdmin} onchange={(e) => set('arcadeAdmin', (e.target as HTMLInputElement).checked)} />
-      </div>
     {/if}
   </fieldset>
   {#if s.economyEnabled}

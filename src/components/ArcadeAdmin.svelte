@@ -1,5 +1,5 @@
 <script lang="ts">
-  // Settings → Arcade admin: add games to this browser (upload an HTML file or paste a link), preview them,
+  // Admin panel → Arcade: add games to this browser (upload an HTML file or paste a link), preview them,
   // and copy the games.json entry to publish them for everyone.
   import { onMount } from 'svelte';
   import { arcade } from '../lib/arcade.svelte';
