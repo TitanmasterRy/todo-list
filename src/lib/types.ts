@@ -239,6 +239,7 @@ export interface Settings {
   lastSyncAt?: string;
   archiveAfterDays: number; // 0 disables
   autoDescribe: boolean; // fill notes/subtasks/estimate for new tasks
+  swipeGestures: boolean; // touch: swipe a task right to complete, left to snooze
   schoologyFeedUrl: string;
   canvasFeedUrl: string; // Canvas → Calendar → Calendar Feed (private link; kept behind the key lock)
   canvasIncludeEvents?: boolean; // also add calendar events, not just assignments
@@ -337,6 +338,7 @@ export const DEFAULT_SETTINGS: Settings = {
   gistId: '',
   archiveAfterDays: 90,
   autoDescribe: true,
+  swipeGestures: true,
   schoologyFeedUrl: '',
   canvasFeedUrl: '',
   schoologyProxy: '',

@@ -164,3 +164,29 @@ test('print a weekly planner', async ({ page }) => {
   const pdf = await page.pdf({ landscape: true });
   expect(pdf.byteLength).toBeGreaterThan(5000);
 });
+
+test('swipe a task right to complete it, left to snooze it (touch)', async ({ page }) => {
+  const errors = await openApp(page);
+  await addTask(page, 'Swipe me done today');
+  await addTask(page, 'Swipe me later today');
+  const swipeRow = (title: string, dx: number) =>
+    page.locator('.task', { hasText: title }).evaluate((el, dx) => {
+      const r = el.getBoundingClientRect();
+      const y = r.top + r.height / 2;
+      const x = r.left + r.width / 2;
+      const ev = (type: string, cx: number) => new PointerEvent(type, { pointerType: 'touch', pointerId: 7, isPrimary: true, clientX: cx, clientY: y, bubbles: true });
+      const body = el.querySelector('.body') ?? el;
+      body.dispatchEvent(ev('pointerdown', x));
+      for (let i = 1; i <= 8; i++) body.dispatchEvent(ev('pointermove', x + (dx * i) / 8));
+      body.dispatchEvent(ev('pointerup', x + dx));
+    }, dx);
+  await swipeRow('Swipe me done', 200);
+  await expect(page.locator('.task.done', { hasText: 'Swipe me done' })).toBeVisible();
+  await swipeRow('Swipe me later', -200);
+  await expect(page.locator('.toast', { hasText: /tomorrow/i })).toBeVisible();
+  // a short drag does nothing
+  await addTask(page, 'Barely moved today');
+  await swipeRow('Barely moved', 30);
+  await expect(page.locator('.task.done', { hasText: 'Barely moved' })).toHaveCount(0);
+  expect(errors).toEqual([]);
+});

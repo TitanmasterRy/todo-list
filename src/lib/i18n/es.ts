@@ -519,6 +519,10 @@ const es: Dict = {
   'settings.sounds': 'Sonidos',
   'settings.soundPack': 'Paquete de sonidos',
   'settings.adding': 'Añadir tareas',
+  'settings.swipe': 'Deslizar tareas (pantallas táctiles)',
+  'settings.swipeHelp': 'Desliza a la derecha para completar y a la izquierda para posponer a mañana.',
+  'task.swipeDone': 'Hecha',
+  'task.swipeSnooze': 'Mañana',
   'settings.autoDescribe': 'Describir solas las tareas nuevas (plan, pasos, estimación)',
   'settings.autoDescribeHelp':
     'Funciona sin conexión a partir del título y la materia. Actívalo o desactívalo en cada tarea con la etiqueta “plan automático” debajo de añadir rápido. Pega varias líneas para crear una tarea por línea; toca 🎤 para dictar.',

@@ -518,6 +518,10 @@ const en = {
   'settings.sounds': 'Sounds',
   'settings.soundPack': 'Sound pack',
   'settings.adding': 'Adding tasks',
+  'settings.swipe': 'Swipe tasks (touch screens)',
+  'settings.swipeHelp': 'Swipe right to complete, left to snooze to tomorrow.',
+  'task.swipeDone': 'Done',
+  'task.swipeSnooze': 'Tomorrow',
   'settings.autoDescribe': 'Auto-describe new tasks (plan, steps, estimate)',
   'settings.autoDescribeHelp':
     'Works offline from the task title and course. Toggle it per task with the “auto plan” chip under quick add. Paste several lines into quick add to create one task per line; tap 🎤 to dictate.',
