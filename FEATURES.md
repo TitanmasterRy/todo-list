@@ -129,7 +129,6 @@ merged into `main` and live on the GitHub Pages site. The full plan, including w
 - [ ] 📺 Watch: Jellyfin/Emby browsing and playback, Plex and other sites, video links and files (Play → Watch)
 - [ ] Case clicker game (original, like the CS:GO case clicker)
 - [ ] Casino visual overhaul: more eye candy on every casino game
-- [ ] Art list for image generation (ART_REQUESTS.md)
 
 ## ⏳ Not done yet
 
@@ -137,4 +136,4 @@ merged into `main` and live on the GitHub Pages site. The full plan, including w
 - [ ] A right-to-left language (the layout supports it; no translation yet)
 - [ ] Microsoft Teams and Microsoft To Do (no feeds; would need a Microsoft Graph app)
 - [ ] True push reminders (needs a server), phone widgets and a Capacitor app
-- [ ] Real artwork (illustrations, sprites, card art): needs an image generator, see ART_REQUESTS.md once it's written
+- [ ] Real artwork (illustrations, sprites, card art): needs an image generator, ART_REQUESTS.md lists every piece with sizes, ready to hand to an image generator
