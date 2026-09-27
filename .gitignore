@@ -9,3 +9,5 @@ test-results
 playwright-report
 .vitest
 dist-extension/
+lighthouse/
+.lighthouseci/
