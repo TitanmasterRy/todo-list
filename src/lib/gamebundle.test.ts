@@ -15,6 +15,7 @@ describe('adding games', () => {
   it('tells HTML from JavaScript and finds titles', () => {
     expect(looksLikeHtml('  <!DOCTYPE html><p>')).toBe(true);
     expect(looksLikeHtml('const x = 1 < 2;')).toBe(false);
+    expect(looksLikeHtml('<p id="n">?</p>')).toBe(true);
     expect(titleFromHtml('<title> Space Run </title>')).toBe('Space Run');
     expect(titleFromName('games/space-run_v2.html')).toBe('Space run v2');
     expect(normPath('./a/../b//c.js')).toBe('b/c.js');

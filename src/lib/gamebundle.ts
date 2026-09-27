@@ -78,7 +78,8 @@ ${js.replace(/<\/script/gi, '<\\/script')}
 
 /** Does pasted code look like HTML (vs. JavaScript)? */
 export function looksLikeHtml(code: string): boolean {
-  return /^\s*(<!doctype|<html|<head|<body|<canvas|<div|<script|<style|<svg|<!--)/i.test(code);
+  // JavaScript never starts with a tag
+  return /^\s*<[!a-z]/i.test(code);
 }
 
 export function titleFromHtml(html: string): string {

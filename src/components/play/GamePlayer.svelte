@@ -3,9 +3,12 @@
   // power-ups for coins: the game posts { type: 'hwtodo:buy', id, label, cost }, the player confirms here, and the
   // game gets { type: 'hwtodo:bought', id } or { type: 'hwtodo:denied', id, reason }. The wallet is sent as
   // { type: 'hwtodo:wallet', coins } when the game loads (or says { type: 'hwtodo:hello' }) and after each purchase.
+  // Saves: sandboxed games can't use localStorage, so they post { type: 'hwtodo:save', data: string } (≤ 1 MB) and
+  // get { type: 'hwtodo:load', data: string | null } back after saying hello. Kept per game on this device.
   import { onMount, untrack } from 'svelte';
   import { arcade } from '../../lib/arcade.svelte';
-  import { readScoreMessage, sandboxFor } from '../../lib/arcade';
+  import { readSaveMessage, readScoreMessage, sandboxFor, saveKey } from '../../lib/arcade';
+  import { getMeta, putMeta } from '../../lib/storage';
   import { store } from '../../lib/store.svelte';
   import { economy } from '../../lib/economy.svelte';
   import { parsePowerup, POWERUP_SESSION_MAX, type PowerupRequest } from '../../lib/economy';
@@ -102,7 +105,18 @@
     }, 500);
     const onMsg = (e: MessageEvent) => {
       if (!frame || e.source !== frame.contentWindow) return;
-      if ((e.data as { type?: unknown } | null)?.type === 'hwtodo:hello') return sendWallet();
+      if ((e.data as { type?: unknown } | null)?.type === 'hwtodo:hello') {
+        sendWallet();
+        // previews (admin/try it) start fresh and don't overwrite the real save
+        if (preview) post({ type: 'hwtodo:load', data: null });
+        else void getMeta<string>(saveKey(game.id)).then((data) => post({ type: 'hwtodo:load', data: data ?? null }));
+        return;
+      }
+      const save = readSaveMessage(e.data);
+      if (save !== null) {
+        if (!preview) void putMeta(saveKey(game.id), save);
+        return;
+      }
       const req = parsePowerup(e.data);
       if (req) return request(req);
       const score = readScoreMessage(e.data);

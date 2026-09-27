@@ -103,3 +103,31 @@ test('with a parent PIN, adding a game asks for it', async ({ page }) => {
   await dlg.getByRole('button', { name: 'Add to my arcade' }).click();
   await expect(dlg).toHaveCount(0);
 });
+
+test('arcade games can save progress through the app and load it next time', async ({ page }) => {
+  const errors = await openApp(page);
+  const dlg = await openAdd(page);
+  await dlg.getByRole('tab', { name: /Paste code/ }).click();
+  await dlg
+    .getByLabel('Game code')
+    .fill(
+      `<p id="n">?</p><button id="b">+1</button><script>let n=0;addEventListener('message',e=>{if(e.data.type==='hwtodo:load'){n=e.data.data?JSON.parse(e.data.data).n:0;document.getElementById('n').textContent=n}});parent.postMessage({type:'hwtodo:hello'},'*');document.getElementById('b').onclick=()=>{n++;document.getElementById('n').textContent=n;parent.postMessage({type:'hwtodo:save',data:JSON.stringify({n})},'*')}</script>`,
+    );
+  await dlg.getByLabel('Game name').fill('Counter');
+  await dlg.getByLabel('Cost').fill('0');
+  await dlg.getByRole('button', { name: 'Add to my arcade' }).click();
+  const open = async () => {
+    await page.locator('.card.game', { hasText: 'Counter' }).getByRole('button', { name: 'Play' }).click();
+    return page.frameLocator('.player iframe');
+  };
+  let f = await open();
+  await expect(f.locator('#n')).toHaveText('0');
+  await f.locator('#b').click();
+  await f.locator('#b').click();
+  await page.locator('.player').getByText('Close', { exact: true }).click();
+  await page.goto('./?view=play');
+  await page.getByRole('tab', { name: /Arcade/ }).click();
+  f = await open();
+  await expect(f.locator('#n')).toHaveText('2');
+  expect(errors.filter((e) => !/sandboxed/.test(e))).toEqual([]);
+});
