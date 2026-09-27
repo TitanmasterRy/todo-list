@@ -61,7 +61,19 @@ function sanitize(s: Raw, now: number): FactoryState {
     if (shardsFor(clock) > shards) clock = Math.min(clock, 1 + shards * 0.5);
     used.add(`${x},${y}`);
     maxId = Math.max(maxId, id);
-    buildings.push({ id, type, x, y, rot: (Math.floor(num(b.rot, 0, 0, 3)) % 4) as Dir, recipe, clock, shards, off: b.off === true || undefined, inBuf: inv(b.inBuf), outBuf: inv(b.outBuf) });
+    buildings.push({
+      id,
+      type,
+      x,
+      y,
+      rot: (Math.floor(num(b.rot, 0, 0, 3)) % 4) as Dir,
+      recipe,
+      clock,
+      shards,
+      off: b.off === true || undefined,
+      inBuf: inv(b.inBuf),
+      outBuf: inv(b.outBuf),
+    });
   }
   if (!buildings.some((b) => b.type === 'camp')) {
     const campId = maxId + 1;

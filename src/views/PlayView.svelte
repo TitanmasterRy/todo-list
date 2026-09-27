@@ -6,7 +6,7 @@
   import ArcadeTab from '../components/play/ArcadeTab.svelte';
   import WalletTab from '../components/play/WalletTab.svelte';
 
-  type Tab = 'shop' | 'casino' | 'arcade' | 'study' | 'stars' | 'wallet';
+  type Tab = 'shop' | 'casino' | 'arcade' | 'study' | 'stars' | 'factory' | 'wallet';
   const TAB_KEY = 'homework-todo:play-tab';
   let tab = $state<Tab>(
     ((): Tab => {
@@ -25,6 +25,7 @@
         { id: 'arcade', label: 'Arcade', icon: '🕹️' },
         { id: 'study', label: 'Study games', icon: '🧠' },
         { id: 'stars', label: 'Star map', icon: '🌌' },
+        { id: 'factory', label: 'Factory', icon: '🏭' },
         { id: 'wallet', label: 'Wallet', icon: '👛' },
       ] as { id: Tab; label: string; icon: string }[]
     ).filter((t) => t.id !== 'casino' || store.settings.casinoEnabled),
@@ -78,6 +79,14 @@
       <p class="sub">Loading the star map…</p>
     {:then m}
       <m.default />
+    {/await}
+  {:else if active === 'factory'}
+    {#await import('../components/play/factory/FactoryGame.svelte')}
+      <p class="sub">Loading the factory…</p>
+    {:then m}
+      <m.default />
+    {:catch}
+      <p class="sub">Couldn't load the factory{navigator.onLine ? '' : ' while offline'}. <button class="btn sm" onclick={() => location.reload()}>Reload</button></p>
     {/await}
   {:else}
     <WalletTab />

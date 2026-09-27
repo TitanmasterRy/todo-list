@@ -22,7 +22,12 @@ describe('factory data', () => {
     BUILDINGS.forEach((b) => check(b.cost));
     MILESTONES.forEach((m) => {
       check(m.cost);
-      m.unlock.recipes?.forEach((r) => expect(RECIPES.some((x) => x.id === r && !x.alt), r).toBe(true));
+      m.unlock.recipes?.forEach((r) =>
+        expect(
+          RECIPES.some((x) => x.id === r && !x.alt),
+          r,
+        ).toBe(true),
+      );
     });
     PHASES.forEach((p) => check(p.cost));
     RESEARCH.forEach((r) => {
@@ -50,7 +55,17 @@ describe('factory data', () => {
       while (grew) {
         grew = false;
         for (const n of NODES) {
-          const item = { iron: 'ironOre', copper: 'copperOre', limestone: 'limestone', coal: 'coal', oil: 'crudeOil', quartz: 'quartz', sulfur: 'sulfur', gold: 'goldOre', grove: 'biomass' }[n.res] as ItemId;
+          const item = {
+            iron: 'ironOre',
+            copper: 'copperOre',
+            limestone: 'limestone',
+            coal: 'coal',
+            oil: 'crudeOil',
+            quartz: 'quartz',
+            sulfur: 'sulfur',
+            gold: 'goldOre',
+            grove: 'biomass',
+          }[n.res] as ItemId;
           if (resources.has(n.res) && !makeable.has(item)) {
             makeable.add(item);
             grew = true;
@@ -77,8 +92,15 @@ describe('factory data', () => {
           }
       }
       refresh();
-      for (const m of todo) expect(Object.keys(m.cost).filter((k) => !makeable.has(k as ItemId)), `${m.id} cost`).toEqual([]);
-      expect(Object.keys(PHASES[tier].cost).filter((k) => !makeable.has(k as ItemId)), `phase ${tier}`).toEqual([]);
+      for (const m of todo)
+        expect(
+          Object.keys(m.cost).filter((k) => !makeable.has(k as ItemId)),
+          `${m.id} cost`,
+        ).toEqual([]);
+      expect(
+        Object.keys(PHASES[tier].cost).filter((k) => !makeable.has(k as ItemId)),
+        `phase ${tier}`,
+      ).toEqual([]);
     }
   });
 
