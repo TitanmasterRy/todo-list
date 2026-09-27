@@ -257,6 +257,7 @@ const es: Dict = {
   'inbox.sub': 'Todo, con filtros.',
   'inbox.doneSelecting': 'Terminar selección',
   'inbox.select': 'Seleccionar',
+  'inbox.showMore': { one: 'Mostrar {count} más', other: 'Mostrar {count} más' },
   'inbox.search': 'Buscar tareas…  ( / )',
   'inbox.searchLabel': 'Buscar',
   'inbox.status': 'Estado',

@@ -9,7 +9,10 @@
 </script>
 
 {#await load()}
-  <div class="page" aria-busy="true"><p class="muted">Loading…</p></div>
+  <div class="page" aria-busy="true">
+    <div class="skeleton head"></div>
+    {#each [0, 1, 2] as i (i)}<div class="skeleton card-sk"></div>{/each}
+  </div>
 {:then m}
   <m.default />
 {:catch e}
@@ -22,7 +25,14 @@
 {/await}
 
 <style>
-  .muted {
-    color: var(--text-muted);
+  .head {
+    width: 30%;
+    height: 28px;
+    margin: 8px 0 20px;
+  }
+  .card-sk {
+    height: 120px;
+    margin-bottom: 12px;
+    border-radius: var(--radius);
   }
 </style>

@@ -147,7 +147,11 @@
 
 {#if !store.ready}
   <div class="loading" aria-busy="true">
-    <div class="spinner"></div>
+    <div class="sk-side skeleton"></div>
+    <div class="sk-main">
+      <div class="skeleton sk-title"></div>
+      {#each [0, 1, 2, 3, 4] as i (i)}<div class="skeleton sk-row" style="opacity:{1 - i * 0.15}"></div>{/each}
+    </div>
   </div>
 {:else}
   <div class="shell">
@@ -249,20 +253,34 @@
   }
   .loading {
     height: 100vh;
-    display: grid;
-    place-items: center;
+    display: flex;
+    gap: 24px;
+    padding: 16px;
   }
-  .spinner {
-    width: 28px;
+  .sk-side {
+    width: calc(var(--sidebar-w) - 32px);
+    border-radius: var(--radius);
+  }
+  .sk-main {
+    flex: 1;
+    max-width: 760px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding-top: 12px;
+  }
+  .sk-title {
+    width: 40%;
     height: 28px;
-    border-radius: 50%;
-    border: 3px solid var(--border);
-    border-top-color: var(--accent);
-    animation: spin 0.8s linear infinite;
+    margin-bottom: 12px;
   }
-  @keyframes spin {
-    to {
-      transform: rotate(360deg);
+  .sk-row {
+    height: 52px;
+    border-radius: var(--radius);
+  }
+  @media (max-width: 760px) {
+    .sk-side {
+      display: none;
     }
   }
   .shell {

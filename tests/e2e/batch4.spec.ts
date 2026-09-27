@@ -205,3 +205,41 @@ test('the task editor shows what changed and when', async ({ page }) => {
   await expect(form.locator('.hist')).toContainText(/Estimate \(min\): .* → 45/);
   expect(errors).toEqual([]);
 });
+
+test('long lists render a page at a time and load more on scroll', async ({ page }) => {
+  const errors = await openApp(page);
+  await page.evaluate(
+    () =>
+      new Promise<void>((resolve) => {
+        const r = indexedDB.open('homework-todo');
+        r.onsuccess = () => {
+          const tx = r.result.transaction('tasks', 'readwrite');
+          const now = new Date().toISOString();
+          for (let i = 0; i < 400; i++)
+            tx.objectStore('tasks').put({
+              id: `bulk${i}`,
+              title: `Old task ${i}`,
+              tags: [],
+              priority: 'normal',
+              subtasks: [],
+              createdAt: now,
+              updatedAt: now,
+              completedAt: now,
+              order: i,
+              deferredCount: 0,
+            });
+          tx.oncomplete = () => resolve();
+        };
+      }),
+  );
+  await page.goto('./?view=inbox');
+  await page.getByRole('combobox', { name: /status/i }).selectOption('done');
+  await expect(page.locator('.section-title .count')).toHaveText('400');
+  await expect(page.locator('.task')).toHaveCount(150);
+  await page.locator('.more').scrollIntoViewIfNeeded();
+  await expect(page.locator('.task').nth(299)).toBeAttached();
+  await page.locator('.task').last().scrollIntoViewIfNeeded();
+  await expect(page.locator('.task')).toHaveCount(400);
+  await expect(page.locator('.more')).toHaveCount(0);
+  expect(errors).toEqual([]);
+});

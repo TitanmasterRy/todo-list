@@ -257,6 +257,7 @@ const en = {
   'inbox.sub': 'Everything, with filters.',
   'inbox.doneSelecting': 'Done selecting',
   'inbox.select': 'Select',
+  'inbox.showMore': { one: 'Show {count} more', other: 'Show {count} more' },
   'inbox.search': 'Search tasks…  ( / )',
   'inbox.searchLabel': 'Search',
   'inbox.status': 'Status',
