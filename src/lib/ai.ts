@@ -6,6 +6,7 @@ import { checkCap, recordUsage } from './aiusage';
 import type { AiProvider, TaskType } from './types';
 import { chatOpenAICompatible, cleanKey, listModelsOpenAICompatible, ModelNotFoundError, providerInfo, type ChatImage, type ChatRequest } from './ai-providers';
 import { hasSecret, secret, useSecret, type SecretSlot } from './secrets.svelte';
+import { t as tr } from './i18n/index.svelte';
 
 export function currentProvider(): AiProvider {
   return store.settings.aiProvider || 'anthropic';
@@ -27,7 +28,7 @@ export function hasKey(provider: AiProvider = currentProvider()): boolean {
 
 /** Ask for the passphrase first if this provider's key is locked. */
 async function unlockKey(provider: AiProvider): Promise<void> {
-  for (const slot of keySlots(provider)) await useSecret(slot, { reason: 'Enter your passphrase to use your AI key.' });
+  for (const slot of keySlots(provider)) await useSecret(slot, { reason: tr('unlock.ai') });
 }
 
 export function currentModel(provider: AiProvider = currentProvider()): string {

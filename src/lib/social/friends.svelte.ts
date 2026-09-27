@@ -8,6 +8,7 @@ import { store } from '../store.svelte';
 import { on } from '../events';
 import { FRIEND_LIVE_KEY } from './links';
 import { account, accountConfig, getClient } from '../account.svelte';
+import { t } from '../i18n/index.svelte';
 
 const PROFILE_KEY = 'homework-todo:friend-profile';
 const LIST_KEY = 'homework-todo:friends';
@@ -108,7 +109,7 @@ class FriendsState {
 
   /** Turn on live updates: a fresh public id, published to the account's server. Codes made after this include it. */
   async enableLive(): Promise<void> {
-    if (!account.userId) throw new Error('Sign in first (Settings → Account).');
+    if (!account.userId) throw new Error(t('friends.signIn'));
     this.profile = { ...this.profile, pid: randomId(24) };
     try {
       await publishNow();
@@ -138,12 +139,7 @@ class FriendsState {
     const ids = this.list.map((f) => f.card.pid).filter((x): x is string => !!x);
     if (!ids.length || !accountConfig()) return 0;
     const { data, error } = await (await getClient()).rpc('friend_cards_by_id', { ids: ids.slice(0, 100) });
-    if (error)
-      throw new Error(
-        /function .* does not exist|schema cache/i.test(error.message)
-          ? 'The account server is missing friend_cards. The site admin needs to run docs/supabase.sql.'
-          : error.message,
-      );
+    if (error) throw new Error(/function .* does not exist|schema cache/i.test(error.message) ? t('friends.noTable') : error.message);
     let updated = 0;
     let list = this.list;
     for (const row of (Array.isArray(data) ? data : []) as { id?: unknown; card?: unknown }[]) {
@@ -171,12 +167,7 @@ async function publishNow(): Promise<void> {
   friends.liveStatus = 'syncing';
   try {
     const { error } = await (await getClient()).from(TABLE).upsert({ id: pid, owner: account.userId, card: friends.myCard(), updated_at: new Date().toISOString() });
-    if (error)
-      throw new Error(
-        /relation .* does not exist|schema cache/i.test(error.message)
-          ? 'The account server is missing friend_cards. The site admin needs to run docs/supabase.sql.'
-          : error.message,
-      );
+    if (error) throw new Error(/relation .* does not exist|schema cache/i.test(error.message) ? t('friends.noTable') : error.message);
     friends.liveStatus = 'ok';
     friends.liveError = '';
   } catch (e) {

@@ -3,6 +3,7 @@
   import { toasts } from '../../lib/toast.svelte';
   import { parsePowerSchoolHTML, parsePowerSchoolText, matchToCourses, latestGrade, type PSCourse } from '../../lib/powerschool';
   import { COURSE_COLORS, COURSE_EMOJIS } from '../../lib/colors';
+  import { t } from '../../lib/i18n/index.svelte';
 
   let raw = $state('');
   let parsed = $state<{ courses: PSCourse[]; terms: string[]; student?: string } | null>(null);
@@ -15,8 +16,8 @@
     const r = looksHtml ? parsePowerSchoolHTML(text) : parsePowerSchoolText(text);
     if (!r.courses.length) {
       toasts.push({
-        message: 'No grades found',
-        detail: 'Save the “Grades and Attendance” page as HTML (Ctrl+S → Webpage, complete) or select the whole table and paste it.',
+        message: t('ps.none'),
+        detail: t('ps.noneDetail'),
         kind: 'warn',
         timeout: 9000,
       });
@@ -54,8 +55,8 @@
       updated++;
     });
     toasts.push({
-      message: `Updated ${updated} course grade${updated === 1 ? '' : 's'}`,
-      detail: created ? `${created} course${created > 1 ? 's' : ''} created. See Tools → Transcript.` : 'See Tools → Transcript.',
+      message: t('ps.updated', { count: updated }),
+      detail: created ? `${t('ps.created', { count: created })} ${t('ps.see')}` : t('ps.see'),
       kind: 'success',
       emoji: '🏫',
     });
@@ -65,37 +66,36 @@
 </script>
 
 <section class="card">
-  <h2>PowerSchool grades import</h2>
+  <h2>{t('ps.title')}</h2>
   <p class="help">
-    PowerSchool gives students no API, so this reads the <strong>Grades and Attendance</strong> page you save or copy from the portal and fills course final grades for the transcript
-    and GPA. Nothing is sent anywhere.
+    {t('ps.help')}
   </p>
   <ol class="steps">
-    <li>Log in to PowerSchool and open <strong>Grades and Attendance</strong>.</li>
+    <li>{t('ps.step1')}</li>
     <li>
-      Either save the page (<span class="kbd">Ctrl</span>+<span class="kbd">S</span> → “Webpage, complete” or “HTML only”) and upload it, or select the whole grades table, copy, and
-      paste below.
+      {t('ps.step2')}
     </li>
   </ol>
   <div class="btns">
-    <button class="btn" onclick={() => fileInput?.click()}>Upload saved page (.html)</button>
-    <input type="file" accept=".html,.htm,text/html,.txt" class="visually-hidden" bind:this={fileInput} onchange={onFile} aria-label="Upload PowerSchool page" />
+    <button class="btn" onclick={() => fileInput?.click()}>{t('ps.upload')}</button>
+    <input type="file" accept=".html,.htm,text/html,.txt" class="visually-hidden" bind:this={fileInput} onchange={onFile} aria-label={t('ps.uploadLabel')} />
   </div>
-  <textarea class="textarea" bind:value={raw} placeholder="…or paste the copied grades table / page source here" rows="5"></textarea>
-  <div class="btns"><button class="btn primary" onclick={() => parse(raw)} disabled={!raw.trim()}>Read grades</button></div>
+  <textarea class="textarea" bind:value={raw} placeholder={t('ps.pastePh')} rows="5"></textarea>
+  <div class="btns"><button class="btn primary" onclick={() => parse(raw)} disabled={!raw.trim()}>{t('ps.read')}</button></div>
 
   {#if parsed}
     <div class="result">
       <div class="row-head">
-        <h3>{parsed.student ? `${parsed.student} · ` : ''}{parsed.courses.length} courses</h3>
+        <h3>{parsed.student ? `${parsed.student} · ` : ''}{t('ps.courses', { count: parsed.courses.length })}</h3>
         <label class="term"
-          >Term <select class="select" bind:value={term}
+          >{t('ps.term')}
+          <select class="select" bind:value={term}
             >{#each parsed.terms as t}<option value={t}>{t}</option>{/each}</select
           ></label
         >
       </div>
       <table>
-        <thead><tr><th>PowerSchool course</th><th>Teacher</th><th>Grade</th><th>Apply to</th></tr></thead>
+        <thead><tr><th>{t('ps.course')}</th><th>{t('ps.teacher')}</th><th>{t('gpa.grade')}</th><th>{t('ps.applyTo')}</th></tr></thead>
         <tbody>
           {#each parsed.courses as c, ci (ci)}
             {@const g = latestGrade(c, term || undefined)}
@@ -105,16 +105,18 @@
               <td>{g && g.percent !== undefined ? `${g.percent}%${g.letter ? ` (${g.letter})` : ''}` : '—'}</td>
               <td>
                 <select class="select" bind:value={mapping[c.name]}>
-                  <option value="__new">Create “{c.name}”</option>
+                  <option value="__new">{t('ps.create', { name: c.name })}</option>
                   {#each store.activeCourses as course (course.id)}<option value={course.id}>{course.emoji ?? ''} {course.name}</option>{/each}
-                  <option value="">Skip</option>
+                  <option value="">{t('common.skip')}</option>
                 </select>
               </td>
             </tr>
           {/each}
         </tbody>
       </table>
-      <div class="btns"><button class="btn primary" onclick={apply}>Apply grades</button><button class="btn ghost" onclick={() => (parsed = null)}>Cancel</button></div>
+      <div class="btns">
+        <button class="btn primary" onclick={apply}>{t('ps.apply')}</button><button class="btn ghost" onclick={() => (parsed = null)}>{t('common.cancel')}</button>
+      </div>
     </div>
   {/if}
 </section>

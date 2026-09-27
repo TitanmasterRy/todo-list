@@ -4,6 +4,7 @@
   import { TOPICS, searchTopics, type Topic } from '../../lib/studyhelp';
   import { aiAvailable, explain } from '../../lib/ai';
   import { renderMarkdown } from '../../lib/markdown';
+  import { t } from '../../lib/i18n/index.svelte';
 
   let q = $state('');
   let open = $state<string | null>(null);
@@ -12,14 +13,14 @@
   let busy = $state(false);
   let subject = $state<'' | Topic['subject']>('');
   const results = $derived(searchTopics(q).filter((t) => !subject || t.subject === subject));
-  const subjects: { id: Topic['subject']; label: string }[] = [
-    { id: 'math', label: 'Math' },
-    { id: 'science', label: 'Science' },
-    { id: 'writing', label: 'Writing' },
-    { id: 'study', label: 'Study skills' },
-    { id: 'language', label: 'Languages' },
-    { id: 'cs', label: 'CS' },
-  ];
+  const subjects: { id: Topic['subject']; label: string }[] = $derived([
+    { id: 'math', label: t('study.math') },
+    { id: 'science', label: t('study.science') },
+    { id: 'writing', label: t('study.writing') },
+    { id: 'study', label: t('study.skills') },
+    { id: 'language', label: t('study.languages') },
+    { id: 'cs', label: t('study.cs') },
+  ]);
   function inlineMd(s: string): string {
     return renderMarkdown(s).replace(/^<p>|<\/p>$/g, '');
   }
@@ -31,7 +32,7 @@
       const topic = open ? TOPICS.find((t) => t.id === open)?.title : undefined;
       answer = await explain(question, { topic, courseName: store.courseById(store.courseFilter ?? undefined)?.name });
     } catch (e) {
-      toasts.push({ message: 'Could not get an answer', detail: e instanceof Error ? e.message : String(e), kind: 'warn' });
+      toasts.push({ message: t('study.noAnswer'), detail: e instanceof Error ? e.message : String(e), kind: 'warn' });
     } finally {
       busy = false;
     }
@@ -39,61 +40,60 @@
 </script>
 
 <section class="card">
-  <h2>Study help</h2>
+  <h2>{t('tools.study')}</h2>
   <p class="help">
-    Quick reference sheets for common topics. Search, then open a sheet. {aiAvailable()
-      ? 'Ask the tutor below for anything else.'
-      : 'Add an API key in Settings → AI helper to ask questions in your own words.'}
+    {t('study.help')}
+    {aiAvailable() ? t('study.askBelow') : t('study.addKey')}
   </p>
   <div class="search">
-    <input class="input" bind:value={q} placeholder="Search: derivatives, quadratic, MLA, stoichiometry…" aria-label="Search topics" data-study-search />
+    <input class="input" bind:value={q} placeholder={t('study.searchPh')} aria-label={t('study.search')} data-study-search />
     <div class="subs">
-      <button class="chip" class:on={subject === ''} onclick={() => (subject = '')}>All</button>
+      <button class="chip" class:on={subject === ''} onclick={() => (subject = '')}>{t('common.all')}</button>
       {#each subjects as s}<button class="chip" class:on={subject === s.id} onclick={() => (subject = subject === s.id ? '' : s.id)}>{s.label}</button>{/each}
     </div>
   </div>
   <div class="topics">
-    {#each results as t (t.id)}
-      <article class="topic" class:open={open === t.id}>
-        <button class="t-head" onclick={() => (open = open === t.id ? null : t.id)} aria-expanded={open === t.id}>
-          <span class="emoji">{t.emoji}</span>
-          <span class="title">{t.title}</span>
-          <span class="tags">{t.tags.slice(0, 3).join(' · ')}</span>
-          <span class="chev">{open === t.id ? '▾' : '▸'}</span>
+    {#each results as tp (tp.id)}
+      <article class="topic" class:open={open === tp.id}>
+        <button class="t-head" onclick={() => (open = open === tp.id ? null : tp.id)} aria-expanded={open === tp.id}>
+          <span class="emoji">{tp.emoji}</span>
+          <span class="title">{tp.title}</span>
+          <span class="tags">{tp.tags.slice(0, 3).join(' · ')}</span>
+          <span class="chev">{open === tp.id ? '▾' : '▸'}</span>
         </button>
-        {#if open === t.id}
+        {#if open === tp.id}
           <div class="body">
-            {#each t.sections as s}
+            {#each tp.sections as s}
               <h4>{s.heading}</h4>
               <ul>
                 {#each s.items as item}<li>{@html inlineMd(item)}</li>{/each}
               </ul>
             {/each}
-            {#if t.deeper?.length}
-              <h4>Understanding it (textbook level)</h4>
-              {#each t.deeper as d}
+            {#if tp.deeper?.length}
+              <h4>{t('study.deeper')}</h4>
+              {#each tp.deeper as d}
                 <details class="deep">
                   <summary>{d.heading}</summary>
                   <p>{@html inlineMd(d.text)}</p>
                 </details>
               {/each}
             {/if}
-            {#if t.examples?.length}
-              <h4>Worked examples</h4>
-              {#each t.examples as ex, i}
+            {#if tp.examples?.length}
+              <h4>{t('study.examples')}</h4>
+              {#each tp.examples as ex, i}
                 <details class="ex">
-                  <summary><strong>Example {i + 1}.</strong> {@html inlineMd(ex.problem)}</summary>
+                  <summary><strong>{t('study.example', { n: i + 1 })}</strong> {@html inlineMd(ex.problem)}</summary>
                   <ol>
                     {#each ex.steps as st}<li>{@html inlineMd(st)}</li>{/each}
                   </ol>
-                  <p class="ans">Answer: {@html inlineMd(ex.answer)}</p>
+                  <p class="ans">{t('study.answer')} {@html inlineMd(ex.answer)}</p>
                 </details>
               {/each}
             {/if}
-            {#if t.textbook?.length}
-              <h4>Free textbook</h4>
+            {#if tp.textbook?.length}
+              <h4>{t('study.textbook')}</h4>
               <ul class="books">
-                {#each t.textbook as b}
+                {#each tp.textbook as b}
                   <li>
                     📘 <a href={b.url} target="_blank" rel="noopener noreferrer">{b.title}</a>{#if b.chapter}
                       <span class="muted">· {b.chapter}</span>{/if}
@@ -101,20 +101,21 @@
                 {/each}
               </ul>
               <p class="muted">
-                OpenStax books are free and peer-reviewed. Download the PDF from the book page and open it in Tools → Book reader to read, highlight and make notecards.
+                {t('study.openstax')}
               </p>
             {/if}
           </div>
         {/if}
       </article>
     {/each}
-    {#if !results.length}<p class="help">No sheet matches. Try a broader word, or ask below.</p>{/if}
+    {#if !results.length}<p class="help">{t('study.noMatch')}</p>{/if}
   </div>
 </section>
 
 <section class="card ask">
   <h2>
-    Ask the tutor {#if !aiAvailable()}<span class="muted">(optional AI)</span>{/if}
+    {t('study.tutor')}
+    {#if !aiAvailable()}<span class="muted">{t('study.optionalAi')}</span>{/if}
   </h2>
   <form
     onsubmit={(e) => {
@@ -122,15 +123,10 @@
       void ask();
     }}
   >
-    <textarea
-      class="textarea"
-      bind:value={question}
-      placeholder={aiAvailable() ? 'Explain how to find the derivative of x² sin(x), then give me one to try' : 'Add your Anthropic API key in Settings → AI helper to enable this'}
-      disabled={!aiAvailable()}
-    ></textarea>
+    <textarea class="textarea" bind:value={question} placeholder={aiAvailable() ? t('study.askPh') : t('study.askOff')} disabled={!aiAvailable()}></textarea>
     <div class="btns">
-      <button class="btn primary" type="submit" disabled={!aiAvailable() || !question.trim() || busy}>{busy ? 'Thinking…' : 'Ask'}</button>
-      {#if open}<span class="muted">Context: {TOPICS.find((t) => t.id === open)?.title}</span>{/if}
+      <button class="btn primary" type="submit" disabled={!aiAvailable() || !question.trim() || busy}>{busy ? t('study.thinking') : t('study.ask')}</button>
+      {#if open}<span class="muted">{t('study.context', { topic: TOPICS.find((x) => x.id === open)?.title ?? '' })}</span>{/if}
     </div>
   </form>
   {#if answer}

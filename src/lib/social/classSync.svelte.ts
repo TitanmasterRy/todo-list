@@ -22,6 +22,7 @@ import {
   type ClassList,
 } from '../classlist';
 import { CLASS_SUBS_KEY } from './links';
+import { t as tr } from '../i18n/index.svelte';
 
 const PUBLISHED_KEY = 'homework-todo:class-published';
 const FETCH_TIMEOUT_MS = 15_000;
@@ -88,13 +89,11 @@ export async function fetchClassText(url: string): Promise<string> {
     try {
       res = await fetch(url, { cache: 'no-store', credentials: 'omit', referrerPolicy: 'no-referrer', signal: ctrl.signal });
     } catch (e) {
-      if (ctrl.signal.aborted) throw new Error('The class list took too long to load.');
-      throw new Error(
-        `The browser couldn't load that link${e instanceof Error && /fetch|network|load failed/i.test(e.message) ? ' (blocked, offline, or the host sends no CORS headers)' : ''}. Class lists published as a GitHub gist always work; otherwise download the file and use Import a file.${cspHint(url)}`,
-      );
+      if (ctrl.signal.aborted) throw new Error(tr('class.slow'));
+      throw new Error(`${e instanceof Error && /fetch|network|load failed/i.test(e.message) ? tr('cl.blocked') : tr('cl.couldNot')}${cspHint(url)}`);
     }
-    if (!res.ok) throw new Error(`The class list link returned HTTP ${res.status}.`);
-    if (Number(res.headers.get('content-length') ?? 0) > CLASS_LIMITS.bytes) throw new ClassListError('The class list is too big (over 512 kB).');
+    if (!res.ok) throw new Error(tr('class.http', { status: res.status }));
+    if (Number(res.headers.get('content-length') ?? 0) > CLASS_LIMITS.bytes) throw new ClassListError(tr('cl.tooBig'));
     // read at most the size limit, even if the server lied about the length
     const reader = res.body?.getReader();
     if (!reader) return await res.text();
@@ -106,7 +105,7 @@ export async function fetchClassText(url: string): Promise<string> {
       size += value.length;
       if (size > CLASS_LIMITS.bytes) {
         void reader.cancel();
-        throw new ClassListError('The class list is too big (over 512 kB).');
+        throw new ClassListError(tr('cl.tooBig'));
       }
       chunks.push(value);
     }
@@ -164,8 +163,8 @@ function applyList(list: ClassList, url: string): { created: number; updated: nu
 function report(r: { created: number; updated: number; sub: ClassSub }, quiet: boolean): void {
   if (quiet && !r.created) return;
   toasts.push({
-    message: r.created ? `${r.created} new assignment${r.created === 1 ? '' : 's'} from ${r.sub.course}` : `${r.sub.course} is up to date`,
-    detail: [r.updated ? `${r.updated} updated` : '', `${r.sub.items} on the class list`].filter(Boolean).join(' · '),
+    message: r.created ? tr('class.newFrom', { count: r.created, course: r.sub.course }) : tr('class.courseUpToDate', { course: r.sub.course }),
+    detail: [r.updated ? tr('class.nUpdated', { n: r.updated }) : '', tr('class.onList', { n: r.sub.items })].filter(Boolean).join(' · '),
     kind: r.created ? 'success' : 'info',
     emoji: '🧑‍🏫',
   });
@@ -174,13 +173,13 @@ function report(r: { created: number; updated: number; sub: ClassSub }, quiet: b
 /** Subscribe to a class list link (or refresh it if already subscribed). */
 export async function subscribe(input: string): Promise<ClassSub> {
   const url = classSourceUrl(input);
-  if (!url) throw new Error('Paste the https link your teacher shared (a gist link or the raw .json file).');
+  if (!url) throw new Error(tr('class.pasteLink'));
   classes.busy = 'new';
   try {
     const { list, skipped } = parseClassList(await fetchClassText(url));
     const r = applyList(list, url);
     report(r, false);
-    if (skipped) toasts.push({ message: `Skipped ${skipped} item${skipped === 1 ? '' : 's'} that weren't valid`, kind: 'warn' });
+    if (skipped) toasts.push({ message: tr('class.skipped', { count: skipped }), kind: 'warn' });
     return r.sub;
   } finally {
     classes.busy = null;
@@ -201,13 +200,13 @@ export async function refresh(listId: string, opts: { quiet?: boolean } = {}): P
   classes.busy = listId;
   try {
     const { list } = parseClassList(await fetchClassText(sub.url));
-    if (list.id !== sub.listId) throw new ClassListError('That link now holds a different class list. Unsubscribe and subscribe again.');
+    if (list.id !== sub.listId) throw new ClassListError(tr('cl.different'));
     report(applyList(list, sub.url), !!opts.quiet);
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
     classes.subs = classes.subs.map((s) => (s.listId === listId ? { ...s, lastError: msg } : s));
     saveSubs();
-    if (!opts.quiet) toasts.push({ message: `Couldn't refresh ${sub.course}`, detail: msg, kind: 'warn', timeout: 10000 });
+    if (!opts.quiet) toasts.push({ message: tr('class.refreshFailed', { course: sub.course }), detail: msg, kind: 'warn', timeout: 10000 });
   } finally {
     classes.busy = null;
   }
@@ -245,8 +244,8 @@ export function canPublishGist(): boolean {
 
 /** Publish (or update) the list as a public gist with the Gist sync token; returns the stable raw links. */
 export async function publishGist(courseId: string, list: ClassList): Promise<Published> {
-  const token = await useSecret('gistToken', { interactive: true, reason: 'Enter your passphrase to use your GitHub token.' });
-  if (!token) throw new Error('Add a GitHub token with the gist scope in Settings → Sync first.');
+  const token = await useSecret('gistToken', { interactive: true, reason: tr('unlock.github') });
+  if (!token) throw new Error(tr('class.needToken'));
   const p = { ...publishedFor(courseId), id: list.id };
   const headers = { Authorization: `Bearer ${token}`, Accept: 'application/vnd.github+json', 'Content-Type': 'application/json' };
   const body = JSON.stringify({

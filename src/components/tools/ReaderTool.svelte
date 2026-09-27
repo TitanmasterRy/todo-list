@@ -24,6 +24,7 @@
     type LibraryFile,
   } from '../../lib/library';
   import PdfViewer from './PdfViewer.svelte';
+  import { t } from '../../lib/i18n/index.svelte';
 
   const POMODORO_SEC = 25 * 60;
   const NEW_DECK = '__new__';
@@ -83,7 +84,7 @@
     try {
       books = await listBooks();
     } catch (e) {
-      toasts.push({ message: 'Could not open the library', detail: e instanceof Error ? e.message : String(e), kind: 'warn' });
+      toasts.push({ message: t('reader.libFailed'), detail: e instanceof Error ? e.message : String(e), kind: 'warn' });
     } finally {
       loadingList = false;
     }
@@ -110,13 +111,13 @@
       await refreshList();
       await refreshUsage();
       toasts.push({
-        message: added ? `Added ${added} PDF${added === 1 ? '' : 's'}` : 'Already in your library',
-        detail: dupes && added ? `${dupes} already there` : undefined,
+        message: added ? t('reader.added', { count: added }) : t('reader.already'),
+        detail: dupes && added ? t('reader.dupes', { n: dupes }) : undefined,
         kind: added ? 'success' : 'info',
         emoji: added ? '📚' : undefined,
       });
     } catch (e) {
-      toasts.push({ message: 'Could not add the file', detail: e instanceof Error ? e.message : String(e), kind: 'warn' });
+      toasts.push({ message: t('reader.addFailed'), detail: e instanceof Error ? e.message : String(e), kind: 'warn' });
     } finally {
       adding = false;
     }
@@ -126,19 +127,17 @@
     try {
       await deleteBook(b.id);
       books = books.filter((x) => x.id !== b.id);
-      toasts.push({ message: `Removed “${b.name}”`, kind: 'info' });
+      toasts.push({ message: t('reader.removed', { name: b.name }), kind: 'info' });
       void refreshUsage();
     } catch (e) {
-      toasts.push({ message: 'Could not delete', detail: e instanceof Error ? e.message : String(e), kind: 'warn' });
+      toasts.push({ message: t('reader.deleteFailed'), detail: e instanceof Error ? e.message : String(e), kind: 'warn' });
     }
   }
 
   async function keepData() {
     const ok = await requestPersistentStorage();
-    persistResult = ok
-      ? 'Your library is marked persistent; the browser won’t clear it to free space.'
-      : 'The browser didn’t grant persistent storage. Installing the app or bookmarking it usually helps.';
-    toasts.push({ message: ok ? 'Data will be kept' : 'Not granted', kind: ok ? 'success' : 'warn' });
+    persistResult = ok ? t('reader.persistOk') : t('reader.persistNo');
+    toasts.push({ message: ok ? t('reader.kept') : t('reader.notGranted'), kind: ok ? 'success' : 'warn' });
   }
 
   // ---------- open / close ----------
@@ -146,7 +145,7 @@
     try {
       const full = await getBook(b.id);
       if (!full) {
-        toasts.push({ message: 'That file is gone from this browser', kind: 'warn' });
+        toasts.push({ message: t('reader.gone'), kind: 'warn' });
         await refreshList();
         return;
       }
@@ -161,7 +160,7 @@
       highlights = await listHighlights(full.id);
       startTimer();
     } catch (e) {
-      toasts.push({ message: 'Could not open', detail: e instanceof Error ? e.message : String(e), kind: 'warn' });
+      toasts.push({ message: t('reader.openFailed'), detail: e instanceof Error ? e.message : String(e), kind: 'warn' });
     }
   }
   function close() {
@@ -178,7 +177,12 @@
       elapsed++;
       if (elapsed % POMODORO_SEC === 0) {
         store.recordPomodoro();
-        toasts.push({ message: 'Reading pomodoro done', detail: `${elapsed / 60} minutes in “${book?.name ?? 'your book'}”. Take a short break.`, kind: 'success', emoji: '🍅' });
+        toasts.push({
+          message: t('reader.pomo'),
+          detail: t('reader.pomoDetail', { n: elapsed / 60, name: book?.name ?? t('reader.yourBook') }),
+          kind: 'success',
+          emoji: '🍅',
+        });
       }
     }, 1000);
   }
@@ -220,7 +224,7 @@
     const bookmarks = has ? book.bookmarks.filter((p) => p !== page) : [...book.bookmarks, page].sort((a, b) => a - b);
     book = { ...book, bookmarks };
     await updateBook(book.id, { bookmarks });
-    toasts.push({ message: has ? `Bookmark removed from page ${page}` : `Page ${page} bookmarked`, kind: 'info', timeout: 1500 });
+    toasts.push({ message: has ? t('reader.unmarked', { page }) : t('reader.marked', { page }), kind: 'info', timeout: 1500 });
   }
 
   // ---------- selection actions ----------
@@ -233,9 +237,9 @@
     if (!sel) return;
     try {
       await navigator.clipboard.writeText(sel.text);
-      toasts.push({ message: 'Copied', kind: 'success', timeout: 1200 });
+      toasts.push({ message: t('scan.copied'), kind: 'success', timeout: 1200 });
     } catch {
-      toasts.push({ message: 'Clipboard blocked; select and press Ctrl/Cmd+C', kind: 'warn' });
+      toasts.push({ message: t('reader.clipboard'), kind: 'warn' });
     }
   }
   function openCardForm() {
@@ -265,8 +269,8 @@
     const deckId = resolveDeck();
     const added = store.addCards(deckId, [{ front: cardFront, back: cardBack }]);
     toasts.push({
-      message: added.length ? 'Notecard added' : 'Nothing added',
-      detail: added.length ? `In “${store.decks.find((d) => d.id === deckId)?.name ?? 'deck'}”` : undefined,
+      message: added.length ? t('reader.cardAdded') : t('reader.nothing'),
+      detail: added.length ? t('reader.inDeck', { deck: store.decks.find((d) => d.id === deckId)?.name ?? '' }) : undefined,
       kind: added.length ? 'success' : 'warn',
       emoji: added.length ? '🃏' : undefined,
     });
@@ -278,7 +282,7 @@
     const h: Highlight = { id: uid('hl'), fileId: book.id, page: sel.page, text: sel.text, createdAt: new Date().toISOString() };
     await addHighlight(h);
     highlights = [...highlights, h].sort((a, b) => a.page - b.page || a.createdAt.localeCompare(b.createdAt));
-    toasts.push({ message: 'Highlight saved', kind: 'success', timeout: 1500, emoji: '🖍️' });
+    toasts.push({ message: t('reader.hlSaved'), kind: 'success', timeout: 1500, emoji: '🖍️' });
     sel = null;
   }
   async function removeHighlight(h: Highlight) {
@@ -292,7 +296,7 @@
     try {
       explanation = await explain(sel.text, { topic: book.name });
     } catch (e) {
-      toasts.push({ message: 'Could not explain', detail: e instanceof Error ? e.message : String(e), kind: 'warn' });
+      toasts.push({ message: t('reader.explainFailed'), detail: e instanceof Error ? e.message : String(e), kind: 'warn' });
     } finally {
       explaining = false;
     }
@@ -311,13 +315,13 @@
       const deckId = resolveDeck();
       const added = store.addCards(deckId, items);
       toasts.push({
-        message: `Added ${added.length} card${added.length === 1 ? '' : 's'}`,
-        detail: `In “${store.decks.find((d) => d.id === deckId)?.name ?? 'deck'}”`,
+        message: t('cards.added', { count: added.length }),
+        detail: t('reader.inDeck', { deck: store.decks.find((d) => d.id === deckId)?.name ?? '' }),
         kind: added.length ? 'success' : 'warn',
         emoji: '🃏',
       });
     } catch (e) {
-      toasts.push({ message: 'Could not make cards', detail: e instanceof Error ? e.message : String(e), kind: 'warn' });
+      toasts.push({ message: t('cards.genFailed'), detail: e instanceof Error ? e.message : String(e), kind: 'warn' });
     } finally {
       makingCards = false;
     }
@@ -354,24 +358,22 @@
 
 {#if !book}
   <section class="card">
-    <h2>Reader</h2>
+    <h2>{t('reader.title')}</h2>
     <p class="help">
-      Keep textbooks and readings here, pick up where you left off, and turn what you read into highlights and notecards. <strong
-        >Files stay in this browser only; nothing is uploaded.</strong
-      >
+      {t('reader.help')} <strong>{t('reader.local')}</strong>
     </p>
     <div class="addrow">
       <input type="file" accept=".pdf,application/pdf" multiple hidden bind:this={fileInput} onchange={onFiles} />
-      <button class="btn primary" onclick={() => fileInput?.click()} disabled={adding}>{adding ? 'Adding…' : '+ Add PDF'}</button>
-      <select class="select" bind:value={addCourse} aria-label="Course for new files">
-        <option value="">No course</option>
+      <button class="btn primary" onclick={() => fileInput?.click()} disabled={adding}>{adding ? t('reader.adding') : t('reader.add')}</button>
+      <select class="select" bind:value={addCourse} aria-label={t('reader.courseFor')}>
+        <option value="">{t('inbox.noCourse')}</option>
         {#each store.activeCourses as c (c.id)}<option value={c.id}>{c.emoji ?? ''} {c.name}</option>{/each}
       </select>
     </div>
     {#if loadingList}
-      <p class="muted">Loading…</p>
+      <p class="muted">{t('common.loading')}</p>
     {:else if !books.length}
-      <p class="muted">No PDFs yet. Add a textbook chapter, a packet, or an article.</p>
+      <p class="muted">{t('reader.none')}</p>
     {:else}
       <ul class="books">
         {#each books as b (b.id)}
@@ -380,53 +382,62 @@
               <span class="dot" style="background:{courseColor(b.courseId)}"></span>
               <span class="name">{b.name}</span>
               <span class="meta"
-                >{formatBytes(b.size)}{b.pageCount ? ` · page ${b.lastPage}/${b.pageCount}` : b.lastPage > 1 ? ` · page ${b.lastPage}` : ''}{b.bookmarks.length
-                  ? ` · ${b.bookmarks.length} ★`
-                  : ''}</span
+                >{formatBytes(b.size)}{b.pageCount
+                  ? ` · ${t('reader.pageOf', { n: b.lastPage, total: b.pageCount })}`
+                  : b.lastPage > 1
+                    ? ` · ${t('reader.pageN', { n: b.lastPage })}`
+                    : ''}{b.bookmarks.length ? ` · ${b.bookmarks.length} ★` : ''}</span
               >
               {#if b.pageCount}
                 <span class="prog"><span class="fill" style="width:{Math.min(100, (b.lastPage / b.pageCount) * 100)}%"></span></span>
               {/if}
             </button>
-            <button class="btn ghost sm icon" aria-label="Delete {b.name}" onclick={() => remove(b)}>×</button>
+            <button class="btn ghost sm icon" aria-label={t('reader.delete', { name: b.name })} onclick={() => remove(b)}>×</button>
           </li>
         {/each}
       </ul>
     {/if}
     <div class="storage">
-      <span class="muted">{usage ? `Using ${formatBytes(usage.usage)}${usage.quota ? ` of ${formatBytes(usage.quota)}` : ''} in this browser.` : 'Storage usage unavailable.'}</span
+      <span class="muted"
+        >{usage
+          ? usage.quota
+            ? t('reader.usingOf', { used: formatBytes(usage.usage), quota: formatBytes(usage.quota) })
+            : t('reader.using', { used: formatBytes(usage.usage) })
+          : t('reader.noUsage')}</span
       >
-      <button class="btn sm" onclick={keepData}>Keep my data</button>
+      <button class="btn sm" onclick={keepData}>{t('reader.keep')}</button>
     </div>
     {#if persistResult}<p class="muted small">{persistResult}</p>{/if}
   </section>
 {:else}
   <section class="card reader">
     <div class="toolbar">
-      <button class="btn ghost sm" onclick={close}>← Library</button>
+      <button class="btn ghost sm" onclick={close}>← {t('reader.library')}</button>
       <span class="title" title={book.name}>{book.name}</span>
-      <span class="timer" title="Reading timer">⏱ {clock}</span>
+      <span class="timer" title={t('reader.timer')}>⏱ {clock}</span>
       <div class="group">
-        <button class="btn sm icon" onclick={() => go(page - 1)} disabled={page <= 1} aria-label="Previous page">‹</button>
+        <button class="btn sm icon" onclick={() => go(page - 1)} disabled={page <= 1} aria-label={t('reader.prev')}>‹</button>
         <form class="jump" onsubmit={jumpTo}>
-          <input class="input pg" type="number" min="1" max={pageCount || undefined} bind:value={jump} placeholder={String(page)} aria-label="Go to page" />
+          <input class="input pg" type="number" min="1" max={pageCount || undefined} bind:value={jump} placeholder={String(page)} aria-label={t('reader.goTo')} />
           <span class="muted">/ {pageCount || '…'}</span>
         </form>
-        <button class="btn sm icon" onclick={() => go(page + 1)} disabled={!!pageCount && page >= pageCount} aria-label="Next page">›</button>
+        <button class="btn sm icon" onclick={() => go(page + 1)} disabled={!!pageCount && page >= pageCount} aria-label={t('reader.next')}>›</button>
       </div>
       <div class="group">
-        <button class="btn sm icon" onclick={() => setZoom(zoom - 0.1)} disabled={zoom <= 0.5} aria-label="Zoom out">−</button>
+        <button class="btn sm icon" onclick={() => setZoom(zoom - 0.1)} disabled={zoom <= 0.5} aria-label={t('graph.zoomOut')}>−</button>
         <span class="muted zoom">{Math.round(zoom * 100)}%</span>
-        <button class="btn sm icon" onclick={() => setZoom(zoom + 0.1)} disabled={zoom >= 3} aria-label="Zoom in">+</button>
+        <button class="btn sm icon" onclick={() => setZoom(zoom + 0.1)} disabled={zoom >= 3} aria-label={t('graph.zoomIn')}>+</button>
       </div>
-      <button class="btn sm icon" class:star={bookmarked} onclick={toggleBookmark} aria-label={bookmarked ? 'Remove bookmark' : 'Bookmark this page'} aria-pressed={bookmarked}
+      <button class="btn sm icon" class:star={bookmarked} onclick={toggleBookmark} aria-label={bookmarked ? t('reader.unbookmark') : t('reader.bookmark')} aria-pressed={bookmarked}
         >{bookmarked ? '★' : '☆'}</button
       >
-      <button class="btn sm" class:on={showHighlights} onclick={() => (showHighlights = !showHighlights)}>Highlights{highlights.length ? ` (${highlights.length})` : ''}</button>
+      <button class="btn sm" class:on={showHighlights} onclick={() => (showHighlights = !showHighlights)}
+        >{t('reader.highlights')}{highlights.length ? ` (${highlights.length})` : ''}</button
+      >
     </div>
     {#if book.bookmarks.length}
       <div class="bookmarks">
-        <span class="muted">Bookmarks:</span>
+        <span class="muted">{t('reader.bookmarks')}</span>
         {#each book.bookmarks as p (p)}
           <button class="chip" class:on={p === page} onclick={() => go(p)}>p. {p}</button>
         {/each}
@@ -437,10 +448,10 @@
       <div class="popover" in:fly={{ y: -6, duration: 160 }}>
         <span class="snippet" title={sel.text}>“{sel.text.length > 60 ? sel.text.slice(0, 60) + '…' : sel.text}”</span>
         <div class="acts">
-          <button class="btn sm" onclick={copySel}>Copy</button>
-          <button class="btn sm" onclick={openCardForm}>Make notecard</button>
-          <button class="btn sm" onclick={saveHighlight}>Save highlight</button>
-          {#if aiAvailable()}<button class="btn sm" onclick={explainSel} disabled={explaining}>{explaining ? 'Thinking…' : '✨ Explain'}</button>{/if}
+          <button class="btn sm" onclick={copySel}>{t('card.copy')}</button>
+          <button class="btn sm" onclick={openCardForm}>{t('reader.makeCard')}</button>
+          <button class="btn sm" onclick={saveHighlight}>{t('reader.saveHl')}</button>
+          {#if aiAvailable()}<button class="btn sm" onclick={explainSel} disabled={explaining}>{explaining ? t('study.thinking') : t('reader.explain')}</button>{/if}
           <button
             class="btn ghost sm icon"
             onclick={() => {
@@ -448,18 +459,18 @@
               cardForm = false;
               explanation = null;
             }}
-            aria-label="Dismiss">×</button
+            aria-label={t('common.dismiss')}>×</button
           >
         </div>
         {#if cardForm}
           <form class="cardform" onsubmit={saveCard}>
-            <input class="input" bind:value={cardFront} maxlength="200" placeholder="Front (term or question)" aria-label="Front" />
-            <input class="input" bind:value={cardBack} placeholder="Back (definition or answer)" aria-label="Back" />
-            <select class="select" bind:value={deckChoice} aria-label="Deck">
-              <option value={NEW_DECK}>New deck named “{book.name}”</option>
+            <input class="input" bind:value={cardFront} maxlength="200" placeholder={t('reader.frontPh')} aria-label={t('cards.front')} />
+            <input class="input" bind:value={cardBack} placeholder={t('cards.backPh')} aria-label={t('cards.back')} />
+            <select class="select" bind:value={deckChoice} aria-label={t('reader.deck')}>
+              <option value={NEW_DECK}>{t('reader.newDeck', { name: book.name })}</option>
               {#each store.decks as d (d.id)}<option value={d.id}>{d.name}</option>{/each}
             </select>
-            <button class="btn primary sm" type="submit" disabled={!cardFront.trim() || !cardBack.trim()}>Add card</button>
+            <button class="btn primary sm" type="submit" disabled={!cardFront.trim() || !cardBack.trim()}>{t('reader.addCard')}</button>
           </form>
         {/if}
       </div>
@@ -468,20 +479,20 @@
     {#if showHighlights}
       <div class="hl-panel">
         <div class="hl-head">
-          <strong>Highlights</strong>
+          <strong>{t('reader.highlights')}</strong>
           <button class="btn sm" onclick={cardsFromHighlights} disabled={!highlights.length || makingCards}
-            >{makingCards ? 'Making…' : aiAvailable() ? '✨ Make cards from all highlights' : 'Make cards from all highlights'}</button
+            >{makingCards ? t('reader.making') : aiAvailable() ? `✨ ${t('reader.cardsFromHl')}` : t('reader.cardsFromHl')}</button
           >
         </div>
         {#if !highlights.length}
-          <p class="muted">Select text on a page and choose “Save highlight”.</p>
+          <p class="muted">{t('reader.hlHint')}</p>
         {:else}
           <ul class="hls">
             {#each highlights as h (h.id)}
               <li>
                 <button class="pagelink" onclick={() => go(h.page)}>p. {h.page}</button>
                 <span class="hltext">{h.text}</span>
-                <button class="btn ghost sm icon" aria-label="Delete highlight" onclick={() => removeHighlight(h)}>×</button>
+                <button class="btn ghost sm icon" aria-label={t('reader.deleteHl')} onclick={() => removeHighlight(h)}>×</button>
               </li>
             {/each}
           </ul>
@@ -496,13 +507,13 @@
     {#if explanation !== null}
       <div class="explain" in:fly={{ y: 8, duration: 200 }}>
         <div class="hl-head">
-          <strong>✨ Explanation</strong>
-          <button class="btn ghost sm icon" onclick={() => (explanation = null)} aria-label="Close explanation">×</button>
+          <strong>✨ {t('reader.explanation')}</strong>
+          <button class="btn ghost sm icon" onclick={() => (explanation = null)} aria-label={t('reader.closeExplanation')}>×</button>
         </div>
         <div class="md">{@html renderMarkdown(explanation)}</div>
       </div>
     {/if}
-    <p class="muted small keys">← → pages · b bookmark · + − zoom · select text for actions</p>
+    <p class="muted small keys">{t('reader.keys')}</p>
   </section>
 {/if}
 

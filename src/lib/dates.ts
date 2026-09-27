@@ -36,6 +36,30 @@ export function formatMonthDay(d: Date, now: Date = new Date()): string {
   return dtf(withYear ? { day: 'numeric', month: 'short', year: 'numeric' } : { day: 'numeric', month: 'short' }).format(d);
 }
 
+// English keeps the browser's default format (unchanged output); other languages follow the app language and region
+const tagOrDefault = () => (locale() === 'en' ? undefined : intlLocale());
+
+/** Date and time for "last synced" labels: the browser default in English, the app language otherwise. */
+export function formatDateTime(d: Date, opts?: Intl.DateTimeFormatOptions): string {
+  return d.toLocaleString(tagOrDefault(), opts);
+}
+
+/** Numeric date ("10/5/2026" / "5/10/2026"). */
+export function formatDate(d: Date): string {
+  return d.toLocaleDateString(tagOrDefault());
+}
+
+/** Clock time ("8:05 PM" / "20:05"). */
+export function formatClock(d: Date, opts?: Intl.DateTimeFormatOptions): string {
+  return d.toLocaleTimeString(tagOrDefault(), opts);
+}
+
+/** "Mon, Oct 5, 2026" / "lun, 5 oct 2026". */
+export function formatFullDate(d: Date): string {
+  if (locale() === 'en') return `${DAY_SHORT[d.getDay()]}, ${MONTH_SHORT[d.getMonth()]} ${d.getDate()}, ${d.getFullYear()}`;
+  return dtf({ weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' }).format(d);
+}
+
 /** "Monday, Oct 5" / "lunes, 5 oct". */
 export function formatWeekdayDate(d: Date): string {
   if (locale() === 'en') return `${DAY_NAMES[d.getDay()]}, ${MONTH_SHORT[d.getMonth()]} ${d.getDate()}`;

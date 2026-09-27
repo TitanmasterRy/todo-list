@@ -4,6 +4,7 @@
 // - HTML/CSS/JS are combined into a srcdoc for a sandboxed iframe.
 // - Java and C++ can't run in the browser; the UI links to an online compiler instead.
 import type { SnippetLanguage } from './snippets';
+import { t } from './i18n/index.svelte';
 
 export interface RunResult {
   output: string[];
@@ -138,7 +139,7 @@ export function runJavaScript(code: string, opts: { timeoutMs?: number } = {}): 
       worker = new Worker(url);
     } catch (err) {
       URL.revokeObjectURL(url);
-      resolve({ output: [], error: `Could not start a worker: ${formatValue(err)}`, ms: 0 });
+      resolve({ output: [], error: t('code.workerFailed', { err: formatValue(err) }), ms: 0 });
       return;
     }
     let done = false;
@@ -196,19 +197,19 @@ function injectScript(src: string): Promise<void> {
     s.src = src;
     s.async = true;
     s.onload = () => resolve();
-    s.onerror = () => reject(new Error('Could not download the Python runtime. Check your connection and try again.'));
+    s.onerror = () => reject(new Error(t('code.pyDownload')));
     document.head.appendChild(s);
   });
 }
 
 function loadPyodideOnce(onStatus?: (s: string) => void): Promise<PyodideLike> {
   if (!pyodidePromise) {
-    onStatus?.('Loading Python runtime (~10 MB, once)…');
+    onStatus?.(t('code.loadingPy'));
     pyodidePromise = (async () => {
       await injectScript(PYODIDE_URL);
       const loadPyodide = (window as unknown as { loadPyodide?: LoadPyodide }).loadPyodide;
-      if (!loadPyodide) throw new Error('Python runtime failed to initialise.');
-      onStatus?.('Starting Python…');
+      if (!loadPyodide) throw new Error(t('code.pyInit'));
+      onStatus?.(t('code.startingPy'));
       return loadPyodide({ indexURL: PYODIDE_INDEX_URL });
     })();
     pyodidePromise.catch(() => {
@@ -216,7 +217,7 @@ function loadPyodideOnce(onStatus?: (s: string) => void): Promise<PyodideLike> {
       pyodidePromise = null;
     });
   } else {
-    onStatus?.('Starting Python…');
+    onStatus?.(t('code.startingPy'));
   }
   return pyodidePromise;
 }
@@ -234,7 +235,7 @@ export async function runPython(code: string, opts: { onStatus?: (s: string) => 
   } catch (err) {
     return { output: [], error: formatValue(err), ms: Math.round(performance.now() - start) };
   }
-  opts.onStatus?.('Running…');
+  opts.onStatus?.(t('code.running'));
   const output: string[] = [];
   const pushLines = (prefix: string) => (s: string) => {
     for (const line of s.split('\n')) output.push(prefix + line);

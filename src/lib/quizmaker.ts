@@ -1,5 +1,6 @@
 // Quiz sets: manual or AI-made, exported to Quizlet, Blooket, Gimkit, Kahoot, printable worksheets, notecards, and QTI 1.2 (Schoology).
 import { buildZip } from './zip';
+import { t } from './i18n/index.svelte';
 
 export type QuestionType = 'mc' | 'tf' | 'short' | 'fill';
 export type Difficulty = 'easy' | 'medium' | 'hard' | 'mixed';
@@ -61,7 +62,7 @@ export const SUBJECTS = [
 let n = 0;
 export function newQuestion(type: QuestionType = 'mc'): Question {
   const id = `q_${Date.now().toString(36)}_${++n}`;
-  if (type === 'tf') return { id, type, prompt: '', options: ['True', 'False'], correct: [0] };
+  if (type === 'tf') return { id, type, prompt: '', options: [t('quiz.true'), t('quiz.false')], correct: [0] };
   if (type === 'mc') return { id, type, prompt: '', options: ['', '', '', ''], correct: [0] };
   return { id, type, prompt: '', options: [], correct: [], answer: '' };
 }
@@ -163,9 +164,9 @@ export function asChoice(q: Question, pool: Question[] = []): { options: string[
 export function toWorksheet(set: QuizSet, opts: { key?: boolean } = { key: true }): string {
   const lines: string[] = [
     `# ${set.title}`,
-    `${set.subject}${set.topic ? ` · ${set.topic}` : ''} · ${set.questions.length} questions · ${set.difficulty}`,
+    `${set.subject}${set.topic ? ` · ${set.topic}` : ''} · ${t('quiz.nQuestions', { count: set.questions.length })} · ${t(`quiz.diff.${set.difficulty}`)}`,
     '',
-    'Name: ______________________   Date: __________',
+    t('quiz.nameDate'),
     '',
   ];
   set.questions.forEach((q, i) => {
@@ -175,7 +176,7 @@ export function toWorksheet(set: QuizSet, opts: { key?: boolean } = { key: true 
     lines.push('');
   });
   if (opts.key) {
-    lines.push('---', '', '## Answer key', '');
+    lines.push('---', '', `## ${t('quiz.answerKey')}`, '');
     set.questions.forEach((q, i) => {
       const ans = q.type === 'mc' || q.type === 'tf' ? q.correct.map((c) => String.fromCharCode(65 + c)).join(', ') + ` (${correctText(q)})` : correctText(q);
       lines.push(`${i + 1}. ${ans}${q.explanation ? ` — ${q.explanation}` : ''}`);

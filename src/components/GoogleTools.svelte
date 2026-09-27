@@ -2,7 +2,8 @@
   import { onMount } from 'svelte';
   import { store } from '../lib/store.svelte';
   import { toasts } from '../lib/toast.svelte';
-  import { formatDue } from '../lib/dates';
+  import { formatDateTime, formatDue } from '../lib/dates';
+  import { t } from '../lib/i18n/index.svelte';
   import { COURSE_COLORS, COURSE_EMOJIS } from '../lib/colors';
   import { matchCourseName } from '../lib/schoology';
   import { extractAssignmentsFromMail, type Suggestion } from '../lib/google-parse';
@@ -60,10 +61,10 @@
     authBusy = true;
     try {
       await signIn(neededScopes());
-      toasts.push({ message: google.email ? `Signed in as ${google.email}` : 'Signed in to Google', kind: 'success', emoji: '✅' });
+      toasts.push({ message: google.email ? t('google.signedInAs', { email: google.email }) : t('google.signedIn'), kind: 'success', emoji: '✅' });
       if (s.googleSyncEnabled) void driveSync({ pull: true, interactive: true });
     } catch (e) {
-      fail('Google sign-in failed', e);
+      fail(t('google.signInFailed'), e);
     } finally {
       authBusy = false;
     }
@@ -73,7 +74,7 @@
     signOut();
     suggestions = [];
     scanned = false;
-    toasts.push({ message: 'Signed out of Google', kind: 'info' });
+    toasts.push({ message: t('google.signedOut'), kind: 'info' });
   }
 
   async function scan() {
@@ -117,7 +118,7 @@
     const items = visible.filter((x) => x.confidence === 'high' && x.title.trim());
     if (!items.length) return;
     const created = store.addTasks(items.map(taskInput));
-    toasts.push({ message: `Added ${created.length} task${created.length === 1 ? '' : 's'} from Gmail`, kind: 'success', emoji: '📧' });
+    toasts.push({ message: t('google.addedGmail', { count: created.length }), kind: 'success', emoji: '📧' });
   }
 
   function ignore(x: Suggestion) {
@@ -180,8 +181,8 @@
       }
       classroomResult = { courses: created.size, added: tasks.length, done, skipped: work.length - fresh.length, total: work.length };
       toasts.push({
-        message: tasks.length ? `Imported ${tasks.length} from Google Classroom` : 'Google Classroom is up to date',
-        detail: created.size ? `${created.size} new course${created.size === 1 ? '' : 's'}` : undefined,
+        message: tasks.length ? t('google.imported', { n: tasks.length }) : t('google.upToDate'),
+        detail: created.size ? t('google.newCourses', { count: created.size }) : undefined,
         kind: 'success',
         emoji: '🎓',
       });
@@ -194,15 +195,15 @@
 
   async function pushCalendar() {
     if (!upcoming.length) {
-      toasts.push({ message: 'Nothing due in the next 30 days', kind: 'info' });
+      toasts.push({ message: t('google.nothing30'), kind: 'info' });
       return;
     }
     calBusy = true;
     try {
       const r = await pushTasksToCalendar(upcoming);
-      toasts.push({ message: `Google Calendar updated`, detail: `${r.created} created · ${r.updated} updated`, kind: 'success', emoji: '📅' });
+      toasts.push({ message: t('google.calUpdated'), detail: t('google.calDetail', { created: r.created, updated: r.updated }), kind: 'success', emoji: '📅' });
     } catch (e) {
-      fail('Calendar push failed', e);
+      fail(t('google.calFailed'), e);
     } finally {
       calBusy = false;
     }
@@ -218,7 +219,7 @@
     syncBusy = true;
     try {
       await driveSync({ pull: true, interactive: true });
-      if (google.syncStatus === 'ok') toasts.push({ message: 'Synced with Google Drive', kind: 'success', emoji: '☁️' });
+      if (google.syncStatus === 'ok') toasts.push({ message: t('google.driveSynced'), kind: 'success', emoji: '☁️' });
     } finally {
       syncBusy = false;
     }
@@ -234,69 +235,68 @@
   const grantedLabels = $derived(Array.from(new Set(google.scopes.map(scopeLabel).filter(Boolean))));
 
   function fmtWhen(iso: string | undefined): string {
-    if (!iso) return 'never';
+    if (!iso) return t('google.never');
     const d = new Date(iso);
-    return Number.isNaN(d.getTime()) ? 'never' : d.toLocaleString(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
+    return Number.isNaN(d.getTime()) ? t('google.never') : formatDateTime(d, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
   }
 </script>
 
 <div class="google">
   <section class="card">
     <div class="head">
-      <h2>Google account</h2>
+      <h2>{t('google.account')}</h2>
       {#if signedIn}
-        <span class="status ok">● Signed in{google.email ? ` as ${google.email}` : ''}</span>
+        <span class="status ok">● {google.email ? t('google.signedInAs', { email: google.email }) : t('google.signedInShort')}</span>
       {:else if google.status === 'ready'}
-        <span class="status">○ Not signed in</span>
+        <span class="status">○ {t('google.notSignedIn')}</span>
       {:else}
-        <span class="status">○ Needs setup</span>
+        <span class="status">○ {t('google.needsSetup')}</span>
       {/if}
     </div>
     {#if !s.googleClientId?.trim()}
       <p class="muted">
-        Add your OAuth Client ID in <button class="link" onclick={() => store.go('settings')}>Settings</button> to enable Gmail scanning, Classroom import, Calendar push and Drive sync.
-        Everything runs in your browser; nothing is sent anywhere but Google.
+        {t('google.addId')} <button class="link" onclick={() => store.go('settings')}>{t('nav.settings')}</button>
+        {t('google.addId2')}
       </p>
     {/if}
     <details class="help" open={!s.googleClientId?.trim()}>
-      <summary>Setup (one time, about 5 minutes)</summary>
+      <summary>{t('google.setup')}</summary>
       <ol class="steps">
-        <li>Open <code>console.cloud.google.com</code> and create a <strong>project</strong>.</li>
+        <li>{t('google.step1')}</li>
         <li>
-          <strong>APIs &amp; Services → OAuth consent screen</strong>: choose <strong>External</strong>, fill in the app name, and add yourself under <strong>Test users</strong>.
+          {t('google.step2')}
         </li>
         <li>
-          <strong>APIs &amp; Services → Library</strong>: enable the <strong>Gmail API</strong>, <strong>Google Calendar API</strong>, <strong>Google Classroom API</strong> and
-          <strong>Google Drive API</strong> (only the ones you plan to use).
+          {t('google.step3')}
         </li>
         <li>
-          <strong>Credentials → Create credentials → OAuth client ID → Web application</strong>. Under <strong>Authorized JavaScript origins</strong> add this page's origin:
+          {t('google.step4')}
           <code>{origin}</code>.
         </li>
         <li>
-          Copy the Client ID (ends in <code>.apps.googleusercontent.com</code>) and paste it into <button class="link" onclick={() => store.go('settings')}>Settings</button>.
+          {t('google.step5')} <button class="link" onclick={() => store.go('settings')}>{t('nav.settings')}</button>.
         </li>
       </ol>
     </details>
     <div class="btns">
       {#if signedIn}
-        <button class="btn" onclick={doSignOut}>Sign out</button>
-        {#if grantedLabels.length}<span class="muted">Access: {grantedLabels.join(', ')}</span>{/if}
+        <button class="btn" onclick={doSignOut}>{t('google.signOut')}</button>
+        {#if grantedLabels.length}<span class="muted">{t('google.access', { list: grantedLabels.join(', ') })}</span>{/if}
       {:else}
-        <button class="btn primary" onclick={doSignIn} disabled={authBusy || !s.googleClientId?.trim()}>{authBusy ? 'Opening Google…' : 'Sign in with Google'}</button>
+        <button class="btn primary" onclick={doSignIn} disabled={authBusy || !s.googleClientId?.trim()}>{authBusy ? t('google.opening') : t('google.signIn')}</button>
       {/if}
     </div>
     <label class="check"
-      ><input type="checkbox" checked={s.googleClassroomEnabled} onchange={(e) => store.updateSettings({ googleClassroomEnabled: (e.target as HTMLInputElement).checked })} /> Include
-      Google Classroom when signing in</label
+      ><input type="checkbox" checked={s.googleClassroomEnabled} onchange={(e) => store.updateSettings({ googleClassroomEnabled: (e.target as HTMLInputElement).checked })} />
+      {t('google.includeClassroom')}</label
     >
     {#if google.error}<p class="err">{google.error}</p>{/if}
   </section>
 
   <section class="card">
-    <h2>Scan Gmail for assignments</h2>
+    <h2>{t('google.scanTitle')}</h2>
     <p class="muted">
-      Searches your mail with a Gmail query and suggests tasks from messages that mention homework, quizzes, due dates and so on. Only subjects and short previews are read.
+      {t('google.scanHelp')}
     </p>
     <form
       class="scan"
@@ -305,63 +305,63 @@
         void scan();
       }}
     >
-      <input class="input" bind:value={query} placeholder={DEFAULT_GMAIL_QUERY} aria-label="Gmail search query" spellcheck="false" />
-      <button class="btn primary" type="submit" disabled={scanBusy || !s.googleClientId?.trim()}>{scanBusy ? 'Scanning…' : 'Scan'}</button>
-      <button class="btn ghost sm" type="button" onclick={() => (query = DEFAULT_GMAIL_QUERY)}>Reset query</button>
+      <input class="input" bind:value={query} placeholder={DEFAULT_GMAIL_QUERY} aria-label={t('google.query')} spellcheck="false" />
+      <button class="btn primary" type="submit" disabled={scanBusy || !s.googleClientId?.trim()}>{scanBusy ? t('google.scanning') : t('google.scan')}</button>
+      <button class="btn ghost sm" type="button" onclick={() => (query = DEFAULT_GMAIL_QUERY)}>{t('google.resetQuery')}</button>
     </form>
     {#if scanError}<p class="err">{scanError}</p>{/if}
     {#if scanned}
       <div class="result-head">
         <span class="muted"
-          >{scannedCount} message{scannedCount === 1 ? '' : 's'} · {visible.length} suggestion{visible.length === 1 ? '' : 's'}{suggestions.length - visible.length
-            ? ` · ${suggestions.length - visible.length} already added or ignored`
+          >{t('google.messages', { count: scannedCount })} · {t('google.suggestions', { count: visible.length })}{suggestions.length - visible.length
+            ? ` · ${t('google.alreadyIgnored', { n: suggestions.length - visible.length })}`
             : ''}</span
         >
-        {#if highCount}<button class="btn sm" onclick={addAllHigh}>Add all high-confidence ({highCount})</button>{/if}
+        {#if highCount}<button class="btn sm" onclick={addAllHigh}>{t('google.addHigh', { n: highCount })}</button>{/if}
       </div>
       {#if !visible.length}
-        <p class="muted">Nothing new looked like an assignment. Try a broader query, e.g. <code>newer_than:60d from:school.org</code>.</p>
+        <p class="muted">{t('google.nothingNew')} <code>newer_than:60d from:school.org</code>.</p>
       {/if}
       <ul class="suggestions">
         {#each visible as x (x.messageId)}
           <li class="sug">
             <div class="top">
-              <span class="chip conf {x.confidence}">{x.confidence}</span>
-              <input class="input title" bind:value={x.title} aria-label="Task title" />
+              <span class="chip conf {x.confidence}">{t(`google.conf.${x.confidence}`)}</span>
+              <input class="input title" bind:value={x.title} aria-label={t('editor.titlePh')} />
             </div>
             <div class="meta">
-              {#if x.dueAt}<span class="chip">📅 {formatDue(x.dueAt, store.now, s.timeFormat)}</span>{:else}<span class="chip faint">no date</span>{/if}
-              <select class="select course" bind:value={x.courseId} aria-label="Course">
-                <option value={undefined}>No course</option>
+              {#if x.dueAt}<span class="chip">📅 {formatDue(x.dueAt, store.now, s.timeFormat)}</span>{:else}<span class="chip faint">{t('focus.noDate')}</span>{/if}
+              <select class="select course" bind:value={x.courseId} aria-label={t('inbox.course')}>
+                <option value={undefined}>{t('inbox.noCourse')}</option>
                 {#each store.activeCourses as c (c.id)}<option value={c.id}>{c.emoji ?? ''} {c.name}</option>{/each}
               </select>
-              <a class="open" href={x.url} target="_blank" rel="noopener noreferrer">Open mail ↗</a>
+              <a class="open" href={x.url} target="_blank" rel="noopener noreferrer">{t('google.openMail')}</a>
               <span class="spacer"></span>
-              <button class="btn sm primary" onclick={() => addOne(x)} disabled={!x.title.trim()}>Add task</button>
-              <button class="btn sm ghost" onclick={() => ignore(x)}>Ignore</button>
+              <button class="btn sm primary" onclick={() => addOne(x)} disabled={!x.title.trim()}>{t('app.addTask')}</button>
+              <button class="btn sm ghost" onclick={() => ignore(x)}>{t('google.ignore')}</button>
             </div>
             <div class="reason">{x.reason}</div>
           </li>
         {/each}
       </ul>
       {#if s.gmailIgnored?.length}
-        <button class="btn ghost sm" onclick={forgetIgnored}>Forget {s.gmailIgnored.length} ignored message{s.gmailIgnored.length === 1 ? '' : 's'}</button>
+        <button class="btn ghost sm" onclick={forgetIgnored}>{t('google.forget', { count: s.gmailIgnored.length })}</button>
       {/if}
     {/if}
   </section>
 
   <section class="card">
     <h2>Google Classroom</h2>
-    <p class="muted">Imports your active classes and their assignments. Courses are matched by name or created for you; work you already turned in is marked complete.</p>
+    <p class="muted">{t('google.classroomHelp')}</p>
     <div class="btns">
       <button class="btn primary" onclick={runClassroomImport} disabled={classroomBusy || !s.googleClientId?.trim()}
-        >{classroomBusy ? 'Importing…' : 'Import from Classroom'}</button
+        >{classroomBusy ? t('cards.importing') : t('google.importClassroom')}</button
       >
       {#if classroomResult}
         <span class="muted"
-          >{classroomResult.added} added · {classroomResult.done} already done · {classroomResult.skipped} skipped{classroomResult.courses
-            ? ` · ${classroomResult.courses} new course${classroomResult.courses === 1 ? '' : 's'}`
-            : ''} ({classroomResult.total} total)</span
+          >{t('google.result', { added: classroomResult.added, done: classroomResult.done, skipped: classroomResult.skipped })}{classroomResult.courses
+            ? ` · ${t('google.newCourses', { count: classroomResult.courses })}`
+            : ''} ({t('review.total', { n: classroomResult.total })})</span
         >
       {/if}
     </div>
@@ -370,34 +370,37 @@
 
   <section class="card">
     <h2>Google Calendar</h2>
-    <p class="muted">Adds an event for each open task with a due date in the next 30 days ({upcoming.length} right now). Running it again updates the same events.</p>
+    <p class="muted">{t('google.calHelp', { n: upcoming.length })}</p>
     <div class="btns">
-      <button class="btn primary" onclick={pushCalendar} disabled={calBusy || !s.googleClientId?.trim()}
-        >{calBusy ? 'Pushing…' : 'Push upcoming due dates to Google Calendar'}</button
-      >
+      <button class="btn primary" onclick={pushCalendar} disabled={calBusy || !s.googleClientId?.trim()}>{calBusy ? t('google.pushing') : t('google.push')}</button>
     </div>
   </section>
 
   <section class="card">
     <div class="head">
-      <h2>Sync with Google Drive</h2>
+      <h2>{t('google.driveTitle')}</h2>
       {#if s.googleSyncEnabled}
         <span class="status" class:ok={google.syncStatus === 'ok'} class:error={google.syncStatus === 'error'}>
-          {google.syncStatus === 'syncing' ? '⏳ Syncing…' : google.syncStatus === 'ok' ? '● Synced' : google.syncStatus === 'error' ? '● Error' : '○ Waiting for sign-in'}
+          {google.syncStatus === 'syncing'
+            ? `⏳ ${t('sync.syncing')}`
+            : google.syncStatus === 'ok'
+              ? `● ${t('google.synced')}`
+              : google.syncStatus === 'error'
+                ? `● ${t('google.error')}`
+                : `○ ${t('google.waiting')}`}
         </span>
       {/if}
     </div>
     <p class="muted">
-      Keeps a private copy of your data in your Google Drive app folder so other devices signed into the same Google account stay in sync. The copy is invisible in Drive and only
-      this app can read it.
+      {t('google.driveHelp')}
     </p>
     <label class="check"
-      ><input type="checkbox" checked={s.googleSyncEnabled} disabled={syncBusy} onchange={(e) => void toggleSync((e.target as HTMLInputElement).checked)} /> Sync my data through Google
-      Drive</label
+      ><input type="checkbox" checked={s.googleSyncEnabled} disabled={syncBusy} onchange={(e) => void toggleSync((e.target as HTMLInputElement).checked)} />
+      {t('google.driveToggle')}</label
     >
     <div class="btns">
-      <button class="btn" onclick={syncNow} disabled={syncBusy || !s.googleSyncEnabled || !s.googleClientId?.trim()}>{syncBusy ? 'Syncing…' : 'Sync now'}</button>
-      <span class="muted">Last sync: {fmtWhen(s.lastGoogleSyncAt)}</span>
+      <button class="btn" onclick={syncNow} disabled={syncBusy || !s.googleSyncEnabled || !s.googleClientId?.trim()}>{syncBusy ? t('sync.syncing') : t('sync.now')}</button>
+      <span class="muted">{t('google.lastSync', { when: fmtWhen(s.lastGoogleSyncAt) })}</span>
     </div>
     {#if google.syncError}<p class="err">{google.syncError}</p>{/if}
   </section>

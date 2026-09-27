@@ -4,9 +4,10 @@
   import { BADGES, levelProgress, xpForLevel } from '../lib/gamification';
   import { TITLE_TEXT } from '../lib/economy';
   import { estimateAccuracy } from '../lib/estimates';
-  import { endOfWeekKey, dueKey, formatMinutes, daysAgoKey } from '../lib/dates';
+  import { endOfWeekKey, dueKey, formatMinutes, daysAgoKey, formatFullDate, fromKey } from '../lib/dates';
   import Heatmap from '../components/Heatmap.svelte';
   import GoalRing from '../components/GoalRing.svelte';
+  import { t } from '../lib/i18n/index.svelte';
 
   const lp = $derived(levelProgress(store.stats.xp));
   const accuracy = $derived(estimateAccuracy(store.completedTasks));
@@ -25,7 +26,7 @@
     const none = store.openTasks.filter((t) => !t.courseId && t.dueAt && dueKey(t.dueAt) <= weekEnd);
     if (none.length)
       rows.push({
-        course: { id: '', name: 'No course', color: 'var(--text-faint)', archived: false },
+        course: { id: '', name: t('inbox.noCourse'), color: 'var(--text-faint)', archived: false },
         count: none.length,
         minutes: none.reduce((a, t) => a + (t.estimateMin ?? 0), 0),
         exams: 0,
@@ -42,58 +43,58 @@
 <div class="page">
   <header class="page-head">
     <div>
-      <h1>Stats</h1>
-      <div class="sub">Streaks, levels, badges and your week.</div>
+      <h1>{t('nav.stats')}</h1>
+      <div class="sub">{t('stats.sub')}</div>
     </div>
     <div class="grow"></div>
-    <button class="btn sm" onclick={() => (sharing = true)}>📸 Share my week</button>
-    <button class="btn sm" onclick={() => (ui.weeklyReview = true)}>Weekly review</button>
+    <button class="btn sm" onclick={() => (sharing = true)}>{t('stats.share')}</button>
+    <button class="btn sm" onclick={() => (ui.weeklyReview = true)}>{t('stats.review')}</button>
   </header>
   {#if sharing}
     {#await import('../components/ShareStatsCard.svelte') then m}<m.default onclose={() => (sharing = false)} />{/await}
   {/if}
 
   {#if !store.settings.gamification}
-    <div class="card muted">Gamification is off. Turn it on in Settings to see XP, streaks and badges. The heatmap and summaries still work.</div>
+    <div class="card muted">{t('stats.gameOff')}</div>
   {/if}
 
   <div class="tiles">
     {#if store.settings.gamification}
       <div class="card tile">
-        <div class="k">Streak</div>
-        <div class="v">🔥 {store.streak}<span class="unit">day{store.streak === 1 ? '' : 's'}</span></div>
-        <div class="s">Best {store.stats.streak.best} · {store.stats.streak.freezes} freeze{store.stats.streak.freezes === 1 ? '' : 's'} banked 🧊</div>
+        <div class="k">{t('today.streak')}</div>
+        <div class="v">🔥 {store.streak}<span class="unit">{t('stats.days', { count: store.streak })}</span></div>
+        <div class="s">{t('stats.best', { best: store.stats.streak.best, count: store.stats.streak.freezes })}</div>
       </div>
       <div class="card tile frame-{store.settings.equippedFrame ?? 'none'}">
         <div class="k">
-          Level {lp.level}{#if store.settings.equippedTitle}
+          {t('stats.level', { level: lp.level })}{#if store.settings.equippedTitle}
             · {TITLE_TEXT[store.settings.equippedTitle]}{/if}
         </div>
         <div class="v">{store.stats.xp}<span class="unit">XP</span></div>
         <div class="bar"><div class="fill" style="width:{lp.pct * 100}%"></div></div>
-        <div class="s">{lp.needed - lp.into} XP to level {lp.level + 1} ({xpForLevel(lp.level)} total)</div>
+        <div class="s">{t('stats.toLevel', { xp: lp.needed - lp.into, level: lp.level + 1, total: xpForLevel(lp.level) })}</div>
       </div>
     {/if}
     {#if accuracy}
       <div class="card tile">
-        <div class="k">Estimates</div>
-        <div class="v">×{accuracy.medianRatio}<span class="unit">actual ÷ estimate</span></div>
-        <div class="s">{accuracy.message} Based on {accuracy.n} timed tasks.</div>
+        <div class="k">{t('stats.estimates')}</div>
+        <div class="v">×{accuracy.medianRatio}<span class="unit">{t('stats.ratio')}</span></div>
+        <div class="s">{accuracy.message} {t('stats.basedOn', { count: accuracy.n })}</div>
       </div>
     {/if}
     <div class="card tile ring">
       <GoalRing value={store.completedToday} goal={store.settings.dailyGoal} size={64} stroke={7} />
       <div>
-        <div class="k">Today</div>
-        <div class="s">{store.completedToday} of {store.settings.dailyGoal} · {pomToday} pomodoro{pomToday === 1 ? '' : 's'}</div>
+        <div class="k">{t('nav.today')}</div>
+        <div class="s">{t('stats.todayOf', { done: store.completedToday, goal: store.settings.dailyGoal })} · {t('stats.pomodoros', { count: pomToday })}</div>
       </div>
     </div>
     <div class="card tile">
-      <div class="k">Last 7 days</div>
-      <div class="v">{week7}<span class="unit">done</span></div>
+      <div class="k">{t('stats.last7')}</div>
+      <div class="v">{week7}<span class="unit">{t('stats.done', { count: week7 })}</span></div>
       <div class="spark" aria-hidden="true">
         {#each last7 as d}
-          <span style="height:{Math.max(8, (d.n / Math.max(1, ...last7.map((x) => x.n))) * 100)}%" title="{d.n} on {d.key}"></span>
+          <span style="height:{Math.max(8, (d.n / Math.max(1, ...last7.map((x) => x.n))) * 100)}%" title={t('heat.onDay', { n: d.n, date: formatFullDate(fromKey(d.key)) })}></span>
         {/each}
       </div>
     </div>
@@ -104,16 +105,16 @@
   </div>
 
   <div class="card block">
-    <div class="block-title">Due this week by course</div>
+    <div class="block-title">{t('stats.byCourse')}</div>
     {#if !byCourse.length}
-      <div class="muted">Nothing due this week.</div>
+      <div class="muted">{t('stats.nothingDue')}</div>
     {/if}
     <div class="bars">
       {#each byCourse as r (r.course.id)}
         <div class="row">
           <span class="name"><span class="dot" style="background:{r.course.color}"></span>{r.course.emoji ? r.course.emoji + ' ' : ''}{r.course.name}</span>
           <div class="track"><div class="fill" style="width:{(r.minutes / maxMinutes) * 100}%; background:{r.course.color}"></div></div>
-          <span class="num">{r.count} task{r.count === 1 ? '' : 's'} · {formatMinutes(r.minutes)}{r.exams ? ` · ${r.exams} exam/quiz` : ''}</span>
+          <span class="num">{t('common.tasks', { count: r.count })} · {formatMinutes(r.minutes)}{r.exams ? ` · ${t('upcoming.exams', { count: r.exams })}` : ''}</span>
         </div>
       {/each}
     </div>
@@ -123,7 +124,7 @@
 
   {#if store.settings.gamification}
     <div class="card block">
-      <div class="block-title">Badges <span class="muted">{earned.size}/{BADGES.length}</span></div>
+      <div class="block-title">{t('stats.badges')} <span class="muted">{earned.size}/{BADGES.length}</span></div>
       <div class="badges">
         {#each BADGES as b (b.id)}
           <div class="badge" class:on={earned.has(b.id)} title={b.description}>

@@ -26,7 +26,7 @@
   <div class="row">
     <span id="pack-l">{t('settings.soundPack')}</span>
     <div class="packs" role="radiogroup" aria-labelledby="pack-l">
-      {#each ['soft', 'click', 'arcade'] as p}
+      {#each ['soft', 'click', 'arcade'] as const as p}
         <button
           class="btn sm"
           class:primary={s.soundPack === p}
@@ -35,7 +35,7 @@
           onclick={() => {
             set('soundPack', p as SoundPack);
             previewPack(p as SoundPack);
-          }}>{p}</button
+          }}>{t(`sound.${p}`)}</button
         >
       {/each}
     </div>

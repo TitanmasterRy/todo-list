@@ -2,7 +2,8 @@
   import { store, byDueThenOrder } from '../lib/store.svelte';
   import { toasts } from '../lib/toast.svelte';
   import type { Task } from '../lib/types';
-  import { addDaysKey, dueKey, isOverdue, isDueToday } from '../lib/dates';
+  import { addDaysKey, dueKey, formatClock, isOverdue, isDueToday } from '../lib/dates';
+  import { t } from '../lib/i18n/index.svelte';
   import { schoology, syncNow, syncFromText, testApiCredentials, schoologyConfigured } from '../lib/schoologySync.svelte';
   import { isSchoologyFeedUrl } from '../lib/schoology';
   import { forgetSecret, secret } from '../lib/secrets.svelte';
@@ -16,7 +17,7 @@
   async function signIn() {
     if (!apiKey.trim() || !apiSecret.trim()) return;
     if (!proxy.trim()) {
-      toasts.push({ message: 'The proxy is required for the API', detail: 'Deploy docs/cors-proxy-worker.js (2 minutes, free) and paste its URL.', kind: 'warn', timeout: 9000 });
+      toasts.push({ message: t('sgy.needProxy'), detail: t('sgy.needProxyDetail'), kind: 'warn', timeout: 9000 });
       return;
     }
     signingIn = true;
@@ -30,11 +31,11 @@
         schoologyDomain: domain.trim(),
         schoologyIntervalMin: interval,
       });
-      toasts.push({ message: `Signed in as ${signedInAs}`, detail: 'Assignments and grades will sync automatically.', kind: 'success', emoji: '🔄' });
+      toasts.push({ message: t('google.signedInAs', { email: signedInAs }), detail: t('sgy.signedInDetail'), kind: 'success', emoji: '🔄' });
       showSetup = false;
       void syncNow();
     } catch (e) {
-      toasts.push({ message: 'Sign-in failed', detail: e instanceof Error ? e.message : String(e), kind: 'warn', timeout: 10000 });
+      toasts.push({ message: t('sgy.signInFailed'), detail: e instanceof Error ? e.message : String(e), kind: 'warn', timeout: 10000 });
     } finally {
       signingIn = false;
     }
@@ -74,15 +75,15 @@
       const r = await syncFromText(text);
       schoology.status = 'ok';
       toasts.push({
-        message: `Imported ${r.created} new assignment${r.created === 1 ? '' : 's'}`,
-        detail: `${r.updated} updated · ${r.total} in file`,
+        message: t('sgy.imported', { count: r.created }),
+        detail: t('sgy.importedDetail', { updated: r.updated, total: r.total }),
         kind: 'success',
         emoji: '🔄',
       });
       pasted = '';
       showSetup = false;
     } catch (e) {
-      toasts.push({ message: 'Could not read that calendar', detail: e instanceof Error ? e.message : String(e), kind: 'warn' });
+      toasts.push({ message: t('sgy.readFailed'), detail: e instanceof Error ? e.message : String(e), kind: 'warn' });
     } finally {
       busy = false;
     }
@@ -103,7 +104,7 @@
     }
     // Re-link tasks that carry this course name in their feed data by re-syncing next time; for now assign by matching unmatched tasks' notes is not possible, so prompt a resync.
     schoology.unmatched = schoology.unmatched.filter((n) => n !== name);
-    toasts.push({ message: `Mapped “${name}”`, detail: 'Sync again to attach existing assignments.', kind: 'success' });
+    toasts.push({ message: t('sgy.mapped', { name }), detail: t('sgy.mappedDetail'), kind: 'success' });
   }
   function disconnect() {
     forgetSecret('schoologyFeedUrl', 'schoologyKey', 'schoologySecret');
@@ -119,19 +120,23 @@
 <div class="page">
   <header class="page-head">
     <div>
-      <h1>Schoology</h1>
-      <div class="sub">Assignments synced from your Schoology calendar. Complete them here to earn XP; deadlines stay in step with the feed.</div>
+      <h1>{t('nav.schoology')}</h1>
+      <div class="sub">{t('sgy.sub')}</div>
     </div>
     <div class="grow"></div>
     {#if schoologyConfigured()}
       <span class="status {schoology.status}">
-        {schoology.status === 'syncing' ? 'Syncing…' : schoology.status === 'error' ? 'Sync error' : schoology.status === 'ok' ? 'Synced' : 'Connected'}
-        {#if store.settings.lastSchoologySync}<span class="muted">
-            · {new Date(store.settings.lastSchoologySync).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}</span
-          >{/if}
+        {schoology.status === 'syncing'
+          ? t('sync.syncing')
+          : schoology.status === 'error'
+            ? t('sgy.syncError')
+            : schoology.status === 'ok'
+              ? t('google.synced')
+              : t('sync.connected')}
+        {#if store.settings.lastSchoologySync}<span class="muted"> · {formatClock(new Date(store.settings.lastSchoologySync), { hour: 'numeric', minute: '2-digit' })}</span>{/if}
       </span>
-      <button class="btn sm" onclick={() => void syncNow()} disabled={schoology.status === 'syncing'}>Sync now</button>
-      <button class="btn ghost sm" onclick={() => (showSetup = !showSetup)}>Setup</button>
+      <button class="btn sm" onclick={() => void syncNow()} disabled={schoology.status === 'syncing'}>{t('sync.now')}</button>
+      <button class="btn ghost sm" onclick={() => (showSetup = !showSetup)}>{t('tt.setup')}</button>
     {/if}
   </header>
 
@@ -141,27 +146,26 @@
 
   {#if showSetup}
     <section class="card setup">
-      <h2>Connect Schoology</h2>
+      <h2>{t('sgy.connect')}</h2>
       <div class="modes" role="tablist">
         <button role="tab" aria-selected={mode === 'api'} class:on={mode === 'api'} onclick={() => (mode = 'api')}
-          >Sign in with API key <span class="rec">assignments + grades</span></button
+          >{t('sgy.apiMode')} <span class="rec">{t('sgy.apiModeSub')}</span></button
         >
-        <button role="tab" aria-selected={mode === 'ics'} class:on={mode === 'ics'} onclick={() => (mode = 'ics')}>Calendar feed <span class="rec">assignments only</span></button>
+        <button role="tab" aria-selected={mode === 'ics'} class:on={mode === 'ics'} onclick={() => (mode = 'ics')}
+          >{t('sgy.icsMode')} <span class="rec">{t('sgy.icsModeSub')}</span></button
+        >
       </div>
       <p class="help">
-        Schoology has no “Sign in with Schoology” button for outside apps, and it blocks browsers on other sites from talking to it. Both ways below need a tiny relay you own:
-        deploy <code>docs/cors-proxy-worker.js</code> as a free Cloudflare Worker (about two minutes) and paste its URL. Your keys go only from your browser to Schoology through that
-        relay.
+        {t('sgy.help')}
       </p>
-      <label class="fld">CORS proxy prefix <input class="input" bind:value={proxy} placeholder="https://your-worker.workers.dev/?url=" /></label>
+      <label class="fld">{t('sync.proxyLabel')} <input class="input" bind:value={proxy} placeholder="https://your-worker.workers.dev/?url=" /></label>
       {#if mode === 'api'}
         <ol class="steps">
           <li>
-            Open <a href="https://app.schoology.com/api" target="_blank" rel="noopener noreferrer">app.schoology.com/api</a> while logged in. It shows your personal
-            <strong>Consumer Key</strong>
-            and <strong>Secret</strong>. (If the page is missing, your school has disabled student API access; use the calendar feed instead.)
+            {t('sgy.api1a')} <a href="https://app.schoology.com/api" target="_blank" rel="noopener noreferrer">app.schoology.com/api</a>
+            {t('sgy.api1b')}
           </li>
-          <li>Paste them below and sign in. The app then syncs every course, assignment, due date and grade on load and every {interval} minutes.</li>
+          <li>{t('sgy.api2', { n: interval })}</li>
         </ol>
         <form
           class="grid"
@@ -170,41 +174,41 @@
             void signIn();
           }}
         >
-          <label class="fld">Consumer key <input class="input" bind:value={apiKey} autocomplete="off" /></label>
-          <label class="fld">Consumer secret <input class="input" type="password" bind:value={apiSecret} autocomplete="off" /></label>
-          <label class="fld">Your school’s Schoology address (optional, for links) <input class="input" bind:value={domain} placeholder="https://myschool.schoology.com" /></label>
-          <label class="fld">Sync every <input class="input num" type="number" min="5" max="240" bind:value={interval} /> minutes</label>
+          <label class="fld">{t('sgy.key')} <input class="input" bind:value={apiKey} autocomplete="off" /></label>
+          <label class="fld">{t('sgy.secret')} <input class="input" type="password" bind:value={apiSecret} autocomplete="off" /></label>
+          <label class="fld">{t('sgy.domain')} <input class="input" bind:value={domain} placeholder="https://myschool.schoology.com" /></label>
+          <label class="fld">{t('sgy.every')} <input class="input num" type="number" min="5" max="240" bind:value={interval} /> {t('sgy.minutes')}</label>
           <label class="check"
             ><input
               type="checkbox"
               checked={store.settings.schoologyImportGrades}
               onchange={(e) => store.updateSettings({ schoologyImportGrades: (e.target as HTMLInputElement).checked })}
-            /> Import grades (fills scores on assignments and course final grades; pays grade XP)</label
+            />
+            {t('sgy.grades')}</label
           >
           <label class="check"
             ><input
               type="checkbox"
               checked={store.settings.schoologyAutoCreateCourses}
               onchange={(e) => store.updateSettings({ schoologyAutoCreateCourses: (e.target as HTMLInputElement).checked })}
-            /> Create courses automatically for new class names</label
+            />
+            {t('sgy.autoCourses')}</label
           >
           <label class="check"
-            ><input type="checkbox" checked={store.settings.autoDescribe} onchange={(e) => store.updateSettings({ autoDescribe: (e.target as HTMLInputElement).checked })} /> Auto-describe
-            assignments that have no description</label
+            ><input type="checkbox" checked={store.settings.autoDescribe} onchange={(e) => store.updateSettings({ autoDescribe: (e.target as HTMLInputElement).checked })} />
+            {t('sgy.autoDescribe')}</label
           >
           <div class="btns">
-            <button class="btn primary" type="submit" disabled={signingIn || !apiKey.trim() || !apiSecret.trim()}>{signingIn ? 'Signing in…' : 'Sign in and sync'}</button>
-            {#if schoologyConfigured()}<button type="button" class="btn danger" onclick={disconnect}>Disconnect</button>{/if}
+            <button class="btn primary" type="submit" disabled={signingIn || !apiKey.trim() || !apiSecret.trim()}>{signingIn ? t('sgy.signingIn') : t('sgy.signInSync')}</button>
+            {#if schoologyConfigured()}<button type="button" class="btn danger" onclick={disconnect}>{t('sync.disconnect')}</button>{/if}
           </div>
         </form>
       {:else}
         <ol class="steps">
           <li>
-            In Schoology open <strong>Calendar</strong> → <strong>⚙ / Export</strong> → <strong>Enable</strong> the iCal feed and copy its URL (<code
-              >https://app.schoology.com/calendar/feed/ical/…/schoology.ics</code
-            >).
+            {t('sgy.ics1')} (<code>https://app.schoology.com/calendar/feed/ical/…/schoology.ics</code>).
           </li>
-          <li>Paste it below. Without a proxy you can still upload the <code>.ics</code> file by hand whenever you want to refresh.</li>
+          <li>{t('sgy.ics2')}</li>
         </ol>
         <form
           class="grid"
@@ -213,33 +217,34 @@
             saveSetup();
           }}
         >
-          <label class="fld">Feed URL <input class="input" bind:value={url} placeholder="https://app.schoology.com/calendar/feed/ical/…/schoology.ics" /></label>
-          {#if url && !isSchoologyFeedUrl(url)}<span class="warn">That doesn’t look like a Schoology iCal URL, but you can try it.</span>{/if}
-          <label class="fld">Sync every <input class="input num" type="number" min="5" max="240" bind:value={interval} /> minutes</label>
+          <label class="fld">{t('sgy.feedUrl')} <input class="input" bind:value={url} placeholder="https://app.schoology.com/calendar/feed/ical/…/schoology.ics" /></label>
+          {#if url && !isSchoologyFeedUrl(url)}<span class="warn">{t('sgy.notFeed')}</span>{/if}
+          <label class="fld">{t('sgy.every')} <input class="input num" type="number" min="5" max="240" bind:value={interval} /> {t('sgy.minutes')}</label>
           <label class="check"
             ><input
               type="checkbox"
               checked={store.settings.schoologyAutoCreateCourses}
               onchange={(e) => store.updateSettings({ schoologyAutoCreateCourses: (e.target as HTMLInputElement).checked })}
-            /> Create courses automatically for new class names</label
+            />
+            {t('sgy.autoCourses')}</label
           >
           <label class="check"
-            ><input type="checkbox" checked={store.settings.autoDescribe} onchange={(e) => store.updateSettings({ autoDescribe: (e.target as HTMLInputElement).checked })} /> Auto-describe
-            assignments that have no description (plan, steps, estimate)</label
+            ><input type="checkbox" checked={store.settings.autoDescribe} onchange={(e) => store.updateSettings({ autoDescribe: (e.target as HTMLInputElement).checked })} />
+            {t('sgy.autoDescribeFull')}</label
           >
           <div class="btns">
-            <button class="btn primary" type="submit" disabled={!url.trim()}>Save and sync</button>
-            {#if schoologyConfigured()}<button type="button" class="btn danger" onclick={disconnect}>Disconnect</button>{/if}
+            <button class="btn primary" type="submit" disabled={!url.trim()}>{t('sync.saveSync')}</button>
+            {#if schoologyConfigured()}<button type="button" class="btn danger" onclick={disconnect}>{t('sync.disconnect')}</button>{/if}
           </div>
         </form>
         <div class="manual">
-          <h3>Or import the file manually</h3>
+          <h3>{t('sgy.manual')}</h3>
           <div class="btns">
-            <button class="btn" onclick={() => fileInput?.click()} disabled={busy}>Upload .ics file…</button>
-            <input type="file" accept=".ics,text/calendar" class="visually-hidden" bind:this={fileInput} onchange={onFile} aria-label="Upload calendar file" />
+            <button class="btn" onclick={() => fileInput?.click()} disabled={busy}>{t('sgy.upload')}</button>
+            <input type="file" accept=".ics,text/calendar" class="visually-hidden" bind:this={fileInput} onchange={onFile} aria-label={t('sgy.uploadLabel')} />
           </div>
-          <textarea class="textarea" bind:value={pasted} placeholder="…or paste the contents of the .ics file here (starts with BEGIN:VCALENDAR)"></textarea>
-          <button class="btn sm" onclick={() => void importText(pasted)} disabled={!pasted.trim() || busy}>Import pasted calendar</button>
+          <textarea class="textarea" bind:value={pasted} placeholder={t('sgy.pastePh')}></textarea>
+          <button class="btn sm" onclick={() => void importText(pasted)} disabled={!pasted.trim() || busy}>{t('sgy.importPasted')}</button>
         </div>
       {/if}
     </section>
@@ -247,14 +252,14 @@
 
   {#if schoology.unmatched.length}
     <section class="card">
-      <h2>Match classes to courses</h2>
-      <p class="muted">These class names in the feed don’t match a course yet. Pick one or create it, then sync again.</p>
+      <h2>{t('sgy.match')}</h2>
+      <p class="muted">{t('sgy.matchHelp')}</p>
       {#each schoology.unmatched as name (name)}
         <div class="map-row">
           <span class="grow">{name}</span>
-          <select class="select" onchange={(e) => mapCourse(name, (e.target as HTMLSelectElement).value)} aria-label="Course for {name}">
-            <option value="">Choose…</option>
-            <option value="__new">Create “{name}”</option>
+          <select class="select" onchange={(e) => mapCourse(name, (e.target as HTMLSelectElement).value)} aria-label={t('sgy.courseFor', { name })}>
+            <option value="">{t('focus.choose')}</option>
+            <option value="__new">{t('ps.create', { name })}</option>
             {#each store.activeCourses as c (c.id)}<option value={c.id}>{c.emoji ?? ''} {c.name}</option>{/each}
           </select>
         </div>
@@ -265,15 +270,15 @@
   {#if !synced.length && !showSetup}
     <div class="empty">
       <div class="big">🔄</div>
-      <h3>No synced assignments yet</h3>
-      <p>Sync now, or open Setup to upload your calendar file.</p>
+      <h3>{t('sgy.none')}</h3>
+      <p>{t('sgy.noneHint')}</p>
     </div>
   {/if}
 
   {#if overdue.length}
     <div class="section-title overdue">
-      <span>Overdue</span><span class="count">{overdue.length}</span><span class="spacer"></span><button class="btn sm" onclick={() => store.rollOverdueToToday()}
-        >Roll all to today</button
+      <span>{t('today.overdue')}</span><span class="count">{overdue.length}</span><span class="spacer"></span><button class="btn sm" onclick={() => store.rollOverdueToToday()}
+        >{t('today.rollAll')}</button
       >
     </div>
     <div class="task-list">
@@ -281,20 +286,22 @@
     </div>
   {/if}
   {#if dueSoon.length}
-    <div class="section-title"><span>Due in the next 7 days</span><span class="count">{dueSoon.length}</span></div>
+    <div class="section-title"><span>{t('sgy.next7')}</span><span class="count">{dueSoon.length}</span></div>
     <div class="task-list">
       {#each dueSoon as task (task.id)}<TaskItem {task} listIds={ids} />{/each}
     </div>
   {/if}
   {#if later.length}
-    <div class="section-title"><span>Later</span><span class="count">{later.length}</span></div>
+    <div class="section-title"><span>{t('sgy.later')}</span><span class="count">{later.length}</span></div>
     <div class="task-list">
       {#each later as task (task.id)}<TaskItem {task} listIds={ids} />{/each}
     </div>
   {/if}
   {#if done.length}
     <button class="section-title toggle" onclick={() => (showDone = !showDone)} aria-expanded={showDone}>
-      <span>Completed</span><span class="count">{done.length}</span><span class="spacer"></span><span class="hint">{showDone ? 'Hide' : 'Show'}</span>
+      <span>{t('inbox.completed')}</span><span class="count">{done.length}</span><span class="spacer"></span><span class="hint"
+        >{showDone ? t('common.hide') : t('common.show')}</span
+      >
     </button>
     {#if showDone}
       <div class="task-list">
@@ -304,10 +311,8 @@
   {/if}
   {#if synced.length && !showSetup}
     <p class="muted foot">
-      Deleting a synced assignment here keeps it from coming back on the next sync. Manage the connection under Setup, or in <button
-        class="link"
-        onclick={() => store.go('settings')}>Settings</button
-      >.
+      {t('sgy.foot')}
+      <button class="link" onclick={() => store.go('settings')}>{t('nav.settings')}</button>.
     </p>
   {/if}
 </div>

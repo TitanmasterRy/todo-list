@@ -4,6 +4,7 @@
   import { examSessions, MILESTONE_TEMPLATES, planMilestones, templateForType, type MilestoneStep } from '../lib/plan';
   import { formatDayHeading } from '../lib/dates';
   import type { TaskType } from '../lib/types';
+  import { t } from '../lib/i18n/index.svelte';
 
   interface Props {
     taskId: string;
@@ -27,8 +28,8 @@
   let open = $state(false);
 
   function loadTemplate(id: string) {
-    const t = MILESTONE_TEMPLATES.find((x) => x.id === id);
-    if (t) steps = t.steps.map((s) => ({ ...s }));
+    const tpl = MILESTONE_TEMPLATES.find((x) => x.id === id);
+    if (tpl) steps = tpl.steps.map((s) => ({ ...s }));
   }
   $effect(() => {
     if (open && !steps.length) loadTemplate(templateId);
@@ -49,7 +50,7 @@
     const made = store.addPlan(
       taskId,
       planned.map((p) => ({ ...p, title: `${p.title} · ${shortTitle}` })),
-      { chain: true, label: `Added ${planned.length} milestones` },
+      { chain: true, label: t('plan.added', { count: planned.length }) },
     );
     if (made.length) onchain(made[made.length - 1].id);
     open = false;
@@ -59,26 +60,30 @@
     const min = Math.max(5, parseInt(sessionMin, 10) || 30);
     store.addPlan(
       taskId,
-      sessions.map((d, i) => ({ title: `Study for ${shortTitle} (${i + 1}/${sessions.length})`, dateKey: d, estimateMin: min, deckId: deck?.id })),
-      { label: `Added ${sessions.length} study sessions` },
+      sessions.map((d, i) => ({ title: t('plan.studyFor', { title: shortTitle, i: i + 1, n: sessions.length }), dateKey: d, estimateMin: min, deckId: deck?.id })),
+      { label: t('plan.addedSessions', { count: sessions.length }) },
     );
     open = false;
   }
 </script>
 
 <details class="plan" bind:open>
-  <summary>🪜 Plan it out{existing.length ? ` · ${existing.length} step${existing.length === 1 ? '' : 's'} planned` : ''}</summary>
+  <summary>🪜 {t('plan.title')}{existing.length ? ` · ${t('plan.planned', { count: existing.length })}` : ''}</summary>
   {#if !dateKey}
-    <p class="muted">Set a due date first; the plan works back from it.</p>
+    <p class="muted">{t('plan.needDate')}</p>
   {:else}
-    <div class="seg" role="radiogroup" aria-label="Plan type">
-      <button type="button" role="radio" aria-checked={mode === 'milestones'} class:on={mode === 'milestones'} onclick={() => (pickedMode = 'milestones')}>Milestones</button>
-      <button type="button" role="radio" aria-checked={mode === 'exam'} class:on={mode === 'exam'} onclick={() => (pickedMode = 'exam')}>Exam prep{examLike ? ' ✓' : ''}</button>
+    <div class="seg" role="radiogroup" aria-label={t('plan.type')}>
+      <button type="button" role="radio" aria-checked={mode === 'milestones'} class:on={mode === 'milestones'} onclick={() => (pickedMode = 'milestones')}
+        >{t('plan.milestones')}</button
+      >
+      <button type="button" role="radio" aria-checked={mode === 'exam'} class:on={mode === 'exam'} onclick={() => (pickedMode = 'exam')}
+        >{t('plan.exam')}{examLike ? ' ✓' : ''}</button
+      >
     </div>
     {#if mode === 'milestones'}
-      <p class="muted">Each step gets its own date, working back from the due date. Each one waits on the step before, and this task waits on the last.</p>
+      <p class="muted">{t('plan.help')}</p>
       <label class="row">
-        <span>Template</span>
+        <span>{t('plan.template')}</span>
         <select
           class="select"
           value={templateId}
@@ -86,32 +91,32 @@
             pickedTemplate = e.currentTarget.value;
             loadTemplate(pickedTemplate);
           }}
-          aria-label="Milestone template"
-          >{#each MILESTONE_TEMPLATES as t (t.id)}<option value={t.id}>{t.label}</option>{/each}</select
+          aria-label={t('plan.templateLabel')}
+          >{#each MILESTONE_TEMPLATES as tpl (tpl.id)}<option value={tpl.id}>{tpl.label}</option>{/each}</select
         >
       </label>
       <ol class="steps">
         {#each steps as s, i (i)}
           <li>
-            <input class="input" bind:value={s.title} aria-label="Step {i + 1}" />
+            <input class="input" bind:value={s.title} aria-label={t('plan.step', { n: i + 1 })} />
             <span class="date">{rowDates[i] ? formatDayHeading(rowDates[i], store.now) : ''}</span>
-            <button type="button" class="x" onclick={() => (steps = steps.filter((_, k) => k !== i))} aria-label="Remove step {i + 1}">×</button>
+            <button type="button" class="x" onclick={() => (steps = steps.filter((_, k) => k !== i))} aria-label={t('plan.removeStep', { n: i + 1 })}>×</button>
           </li>
         {/each}
       </ol>
       <div class="row">
-        <button type="button" class="btn sm ghost" onclick={() => (steps = [...steps, { title: '', weight: 1, estimateMin: 30 }])}>+ Step</button>
+        <button type="button" class="btn sm ghost" onclick={() => (steps = [...steps, { title: '', weight: 1, estimateMin: 30 }])}>{t('plan.addStep')}</button>
         <span class="grow"></span>
-        <button type="button" class="btn sm primary" onclick={addMilestones} disabled={!planned.length}>Add {planned.length} milestone{planned.length === 1 ? '' : 's'}</button>
+        <button type="button" class="btn sm primary" onclick={addMilestones} disabled={!planned.length}>{t('plan.addN', { count: planned.length })}</button>
       </div>
     {:else}
-      <p class="muted">Spaced sessions before the test beat one long cram. Link a notecard deck and each session gets a Study button.</p>
+      <p class="muted">{t('plan.examHelp')}</p>
       <div class="row">
-        <select class="select" bind:value={deckId} aria-label="Deck to study">
-          <option value="">No deck</option>
+        <select class="select" bind:value={deckId} aria-label={t('plan.deck')}>
+          <option value="">{t('plan.noDeck')}</option>
           {#each decks as d (d.id)}<option value={d.id}>🃏 {d.name}</option>{/each}
         </select>
-        <label class="mins"><input class="input n" type="number" min="5" step="5" bind:value={sessionMin} aria-label="Minutes per session" /> min each</label>
+        <label class="mins"><input class="input n" type="number" min="5" step="5" bind:value={sessionMin} aria-label={t('plan.minutes')} /> {t('plan.minEach')}</label>
       </div>
       {#if sessions.length}
         <ul class="sessions">
@@ -119,10 +124,10 @@
         </ul>
         <div class="row">
           <span class="grow"></span>
-          <button type="button" class="btn sm primary" onclick={addSessions}>Add {sessions.length} study session{sessions.length === 1 ? '' : 's'}</button>
+          <button type="button" class="btn sm primary" onclick={addSessions}>{t('plan.addSessions', { count: sessions.length })}</button>
         </div>
       {:else}
-        <p class="muted">That date has passed.</p>
+        <p class="muted">{t('plan.past')}</p>
       {/if}
     {/if}
   {/if}

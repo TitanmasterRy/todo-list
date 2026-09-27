@@ -6,6 +6,12 @@
   import { formatScale, GRADE_SCALES, gradeTimeline, letterOn, neededOnRemaining, nextLetter, parseScale, scaleFor, summarize, whatIf } from '../../lib/grades';
   import GradeTrend from '../GradeTrend.svelte';
   import type { Course } from '../../lib/types';
+  import { hasKey, t, t as tr } from '../../lib/i18n/index.svelte';
+
+  const scaleLabel = (sc: { id: string; label: string }) => {
+    const k = `grades.scale.${sc.id}`;
+    return hasKey(k) ? t(k) : sc.label;
+  };
 
   const target = $derived(store.settings.targetGrade || 90);
   function setTarget(e: Event) {
@@ -32,13 +38,13 @@
     const raw = (e.target as HTMLInputElement).value;
     const v = raw === '' ? undefined : Math.max(0, Math.min(200, parseFloat(raw)));
     if (v === t.score || (v !== undefined && Number.isNaN(v))) return;
-    store.updateTask(t.id, { score: v }, { undoable: true, label: `Scored “${t.title}”` });
+    store.updateTask(t.id, { score: v }, { undoable: true, label: tr('grades.scored', { title: t.title }) });
   }
   function setWeight(t: Task, e: Event) {
     const raw = (e.target as HTMLInputElement).value;
     const v = raw === '' ? undefined : Math.max(0, Math.min(100, parseFloat(raw)));
     if (v === t.weight) return;
-    store.updateTask(t.id, { weight: v }, { undoable: true, label: `Changed weight of “${t.title}”` });
+    store.updateTask(t.id, { weight: v }, { undoable: true, label: tr('grades.weighted', { title: t.title }) });
   }
   // ---------- letter scales ----------
   let scaleText = $state<Record<string, string>>({});
@@ -83,25 +89,27 @@
 
 {#if exams.length}
   <div class="exams">
-    {#each exams.slice(0, 6) as { t, days } (t.id)}
+    {#each exams.slice(0, 6) as { t: ex, days } (ex.id)}
       <div class="exam card" class:soon={days <= 3}>
-        <div class="days">{days === 0 ? 'Today' : days === 1 ? '1 day' : `${days} days`}</div>
-        <div class="et">{t.type === 'exam' ? '📝' : '❓'} {t.title}</div>
-        <div class="muted">{store.courseById(t.courseId)?.name ?? ''}{t.weight ? ` · ${t.weight}%` : ''}</div>
+        <div class="days">{days === 0 ? t('date.today') : t('task.examDays', { count: days })}</div>
+        <div class="et">{ex.type === 'exam' ? '📝' : '❓'} {ex.title}</div>
+        <div class="muted">{store.courseById(ex.courseId)?.name ?? ''}{ex.weight ? ` · ${ex.weight}%` : ''}</div>
       </div>
     {/each}
   </div>
 {/if}
 <section class="card">
   <div class="row-head">
-    <h2>Grade calculator</h2>
-    <label class="cap">Target <input class="input num" type="number" min="1" max="100" value={target} onchange={setTarget} aria-label="Target grade" /> %</label>
+    <h2>{t('tools.grades')}</h2>
+    <label class="cap"
+      >{t('grades.target')} <input class="input num" type="number" min="1" max="100" value={target} onchange={setTarget} aria-label={t('grades.targetLabel')} /> %</label
+    >
   </div>
   <p class="help">
-    Give tasks a <strong>weight %</strong> (task editor, or the form below) and enter the <strong>score</strong> you got. Unweighted remainder counts as “not graded yet”.
+    {t('grades.help')}
   </p>
   {#if !store.activeCourses.length}
-    <p class="muted">Add a course first.</p>
+    <p class="muted">{t('grades.addCourse')}</p>
   {/if}
   {#each gradeCourses as g (g.course.id)}
     <div class="course" style="--course:{g.course.color}">
@@ -111,23 +119,23 @@
         {#if g.summary.current !== null}
           {@const up = nextLetter(g.summary.current, g.scale)}
           <span class="grade">{g.summary.current.toFixed(1)}% <span class="letter">{letterOn(g.summary.current, g.scale)}</span></span>
-          {#if up}<span class="muted small">{(up.min - g.summary.current).toFixed(1)} to {up.letter}</span>{/if}
+          {#if up}<span class="muted small">{t('grades.toNext', { n: (up.min - g.summary.current).toFixed(1), letter: up.letter })}</span>{/if}
         {:else}
-          <span class="muted">no scores yet</span>
+          <span class="muted">{t('grades.noScores')}</span>
         {/if}
       </div>
       {#if g.items.length}
         <table>
-          <thead><tr><th>Item</th><th>Weight %</th><th>Score %</th></tr></thead>
+          <thead><tr><th>{t('grades.item')}</th><th>{t('editor.weight')}</th><th>{t('editor.score')}</th></tr></thead>
           <tbody>
-            {#each g.items as t (t.id)}
-              <tr class:done={!!t.completedAt}>
+            {#each g.items as it (it.id)}
+              <tr class:done={!!it.completedAt}>
                 <td
-                  ><button class="link-title" onclick={() => (store.editingTaskId = t.id)}>{t.title}</button>{#if t.dueAt}<span class="muted">
-                      · {formatDue(t.dueAt, store.now)}</span
+                  ><button class="link-title" onclick={() => (store.editingTaskId = it.id)}>{it.title}</button>{#if it.dueAt}<span class="muted">
+                      · {formatDue(it.dueAt, store.now)}</span
                     >{/if}</td
                 >
-                <td><input class="input num" type="number" min="0" max="100" value={t.weight ?? ''} onchange={(e) => setWeight(t, e)} aria-label="Weight" /></td>
+                <td><input class="input num" type="number" min="0" max="100" value={it.weight ?? ''} onchange={(e) => setWeight(it, e)} aria-label={t('grades.weight')} /></td>
                 <td
                   ><input
                     class="input num"
@@ -135,10 +143,10 @@
                     min="0"
                     max="200"
                     step="0.5"
-                    value={t.score ?? ''}
+                    value={it.score ?? ''}
                     placeholder="—"
-                    onchange={(e) => setScore(t, e)}
-                    aria-label="Score"
+                    onchange={(e) => setScore(it, e)}
+                    aria-label={t('grades.score')}
                   /></td
                 >
               </tr>
@@ -146,33 +154,36 @@
           </tbody>
         </table>
         <div class="outlook">
-          <span>Graded {g.summary.gradedWeight}% of {g.summary.totalWeight}%</span>
-          <span>Range {g.summary.floor.toFixed(0)}–{g.summary.ceiling.toFixed(0)}%</span>
+          <span>{t('grades.graded', { done: g.summary.gradedWeight, total: g.summary.totalWeight })}</span>
+          <span>{t('grades.range', { lo: g.summary.floor.toFixed(0), hi: g.summary.ceiling.toFixed(0) })}</span>
           {#if g.needed === null}
-            <span class="ok">Final: {g.summary.floor.toFixed(1)}% ({letterOn(g.summary.floor, g.scale)})</span>
+            <span class="ok">{t('grades.final', { pct: g.summary.floor.toFixed(1), letter: letterOn(g.summary.floor, g.scale) })}</span>
           {:else if g.needed <= 0}
-            <span class="ok">✓ {target}% is already locked in</span>
+            <span class="ok">✓ {t('grades.locked', { target })}</span>
           {:else if g.needed > 100}
-            <span class="bad">{target}% is out of reach (needs {g.needed.toFixed(0)}% on the rest); max is {g.summary.ceiling.toFixed(0)}%</span>
+            <span class="bad">{t('grades.outOfReach', { target, need: g.needed.toFixed(0), max: g.summary.ceiling.toFixed(0) })}</span>
           {:else}
-            <span class="need">Need <strong>{g.needed.toFixed(1)}%</strong> average on the remaining {g.summary.remainingWeight}% for {target}%</span>
+            {@const parts = t('grades.need', { rest: g.summary.remainingWeight, target }).split('{need}')}
+            <span class="need">{parts[0]}<strong>{g.needed.toFixed(1)}%</strong>{parts[1]}</span>
           {/if}
         </div>
         <div class="gtools">
           {#if g.timeline.length >= 2}
-            <button class="btn sm ghost" aria-expanded={!!showTrend[g.course.id]} onclick={() => (showTrend[g.course.id] = !showTrend[g.course.id])}>📈 Trend</button>
+            <button class="btn sm ghost" aria-expanded={!!showTrend[g.course.id]} onclick={() => (showTrend[g.course.id] = !showTrend[g.course.id])}>📈 {t('grades.trend')}</button>
           {/if}
-          <button class="btn sm ghost" aria-expanded={!!whatIfOpen[g.course.id]} onclick={() => (whatIfOpen[g.course.id] = !whatIfOpen[g.course.id])}>🔮 What if…</button>
+          <button class="btn sm ghost" aria-expanded={!!whatIfOpen[g.course.id]} onclick={() => (whatIfOpen[g.course.id] = !whatIfOpen[g.course.id])}
+            >🔮 {t('grades.whatIf')}</button
+          >
           <label class="scale"
-            >Scale
+            >{t('grades.scale')}
             <select
               class="select"
               value={g.course.gradeScale ?? 'plusminus'}
               onchange={(e) => setScale(g.course, e.currentTarget.value)}
-              aria-label="Letter scale for {g.course.name}"
+              aria-label={t('grades.scaleFor', { name: g.course.name })}
             >
-              {#each GRADE_SCALES as sc (sc.id)}<option value={sc.id}>{sc.label}</option>{/each}
-              <option value="custom">Custom…</option>
+              {#each GRADE_SCALES as sc (sc.id)}<option value={sc.id}>{scaleLabel(sc)}</option>{/each}
+              <option value="custom">{t('grades.custom')}</option>
             </select></label
           >
         </div>
@@ -183,23 +194,23 @@
               value={scaleText[g.course.id] ?? formatScale(g.scale)}
               oninput={(e) => (scaleText[g.course.id] = e.currentTarget.value)}
               onchange={() => saveCustom(g.course)}
-              aria-label="Custom scale for {g.course.name}"
+              aria-label={t('grades.customFor', { name: g.course.name })}
               placeholder="A 94, B 85, C 75, D 65, F 0"
             />
-            {#if scaleText[g.course.id] && !parseScale(scaleText[g.course.id])}<span class="bad small">Use “letter number” pairs, e.g. A 94, B 85.</span>{/if}
+            {#if scaleText[g.course.id] && !parseScale(scaleText[g.course.id])}<span class="bad small">{t('grades.customHelp')}</span>{/if}
           </div>
         {/if}
         {#if showTrend[g.course.id] && g.timeline.length >= 2}
-          <GradeTrend points={g.timeline} color={g.course.color} {target} letter={(p) => letterOn(p, g.scale)} label="{g.course.name} grade trend" />
+          <GradeTrend points={g.timeline} color={g.course.color} {target} letter={(p) => letterOn(p, g.scale)} label={t('grades.trendOf', { name: g.course.name })} />
         {/if}
         {#if whatIfOpen[g.course.id]}
           {@const p = projection(g.course.id, g.items)}
-          <div class="whatif" role="group" aria-label="What if for {g.course.name}">
-            <p class="muted small">Try scores for work that isn't graded yet. Nothing here is saved.</p>
-            {#each g.items as t, i (t.id)}
-              {#if typeof t.score !== 'number'}
+          <div class="whatif" role="group" aria-label={t('grades.whatIfFor', { name: g.course.name })}>
+            <p class="muted small">{t('grades.whatIfHelp')}</p>
+            {#each g.items as it, i (it.id)}
+              {#if typeof it.score !== 'number'}
                 <label class="wi"
-                  ><span>{t.title} <span class="muted">({t.weight}%)</span></span>
+                  ><span>{it.title} <span class="muted">({it.weight}%)</span></span>
                   <input
                     class="input num"
                     type="number"
@@ -211,42 +222,42 @@
                       const v = e.currentTarget.value === '' ? undefined : parseFloat(e.currentTarget.value);
                       imagined[g.course.id] = { ...(imagined[g.course.id] ?? {}), [i]: Number.isFinite(v) ? v : undefined };
                     }}
-                    aria-label="Imagined score for {t.title}"
+                    aria-label={t('grades.imagined', { title: it.title })}
                   /></label
                 >
               {/if}
             {/each}
             <div class="wi">
-              <span>Extra item</span>
+              <span>{t('grades.extra')}</span>
               <input
                 class="input num"
                 type="number"
                 min="0"
                 max="100"
-                placeholder="wt %"
+                placeholder={t('grades.wt')}
                 value={extra[g.course.id]?.weight ?? ''}
                 oninput={(e) => (extra[g.course.id] = { score: extra[g.course.id]?.score ?? '', weight: e.currentTarget.value })}
-                aria-label="Extra item weight"
+                aria-label={t('grades.extraWeight')}
               />
               <input
                 class="input num"
                 type="number"
                 min="0"
                 max="200"
-                placeholder="score"
+                placeholder={t('grades.scorePh')}
                 value={extra[g.course.id]?.score ?? ''}
                 oninput={(e) => (extra[g.course.id] = { weight: extra[g.course.id]?.weight ?? '', score: e.currentTarget.value })}
-                aria-label="Extra item score"
+                aria-label={t('grades.extraScore')}
               />
             </div>
             <p class="result" role="status">
               {#if p.remainingWeight <= 0}
-                Final grade: <strong>{p.floor.toFixed(1)}% {letterOn(p.floor, g.scale)}</strong>
+                {t('grades.finalGrade')} <strong>{p.floor.toFixed(1)}% {letterOn(p.floor, g.scale)}</strong>
               {:else if p.current !== null}
-                Average so far: <strong>{p.current.toFixed(1)}% {letterOn(p.current, g.scale)}</strong>
-                <span class="muted">· final between {p.floor.toFixed(0)}% and {p.ceiling.toFixed(0)}% with {p.remainingWeight}% left</span>
+                {t('grades.soFar')} <strong>{p.current.toFixed(1)}% {letterOn(p.current, g.scale)}</strong>
+                <span class="muted">· {t('grades.between', { lo: p.floor.toFixed(0), hi: p.ceiling.toFixed(0), left: p.remainingWeight })}</span>
               {:else}
-                Enter a score to see a projection.
+                {t('grades.enterScore')}
               {/if}
             </p>
             <button
@@ -254,24 +265,24 @@
               onclick={() => {
                 imagined[g.course.id] = {};
                 extra[g.course.id] = { weight: '', score: '' };
-              }}>Clear</button
+              }}>{t('inbox.clear')}</button
             >
           </div>
         {/if}
       {:else}
-        <p class="muted">No weighted items yet.</p>
+        <p class="muted">{t('grades.noItems')}</p>
       {/if}
     </div>
   {/each}
   {#if store.activeCourses.length}
     <form class="addg" onsubmit={addGraded}>
-      <select class="select" bind:value={newGraded.courseId} aria-label="Course">
-        <option value="">Course…</option>
+      <select class="select" bind:value={newGraded.courseId} aria-label={t('inbox.course')}>
+        <option value="">{t('bulk.course')}</option>
         {#each store.activeCourses as c (c.id)}<option value={c.id}>{c.emoji ?? ''} {c.name}</option>{/each}
       </select>
-      <input class="input" bind:value={newGraded.title} placeholder="Graded item, e.g. Midterm" aria-label="Title" />
-      <input class="input num" type="number" min="0" max="100" bind:value={newGraded.weight} placeholder="wt %" aria-label="Weight" />
-      <button class="btn primary sm" type="submit" disabled={!newGraded.courseId || !newGraded.title.trim()}>Add</button>
+      <input class="input" bind:value={newGraded.title} placeholder={t('grades.newPh')} aria-label={t('editor.title')} />
+      <input class="input num" type="number" min="0" max="100" bind:value={newGraded.weight} placeholder={t('grades.wt')} aria-label={t('grades.weight')} />
+      <button class="btn primary sm" type="submit" disabled={!newGraded.courseId || !newGraded.title.trim()}>{t('common.add')}</button>
     </form>
   {/if}
 </section>

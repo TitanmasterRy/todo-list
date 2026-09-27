@@ -7,6 +7,7 @@ import { bundlesDiffer, mergeBundles } from './backup';
 import { forgetSecret, hasSecret, isLocked, useSecret } from './secrets.svelte';
 import { decodeFromSync, encodeForSync, SyncLockedError } from './syncCrypto';
 import type { ExportBundle } from './types';
+import { t as tr } from './i18n/index.svelte';
 
 const GIST_FILE = 'homework-todo.json';
 const API = 'https://api.github.com';
@@ -112,8 +113,8 @@ export async function syncNow(opts: { pull?: boolean; interactive?: boolean } = 
           if (conflicts.length) {
             const names = conflicts.map((cid) => merged.tasks.find((t) => t.id === cid)?.title ?? cid).slice(0, 3);
             toasts.push({
-              message: `Sync conflict on ${conflicts.length} task${conflicts.length > 1 ? 's' : ''}`,
-              detail: `Edited on two devices in the same second; kept the newer copy. ${names.join(', ')}`,
+              message: tr('sync.conflict', { count: conflicts.length }),
+              detail: tr('sync.conflictDetail', { names: names.join(', ') }),
               kind: 'warn',
               emoji: '⚠️',
               timeout: 10000,
@@ -184,7 +185,7 @@ export function disconnect(): void {
 export async function deleteGist(): Promise<boolean> {
   const token = await useSecret('gistToken', { reason: 'Enter your passphrase to delete your gist.' });
   const { gistId } = store.settings;
-  if (!token && isLocked('gistToken')) throw new Error('Your keys are locked, so the gist was not deleted.');
+  if (!token && isLocked('gistToken')) throw new Error(tr('gist.lockedDelete'));
   if (!token || !gistId) return false;
   const res = await fetch(`${API}/gists/${gistId}`, { method: 'DELETE', headers: headers(token) });
   if (res.status === 404) return false;

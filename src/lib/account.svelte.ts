@@ -12,6 +12,7 @@ import { isLocked } from './secrets.svelte';
 import { decodeFromSync, encodeForSync, isEncryptedEnvelope, syncEncryptionOn } from './syncCrypto';
 import { toasts } from './toast.svelte';
 import type { ExportBundle } from './types';
+import { t as tr } from './i18n/index.svelte';
 
 const TABLE = 'user_data';
 const DEBOUNCE_MS = 3000;
@@ -50,7 +51,7 @@ let clientKey = '';
 /** The project's client (also used by the optional social features: friend cards, study-room presence). */
 export async function getClient(): Promise<SupabaseClient> {
   const cfg = accountConfig();
-  if (!cfg) throw new Error('Accounts are not set up on this site yet. See Settings → Account → Server.');
+  if (!cfg) throw new Error(tr('acct.notSetUp'));
   const key = `${cfg.url}|${cfg.anonKey}`;
   if (client && clientKey === key) return client;
   const { createClient } = await import('@supabase/supabase-js');
@@ -63,7 +64,7 @@ export async function getClient(): Promise<SupabaseClient> {
     if (event === 'PASSWORD_RECOVERY') {
       account.recovering = true;
       store.go('settings');
-      toasts.push({ message: 'Choose a new password', detail: 'Settings → Account', kind: 'info', emoji: '🔑', timeout: 8000 });
+      toasts.push({ message: tr('acct.choosePass'), detail: tr('acct.choosePassDetail'), kind: 'info', emoji: '🔑', timeout: 8000 });
     }
     if (event === 'SIGNED_IN') void syncNow({ pull: true });
   });
@@ -86,18 +87,18 @@ function redirectUrl(): string {
 
 function friendly(e: unknown): string {
   const msg = e instanceof Error ? e.message : typeof e === 'object' && e && 'message' in e ? String((e as { message: unknown }).message) : String(e);
-  if (/invalid login credentials/i.test(msg)) return 'Wrong email or password.';
-  if (/email not confirmed/i.test(msg)) return 'Confirm your email first: check your inbox for the link.';
-  if (/already registered|already exists/i.test(msg)) return 'That email already has an account. Sign in instead.';
-  if (/rate limit|too many/i.test(msg)) return 'Too many attempts. Wait a minute and try again.';
-  if (/failed to fetch|networkerror|load failed/i.test(msg)) return 'Could not reach the account server. Check your connection.';
-  if (/relation .*user_data.* does not exist|schema cache/i.test(msg)) return 'The account server is missing its table. The site admin needs to run docs/supabase.sql.';
+  if (/invalid login credentials/i.test(msg)) return tr('acct.wrong');
+  if (/email not confirmed/i.test(msg)) return tr('acct.confirmFirst');
+  if (/already registered|already exists/i.test(msg)) return tr('acct.exists');
+  if (/rate limit|too many/i.test(msg)) return tr('acct.tooMany');
+  if (/failed to fetch|networkerror|load failed/i.test(msg)) return tr('acct.unreachable');
+  if (/relation .*user_data.* does not exist|schema cache/i.test(msg)) return tr('acct.noTable');
   return msg;
 }
 
 export function validateCredentials(email: string, password: string): string | null {
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) return 'Enter a valid email address.';
-  if (password.length < MIN_PASSWORD) return `Use at least ${MIN_PASSWORD} characters for the password.`;
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) return tr('acct.badEmail');
+  if (password.length < MIN_PASSWORD) return tr('acct.shortPass', { n: MIN_PASSWORD });
   return null;
 }
 
@@ -109,7 +110,7 @@ export async function signUp(email: string, password: string): Promise<'signedIn
   const { data, error } = await c.auth.signUp({ email: email.trim(), password, options: { emailRedirectTo: redirectUrl() } });
   if (error) throw new Error(friendly(error));
   // Supabase returns a user with no identities when the email is already registered (to avoid leaking accounts)
-  if (data.user && data.user.identities && data.user.identities.length === 0) throw new Error('That email already has an account. Sign in instead.');
+  if (data.user && data.user.identities && data.user.identities.length === 0) throw new Error(tr('acct.exists'));
   if (data.session) {
     applySession(data.session);
     return 'signedIn';
@@ -118,7 +119,7 @@ export async function signUp(email: string, password: string): Promise<'signedIn
 }
 
 export async function signIn(email: string, password: string): Promise<void> {
-  if (!email.trim() || !password) throw new Error('Enter your email and password.');
+  if (!email.trim() || !password) throw new Error(tr('acct.enterBoth'));
   const c = await getClient();
   const { data, error } = await c.auth.signInWithPassword({ email: email.trim(), password });
   if (error) throw new Error(friendly(error));
@@ -134,14 +135,14 @@ export async function signOut(): Promise<void> {
 }
 
 export async function sendPasswordReset(email: string): Promise<void> {
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) throw new Error('Enter the email you signed up with.');
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) throw new Error(tr('acct.enterEmail'));
   const c = await getClient();
   const { error } = await c.auth.resetPasswordForEmail(email.trim(), { redirectTo: redirectUrl() });
   if (error) throw new Error(friendly(error));
 }
 
 export async function changePassword(password: string): Promise<void> {
-  if (password.length < MIN_PASSWORD) throw new Error(`Use at least ${MIN_PASSWORD} characters for the password.`);
+  if (password.length < MIN_PASSWORD) throw new Error(tr('acct.shortPass', { n: MIN_PASSWORD }));
   const c = await getClient();
   const { error } = await c.auth.updateUser({ password });
   if (error) throw new Error(friendly(error));
@@ -151,7 +152,7 @@ export async function changePassword(password: string): Promise<void> {
 /** Delete this account's synced data from the server (the login itself is removed by the site admin). */
 export async function deleteServerData(): Promise<void> {
   const c = await getClient();
-  if (!account.userId) throw new Error('Not signed in.');
+  if (!account.userId) throw new Error(tr('acct.notSignedIn'));
   const { error } = await c.from(TABLE).delete().eq('user_id', account.userId);
   if (error) throw new Error(friendly(error));
 }
@@ -202,7 +203,7 @@ export async function syncNow(opts: { pull?: boolean; interactive?: boolean } = 
             await store.loadBundle(merged);
             local = store.snapshotBundle();
           }
-          if (conflicts.length) toasts.push({ message: `Sync kept the newer copy of ${conflicts.length} task${conflicts.length > 1 ? 's' : ''}`, kind: 'warn', emoji: '⚠️' });
+          if (conflicts.length) toasts.push({ message: tr('acct.kept', { count: conflicts.length }), kind: 'warn', emoji: '⚠️' });
           // server already has everything (and is encrypted, or not, as this device wants)
           if (!bundlesDiffer(local, remote) && isEncryptedEnvelope(row.data) === syncEncryptionOn()) break;
         }
@@ -223,7 +224,7 @@ export async function syncNow(opts: { pull?: boolean; interactive?: boolean } = 
         if (error) throw new Error(friendly(error));
         if (data && data.length) break;
         // version moved on: someone else wrote in between; loop to re-merge
-        if (attempt === 3) throw new Error('Another device kept syncing at the same time. Try again.');
+        if (attempt === 3) throw new Error(tr('acct.busy'));
       }
       account.lastSyncAt = new Date().toISOString();
       store.updateSettings({ lastAccountSyncAt: account.lastSyncAt });

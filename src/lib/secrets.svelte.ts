@@ -14,6 +14,7 @@ import { toasts } from './toast.svelte';
 import { pickSecrets, readSlot, secretsPatch, SECRET_FIELDS, stripSecrets, touchesSecrets, type SecretField, type SecretSlot } from './secretSlots';
 import { createVault, dropSlots, openVault, parseVaultFile, rewriteVault, storedSlots, VAULT_KEY, type VaultFile } from './vault';
 import type { Settings } from './types';
+import { t as tr } from './i18n/index.svelte';
 
 export type { SecretSlot } from './secretSlots';
 
@@ -85,7 +86,7 @@ export async function useSecret(slot: SecretSlot, opts: { interactive?: boolean;
 let pending: { promise: Promise<boolean>; resolve: (ok: boolean) => void } | null = null;
 
 /** Show the unlock dialog (once; concurrent callers share it). Resolves false if the user cancels. */
-export function requestUnlock(reason = 'Enter your passphrase to use your saved keys.'): Promise<boolean> {
+export function requestUnlock(reason = tr('unlock.default')): Promise<boolean> {
   if (!vault.enabled || vault.unlocked) return Promise.resolve(true);
   if (pending) return pending.promise;
   let resolve!: (ok: boolean) => void;
@@ -170,8 +171,8 @@ export function afterSettingsChange(patch: Partial<Settings>): void {
   const cleared = SECRET_FIELDS.filter((f) => f in patch && !patch[f] && vault.stored.includes(f));
   if (cleared.length && file) setFile(dropSlots(file, cleared));
   if (Object.keys(pickSecrets(patch)).length) {
-    void requestUnlock('Enter your passphrase to save the new key.').then((ok) => {
-      if (!ok) toasts.push({ message: 'New key kept for this session only', detail: 'Unlock your keys to save it on this device.', kind: 'warn', timeout: 8000 });
+    void requestUnlock(tr('unlock.saveKey')).then((ok) => {
+      if (!ok) toasts.push({ message: tr('unlock.sessionOnly'), detail: tr('unlock.sessionOnlyDetail'), kind: 'warn', timeout: 8000 });
     });
   }
 }
@@ -235,7 +236,7 @@ const BACKGROUND: SecretSlot[] = ['gistToken', 'syncPassphrase', 'schoologyFeedU
  */
 export function promptAtStartup(): void {
   if (vault.enabled && !vault.unlocked && BACKGROUND.some((s) => vault.stored.includes(s))) {
-    void requestUnlock('Your keys are locked. Enter your passphrase to turn sync back on for this session.');
+    void requestUnlock(tr('unlock.sync'));
   }
 }
 

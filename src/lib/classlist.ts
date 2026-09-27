@@ -8,6 +8,7 @@ import { cleanText } from './b64url';
 import { dueKey } from './dates';
 import { esc, fold, utcStamp } from './ics';
 import { diffAssignments, inferType, type ExternalAssignment, type SyncDiff } from './schoology';
+import { t as tr } from './i18n/index.svelte';
 
 export interface ClassItem {
   id: string;
@@ -94,23 +95,22 @@ function safeDue(v: unknown): string | undefined {
 
 /** Parse and validate a class list from untrusted text. Invalid items are skipped (and counted); a bad file throws. */
 export function parseClassList(text: string): { list: ClassList; skipped: number } {
-  if (typeof text !== 'string' || !text.trim()) throw new ClassListError('The class list is empty.');
-  if (text.length > CLASS_LIMITS.bytes) throw new ClassListError('The class list is too big (over 512 kB).');
+  if (typeof text !== 'string' || !text.trim()) throw new ClassListError(tr('cl.empty'));
+  if (text.length > CLASS_LIMITS.bytes) throw new ClassListError(tr('cl.tooBig'));
   let raw: unknown;
   try {
     raw = JSON.parse(text);
   } catch {
-    throw new ClassListError(/^\s*</.test(text) ? 'That link opened a web page, not a class list. Use the raw file link.' : 'That is not a class list (not JSON).');
+    throw new ClassListError(/^\s*</.test(text) ? tr('cl.webPage') : tr('cl.notJson'));
   }
-  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) throw new ClassListError('That is not a class list.');
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) throw new ClassListError(tr('cl.notList'));
   const j = raw as Record<string, unknown>;
-  if (j.hwtodoClass !== 1)
-    throw new ClassListError(typeof j.hwtodoClass === 'number' ? 'This class list is from a newer version of the app. Update the app first.' : 'That is not a class list.');
-  if (typeof j.id !== 'string' || !ID_RE.test(j.id)) throw new ClassListError('The class list has no valid id.');
+  if (j.hwtodoClass !== 1) throw new ClassListError(typeof j.hwtodoClass === 'number' ? tr('cl.newer') : tr('cl.notList'));
+  if (typeof j.id !== 'string' || !ID_RE.test(j.id)) throw new ClassListError(tr('cl.noId'));
   const course = cleanText(j.course, CLASS_LIMITS.course);
-  if (!course) throw new ClassListError('The class list has no course name.');
-  if (!Array.isArray(j.items)) throw new ClassListError('The class list has no assignments.');
-  if (j.items.length > CLASS_LIMITS.items) throw new ClassListError(`The class list has more than ${CLASS_LIMITS.items} assignments.`);
+  if (!course) throw new ClassListError(tr('cl.noCourse'));
+  if (!Array.isArray(j.items)) throw new ClassListError(tr('cl.noItems'));
+  if (j.items.length > CLASS_LIMITS.items) throw new ClassListError(tr('cl.tooMany', { n: CLASS_LIMITS.items }));
   const seen = new Set<string>();
   const items: ClassItem[] = [];
   let skipped = 0;

@@ -6,6 +6,7 @@
   import { renderMarkdown } from '../lib/markdown';
   import { latestSection } from '../lib/whatsnew';
   import changelog from '../../CHANGELOG.md?raw';
+  import { locale, t } from '../lib/i18n/index.svelte';
 
   const section = latestSection(changelog);
   const close = () => (ui.whatsNew = false);
@@ -14,12 +15,13 @@
 <div class="modal-backdrop" onclick={close} onkeydown={(e) => e.key === 'Escape' && close()} role="presentation">
   <!-- svelte-ignore a11y_click_events_have_key_events -->
   <div use:focusTrap class="modal" role="dialog" aria-modal="true" aria-labelledby="wn-h" tabindex="-1" onclick={(e) => e.stopPropagation()} in:fly={{ y: 20, duration: 250 }}>
-    <h2 id="wn-h">✨ What’s new</h2>
+    <h2 id="wn-h">✨ {t('prompt.whatsNew')}</h2>
     {#if section}
       <p class="sub">{section.title}</p>
+      {#if locale() !== 'en'}<p class="sub">{t('whatsnew.english')}</p>{/if}
       <div class="md">{@html renderMarkdown(section.body)}</div>
     {/if}
-    <div class="actions"><button class="btn primary" onclick={close}>Nice</button></div>
+    <div class="actions"><button class="btn primary" onclick={close}>{t('whatsnew.ok')}</button></div>
   </div>
 </div>
 

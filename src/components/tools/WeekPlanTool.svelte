@@ -3,7 +3,8 @@
   // Applying pins each task to its planned day (it shows on Today that day); due dates don't change.
   import { store } from '../../lib/store.svelte';
   import { toasts } from '../../lib/toast.svelte';
-  import { DAY_NAMES, DAY_SHORT, formatMinutes, fromKey, MONTH_SHORT } from '../../lib/dates';
+  import { dayName, formatMinutes, formatMonthDay, fromKey } from '../../lib/dates';
+  import { t } from '../../lib/i18n/index.svelte';
   import { DEFAULT_ESTIMATE, pinsFor, planWeek } from '../../lib/weekplan';
 
   let includeUndated = $state(false);
@@ -22,36 +23,36 @@
     store.updateSettings({ weekdayCapacityMin: { ...(store.settings.weekdayCapacityMin ?? {}), [dow]: n } });
   }
   function apply() {
-    const n = store.applyPins(pins, 'Planned the week');
+    const n = store.applyPins(pins, t('wplan.undo'));
     toasts.push({
-      message: n ? `Planned ${n} task${n === 1 ? '' : 's'} into your week` : 'Your week already matches this plan',
-      detail: n ? 'Each one shows on Today on its day.' : undefined,
+      message: n ? t('wplan.planned', { count: n }) : t('wplan.already'),
+      detail: n ? t('wplan.plannedDetail') : undefined,
       kind: 'success',
       emoji: '🗓️',
     });
   }
-  const md = (k: string) => `${MONTH_SHORT[fromKey(k).getMonth()]} ${fromKey(k).getDate()}`;
+  const md = (k: string) => formatMonthDay(fromKey(k), fromKey(k));
 </script>
 
 <section class="card">
   <div class="head">
-    <h2>📅 Plan my week</h2>
-    <span class="muted">{formatMinutes(total)} of work over 7 days</span>
+    <h2>📅 {t('tools.week')}</h2>
+    <span class="muted">{t('wplan.total', { time: formatMinutes(total) })}</span>
   </div>
   <p class="help">
-    Earliest deadline first, never after a task's due date and never before what it's waiting on. Tasks without an estimate count as {DEFAULT_ESTIMATE} min.
+    {t('wplan.help', { n: DEFAULT_ESTIMATE })}
   </p>
   <div class="row">
-    <label class="chk"><input type="checkbox" bind:checked={includeUndated} /> Fit in tasks without a due date</label>
-    <button class="btn sm ghost" aria-expanded={showCaps} onclick={() => (showCaps = !showCaps)}>Time per day…</button>
+    <label class="chk"><input type="checkbox" bind:checked={includeUndated} /> {t('wplan.undated')}</label>
+    <button class="btn sm ghost" aria-expanded={showCaps} onclick={() => (showCaps = !showCaps)}>{t('wplan.perDay')}</button>
     <span class="grow"></span>
-    <button class="btn primary sm" onclick={apply} disabled={!changes}>Apply plan{changes ? ` (${changes})` : ''}</button>
+    <button class="btn primary sm" onclick={apply} disabled={!changes}>{t('wplan.apply')}{changes ? ` (${changes})` : ''}</button>
   </div>
   {#if showCaps}
     <div class="caps">
       {#each [1, 2, 3, 4, 5, 6, 0] as d (d)}
         <label
-          >{DAY_SHORT[d]}
+          >{dayName(d)}
           <input
             class="input n"
             type="number"
@@ -59,7 +60,7 @@
             step="15"
             value={capFor(d)}
             onchange={(e) => setCap(d, e.currentTarget.value)}
-            aria-label="Minutes on {DAY_NAMES[d]}"
+            aria-label={t('wplan.minutesOn', { day: dayName(d, 'long') })}
           /></label
         >
       {/each}
@@ -67,16 +68,16 @@
   {/if}
   {#if late.length}
     <p class="warn" role="status">
-      ⚠ {late.length} task{late.length === 1 ? '' : 's'} won't fit before {late.length === 1 ? 'its' : 'their'} due date at this pace: {late.map((i) => i.task.title).join(', ')}.
+      ⚠ {t('wplan.late', { count: late.length, titles: late.map((i) => i.task.title).join(', ') })}
     </p>
   {/if}
 
   <div class="days">
     {#each plan.days as d (d.key)}
       {@const pct = d.capacity ? Math.min(100, (d.used / d.capacity) * 100) : d.used ? 100 : 0}
-      <div class="day" class:today={d.key === store.today} aria-label="{DAY_NAMES[fromKey(d.key).getDay()]} {md(d.key)}">
-        <h3>{d.key === store.today ? 'Today' : DAY_SHORT[fromKey(d.key).getDay()]} <small>{md(d.key)}</small></h3>
-        <div class="meter" class:over={d.used > d.capacity} title="{formatMinutes(d.used)} of {formatMinutes(d.capacity)}">
+      <div class="day" class:today={d.key === store.today} aria-label="{dayName(fromKey(d.key).getDay(), 'long')} {md(d.key)}">
+        <h3>{d.key === store.today ? t('date.today') : dayName(fromKey(d.key).getDay())} <small>{md(d.key)}</small></h3>
+        <div class="meter" class:over={d.used > d.capacity} title={t('wplan.of', { used: formatMinutes(d.used), cap: formatMinutes(d.capacity) })}>
           <span style="width:{pct}%"></span>
         </div>
         <div class="load">{formatMinutes(d.used)} / {formatMinutes(d.capacity)}</div>
@@ -85,16 +86,16 @@
             {@const c = store.courseById(it.task.courseId)}
             <li class:late={it.late} style="--c:{c?.color ?? 'var(--border-strong, var(--border))'}">
               <button class="t" onclick={() => (store.editingTaskId = it.task.id)}>{it.task.title}</button>
-              <span class="m">{it.guessed ? '~' : ''}{formatMinutes(it.min)}{it.task.dueAt && it.task.dueAt.slice(0, 10) === d.key ? ' · due' : ''}</span>
+              <span class="m">{it.guessed ? '~' : ''}{formatMinutes(it.min)}{it.task.dueAt && it.task.dueAt.slice(0, 10) === d.key ? ` · ${t('wplan.due')}` : ''}</span>
             </li>
           {/each}
         </ul>
       </div>
     {/each}
   </div>
-  {#if guessed}<p class="muted">~ marks a guessed estimate. Add estimates in the task editor for a better plan.</p>{/if}
+  {#if guessed}<p class="muted">{t('wplan.guessed')}</p>{/if}
   {#if plan.unplaced.length}
-    <p class="muted">Didn't fit this week: {plan.unplaced.map((t) => t.title).join(', ')}</p>
+    <p class="muted">{t('wplan.unplaced', { titles: plan.unplaced.map((x) => x.title).join(', ') })}</p>
   {/if}
 </section>
 

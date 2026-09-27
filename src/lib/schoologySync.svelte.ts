@@ -9,6 +9,7 @@ import { pullAll, getMe } from './schoologyApi';
 import { hasSecret, isLocked, useSecret } from './secrets.svelte';
 import { on } from './events';
 import { cspHint } from './csp';
+import { t as tr } from './i18n/index.svelte';
 
 const intervalMs = () => Math.max(5, store.settings.schoologyIntervalMin || 30) * 60 * 1000;
 const INTERVAL_MS = 30 * 60 * 1000;
@@ -38,18 +39,14 @@ export async function fetchFeed(url: string, proxy: string): Promise<string> {
       const res = await fetch(u, { cache: 'no-store' });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const text = await res.text();
-      if (!/BEGIN:VCALENDAR/i.test(text)) throw new Error('Response is not an iCalendar feed');
+      if (!/BEGIN:VCALENDAR/i.test(text)) throw new Error(tr('sgy.notIcs'));
       return text;
     } catch (e) {
       lastErr = e;
     }
   }
   const msg = lastErr instanceof Error ? lastErr.message : String(lastErr);
-  throw new Error(
-    /Failed to fetch|NetworkError|Load failed/i.test(msg)
-      ? `The browser blocked the request (CORS). Add a CORS proxy in the setup panel, or upload the .ics file instead.${proxy.trim() ? cspHint(proxy.trim()) : ''}`
-      : msg,
-  );
+  throw new Error(/Failed to fetch|NetworkError|Load failed/i.test(msg) ? `${tr('sgy.cors')}${proxy.trim() ? cspHint(proxy.trim()) : ''}` : msg);
 }
 
 function resolveCourse(a: ExternalAssignment, autoCreate: boolean, created: Map<string, string>): string | undefined {
@@ -121,8 +118,8 @@ export async function syncFromApi(opts: { interactive?: boolean } = {}): Promise
   const s = store.settings;
   const key = await useSecret('schoologyKey', opts);
   const apiSecret = await useSecret('schoologySecret', opts);
-  if (!key || !apiSecret) throw new Error('Add your Schoology API key and secret first.');
-  if (!s.schoologyProxy) throw new Error('The Schoology API needs the CORS proxy (see Setup).');
+  if (!key || !apiSecret) throw new Error(tr('sgy.needKey'));
+  if (!s.schoologyProxy) throw new Error(tr('sgy.needProxyErr'));
   const creds = { key, secret: apiSecret, proxy: s.schoologyProxy };
   const data = await pullAll(creds, s.schoologyDomain, s.schoologyImportGrades);
   const out = applyAssignments(data.assignments);
@@ -179,11 +176,11 @@ export async function syncNow(opts: { quiet?: boolean } = {}): Promise<void> {
       schoology.status = 'ok';
       if (!opts.quiet || r.created > 0 || (r.graded ?? 0) > 0) {
         toasts.push({
-          message: r.created ? `${r.created} new assignment${r.created > 1 ? 's' : ''} from Schoology` : 'Schoology is up to date',
+          message: r.created ? tr('class.newFrom', { count: r.created, course: 'Schoology' }) : tr('class.courseUpToDate', { course: 'Schoology' }),
           detail: [
-            r.updated ? `${r.updated} updated` : '',
-            r.graded ? `${r.graded} new grade${r.graded > 1 ? 's' : ''}` : '',
-            `${r.total} in ${mode === 'api' ? 'Schoology' : 'feed'}`,
+            r.updated ? tr('class.nUpdated', { n: r.updated }) : '',
+            r.graded ? tr('sgy.newGrades', { count: r.graded }) : '',
+            mode === 'api' ? tr('sgy.inSchoology', { n: r.total }) : tr('sgy.inFeed', { n: r.total }),
           ]
             .filter(Boolean)
             .join(' · '),
@@ -195,7 +192,7 @@ export async function syncNow(opts: { quiet?: boolean } = {}): Promise<void> {
       schoology.status = 'error';
       schoology.lastError = e instanceof Error ? e.message : String(e);
       store.updateSettings({ lastSchoologyError: schoology.lastError });
-      if (!opts.quiet) toasts.push({ message: 'Schoology sync failed', detail: schoology.lastError, kind: 'warn', timeout: 10000 });
+      if (!opts.quiet) toasts.push({ message: tr('sgy.failed'), detail: schoology.lastError, kind: 'warn', timeout: 10000 });
     } finally {
       inFlight = null;
     }

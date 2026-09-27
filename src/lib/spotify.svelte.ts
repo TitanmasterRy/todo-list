@@ -3,6 +3,7 @@
 import { store } from './store.svelte';
 import { on } from './events';
 import { forgetSecret, hasSecret, isLocked, secret, setSecrets, useSecret } from './secrets.svelte';
+import { t as tr } from './i18n/index.svelte';
 
 const ACCOUNTS = 'https://accounts.spotify.com';
 const API = 'https://api.spotify.com/v1';
@@ -187,7 +188,7 @@ export async function handleRedirect(): Promise<boolean> {
   for (const k of ['code', 'state', 'error']) url.searchParams.delete(k);
   history.replaceState(null, '', url.pathname + (url.search || '') + url.hash);
   if (err || !code) {
-    fail(new Error(err === 'access_denied' ? 'Spotify access was denied.' : `Spotify: ${err}`));
+    fail(new Error(err === 'access_denied' ? tr('music.denied') : `Spotify: ${err}`));
     return true;
   }
   spotify.status = 'connecting';
@@ -205,7 +206,7 @@ export async function handleRedirect(): Promise<boolean> {
 export async function ensureToken(interactive = true): Promise<string> {
   if (accessToken && Date.now() < expiresAt) return accessToken;
   if (refreshing) return refreshing;
-  const refresh = await useSecret('spotifyRefreshToken', { interactive, reason: 'Enter your passphrase to connect to Spotify.' });
+  const refresh = await useSecret('spotifyRefreshToken', { interactive, reason: tr('unlock.spotify') });
   if (!refresh) throw new Error('Not connected to Spotify.');
   refreshing = (async () => {
     try {

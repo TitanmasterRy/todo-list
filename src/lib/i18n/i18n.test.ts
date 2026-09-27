@@ -3,6 +3,11 @@ import en from './en';
 import es from './es';
 import { formatNumber, i18n, locale, resolveLocale, setLocale, t } from './index.svelte';
 import type { Message } from './types';
+import { BADGES, levelTitle } from '../gamification';
+import { COLUMNS } from '../board';
+import { RATING_LABEL, formatInterval } from '../fsrs';
+import { ATTENDANCE } from '../timetable';
+import { estimateAccuracy } from '../estimates';
 
 afterEach(async () => {
   await setLocale('en');
@@ -98,5 +103,66 @@ describe('Spanish file', () => {
       expect([...placeholders(es[key])].sort(), key).toEqual([...placeholders(en[key])].sort());
     }
     expect(Object.keys(es).length).toBe(Object.keys(en).length);
+  });
+
+  // Values that are the same in both languages on purpose: brand names, words spelled the same, and patterns
+  // that are only placeholders. Anything else identical to English was probably copied and not translated.
+  const SAME_IN_SPANISH = new Set([
+    'priority.normal',
+    'nav.schoology',
+    'app.title',
+    'inbox.ideas',
+    'xp.combo',
+    'collect.c_alien',
+    'stats.pomodoros',
+    'friends.emoji',
+    'tools.google',
+    'tools.canvas',
+    'read.normal',
+    'sync.error',
+    'calc.factorial',
+    'cite.vol',
+    'pt.gases',
+    'pt.state.gas',
+    'quiz.blooketHow',
+    'quiz.gimkitHow',
+    'google.error',
+    'sgy.key',
+    'sgy.secret',
+    'packs.arcade',
+    'sound.arcade',
+    'sgys.status.error',
+    'priv.w.google',
+    'priv.w.schoology',
+    'priv.w.arcade',
+    'ce.color',
+    'ce.colorN',
+    'auto.line',
+    'auto.plan',
+  ]);
+
+  it('translates every value (the few identical ones are on an allowlist)', () => {
+    const same = (Object.keys(en) as (keyof typeof en)[]).filter((k) => JSON.stringify(es[k]) === JSON.stringify(en[k]));
+    expect(same.filter((k) => !SAME_IN_SPANISH.has(k))).toEqual([]);
+    // and the allowlist doesn't keep keys that have since been translated
+    expect([...SAME_IN_SPANISH].filter((k) => !same.includes(k as keyof typeof en))).toEqual([]);
+  });
+});
+
+describe('labels built from data follow the language', () => {
+  it('level titles, badges, board columns, card ratings, attendance and estimate messages', async () => {
+    expect(levelTitle(1)).toBe('Freshman');
+    expect(BADGES[0].name).toBe('First Task');
+    await setLocale('es', { languages: ['es-ES'] });
+    expect(levelTitle(1)).toBe('Novato');
+    expect(levelTitle(99)).toBe('Leyenda');
+    expect(BADGES[0].name).toBe('Primera tarea');
+    expect(BADGES[0].description).toBe('Completa tu primera tarea.');
+    expect(COLUMNS.map((c) => c.label)).toEqual(['Por hacer', 'En curso', 'Hecho']);
+    expect(RATING_LABEL[3]).toBe('Bien');
+    expect(formatInterval(45)).toBe('2 m');
+    expect(ATTENDANCE[0].label).toBe('Presente');
+    const done = (spent: number) => ({ id: String(spent), title: 'x', completedAt: '2026-01-01', estimateMin: 10, timeSpentMin: spent });
+    expect(estimateAccuracy([done(20), done(20), done(20)] as never)?.message).toBe('Las tareas suelen llevarte un 100 % más de lo que estimas.');
   });
 });

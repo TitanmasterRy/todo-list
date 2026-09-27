@@ -2,24 +2,25 @@
   // Settings → Trash: deleted tasks kept for 30 days.
   import { store } from '../../lib/store.svelte';
   import { t } from '../../lib/i18n/index.svelte';
+  import { formatDate } from '../../lib/dates';
 </script>
 
 <section class="card">
   <h2>{t('settings.trash')} <span class="muted">{store.trash.length}</span></h2>
-  <p class="help">Deleted tasks stay here for 30 days. Deletions also sync, so a task deleted on one device is removed on the others.</p>
+  <p class="help">{t('trash.help')}</p>
   {#if store.trash.length}
     <ul class="trash">
-      {#each store.trash.slice(0, 50) as t (t.id)}
+      {#each store.trash.slice(0, 50) as item (item.id)}
         <li>
-          <span class="t-title">{t.task.title}</span>
-          <span class="muted">{new Date(t.deletedAt).toLocaleDateString()}</span>
-          <button class="btn sm" onclick={() => store.restoreFromTrash(t.id)}>Restore</button>
+          <span class="t-title">{item.task.title}</span>
+          <span class="muted">{formatDate(new Date(item.deletedAt))}</span>
+          <button class="btn sm" onclick={() => store.restoreFromTrash(item.id)}>{t('trash.restore')}</button>
         </li>
       {/each}
     </ul>
-    <div class="btns"><button class="btn ghost sm" onclick={() => store.emptyTrash()}>Empty trash</button></div>
+    <div class="btns"><button class="btn ghost sm" onclick={() => store.emptyTrash()}>{t('trash.empty')}</button></div>
   {:else}
-    <p class="muted">Nothing here.</p>
+    <p class="muted">{t('trash.nothing')}</p>
   {/if}
 </section>
 

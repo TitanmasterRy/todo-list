@@ -4,7 +4,8 @@
   import { focusTrap } from '../lib/focusTrap';
   import { store } from '../lib/store.svelte';
   import { weekPlan } from '../lib/printplan';
-  import { addDaysKey, DAY_NAMES, formatTime, fromKey, isDateOnly, MONTH_SHORT, startOfWeekKey } from '../lib/dates';
+  import { addDaysKey, dayName, formatMonthDay, formatTime, fromKey, isDateOnly, startOfWeekKey } from '../lib/dates';
+  import { t } from '../lib/i18n/index.svelte';
 
   let { onclose }: { onclose: () => void } = $props();
 
@@ -14,38 +15,40 @@
   const days = $derived(weekPlan(store.tasks, start));
   const label = (key: string) => {
     const d = fromKey(key);
-    return `${MONTH_SHORT[d.getMonth()]} ${d.getDate()}`;
+    return formatMonthDay(d, d);
   };
 </script>
 
 <div class="modal-backdrop" onclick={onclose} onkeydown={(e) => e.key === 'Escape' && onclose()} role="presentation">
   <!-- svelte-ignore a11y_click_events_have_key_events -->
   <div use:focusTrap class="modal wide" role="dialog" aria-modal="true" aria-labelledby="pp-h" tabindex="-1" onclick={(e) => e.stopPropagation()} in:fly={{ y: 20, duration: 200 }}>
-    <h2 id="pp-h">🖨️ Print a weekly planner</h2>
+    <h2 id="pp-h">🖨️ {t('print.title')}</h2>
     <div class="opts">
-      <div class="seg" role="radiogroup" aria-label="Week">
-        <button role="radio" aria-checked={which === 0} class:on={which === 0} onclick={() => (which = 0)}>This week</button>
-        <button role="radio" aria-checked={which === 1} class:on={which === 1} onclick={() => (which = 1)}>Next week</button>
+      <div class="seg" role="radiogroup" aria-label={t('tt.week')}>
+        <button role="radio" aria-checked={which === 0} class:on={which === 0} onclick={() => (which = 0)}>{t('tt.thisWeek')}</button>
+        <button role="radio" aria-checked={which === 1} class:on={which === 1} onclick={() => (which = 1)}>{t('snooze.nextWeek')}</button>
       </div>
-      <label>Blank lines per day <input class="input n" type="number" min="0" max="12" bind:value={blankLines} /></label>
+      <label>{t('print.blank')} <input class="input n" type="number" min="0" max="12" bind:value={blankLines} /></label>
     </div>
 
     <div id="print-planner" class="sheet">
       <header>
-        <strong>Week of {label(days[0].key)} – {label(days[6].key)}</strong>
+        <strong>{t('upcoming.weekOf', { from: label(days[0].key), to: label(days[6].key) })}</strong>
         <span>Homework To-Do</span>
       </header>
       <div class="grid">
         {#each days as d (d.key)}
           <section class="day">
-            <h3>{DAY_NAMES[fromKey(d.key).getDay()]} <small>{label(d.key)}</small></h3>
+            <h3>{dayName(fromKey(d.key).getDay(), 'long')} <small>{label(d.key)}</small></h3>
             <ul>
-              {#each d.tasks as t (t.id)}
-                {@const c = store.courseById(t.courseId)}
-                <li class:done={!!t.completedAt}>
-                  <span class="box">{t.completedAt ? '☑' : '☐'}</span>
+              {#each d.tasks as task (task.id)}
+                {@const c = store.courseById(task.courseId)}
+                <li class:done={!!task.completedAt}>
+                  <span class="box">{task.completedAt ? '☑' : '☐'}</span>
                   <span
-                    >{t.title}{#if c}<em> · {c.name}</em>{/if}{#if t.dueAt && !isDateOnly(t.dueAt)}<em> · {formatTime(new Date(t.dueAt), store.settings.timeFormat)}</em>{/if}</span
+                    >{task.title}{#if c}<em> · {c.name}</em>{/if}{#if task.dueAt && !isDateOnly(task.dueAt)}<em>
+                        · {formatTime(new Date(task.dueAt), store.settings.timeFormat)}</em
+                      >{/if}</span
                   >
                 </li>
               {/each}
@@ -54,15 +57,15 @@
           </section>
         {/each}
         <section class="day notes">
-          <h3>Notes &amp; goals</h3>
+          <h3>{t('print.notes')}</h3>
           {#each Array(8) as _, i (i)}<div class="line"></div>{/each}
         </section>
       </div>
     </div>
 
     <div class="actions">
-      <button class="btn" onclick={onclose}>Close</button>
-      <button class="btn primary" onclick={() => window.print()}>Print</button>
+      <button class="btn" onclick={onclose}>{t('common.close')}</button>
+      <button class="btn primary" onclick={() => window.print()}>{t('print.print')}</button>
     </div>
   </div>
 </div>

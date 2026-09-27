@@ -1,3 +1,4 @@
+import { t as tr } from './i18n/index.svelte';
 /**
  * mathparser.ts — a small, safe math expression evaluator (no eval / Function).
  *
@@ -74,7 +75,7 @@ function tokenize(src: string): Token[] {
       i++;
       continue;
     }
-    throw new MathError(`Unexpected character '${ch}'`);
+    throw new MathError(tr('math.char', { ch }));
   }
   tokens.push({ type: 'end', value: '', pos: src.length });
   return tokens;
@@ -114,14 +115,14 @@ class Parser {
     const node = this.expr(0);
     const t = this.peek();
     if (t.type !== 'end') {
-      throw new MathError(t.type === ')' ? 'Unexpected )' : `Unexpected '${t.value}'`);
+      throw new MathError(t.type === ')' ? tr('math.paren') : tr('math.token', { v: t.value }));
     }
     return node;
   }
 
   /** Parse an expression whose operators bind tighter than `rbp`. */
   private expr(rbp: number): Node {
-    if (++this.depth > MAX_DEPTH) throw new MathError('Expression too deeply nested');
+    if (++this.depth > MAX_DEPTH) throw new MathError(tr('math.deep'));
     let left = this.prefix();
     for (;;) {
       const t = this.peek();
@@ -176,11 +177,11 @@ class Parser {
               break;
             }
           }
-          if (this.next().type !== ')') throw new MathError('Missing )');
+          if (this.next().type !== ')') throw new MathError(tr('math.missing'));
           const { min, max } = FN[name];
           if (args.length < min || args.length > max) {
             const want = min === max ? `${min}` : max === Infinity ? `at least ${min}` : `${min}-${max}`;
-            throw new MathError(`${name} expects ${want} argument${want === '1' ? '' : 's'}`);
+            throw new MathError(tr(want === '1' ? 'math.args1' : 'math.args', { name, n: want }));
           }
           return { kind: 'call', name, args };
         }
@@ -188,25 +189,25 @@ class Parser {
       }
       case '(': {
         const inner = this.expr(0);
-        if (this.next().type !== ')') throw new MathError('Missing )');
+        if (this.next().type !== ')') throw new MathError(tr('math.missing'));
         return inner;
       }
       case 'op':
         if (t.value === '-') return { kind: 'neg', arg: this.expr(UNARY_BP) };
         if (t.value === '+') return this.expr(UNARY_BP);
-        throw new MathError(`Unexpected '${t.value}'`);
+        throw new MathError(tr('math.token', { v: t.value }));
       case ')':
-        throw new MathError('Unexpected )');
+        throw new MathError(tr('math.paren'));
       case ',':
-        throw new MathError("Unexpected ','");
+        throw new MathError(tr('math.comma'));
       default:
-        throw new MathError('Unexpected end of expression');
+        throw new MathError(tr('math.end'));
     }
   }
 }
 
 function parse(expr: string): Node {
-  if (!expr || !expr.trim()) throw new MathError('Empty expression');
+  if (!expr || !expr.trim()) throw new MathError(tr('math.empty'));
   return new Parser(tokenize(expr)).parse();
 }
 
@@ -230,12 +231,12 @@ const fN = (fn: (...xs: number[]) => number, min: number): Fn => ({ fn: (a) => f
 
 function requireInt(name: string, ...xs: number[]): void {
   if (!xs.every((x) => Number.isInteger(x) && x >= 0)) {
-    throw new MathError(`${name} requires non-negative integers`);
+    throw new MathError(tr('math.nonneg', { name }));
   }
 }
 function factorial(n: number): number {
   if (!Number.isInteger(n) || n < 0 || n > 170) {
-    throw new MathError('Factorial is only defined for integers 0..170');
+    throw new MathError(tr('math.factorial'));
   }
   let r = 1;
   for (let i = 2; i <= n; i++) r *= i;
@@ -308,7 +309,7 @@ function lookupVar(name: string, vars: Record<string, number>): number {
   if (Object.hasOwn(vars, name)) return vars[name];
   const c = CONSTANTS[name.toLowerCase()];
   if (c !== undefined) return c;
-  throw new MathError(`Unknown variable: ${name}`);
+  throw new MathError(tr('math.unknown', { name }));
 }
 
 // ───────────────────────────── Evaluator ─────────────────────────────
@@ -350,7 +351,7 @@ function evalNode(n: Node, ctx: Ctx): number {
         ctx,
       );
   }
-  throw new MathError('Invalid expression');
+  throw new MathError(tr('math.invalid'));
 }
 
 /** Collect the names of every variable referenced in the AST. */
@@ -370,7 +371,7 @@ function collectVars(n: Node, out: Set<string>): Set<string> {
 export function evaluate(expr: string, opts: EvalOptions = {}): number {
   const ast = parse(expr);
   const result = evalNode(ast, { angle: opts.angle ?? 'rad', vars: opts.variables ?? {} });
-  if (Number.isNaN(result)) throw new MathError('Result is undefined');
+  if (Number.isNaN(result)) throw new MathError(tr('math.undefined'));
   return result;
 }
 

@@ -1,4 +1,6 @@
 // Periodic table data and chemistry helpers (molar mass, electron configurations). Loaded with the tool only.
+import { t } from './i18n/index.svelte';
+
 export type Category = 'alkali' | 'alkaline' | 'transition' | 'post-transition' | 'metalloid' | 'nonmetal' | 'halogen' | 'noble' | 'lanthanide' | 'actinide';
 export type Block = 's' | 'p' | 'd' | 'f';
 
@@ -166,7 +168,7 @@ export interface FormulaResult {
  */
 export function molarMass(formula: string): FormulaResult {
   const src = formula.replace(/\s+/g, '').replace(/[₀-₉]/g, (d) => String('₀₁₂₃₄₅₆₇₈₉'.indexOf(d)));
-  if (!src) throw new Error('Type a formula, e.g. H2O');
+  if (!src) throw new Error(t('pt.errEmpty'));
   const counts: Record<string, number> = {};
   for (const part of src.split(/[·•*]|\.(?=\d*[A-Z([])/)) {
     const m = /^(\d+)(.*)$/.exec(part);
@@ -201,21 +203,21 @@ function parseGroup(s: string): Record<string, number> {
     } else if (ch === ')' || ch === ']') {
       i++;
       const top = stack.pop();
-      if (!top || !stack.length) throw new Error('A bracket closes that never opened');
+      if (!top || !stack.length) throw new Error(t('pt.errClose'));
       const n = num();
       const into = stack[stack.length - 1];
       for (const [k, v] of Object.entries(top)) into[k] = (into[k] ?? 0) + v * n;
     } else {
       const m = /^[A-Z][a-z]?/.exec(s.slice(i));
-      if (!m) throw new Error(`Unexpected “${ch}” (element symbols start with a capital letter)`);
+      if (!m) throw new Error(t('pt.errChar', { ch }));
       const sym = m[0].length === 2 && !element(m[0]) && element(m[0][0]) ? m[0][0] : m[0];
-      if (!element(sym)) throw new Error(`“${sym}” isn't an element`);
+      if (!element(sym)) throw new Error(t('pt.errSymbol', { sym }));
       i += sym.length;
       const n = num();
       const top = stack[stack.length - 1];
       top[sym] = (top[sym] ?? 0) + n;
     }
   }
-  if (stack.length !== 1) throw new Error('A bracket is never closed');
+  if (stack.length !== 1) throw new Error(t('pt.errOpen'));
   return stack[0];
 }

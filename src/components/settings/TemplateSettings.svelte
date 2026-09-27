@@ -7,32 +7,32 @@
 <section class="card">
   <h2>{t('settings.templates')} <span class="muted">{store.templates.length}</span></h2>
   {#if !store.templates.length}
-    <p class="help">Save any task as a template from the task editor, then type <code>@name</code> in quick add.</p>
+    <p class="help">{t('tpl.help')} <code>@name</code> {t('tpl.help2')}</p>
   {/if}
   <ul class="list">
-    {#each store.templates as t (t.id)}
+    {#each store.templates as tpl (tpl.id)}
       <li>
-        <span class="mono">@{t.name}</span>
-        <span class="muted grow">{t.task.title}{t.task.subtasks.length ? ` · ${t.task.subtasks.length} subtasks` : ''}</span>
+        <span class="mono">@{tpl.name}</span>
+        <span class="muted grow">{tpl.task.title}{tpl.task.subtasks.length ? ` · ${t('tpl.subtasks', { count: tpl.task.subtasks.length })}` : ''}</span>
         <button
           class="btn ghost sm"
           onclick={() => {
             store.addTask({
-              title: t.task.title,
-              notes: t.task.notes,
-              courseId: t.task.courseId,
-              tags: [...t.task.tags],
-              priority: t.task.priority,
-              estimateMin: t.task.estimateMin,
-              type: t.task.type,
-              weight: t.task.weight,
-              subtasks: [...t.task.subtasks],
-              templateId: t.id,
+              title: tpl.task.title,
+              notes: tpl.task.notes,
+              courseId: tpl.task.courseId,
+              tags: [...tpl.task.tags],
+              priority: tpl.task.priority,
+              estimateMin: tpl.task.estimateMin,
+              type: tpl.task.type,
+              weight: tpl.task.weight,
+              subtasks: [...tpl.task.subtasks],
+              templateId: tpl.id,
             });
             store.go('inbox');
-          }}>Use</button
+          }}>{t('tpl.use')}</button
         >
-        <button class="btn ghost sm" onclick={() => store.deleteTemplate(t.id)}>Delete</button>
+        <button class="btn ghost sm" onclick={() => store.deleteTemplate(tpl.id)}>{t('common.delete')}</button>
       </li>
     {/each}
   </ul>

@@ -5,6 +5,7 @@
   import { sync, syncNow, checkToken, disconnect } from '../../lib/gist.svelte';
   import { hasSecret, isLocked, requestUnlock, setSecrets } from '../../lib/secrets.svelte';
   import { t } from '../../lib/i18n/index.svelte';
+  import { formatDateTime } from '../../lib/dates';
   const s = $derived(store.settings);
   let token = $state('');
   let tokenLogin = $state('');
@@ -18,9 +19,9 @@
       setSecrets({ gistToken: token.trim() });
       token = '';
       await syncNow({ pull: true, interactive: true });
-      toasts.push({ message: `Gist sync on for ${tokenLogin}`, kind: 'success', emoji: '☁️' });
+      toasts.push({ message: t('gist.on', { login: tokenLogin }), kind: 'success', emoji: '☁️' });
     } catch (err) {
-      toasts.push({ message: 'Could not connect', detail: err instanceof Error ? err.message : String(err), kind: 'warn' });
+      toasts.push({ message: t('gist.failed'), detail: err instanceof Error ? err.message : String(err), kind: 'warn' });
     } finally {
       tokenBusy = false;
     }
@@ -30,39 +31,39 @@
 <section class="card">
   <h2>{t('settings.gist')} <span class="chip optional">{t('settings.optional')}</span></h2>
   <p class="help">
-    Keep your data in a <strong>private GitHub Gist</strong> so it follows you across devices. Create a
-    <a href="https://github.com/settings/tokens/new?scopes=gist&description=Homework%20To-Do" target="_blank" rel="noopener noreferrer">personal access token</a>
-    with only the <code>gist</code> scope. The token is stored only in this browser (encrypted if you lock your keys) and sent only to api.github.com. Turn on end-to-end encryption in
-    Privacy &amp; security so GitHub only ever stores an encrypted copy.
+    {t('gist.help1')}
+    <a href="https://github.com/settings/tokens/new?scopes=gist&description=Homework%20To-Do" target="_blank" rel="noopener noreferrer">{t('gist.token')}</a>
+    {t('gist.help2a')} <code>gist</code>
+    {t('gist.help2b')}
   </p>
   {#if hasSecret('gistToken')}
     <div class="row">
-      <span>Status</span>
+      <span>{t('gist.status')}</span>
       <span class="status {sync.status}">
         {isLocked('gistToken')
-          ? 'Locked: enter your passphrase to sync'
+          ? t('gist.locked')
           : sync.status === 'syncing'
-            ? 'Syncing…'
+            ? t('sync.syncing')
             : sync.status === 'error'
-              ? `Error: ${sync.lastError}`
+              ? t('sync.error', { error: sync.lastError ?? '' })
               : sync.status === 'ok'
-                ? 'Up to date'
+                ? t('gist.upToDate')
                 : sync.pending
-                  ? 'Changes pending'
-                  : 'Connected'}
-        {#if s.lastSyncAt}<span class="muted"> · last {new Date(s.lastSyncAt).toLocaleString()}</span>{/if}
+                  ? t('gist.pending')
+                  : t('sync.connected')}
+        {#if s.lastSyncAt}<span class="muted"> · {t('gist.last', { when: formatDateTime(new Date(s.lastSyncAt)) })}</span>{/if}
       </span>
     </div>
     <div class="row">
       <span>Gist</span>
       {#if s.gistId}<a href="https://gist.github.com/{s.gistId}" target="_blank" rel="noopener noreferrer" class="mono">{s.gistId.slice(0, 10)}…</a>{:else}<span class="muted"
-          >created on first sync</span
+          >{t('gist.firstSync')}</span
         >{/if}
     </div>
     <div class="btns">
-      {#if isLocked('gistToken')}<button class="btn" onclick={() => void requestUnlock()}>Unlock</button>{/if}
-      <button class="btn" onclick={() => void syncNow({ pull: true, interactive: true })} disabled={sync.status === 'syncing'}>Sync now</button>
-      <button class="btn danger" onclick={disconnect}>Disconnect</button>
+      {#if isLocked('gistToken')}<button class="btn" onclick={() => void requestUnlock()}>{t('eco.unlock')}</button>{/if}
+      <button class="btn" onclick={() => void syncNow({ pull: true, interactive: true })} disabled={sync.status === 'syncing'}>{t('sync.now')}</button>
+      <button class="btn danger" onclick={disconnect}>{t('sync.disconnect')}</button>
     </div>
   {:else}
     <form
@@ -72,8 +73,8 @@
         void connectGist();
       }}
     >
-      <input class="input" type="password" bind:value={token} placeholder="ghp_… token with gist scope" aria-label="GitHub token" autocomplete="off" />
-      <button class="btn primary" type="submit" disabled={tokenBusy || !token.trim()}>{tokenBusy ? 'Connecting…' : 'Connect'}</button>
+      <input class="input" type="password" bind:value={token} placeholder={t('gist.tokenPh')} aria-label={t('gist.tokenLabel')} autocomplete="off" />
+      <button class="btn primary" type="submit" disabled={tokenBusy || !token.trim()}>{tokenBusy ? t('gist.connecting') : t('sync.connect')}</button>
     </form>
   {/if}
 </section>

@@ -2,7 +2,8 @@
   // Plan my day: daily capacity, the next 7 days of load, and pulling work forward into today.
   import { store, byDueThenOrder } from '../../lib/store.svelte';
   import { toasts } from '../../lib/toast.svelte';
-  import { addDaysKey, dueKey, formatDue, formatMinutes, fromKey, DAY_SHORT, MONTH_SHORT } from '../../lib/dates';
+  import { addDaysKey, dayName, dueKey, formatDue, formatMinutes, formatMonthDay, fromKey } from '../../lib/dates';
+  import { t } from '../../lib/i18n/index.svelte';
 
   const capacity = $derived(store.settings.dailyCapacityMin || 180);
   const committed = $derived(store.todayEstimateMin);
@@ -36,93 +37,101 @@
       if (left < 15) break;
     }
     if (!ids.length) {
-      toasts.push({ message: 'Nothing fits in the remaining time', kind: 'info' });
+      toasts.push({ message: t('planner.nothingFits'), kind: 'info' });
       return;
     }
-    store.bulkUpdate(ids, { pinnedDay: store.today }, `Planned ${ids.length} task${ids.length > 1 ? 's' : ''} for today`);
+    store.bulkUpdate(ids, { pinnedDay: store.today }, t('planner.plannedN', { count: ids.length }));
   }
   const dayLabel = (k: string) => {
     const d = fromKey(k);
-    return `${DAY_SHORT[d.getDay()]} ${MONTH_SHORT[d.getMonth()]} ${d.getDate()}`;
+    return `${dayName(d.getDay())} ${formatMonthDay(d, d)}`;
   };
 </script>
 
 <section class="card">
   <div class="row-head">
-    <h2>Today’s capacity</h2>
+    <h2>{t('planner.capacity')}</h2>
     <label class="cap"
-      >I can do <input class="input num" type="number" min="15" step="15" value={capacity} onchange={setCapacity} aria-label="Daily capacity in minutes" /> min of homework a day</label
+      >{t('planner.iCan')} <input class="input num" type="number" min="15" step="15" value={capacity} onchange={setCapacity} aria-label={t('planner.capLabel')} />
+      {t('planner.perDay')}</label
     >
   </div>
   <div class="capbar" class:over={committed > capacity}>
     <div class="fill" style="width:{Math.min(100, (committed / capacity) * 100)}%"></div>
     <span class="lbl"
-      >{formatMinutes(committed)} of {formatMinutes(capacity)}{committed > capacity
-        ? ` · ${formatMinutes(committed - capacity)} over`
+      >{t('wplan.of', { used: formatMinutes(committed), cap: formatMinutes(capacity) })}{committed > capacity
+        ? ` · ${t('planner.over', { time: formatMinutes(committed - capacity) })}`
         : remaining > 0
-          ? ` · ${formatMinutes(remaining)} free`
-          : ' · full'}</span
+          ? ` · ${t('planner.free', { time: formatMinutes(remaining) })}`
+          : ` · ${t('planner.full')}`}</span
     >
   </div>
   {#if unestimatedToday}
     <p class="help">
-      {unestimatedToday} task{unestimatedToday > 1 ? 's' : ''} on today’s list {unestimatedToday > 1 ? 'have' : 'has'} no estimate, so the bar is optimistic. Add
-      <code>~30m</code> style estimates for a truer picture.
+      {t('planner.unestimated', { count: unestimatedToday })}
+      <code>~30m</code>.
     </p>
   {/if}
-  <div class="week" aria-label="Next 7 days load">
+  <div class="week" aria-label={t('planner.weekLabel')}>
     {#each week as d (d.key)}
-      <div class="day" class:over={d.over} class:today={d.key === store.today} title="{formatMinutes(d.min)} on {dayLabel(d.key)}">
+      <div class="day" class:over={d.over} class:today={d.key === store.today} title={t('planner.on', { time: formatMinutes(d.min), day: dayLabel(d.key) })}>
         <div class="bar"><div class="fill" style="height:{Math.min(100, (d.min / capacity) * 100)}%"></div></div>
-        <span class="dl">{DAY_SHORT[fromKey(d.key).getDay()]}</span>
+        <span class="dl">{dayName(fromKey(d.key).getDay())}</span>
         <span class="dm">{d.min ? formatMinutes(d.min) : ''}</span>
       </div>
     {/each}
   </div>
   {#if week.some((d) => d.over)}
     <p class="warn">
-      ⚠ {week
-        .filter((d) => d.over)
-        .map((d) => dayLabel(d.key))
-        .join(', ')}
-      {week.filter((d) => d.over).length > 1 ? 'are' : 'is'} over capacity. Pull some of that work into earlier days below.
+      ⚠ {t('planner.overDays', {
+        count: week.filter((d) => d.over).length,
+        days: week
+          .filter((d) => d.over)
+          .map((d) => dayLabel(d.key))
+          .join(', '),
+      })}
     </p>
   {/if}
 </section>
 
 <section class="card">
   <div class="row-head">
-    <h2>Pull work forward</h2>
-    <button class="btn sm" onclick={autoFill} disabled={!candidates.length || remaining < 15}>Auto-fill free time</button>
+    <h2>{t('planner.pull')}</h2>
+    <button class="btn sm" onclick={autoFill} disabled={!candidates.length || remaining < 15}>{t('planner.autofill')}</button>
   </div>
-  <p class="help">Planning a task for today keeps its deadline. It shows up in Today under “Planned for today”.</p>
+  <p class="help">{t('planner.help')}</p>
   {#if planned.length}
     <ul class="list">
-      {#each planned as t (t.id)}
+      {#each planned as tk (tk.id)}
         <li>
-          <span class="dot" style="background:{store.courseById(t.courseId)?.color ?? 'var(--border-strong)'}"></span>
+          <span class="dot" style="background:{store.courseById(tk.courseId)?.color ?? 'var(--border-strong)'}"></span>
           <span class="grow"
-            >{t.title}
-            <span class="muted">· due {formatDue(t.dueAt, store.now, store.settings.timeFormat)}{t.estimateMin ? ` · ${formatMinutes(t.estimateMin)}` : ''}</span></span
+            >{tk.title}
+            <span class="muted"
+              >· {t('planner.due', { when: formatDue(tk.dueAt, store.now, store.settings.timeFormat) })}{tk.estimateMin ? ` · ${formatMinutes(tk.estimateMin)}` : ''}</span
+            ></span
           >
-          <button class="btn ghost sm" onclick={() => store.unpinToday(t.id)}>Remove</button>
+          <button class="btn ghost sm" onclick={() => store.unpinToday(tk.id)}>{t('editor.remove')}</button>
         </li>
       {/each}
     </ul>
   {/if}
   {#if !candidates.length}
-    <p class="muted">Nothing due in the next two weeks to pull forward.</p>
+    <p class="muted">{t('planner.nothing')}</p>
   {:else}
     <ul class="list">
-      {#each candidates as t (t.id)}
+      {#each candidates as tk (tk.id)}
         <li>
-          <span class="dot" style="background:{store.courseById(t.courseId)?.color ?? 'var(--border-strong)'}"></span>
+          <span class="dot" style="background:{store.courseById(tk.courseId)?.color ?? 'var(--border-strong)'}"></span>
           <span class="grow"
-            >{t.title}
-            <span class="muted">· due {formatDue(t.dueAt, store.now, store.settings.timeFormat)}{t.estimateMin ? ` · ${formatMinutes(t.estimateMin)}` : ' · no estimate'}</span
+            >{tk.title}
+            <span class="muted"
+              >· {t('planner.due', { when: formatDue(tk.dueAt, store.now, store.settings.timeFormat) })}{tk.estimateMin
+                ? ` · ${formatMinutes(tk.estimateMin)}`
+                : ` · ${t('planner.noEstimate')}`}</span
             ></span
           >
-          <button class="btn sm" onclick={() => store.pinToToday(t.id)}>+ Today</button>
+          <button class="btn sm" onclick={() => store.pinToToday(tk.id)}>+ {t('date.today')}</button>
         </li>
       {/each}
     </ul>

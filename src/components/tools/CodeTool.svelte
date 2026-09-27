@@ -12,6 +12,7 @@
   import { downloadText } from '../../lib/download';
   import SandboxFrame from '../SandboxFrame.svelte';
   import { toasts } from '../../lib/toast.svelte';
+  import { t } from '../../lib/i18n/index.svelte';
 
   // ---------- snippets ----------
   let snippets = $state<Snippet[]>([]);
@@ -77,7 +78,7 @@
     }
   }
   function remove(s: Snippet) {
-    if (!confirm(`Delete “${s.name}”? This can’t be undone.`)) return;
+    if (!confirm(t('code.confirmDelete', { name: s.name }))) return;
     if (dirtyId === s.id) {
       dirtyId = null;
       if (saveTimer) clearTimeout(saveTimer);
@@ -281,7 +282,7 @@
     if (!s || running) return;
     flushSave();
     if (!canRun(s.language)) {
-      toasts.push({ message: `Run isn’t available for ${languageLabel(s.language)} in the browser`, detail: 'Use the editor for notes and copy to your IDE.', kind: 'info' });
+      toasts.push({ message: t('code.noRun', { lang: languageLabel(s.language) }), detail: t('code.noRunDetail'), kind: 'info' });
       return;
     }
     clearOutput();
@@ -316,9 +317,9 @@
     if (!selected) return;
     try {
       await navigator.clipboard.writeText(selected.code);
-      toasts.push({ message: 'Code copied', kind: 'success' });
+      toasts.push({ message: t('code.copied'), kind: 'success' });
     } catch {
-      toasts.push({ message: 'Couldn’t copy', detail: 'Select the code and copy it manually.', kind: 'warn' });
+      toasts.push({ message: t('code.copyFailed'), detail: t('code.copyFailedDetail'), kind: 'warn' });
     }
   }
   const MIME: Record<SnippetLanguage, string> = {
@@ -340,46 +341,39 @@
         .replace(/^-+|-+$/g, '') || 'snippet';
     const filename = `${base}.${languageExt(selected.language)}`;
     downloadText(filename, selected.code, MIME[selected.language]);
-    toasts.push({ message: `Downloaded ${filename}`, kind: 'success' });
+    toasts.push({ message: t('code.downloaded', { name: filename }), kind: 'success' });
   }
   const isMac = typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(navigator.platform);
 </script>
 
 <section class="card code">
   <div class="head">
-    <h2>Code</h2>
+    <h2>{t('code.title')}</h2>
     <div class="new">
-      <select class="select" bind:value={newLang} aria-label="Language for new snippet">
+      <select class="select" bind:value={newLang} aria-label={t('code.newLang')}>
         {#each LANGUAGES as l (l.id)}<option value={l.id}>{l.label}</option>{/each}
       </select>
-      <button class="btn primary sm" onclick={create}>+ New</button>
+      <button class="btn primary sm" onclick={create}>+ {t('code.new')}</button>
     </div>
   </div>
 
   <div class="layout">
     <aside class="side">
       {#if !snippets.length}
-        <p class="muted">No snippets yet. Pick a language and press New.</p>
+        <p class="muted">{t('code.none')}</p>
       {:else}
-        <ul class="list" role="listbox" aria-label="Snippets">
+        <ul class="list" role="listbox" aria-label={t('code.snippets')}>
           {#each snippets as s (s.id)}
             <li class:on={s.id === selectedId}>
               {#if renamingId === s.id}
-                <input class="input rename" bind:this={renameInput} bind:value={renameValue} onkeydown={renameKey} onblur={commitRename} aria-label="Snippet name" />
+                <input class="input rename" bind:this={renameInput} bind:value={renameValue} onkeydown={renameKey} onblur={commitRename} aria-label={t('code.name')} />
               {:else}
-                <button
-                  class="pick"
-                  role="option"
-                  aria-selected={s.id === selectedId}
-                  onclick={() => select(s.id)}
-                  ondblclick={() => startRename(s)}
-                  title="Double-click to rename"
-                >
+                <button class="pick" role="option" aria-selected={s.id === selectedId} onclick={() => select(s.id)} ondblclick={() => startRename(s)} title={t('code.dblclick')}>
                   <span class="nm">{s.name}</span>
                   <span class="chip lang">{languageLabel(s.language)}</span>
                 </button>
-                <button class="btn ghost icon" onclick={() => startRename(s)} aria-label="Rename {s.name}" title="Rename">✎</button>
-                <button class="btn ghost icon" onclick={() => remove(s)} aria-label="Delete {s.name}" title="Delete">🗑</button>
+                <button class="btn ghost icon" onclick={() => startRename(s)} aria-label={t('code.renameX', { name: s.name })} title={t('cards.renameBtn')}>✎</button>
+                <button class="btn ghost icon" onclick={() => remove(s)} aria-label={t('reader.delete', { name: s.name })} title={t('common.delete')}>🗑</button>
               {/if}
             </li>
           {/each}
@@ -394,33 +388,33 @@
             class="select lang-sel"
             value={selected.language}
             onchange={(e) => setLanguage((e.target as HTMLSelectElement).value as SnippetLanguage)}
-            aria-label="Snippet language"
+            aria-label={t('code.lang')}
           >
             {#each LANGUAGES as l (l.id)}<option value={l.id}>{l.label}</option>{/each}
           </select>
         {/if}
         <button class="btn primary sm" onclick={run} disabled={!selected || !runnable || running} title="{isMac ? '⌘' : 'Ctrl'}+Enter">
-          {running ? 'Running…' : 'Run ▶'}
+          {running ? t('code.running') : t('code.run')}
         </button>
-        <button class="btn sm" onclick={copyCode} disabled={!selected}>Copy code</button>
-        <button class="btn sm" onclick={download} disabled={!selected}>Download</button>
-        <span class="hint muted">{isMac ? '⌘' : 'Ctrl'}+Enter runs</span>
+        <button class="btn sm" onclick={copyCode} disabled={!selected}>{t('code.copy')}</button>
+        <button class="btn sm" onclick={download} disabled={!selected}>{t('prompt.download')}</button>
+        <span class="hint muted">{t('code.runs', { key: isMac ? '⌘' : 'Ctrl' })}</span>
       </div>
 
       {#if selected?.language === 'typescript'}
-        <p class="note">TypeScript runs here as plain JavaScript: type annotations aren’t stripped, so keep to JS-compatible syntax when you press Run.</p>
+        <p class="note">{t('code.ts')}</p>
       {/if}
       {#if selected && !runnable}
         <p class="note">
-          Run isn’t available for Java/C++ in the browser; use the editor for notes and copy to your IDE.
-          <a class="ext" href={ONECOMPILER_URLS[selected.language]} target="_blank" rel="noopener noreferrer">Open in OneCompiler ↗</a>
-          <span class="muted">(nothing is sent automatically; paste your code there)</span>
+          {t('code.noRunJava')}
+          <a class="ext" href={ONECOMPILER_URLS[selected.language]} target="_blank" rel="noopener noreferrer">{t('code.onecompiler')}</a>
+          <span class="muted">{t('code.nothingSent')}</span>
         </p>
       {/if}
 
       <div class="editor" bind:this={editorEl} class:hidden={!selected}></div>
       {#if !selected}
-        <p class="muted empty">Select or create a snippet to start editing.</p>
+        <p class="muted empty">{t('code.select')}</p>
       {/if}
 
       {#if status}
@@ -430,13 +424,13 @@
       {#if ran && (previewDoc || output.length || error || ms !== null)}
         <div class="out">
           <div class="out-head">
-            <span>{previewDoc ? 'Preview' : 'Output'}</span>
+            <span>{previewDoc ? t('scan.preview') : t('code.output')}</span>
             {#if ms !== null && !previewDoc}<span class="muted">{ms} ms</span>{/if}
           </div>
           {#if previewDoc}
-            {#key previewDoc}<SandboxFrame class="preview" sandbox="allow-scripts" html={previewDoc} title="HTML preview" />{/key}
+            {#key previewDoc}<SandboxFrame class="preview" sandbox="allow-scripts" html={previewDoc} title={t('code.htmlPreview')} />{/key}
           {:else}
-            <pre class="console" aria-live="polite">{#if !output.length && !error}<span class="muted">(no output)</span>{/if}{#each output as line, i (i)}<span
+            <pre class="console" aria-live="polite">{#if !output.length && !error}<span class="muted">{t('code.noOutput')}</span>{/if}{#each output as line, i (i)}<span
                   class="line"
                   class:err={line.startsWith('✖ ')}
                   class:warn={line.startsWith('⚠ ')}
