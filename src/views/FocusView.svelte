@@ -11,6 +11,7 @@
   import { locale as appLocale, t } from '../lib/i18n/index.svelte';
   const loadMusic = () => import('../components/MusicPanel.svelte');
   const loadRoom = () => import('../components/social/StudyRoom.svelte');
+  const loadCompanion = () => import('../components/FocusCompanion.svelte');
   let customInput = $state(String(pomodoro.customMin));
   let showMusic = $state(false);
   const stop = $derived(pomodoro.mode === 'stopwatch');
@@ -158,6 +159,7 @@
     </div>
   </div>
 
+  {#await loadCompanion() then m}<m.default />{/await}
   {#if showMusic}
     {#await loadMusic() then m}<m.default />{/await}
   {/if}

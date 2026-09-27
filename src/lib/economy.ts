@@ -4,6 +4,7 @@
 import type { Currency, LedgerCurrency, LedgerEntry } from './types';
 import { todayKey } from './dates';
 import { cleanText } from './b64url';
+import { inSeason, seasonById, type SeasonId } from './seasons';
 
 export const CURRENCY_EMOJI: Record<Currency, string> = { coins: '🪙', chips: '🎰', vouchers: '🎟️' };
 export const CURRENCY_LABEL: Record<Currency, string> = { coins: 'Coins', chips: 'Chips', vouchers: 'Vouchers' };
@@ -15,6 +16,9 @@ export const REWARDS = {
   levelUpPerLevel: 5, // level × this
   dailyChipBonus: 100, // chips when the ring closes (once a day)
 };
+
+/** A casino payout this many times the bet (stake included) makes it rain coins. */
+export const BIG_WIN_MULTIPLE = 10;
 
 /** Coins for an XP payout (tasks, grades, study sessions). */
 export function coinsForXp(xp: number): number {
@@ -112,7 +116,7 @@ export function parsePowerup(data: unknown): PowerupRequest | null {
 
 // ---------- shop ----------
 export type ShopKind = 'chips' | 'vouchers' | 'freeze' | 'booster' | 'title' | 'frame' | 'confetti' | 'trophy';
-export type ShopSection = 'currency' | 'boosts' | 'cosmetics' | 'prizes';
+export type ShopSection = 'currency' | 'boosts' | 'cosmetics' | 'seasonal' | 'prizes';
 
 export interface ShopItem {
   id: string;
@@ -125,6 +129,7 @@ export interface ShopItem {
   section: ShopSection;
   grant?: { currency: LedgerCurrency; amount: number }; // what the buyer receives
   unique?: boolean; // can only be owned once
+  season?: SeasonId; // limited: only for sale during this event's window (owners keep it)
 }
 
 export const SHOP: ShopItem[] = [
@@ -298,6 +303,139 @@ export const SHOP: ShopItem[] = [
     section: 'cosmetics',
     unique: true,
   },
+  // limited seasonal cosmetics (for sale only during their event, see seasons.ts)
+  {
+    id: 'frame-pumpkin',
+    name: 'Pumpkin frame',
+    emoji: '🎃',
+    description: 'A glowing jack-o’-lantern ring.',
+    price: 150,
+    pay: 'coins',
+    kind: 'frame',
+    section: 'seasonal',
+    unique: true,
+    season: 'halloween',
+  },
+  {
+    id: 'confetti-spooky',
+    name: 'Spooky confetti',
+    emoji: '👻',
+    description: 'Celebrations rain ghosts and bats.',
+    price: 120,
+    pay: 'coins',
+    kind: 'confetti',
+    section: 'seasonal',
+    unique: true,
+    season: 'halloween',
+  },
+  {
+    id: 'title-spellcaster',
+    name: 'Title: Spellcaster',
+    emoji: '🧙',
+    description: 'Limited Halloween title.',
+    price: 180,
+    pay: 'coins',
+    kind: 'title',
+    section: 'seasonal',
+    unique: true,
+    season: 'halloween',
+  },
+  {
+    id: 'frame-frost',
+    name: 'Frost frame',
+    emoji: '❄️',
+    description: 'An icy blue ring.',
+    price: 150,
+    pay: 'coins',
+    kind: 'frame',
+    section: 'seasonal',
+    unique: true,
+    season: 'winter',
+  },
+  {
+    id: 'confetti-snow',
+    name: 'Snowfall confetti',
+    emoji: '☃️',
+    description: 'Celebrations rain snowflakes.',
+    price: 120,
+    pay: 'coins',
+    kind: 'confetti',
+    section: 'seasonal',
+    unique: true,
+    season: 'winter',
+  },
+  {
+    id: 'title-cocoa',
+    name: 'Title: Cocoa Scholar',
+    emoji: '☕',
+    description: 'Limited winter title.',
+    price: 180,
+    pay: 'coins',
+    kind: 'title',
+    section: 'seasonal',
+    unique: true,
+    season: 'winter',
+  },
+  {
+    id: 'title-finalist',
+    name: 'Title: Finals Survivor',
+    emoji: '📝',
+    description: 'Limited finals-week title.',
+    price: 200,
+    pay: 'coins',
+    kind: 'title',
+    section: 'seasonal',
+    unique: true,
+    season: 'finals',
+  },
+  {
+    id: 'frame-ink',
+    name: 'Ink frame',
+    emoji: '🖋️',
+    description: 'A deep ink-blue ring.',
+    price: 150,
+    pay: 'coins',
+    kind: 'frame',
+    section: 'seasonal',
+    unique: true,
+    season: 'finals',
+  },
+  {
+    id: 'frame-sunny',
+    name: 'Sunny frame',
+    emoji: '🌞',
+    description: 'A warm golden-orange ring.',
+    price: 150,
+    pay: 'coins',
+    kind: 'frame',
+    section: 'seasonal',
+    unique: true,
+    season: 'summer',
+  },
+  {
+    id: 'confetti-beach',
+    name: 'Beach confetti',
+    emoji: '🏖️',
+    description: 'Celebrations rain shells and watermelon.',
+    price: 120,
+    pay: 'coins',
+    kind: 'confetti',
+    section: 'seasonal',
+    unique: true,
+    season: 'summer',
+  },
+  {
+    id: 'title-sunny',
+    name: 'Title: Summer Scholar',
+    emoji: '🕶️',
+    description: 'Limited summer title.',
+    price: 180,
+    pay: 'coins',
+    kind: 'title',
+    section: 'seasonal',
+    unique: true,
+    season: 'summer',
+  },
   // prize counter (chips)
   { id: 'trophy-dice', name: 'Bronze dice', emoji: '🎲', description: 'Casino trophy.', price: 1_000, pay: 'chips', kind: 'trophy', section: 'prizes', unique: true },
   { id: 'trophy-cards', name: 'Silver cards', emoji: '🃏', description: 'Casino trophy.', price: 5_000, pay: 'chips', kind: 'trophy', section: 'prizes', unique: true },
@@ -316,7 +454,13 @@ export const SHOP: ShopItem[] = [
   },
 ];
 
-export const SECTION_LABEL: Record<ShopSection, string> = { currency: 'Chips and vouchers', boosts: 'Boosts', cosmetics: 'Cosmetics', prizes: 'Prize counter (chips)' };
+export const SECTION_LABEL: Record<ShopSection, string> = {
+  currency: 'Chips and vouchers',
+  boosts: 'Boosts',
+  cosmetics: 'Cosmetics',
+  seasonal: 'Limited items',
+  prizes: 'Prize counter (chips)',
+};
 
 export function shopItem(id: string): ShopItem | undefined {
   return SHOP.find((i) => i.id === id);
@@ -329,9 +473,10 @@ export function owned(ledger: LedgerEntry[], id: string): number {
 
 export type BuyCheck = { ok: true } | { ok: false; reason: string };
 
-export function canBuy(ledger: LedgerEntry[], item: ShopItem, ctx: { freezes: number; maxFreezes: number; price?: number }): BuyCheck {
+export function canBuy(ledger: LedgerEntry[], item: ShopItem, ctx: { freezes: number; maxFreezes: number; price?: number; today?: string }): BuyCheck {
   const price = ctx.price ?? item.price;
   if (item.unique && owned(ledger, item.id) > 0) return { ok: false, reason: 'Owned' };
+  if (item.season && !(ctx.today && inSeason(item.season, ctx.today))) return { ok: false, reason: `Only during ${seasonById(item.season)?.name ?? 'its event'}` };
   if (item.kind === 'freeze' && ctx.freezes >= ctx.maxFreezes) return { ok: false, reason: `Max ${ctx.maxFreezes} banked` };
   if (balance(ledger, item.pay) < price) return { ok: false, reason: `Need ${price - balance(ledger, item.pay)} more` };
   return { ok: true };
@@ -373,6 +518,10 @@ export const TITLE_TEXT: Record<string, string> = {
   'title-speedrunner': 'Speedrunner',
   'title-legend': 'Legend',
   'title-high-roller': 'High Roller',
+  'title-spellcaster': 'Spellcaster',
+  'title-cocoa': 'Cocoa Scholar',
+  'title-finalist': 'Finals Survivor',
+  'title-sunny': 'Summer Scholar',
 };
 
 export const CONFETTI_STYLES: Record<string, { colors: string[]; emoji: string[] }> = {
@@ -380,6 +529,9 @@ export const CONFETTI_STYLES: Record<string, { colors: string[]; emoji: string[]
   'confetti-hearts': { colors: ['#ff6fae', '#ff9ecb', '#ffd1e6'], emoji: ['💖', '💗', '💕'] },
   'confetti-stars': { colors: ['#ffe066', '#9ad0ff', '#ffffff'], emoji: ['🌟', '⭐', '✨'] },
   'confetti-books': { colors: ['#6c5ce7', '#00b894', '#fdcb6e'], emoji: ['📚', '✏️', '📐', '📓'] },
+  'confetti-spooky': { colors: ['#ff7518', '#6a0dad', '#1b1b1b'], emoji: ['👻', '🦇', '🎃', '🕸️'] },
+  'confetti-snow': { colors: ['#e0f2ff', '#9ad0ff', '#ffffff'], emoji: ['❄️', '☃️', '✨'] },
+  'confetti-beach': { colors: ['#ffd166', '#06d6a0', '#ef476f'], emoji: ['🐚', '🍉', '🏖️', '🌊'] },
 };
 
 // ---------- history ----------
@@ -402,5 +554,12 @@ export function reasonLabel(e: LedgerEntry): string {
   if (r.startsWith('shop:')) return `Shop: ${shopItem(r.slice(5))?.name ?? r.slice(5)}`;
   if (r.startsWith('casino:')) return `Casino: ${r.slice(7)}`;
   if (r.startsWith('arcade:')) return `Arcade: ${r.slice(7)}`;
+  if (r === 'gift:sent' || r === 'gift:received') {
+    const name = shopItem(e.currency.slice(5))?.name ?? e.currency.slice(5);
+    return r === 'gift:sent' ? `Gift sent: ${name}` : `Gift received: ${name}`;
+  }
+  if (r.startsWith('pet:')) return `Pet snack: ${r.slice(4)}`;
+  if (r === 'quest' && e.ref?.startsWith('event:')) return 'Event quest';
+  if (r === 'quest') return 'Daily quest';
   return r;
 }
