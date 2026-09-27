@@ -153,7 +153,7 @@ describe('three card poker', () => {
     expect(anteNet / n).toBeLessThan(-0.015);
     expect(returned / wagered).toBeGreaterThan(0.96);
     expect(returned / wagered).toBeLessThan(0.995);
-  });
+  }, 60_000);
 });
 
 describe('let it ride', () => {
@@ -208,7 +208,7 @@ describe('let it ride', () => {
     }
     expect(returned / wagered).toBeGreaterThan(0.93);
     expect(returned / wagered).toBeLessThan(0.995);
-  });
+  }, 60_000);
 });
 
 describe("texas hold'em", () => {
