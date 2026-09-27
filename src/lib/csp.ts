@@ -37,6 +37,27 @@ export interface CspOptions {
   arcadeManifest?: string;
   /** VITE_CSP_CONNECT: extra origins (a relay or custom AI endpoint on another host), space or comma separated. */
   extraConnect?: string;
+  /** VITE_MEDIA_SERVERS: the owner's Jellyfin / Emby / video servers (Play → Watch), space or comma separated. */
+  mediaServers?: string;
+}
+
+/** Origins from a space/comma-separated list (paths and trailing slashes dropped; only http(s)/ws(s)). */
+export function originList(list: string | undefined): string[] {
+  const out: string[] = [];
+  for (const s of (list ?? '').split(/[\s,]+/)) {
+    if (!/^(https?|wss?):\/\/[^\s;,']+$/.test(s)) continue;
+    // keep wildcard and port-wildcard sources as written; turn full URLs into their origin
+    if (/[*]/.test(s)) out.push(s.replace(/\/+$/, ''));
+    else {
+      try {
+        const u = new URL(s);
+        out.push(`${u.protocol}//${u.host}`);
+      } catch {
+        /* not a URL */
+      }
+    }
+  }
+  return out;
 }
 
 /** scheme://host[:port] of a URL, or null. */
@@ -71,7 +92,7 @@ export function hostAllowed(origin: string, sources: string[]): boolean {
 
 export function connectSources(o: CspOptions = {}): string[] {
   const extra = [o.supabaseUrl, o.arcadeManifest].map(originOf).filter((x): x is string => !!x);
-  const listed = (o.extraConnect ?? '').split(/[\s,]+/).filter((s) => /^(https?|wss?):\/\/[^\s;,']+$/.test(s));
+  const listed = [...(o.extraConnect ?? '').split(/[\s,]+/).filter((s) => /^(https?|wss?):\/\/[^\s;,']+$/.test(s)), ...originList(o.mediaServers)];
   const all = [...Object.values(CONNECT_HOSTS).flat(), ...listed];
   for (const e of extra) if (!hostAllowed(e, all)) all.push(e);
   return Array.from(new Set(all));
@@ -88,7 +109,8 @@ export function buildCsp(o: CspOptions = {}): string {
     // album art, book covers, notecard pictures (data:), attachment previews (blob:)
     ['img-src', ["'self'", 'data:', 'blob:', 'https:']],
     ['font-src', ["'self'", 'data:']],
-    ['media-src', ["'self'", 'data:', 'blob:']],
+    // Play → Watch: video from the user's own servers and links (blob: for hls.js / local files)
+    ['media-src', ["'self'", 'data:', 'blob:', 'https:']],
     ['connect-src', ["'self'", ...connectSources(o)]],
     // arcade games (sandbox.html, public/games/, embed links on any https site), music embeds, Google sign-in
     ['frame-src', ["'self'", 'blob:', 'data:', 'https:']],
@@ -100,15 +122,26 @@ export function buildCsp(o: CspOptions = {}): string {
   return directives.map(([k, v]) => `${k} ${v.join(' ')}`).join('; ');
 }
 
+/** This page's connect-src list, or null when the page has no policy (dev server, offline build). */
+export function pageConnectSources(): string[] | null {
+  if (typeof document === 'undefined') return null;
+  const policy = document.querySelector<HTMLMetaElement>('meta[http-equiv="Content-Security-Policy"]')?.content ?? '';
+  return /(?:^|;)\s*connect-src ([^;]*)/.exec(policy)?.[1].trim().split(/\s+/) ?? null;
+}
+
+/** The origin of `url` when this page's policy won't let it be fetched, else null. */
+export function blockedOrigin(url: string, connect: string[] | null = pageConnectSources(), self = typeof location === 'undefined' ? '' : location.origin): string | null {
+  const origin = originOf(url);
+  if (!connect || !origin || origin === self || hostAllowed(origin, connect)) return null;
+  return origin;
+}
+
 /**
  * When a request to `url` fails, explain it if this page's policy doesn't list the host (a custom AI endpoint
  * or relay on a host the build doesn't know about). Returns '' when the policy isn't the reason.
  */
 export function cspHint(url: string): string {
-  if (typeof document === 'undefined') return '';
-  const policy = document.querySelector<HTMLMetaElement>('meta[http-equiv="Content-Security-Policy"]')?.content ?? '';
-  const connect = /(?:^|;)\s*connect-src ([^;]*)/.exec(policy)?.[1].trim().split(/\s+/);
-  const origin = originOf(url);
-  if (!connect || !origin || origin === location.origin || hostAllowed(origin, connect)) return '';
+  const origin = blockedOrigin(url);
+  if (!origin) return '';
   return ` This site's security policy doesn't allow ${origin}. The site admin can add it with VITE_CSP_CONNECT (see DEPLOY.md).`;
 }

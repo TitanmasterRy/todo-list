@@ -21,6 +21,7 @@
     schoologySecret: 'Schoology API secret',
     spotifyRefreshToken: 'Spotify sign-in',
     syncPassphrase: 'Sync passphrase',
+    watchTokens: 'Media server sign-ins',
   };
   const label = (slot: SecretSlot) => LABELS[slot] ?? `${slot.slice(7).replace(/^./, (c) => c.toUpperCase())} AI key`;
 
@@ -230,6 +231,10 @@
         the first time; your code and photos stay here. Java and C++ open onecompiler.com in a new tab.
       </li>
       <li><strong>Arcade:</strong> games run in sandboxed frames with no access to your data. Embed-link games load from their own sites.</li>
+      <li>
+        <strong>Watch:</strong> a Jellyfin or Emby server you add gets your username and password once (the app keeps only its token, with your keys), your library requests and what
+        you play, so resume works everywhere. Video links and server web apps load from their own sites in sandboxed frames. Your sources stay on this device.
+      </li>
       <li>
         <strong>Study rooms, friends, class mode:</strong> links and codes go only where you send them. A room link holds the room's name and timer; a friend code holds your name, emoji,
         streak, best streak, this week's XP, level and when it was made; a published class list holds the course and its assignments' titles, due dates, types, notes and links (a gist
