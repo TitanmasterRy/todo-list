@@ -164,3 +164,82 @@ test('print a weekly planner', async ({ page }) => {
   const pdf = await page.pdf({ landscape: true });
   expect(pdf.byteLength).toBeGreaterThan(5000);
 });
+
+test('swipe a task right to complete it, left to snooze it (touch)', async ({ page }) => {
+  const errors = await openApp(page);
+  await addTask(page, 'Swipe me done today');
+  await addTask(page, 'Swipe me later today');
+  const swipeRow = (title: string, dx: number) =>
+    page.locator('.task', { hasText: title }).evaluate((el, dx) => {
+      const r = el.getBoundingClientRect();
+      const y = r.top + r.height / 2;
+      const x = r.left + r.width / 2;
+      const ev = (type: string, cx: number) => new PointerEvent(type, { pointerType: 'touch', pointerId: 7, isPrimary: true, clientX: cx, clientY: y, bubbles: true });
+      const body = el.querySelector('.body') ?? el;
+      body.dispatchEvent(ev('pointerdown', x));
+      for (let i = 1; i <= 8; i++) body.dispatchEvent(ev('pointermove', x + (dx * i) / 8));
+      body.dispatchEvent(ev('pointerup', x + dx));
+    }, dx);
+  await swipeRow('Swipe me done', 200);
+  await expect(page.locator('.task.done', { hasText: 'Swipe me done' })).toBeVisible();
+  await swipeRow('Swipe me later', -200);
+  await expect(page.locator('.toast', { hasText: /tomorrow/i })).toBeVisible();
+  // a short drag does nothing
+  await addTask(page, 'Barely moved today');
+  await swipeRow('Barely moved', 30);
+  await expect(page.locator('.task.done', { hasText: 'Barely moved' })).toHaveCount(0);
+  expect(errors).toEqual([]);
+});
+
+test('the task editor shows what changed and when', async ({ page }) => {
+  const errors = await openApp(page);
+  await addTask(page, 'History essay today');
+  await edit(page, 'History essay');
+  const form = page.getByRole('form', { name: 'Edit task' });
+  await form.getByLabel('Title', { exact: true }).fill('History essay final');
+  await form.getByLabel('Estimate (min)').fill('45');
+  await form.getByRole('button', { name: /^Save/ }).last().click();
+  await edit(page, 'History essay final');
+  await form.getByText(/History \(2 changes\)/).click();
+  await expect(form.locator('.hist')).toContainText('Title: “History essay final”');
+  await expect(form.locator('.hist')).toContainText(/Estimate \(min\): .* → 45/);
+  expect(errors).toEqual([]);
+});
+
+test('long lists render a page at a time and load more on scroll', async ({ page }) => {
+  const errors = await openApp(page);
+  await page.evaluate(
+    () =>
+      new Promise<void>((resolve) => {
+        const r = indexedDB.open('homework-todo');
+        r.onsuccess = () => {
+          const tx = r.result.transaction('tasks', 'readwrite');
+          const now = new Date().toISOString();
+          for (let i = 0; i < 400; i++)
+            tx.objectStore('tasks').put({
+              id: `bulk${i}`,
+              title: `Old task ${i}`,
+              tags: [],
+              priority: 'normal',
+              subtasks: [],
+              createdAt: now,
+              updatedAt: now,
+              completedAt: now,
+              order: i,
+              deferredCount: 0,
+            });
+          tx.oncomplete = () => resolve();
+        };
+      }),
+  );
+  await page.goto('./?view=inbox');
+  await page.getByRole('combobox', { name: /status/i }).selectOption('done');
+  await expect(page.locator('.section-title .count')).toHaveText('400');
+  await expect(page.locator('.task')).toHaveCount(150);
+  await page.locator('.more').scrollIntoViewIfNeeded();
+  await expect(page.locator('.task').nth(299)).toBeAttached();
+  await page.locator('.task').last().scrollIntoViewIfNeeded();
+  await expect(page.locator('.task')).toHaveCount(400);
+  await expect(page.locator('.more')).toHaveCount(0);
+  expect(errors).toEqual([]);
+});

@@ -122,7 +122,7 @@ A soft currency earned only by doing schoolwork. No real money, ever: nothing in
 - [x] Undoing a completion reverses the coins it paid.
 - [x] Economy on/off switch in Settings (off hides the Play view entirely).
 - [x] Weekly coin summary in the weekly review.
-- [ ] Coin rain animation on big payouts.
+- [x] Coin rain animation on big payouts. (A casino payout of 10× the bet or more, and level-ups; loads on first use and is skipped with reduced motion, the OS setting, or confetti off.)
 - [x] Parent/teacher mode: a PIN-locked setting to cap casino time or turn it off.
 
 ## 🛍️ Item shop
@@ -138,8 +138,8 @@ A soft currency earned only by doing schoolwork. No real money, ever: nothing in
 - [x] **Prize counter**: spend Chips on casino-only trophies (chips never convert back to coins).
 - [x] Owned items and trophies shown in an **Inventory** grid.
 - [x] Daily rotating "deal of the day" at a discount.
-- [ ] Limited seasonal items (Halloween, finals week, summer).
-- [ ] Gift items to a friend with a code.
+- [x] Limited seasonal items (Halloween, finals week, summer). (Plus winter holidays: frames, confetti and titles on sale only in their date windows; owners keep them. Windows in `src/lib/seasons.ts`.)
+- [x] Gift items to a friend with a code. (Shop → Gifts: one owned cosmetic per `HWG1.` code; the sender's item is marked given and the receiver redeems once, both in the ledger; 3 sent and 3 redeemed a day. Unsigned, so cosmetics only: see DECISIONS.md.)
 
 ## 🎰 Casino (play chips only)
 
@@ -160,10 +160,10 @@ Chips are bought with Coins in the shop and can't be turned back into Coins, so 
 - [x] **Scratch cards**: match three.
 - [x] **Daily chip bonus** when you close your ring.
 - [x] **Homework break reminder** after 20 minutes of casino play (configurable), plus a session stats bar (played, won, net).
-- [ ] Three Card Poker and Let It Ride.
-- [ ] Texas Hold'em vs. bots.
+- [x] Three Card Poker and Let It Ride. (Ante/Play with the Ante bonus and Pair Plus 40/30/6/4/1; Let It Ride with the standard paytable and a basic-strategy hint. Hand frequencies and returns are tested.)
+- [x] Texas Hold'em vs. bots. (Fixed-limit against 1–3 bots that weigh Monte Carlo equity against pot odds; side pots, 5% rake on pots that see a flop. Buy in from your chips, cash out when you leave.)
 - [x] Casino achievements (first blackjack, royal flush, 10× Plinko).
-- [ ] Chip leaderboard between friends (opt-in).
+- [x] Chip leaderboard between friends (opt-in). (Play → Leaderboards; friend cards v2 `HWF2.` carry the balance only while the toggle is on.)
 
 ## 🕹️ Arcade: vouchers and admin-added games
 
@@ -177,7 +177,7 @@ Chips are bought with Coins in the shop and can't be turned back into Coins, so 
 - [x] Games run in **sandboxed iframes** (no access to your tasks, keys or storage).
 - [x] **Score bridge**: a game can `postMessage({ type: 'hwtodo:score', score })`; the app keeps a per-game high score table.
 - [x] Voucher timer: when `minutes` is set the session ends when time is up.
-- [ ] Per-game leaderboards across friends.
+- [x] Per-game leaderboards across friends. (Play → Leaderboards: up to 8 best arcade scores in the friend card, opt-in.)
 
 ## 🎮 Theme games (built in, one per theme pack)
 
@@ -192,10 +192,10 @@ Each ships as a standalone HTML file in `public/games/`, so they double as examp
 - [x] **Paper → Word search** (can use words from your notecards via `?words=`)
 - [x] Classic → Solitaire (Klondike: draw 1 or 3, drag or click, undo, Windows-style standard scoring)
 - [x] Sleek → Sudoku; Classic → Lights Out
-- [ ] Cute → Virtual pet you feed with coins; bubble pop
+- [x] Cute → Virtual pet you feed with coins; bubble pop (Play → Pet: fullness and happiness drift in real time, food is a coin spend, it naps instead of dying; `bubbles.html`)
 - [x] Arcade → Breakout
 - [x] Arcade → Space-invaders-lite (Invaders); the Flappy-style game is the Paper paper-plane glider
-- [ ] Nature → Garden that grows as you finish tasks; fishing
+- [x] Nature → Garden that grows as you finish tasks; fishing (Play → Garden: four finished tasks grow a plant to bloom, colored by course; `fishing.html`)
 - [x] Space → Lunar lander (`lander.html`); star map you fill in with streak days (Play → Star map)
 - [x] Paper → Hangman from your vocab decks
 - [x] Paper → Crossword from your vocab (Play → Study games, printable); paper-plane glider (`glider.html`)
@@ -206,7 +206,7 @@ Each ships as a standalone HTML file in `public/games/`, so they double as examp
 - [x] **Quiz race**: race a ghost of your last score through a quiz. (Play → Study games, the ghost is your best run per deck or quiz set)
 - [x] **Typing defense**: type vocab words to stop falling letters.
 - [x] **Match rush**: drag terms onto definitions against the clock. (Play → Study games, best time per deck)
-- [ ] **Homework dungeon**: each completed task opens a room; courses are floors.
+- [x] **Homework dungeon**: each completed task opens a room; courses are floors. (Play → Dungeon: a map per floor, exams are boss lairs, readings libraries, projects forges.)
 
 ---
 
@@ -230,8 +230,8 @@ Each ships as a standalone HTML file in `public/games/`, so they double as examp
 - [x] Friends by share code: compare streaks and weekly XP only. (Stats → Friends: a versioned code with name, emoji, streak, best, this week's XP and level; leaderboard with card age and a nudge to swap fresh codes. Optional live cards with an account: `friend_cards` in `docs/supabase.sql`.)
 - [x] Class mode for teachers: publish a read-only assignment list students can subscribe to. (Tools → Class mode: publish a course as a `.json` class list, an `.ics` feed or a public gist; students subscribe by link, assignments sync like Schoology's with `source: 'class'`, refreshed on load.)
 - [x] Daily quests ("finish 1 reading, 1 homework, 1 study session") paying bonus coins.
-- [ ] Seasonal events with themed shop items and games.
-- [ ] Focus-mode companions (a cat that sleeps while the timer runs).
+- [x] Seasonal events with themed shop items and games. (Halloween, winter holidays, finals week, summer: limited items, a quest set counted over the event, and a themed Play header.)
+- [x] Focus-mode companions (a cat that sleeps while the timer runs). (Cat, puppy, fox, owl or bunny under the Focus timer: naps while you focus, plays on breaks.)
 - [ ] Widgets for the phone home screen (via Capacitor).
 - [x] Voice commands ("Hey, add read chapter four for tomorrow"). (The quick-add mic turns speech into quick-add syntax: number words, times, "high priority", "takes 30 minutes".)
 - [ ] Wearable timer (smartwatch notification when a Pomodoro ends).

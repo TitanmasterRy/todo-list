@@ -2,7 +2,22 @@
 
 Everything in this folder is served at `/games/` and listed in the app's **Play → Arcade** tab. Players spend **vouchers** (bought with coins earned from homework) to play.
 
-## Add a game (site admin)
+## Add a game to your own arcade (anyone)
+
+**Play → Arcade → ➕ Add a game.** Drop in an `.html` file, a `.js` file, a `.zip` of a web game, several files or a whole
+folder; or paste HTML/JavaScript; or paste a link (Scratch, CodePen, JSFiddle, Replit and Khan Academy links become their embed
+versions). Scripts, styles, pictures and sounds next to the page are packed into one file so the game works offline. Pasted
+JavaScript gets a full-screen `<canvas id="game">`. Games added this way live in that browser; with a parent PIN set, adding one
+asks for it. The site admin can then publish any of them to everyone from the admin panel.
+
+### Coins for power-ups
+
+A game can sell power-ups for coins: post `{ type: 'hwtodo:buy', id, label, cost }` (cost 1–50) to `parent`; the player
+confirms in the app, and the game gets `{ type: 'hwtodo:bought', id }` or `{ type: 'hwtodo:denied', id, reason }`. Post
+`{ type: 'hwtodo:hello' }` at startup to receive `{ type: 'hwtodo:wallet', coins }` (it's also sent after each purchase).
+At most 200 coins per sitting.
+
+## Add a game for everyone (site admin)
 
 1. **An HTML file:** put `my-game.html` in this folder. It can be a whole game in one file, or load scripts and assets from this folder or a CDN.
    **Or an embed link:** any `https://` URL that allows embedding (itch.io embed links, Scratch `…/embed`, your own hosted game).
@@ -25,7 +40,7 @@ Everything in this folder is served at `/games/` and listed in the app's **Play 
 | `theme` | Optional theme pack it matches: classic, sleek, cute, arcade, nature, space, paper. |
 | `tags` | Optional labels. |
 
-You can also try a game in the app first: **Settings → Arcade admin** lets you upload an HTML file or paste a link, preview it, and copy the `games.json` entry.
+You can also try a game in the app first: the hidden **admin panel** (see [ADMIN.md](../../ADMIN.md)) lets you upload an HTML file or paste a link, preview it, and publish it (or copy the `games.json` entry).
 
 ## Safety
 

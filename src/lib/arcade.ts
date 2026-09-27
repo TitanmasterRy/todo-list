@@ -108,6 +108,19 @@ export function slugify(title: string): string {
 }
 
 /** A score message from a game: { type: 'hwtodo:score', score: number }. */
+/** Most a game may save (a JSON string), per game. */
+export const GAME_SAVE_MAX = 1024 * 1024;
+
+/** A game's `{ type: 'hwtodo:save', data }` message: the string to keep, or null. */
+export function readSaveMessage(data: unknown): string | null {
+  if (!data || typeof data !== 'object') return null;
+  const d = data as { type?: unknown; data?: unknown };
+  if (d.type !== 'hwtodo:save' || typeof d.data !== 'string' || d.data.length > GAME_SAVE_MAX) return null;
+  return d.data;
+}
+
+export const saveKey = (gameId: string) => `gamesave:${gameId}`;
+
 export function readScoreMessage(data: unknown): number | null {
   if (!data || typeof data !== 'object') return null;
   const d = data as { type?: unknown; score?: unknown };

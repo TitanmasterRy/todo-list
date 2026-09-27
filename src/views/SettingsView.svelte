@@ -1,7 +1,5 @@
 <script lang="ts">
-  import { store } from '../lib/store.svelte';
   import AccountPanel from '../components/AccountPanel.svelte';
-  import ArcadeAdmin from '../components/ArcadeAdmin.svelte';
   import ThemePackSettings from '../components/settings/ThemePackSettings.svelte';
   import AppearanceSettings from '../components/settings/AppearanceSettings.svelte';
   import LanguageSettings from '../components/settings/LanguageSettings.svelte';
@@ -24,7 +22,6 @@
   import HelpSettings from '../components/settings/HelpSettings.svelte';
 
   // Each section is its own component under components/settings/, rendered in this order.
-  const s = $derived(store.settings);
 </script>
 
 <div class="page">
@@ -37,9 +34,6 @@
   <GoalsSettings />
   <GamificationSettings />
   <EconomySettings />
-  {#if s.economyEnabled && s.arcadeAdmin}
-    <ArcadeAdmin />
-  {/if}
   <TaskEntrySettings />
   <AiSettings />
   <NotificationSettings />

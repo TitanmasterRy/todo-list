@@ -4,9 +4,19 @@
   import { SECTION_LABEL, SHOP, TITLE_TEXT, type ShopItem, type ShopSection } from '../../lib/economy';
   import { toasts } from '../../lib/toast.svelte';
   import QuestsCard from '../QuestsCard.svelte';
+  import { activeSeason, inSeason, nextSeason, seasonById } from '../../lib/seasons';
 
-  const sections: ShopSection[] = ['currency', 'boosts', 'cosmetics', 'prizes'];
+  const sections: ShopSection[] = ['currency', 'boosts', 'cosmetics', 'seasonal', 'prizes'];
   const s = $derived(store.settings);
+  const event = $derived(activeSeason(store.today));
+  const upcoming = $derived(event ? undefined : nextSeason(store.today));
+  const fmtDay = (key: string) => new Date(`${key}T12:00:00`).toLocaleDateString([], { month: 'short', day: 'numeric' });
+  /** Limited items show during their event, and afterwards only to their owners (to equip). */
+  function listed(item: ShopItem): boolean {
+    if (item.section === 'prizes') return s.casinoEnabled;
+    if (item.section !== 'seasonal') return true;
+    return inSeason(item.season, store.today) || ownedCount(item.id) > 0;
+  }
 
   function buy(item: ShopItem) {
     if (economy.buy(item.id)) toasts.push({ message: `Bought ${item.name}`, kind: 'success', emoji: item.emoji, timeout: 1800 });
@@ -26,6 +36,9 @@
 </script>
 
 <QuestsCard />
+{#if event}
+  {#await import('./EventQuests.svelte') then m}<m.default />{/await}
+{/if}
 
 {#if economy.deal}
   {@const d = economy.deal}
@@ -54,9 +67,19 @@
 {/if}
 
 {#each sections as sec (sec)}
-  {@const items = SHOP.filter((i) => i.section === sec && (sec !== 'prizes' || s.casinoEnabled))}
-  {#if items.length}
+  {@const items = SHOP.filter((i) => i.section === sec && listed(i))}
+  {#if sec === 'seasonal' && (items.length || upcoming)}
+    <h2 class="sec" data-seasonal>
+      {SECTION_LABEL[sec]}{#if event}<span class="lim">{event.season.emoji} {event.season.name} · until {fmtDay(event.window.end)}</span>{/if}
+    </h2>
+    {#if upcoming}<p class="muted soon">
+        Next event: {upcoming.season.emoji}
+        {upcoming.season.name} in {upcoming.days} day{upcoming.days === 1 ? '' : 's'}. Limited items are only for sale during their event, and you keep them afterwards.
+      </p>{/if}
+  {:else if items.length}
     <h2 class="sec">{SECTION_LABEL[sec]}</h2>
+  {/if}
+  {#if items.length}
     <div class="items">
       {#each items as item (item.id)}
         {@const check = economy.check(item)}
@@ -83,6 +106,7 @@
               </button>
               {#if !check.ok}<span class="why">{check.reason}</span>{/if}
             {/if}
+            {#if item.season && !(item.unique && own > 0)}<span class="ltag">Limited · {seasonById(item.season)?.name}</span>{/if}
           </div>
         </div>
       {/each}
@@ -93,7 +117,9 @@
 {#if s.equippedTitle}
   <p class="muted">Your title: <strong>{TITLE_TEXT[s.equippedTitle]}</strong> (shown in the sidebar and on Stats).</p>
 {/if}
-<p class="muted">Coins only come from schoolwork: tasks, the daily ring, streaks, grades, notecards and Pomodoros. Chips can't be turned back into coins.</p>
+{#await import('./GiftsCard.svelte') then m}<m.default />{/await}
+
+<p class="muted">Coins only come from schoolwork: tasks, the daily ring, streaks, grades, notecards and Pomodoros. Chips cash back at half value, a little a day (Wallet).</p>
 
 <style>
   .deal {
@@ -175,5 +201,19 @@
   .muted {
     color: var(--text-muted);
     font-size: 13px;
+  }
+  .lim {
+    margin-inline-start: 8px;
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--warn-text);
+  }
+  .soon {
+    margin: 0 0 8px;
+  }
+  .ltag {
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--warn-text);
   }
 </style>

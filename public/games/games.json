@@ -226,6 +226,48 @@
         "arcade"
       ],
       "builtIn": true
+    },
+    {
+      "id": "bubbles",
+      "title": "Bubble pop",
+      "emoji": "🫧",
+      "description": "Pop the animal bubbles before they float away. Same color in a row makes a combo.",
+      "src": "bubbles.html",
+      "cost": 1,
+      "minutes": 10,
+      "theme": "cute",
+      "tags": [
+        "arcade"
+      ],
+      "builtIn": true
+    },
+    {
+      "id": "fishing",
+      "title": "Fishing",
+      "emoji": "🎣",
+      "description": "Drop your line from the boat. Big fish swim deep; leave the old boots alone.",
+      "src": "fishing.html",
+      "cost": 1,
+      "minutes": 10,
+      "theme": "nature",
+      "tags": [
+        "arcade"
+      ],
+      "builtIn": true
+    },
+    {
+      "id": "glowgrid",
+      "title": "Glow Grid",
+      "emoji": "💠",
+      "description": "Drop glowing gem pieces on an 8×8 grid. Fill rows and columns to shatter them.",
+      "src": "glowgrid.html",
+      "cost": 1,
+      "minutes": 15,
+      "theme": "sleek",
+      "tags": [
+        "puzzle"
+      ],
+      "builtIn": true
     }
   ]
 }

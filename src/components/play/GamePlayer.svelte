@@ -1,9 +1,17 @@
 <script lang="ts">
-  // Full-screen sandboxed player for arcade games. Tracks the voucher timer and score messages.
+  // Full-screen sandboxed player for arcade games. Tracks the voucher timer and score messages, and lets games sell
+  // power-ups for coins: the game posts { type: 'hwtodo:buy', id, label, cost }, the player confirms here, and the
+  // game gets { type: 'hwtodo:bought', id } or { type: 'hwtodo:denied', id, reason }. The wallet is sent as
+  // { type: 'hwtodo:wallet', coins } when the game loads (or says { type: 'hwtodo:hello' }) and after each purchase.
+  // Saves: sandboxed games can't use localStorage, so they post { type: 'hwtodo:save', data: string } (≤ 1 MB) and
+  // get { type: 'hwtodo:load', data: string | null } back after saying hello. Kept per game on this device.
   import { onMount, untrack } from 'svelte';
   import { arcade } from '../../lib/arcade.svelte';
-  import { readScoreMessage, sandboxFor } from '../../lib/arcade';
+  import { readSaveMessage, readScoreMessage, sandboxFor, saveKey } from '../../lib/arcade';
+  import { getMeta, putMeta } from '../../lib/storage';
   import { store } from '../../lib/store.svelte';
+  import { economy } from '../../lib/economy.svelte';
+  import { parsePowerup, POWERUP_SESSION_MAX, type PowerupRequest } from '../../lib/economy';
   import { toasts } from '../../lib/toast.svelte';
   import { focusTrap } from '../../lib/focusTrap';
   import SandboxFrame from '../SandboxFrame.svelte';
@@ -42,6 +50,51 @@
       ? undefined
       : arcade.srcFor(game, { theme: store.settings.themePack, dark: dark ? '1' : '0', accent: store.settings.accent, ...(words.length >= 4 ? { words: words.join(',') } : {}) }),
   );
+  // ---------- coin power-ups ----------
+  let pending = $state<PowerupRequest | null>(null);
+  let spent = $state(0);
+  const coinsOn = $derived(economy.enabled && !preview);
+
+  function post(msg: Record<string, unknown>) {
+    frame?.contentWindow?.postMessage(msg, '*');
+  }
+  function sendWallet() {
+    if (coinsOn) post({ type: 'hwtodo:wallet', coins: economy.wallet.coins });
+  }
+  $effect(() => {
+    const f = frame;
+    if (!f) return;
+    f.addEventListener('load', sendWallet);
+    return () => f.removeEventListener('load', sendWallet);
+  });
+  function request(req: PowerupRequest) {
+    const deny = (reason: string) => post({ type: 'hwtodo:denied', id: req.id, reason });
+    if (!coinsOn) return deny('Coins are off');
+    if (pending) return deny('Another purchase is waiting');
+    if (req.cost > economy.wallet.coins) return deny('Not enough coins');
+    if (spent + req.cost > POWERUP_SESSION_MAX) return deny(`Limit of ${POWERUP_SESSION_MAX} coins per game reached`);
+    pending = req;
+  }
+  function confirmBuy() {
+    const req = pending;
+    pending = null;
+    if (!req) return;
+    if (req.cost > economy.wallet.coins) {
+      post({ type: 'hwtodo:denied', id: req.id, reason: 'Not enough coins' });
+      return;
+    }
+    store.addLedger([{ currency: 'coins', amount: -req.cost, reason: `game:${game.id}`, ref: req.label }]);
+    spent += req.cost;
+    post({ type: 'hwtodo:bought', id: req.id });
+    sendWallet();
+    frame?.focus();
+  }
+  function cancelBuy() {
+    if (pending) post({ type: 'hwtodo:denied', id: pending.id, reason: 'Cancelled' });
+    pending = null;
+    frame?.focus();
+  }
+
   const left = $derived(endsAt ? Math.max(0, endsAt - now) : 0);
   const mmss = $derived(`${Math.floor(left / 60000)}:${String(Math.floor((left % 60000) / 1000)).padStart(2, '0')}`);
 
@@ -52,6 +105,20 @@
     }, 500);
     const onMsg = (e: MessageEvent) => {
       if (!frame || e.source !== frame.contentWindow) return;
+      if ((e.data as { type?: unknown } | null)?.type === 'hwtodo:hello') {
+        sendWallet();
+        // previews (admin/try it) start fresh and don't overwrite the real save
+        if (preview) post({ type: 'hwtodo:load', data: null });
+        else void getMeta<string>(saveKey(game.id)).then((data) => post({ type: 'hwtodo:load', data: data ?? null }));
+        return;
+      }
+      const save = readSaveMessage(e.data);
+      if (save !== null) {
+        if (!preview) void putMeta(saveKey(game.id), save);
+        return;
+      }
+      const req = parsePowerup(e.data);
+      if (req) return request(req);
       const score = readScoreMessage(e.data);
       if (score === null) return;
       if (arcade.recordScore(game.id, score)) {
@@ -60,7 +127,10 @@
       }
     };
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onclose();
+      if (e.key === 'Escape') {
+        if (pending) cancelBuy();
+        else onclose();
+      }
     };
     window.addEventListener('message', onMsg);
     window.addEventListener('keydown', onKey);
@@ -86,9 +156,21 @@
     {#if preview}<span class="chip">Preview</span>{/if}
     {#if best}<span class="best">🏆 {best.toLocaleString()}</span>{/if}
     <span class="grow"></span>
+    {#if coinsOn && spent}<span class="best" title="Spent on power-ups this game">−{spent} 🪙</span>{/if}
     {#if endsAt}<span class="time" class:low={left < 60_000}>⏱ {mmss}</span>{/if}
     <button class="btn sm" onclick={onclose}>Close</button>
   </header>
+  {#if pending}
+    <div class="buy" role="alertdialog" aria-labelledby="buy-h">
+      <p id="buy-h"><strong>{pending.label}</strong> for {pending.cost} 🪙?</p>
+      <p class="muted">You have {economy.wallet.coins.toLocaleString()} 🪙</p>
+      <div class="btns">
+        <button class="btn" onclick={cancelBuy}>No thanks</button>
+        <!-- svelte-ignore a11y_autofocus -->
+        <button class="btn primary" onclick={confirmBuy} autofocus>Buy</button>
+      </div>
+    </div>
+  {/if}
   {#if timeUp}
     <div class="up">
       <h2>Time's up!</h2>
@@ -149,6 +231,27 @@
     height: 100%;
     border: 0;
     background: #fff;
+  }
+  .buy {
+    position: fixed;
+    z-index: 201;
+    left: 50%;
+    top: 64px;
+    transform: translateX(-50%);
+    background: var(--bg-elev);
+    border: 1px solid var(--border-strong);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    padding: 12px 16px;
+    text-align: center;
+    min-width: 240px;
+  }
+  .buy p {
+    margin: 0 0 6px;
+  }
+  .buy .muted {
+    color: var(--text-muted);
+    font-size: 13px;
   }
   .up {
     display: grid;

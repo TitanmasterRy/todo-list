@@ -11,6 +11,7 @@
   import QuickAdd from '../components/QuickAdd.svelte';
   import TaskItem from '../components/TaskItem.svelte';
   import Sortable from '../components/Sortable.svelte';
+  import { LIST_PAGE, visible } from '../lib/visible';
 
   type Status = FilterStatus;
   type Sort = FilterSort;
@@ -53,6 +54,14 @@
     applyFilter(store.tasks, filter, { today: store.today, courseName: (id) => store.courseById(id)?.name ?? '', lingering: store.lingering, byId: store.byId }),
   );
   const ids = $derived(filtered.map((t) => t.id));
+  // long lists render a page at a time (more load as you scroll), so thousands of done tasks stay fast
+  let limit = $state(LIST_PAGE);
+  $effect(() => {
+    void filter;
+    limit = LIST_PAGE;
+  });
+  const shown = $derived(filtered.length > limit ? filtered.slice(0, limit) : filtered);
+  const more = () => (limit += LIST_PAGE);
   const hasFilters = $derived(isFiltered(filter));
   const activeList = $derived(store.settings.smartLists.find((l) => l.id === ui.inboxList));
 
@@ -195,16 +204,21 @@
     <span>{status === 'done' ? t('inbox.completed') : status === 'all' ? t('inbox.allTasks') : t('inbox.open')}</span><span class="count">{filtered.length}</span>
   </div>
   {#if sort === 'manual' && status === 'open'}
-    <Sortable items={filtered} group="inbox" onreorder={(i) => store.reorder(i)}>
+    <Sortable items={shown} group="inbox" onreorder={(i) => store.reorder(i)}>
       {#snippet item(task)}
         <TaskItem {task} listIds={ids} dragHandle />
       {/snippet}
     </Sortable>
   {:else}
     <div class="task-list" role="list">
-      {#each filtered as task (task.id)}
+      {#each shown as task (task.id)}
         <div role="listitem"><TaskItem {task} listIds={ids} /></div>
       {/each}
+    </div>
+  {/if}
+  {#if shown.length < filtered.length}
+    <div class="more" use:visible={more}>
+      <button class="btn ghost sm" onclick={more}>{t('inbox.showMore', { count: Math.min(LIST_PAGE, filtered.length - shown.length) })}</button>
     </div>
   {/if}
   {#if !filtered.length}
@@ -217,6 +231,11 @@
 </div>
 
 <style>
+  .more {
+    display: flex;
+    justify-content: center;
+    padding: 12px 0;
+  }
   .savelist {
     display: flex;
     flex-wrap: wrap;

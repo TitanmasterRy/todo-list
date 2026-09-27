@@ -5,6 +5,7 @@
   import { addDaysKey, nextWeekKey } from '../lib/dates';
   import { locale as appLocale, t } from '../lib/i18n/index.svelte';
   import { PRIORITY_LABEL } from '../lib/store.svelte';
+  import { ui } from '../lib/ui.svelte';
 
   const ids = $derived([...store.selection]);
   const n = $derived(ids.length);
@@ -80,6 +81,7 @@
       <option value="__none">{t('bulk.priority')}</option>
       {#each PRIORITIES as p}<option value={p}>{appLocale() === 'en' ? p : PRIORITY_LABEL[p]}</option>{/each}
     </select>
+    <button class="btn sm" onclick={() => (ui.shareTasks = ids)} disabled={!n}>{t('bulk.share')}</button>
     <button class="btn danger sm" onclick={() => store.bulkDelete(ids)} disabled={!n}>{t('common.delete')}</button>
     <span class="grow"></span>
     <button class="btn ghost sm" onclick={() => store.clearSelection()}>{t('common.done')} <span class="kbd">Esc</span></button>

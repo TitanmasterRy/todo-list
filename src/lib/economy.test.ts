@@ -1,5 +1,21 @@
 import { describe, expect, it } from 'vitest';
-import { balance, balances, canBuy, coinsForXp, purchaseEntries, SHOP, shopItem } from './economy';
+import {
+  balance,
+  balances,
+  canBuy,
+  cashedOutOn,
+  cashoutEntries,
+  cashoutQuote,
+  CASHOUT_DAILY_MAX,
+  CASHOUT_RATE,
+  coinsForXp,
+  lifetimeEarned,
+  parsePowerup,
+  POWERUP_MAX_COST,
+  purchaseEntries,
+  SHOP,
+  shopItem,
+} from './economy';
 import type { LedgerEntry } from './types';
 
 let n = 0;
@@ -50,5 +66,45 @@ describe('economy', () => {
   });
   it('no shop item turns chips into coins', () => {
     for (const i of SHOP) expect(i.pay === 'chips' && i.grant?.currency === 'coins').toBe(false);
+  });
+});
+
+describe('cashing chips out and coin power-ups', () => {
+  const at = (day: string) => `${day}T12:00:00.000Z`;
+  const e = (currency: LedgerEntry['currency'], amount: number, reason: string, day = '2026-09-27'): LedgerEntry => ({
+    id: `${reason}${amount}${day}`,
+    at: at(day),
+    currency,
+    amount,
+    reason,
+  });
+
+  it('quotes whole coins at half value within the daily limit', () => {
+    const ledger = [e('chips', 5000, 'shop:chips-550')];
+    expect(cashoutQuote(ledger, 450, '2026-09-27')).toEqual({ coins: 22, chips: 440, leftToday: CASHOUT_DAILY_MAX });
+    expect(cashoutQuote(ledger, 99999, '2026-09-27').coins).toBe(CASHOUT_DAILY_MAX);
+    const used = [...ledger, e('coins', 90, 'cashout')];
+    expect(cashedOutOn(used, '2026-09-27')).toBe(90);
+    expect(cashoutQuote(used, 5000, '2026-09-27').coins).toBe(10);
+    expect(cashoutQuote(used, 5000, '2026-09-28').coins).toBe(CASHOUT_DAILY_MAX);
+    expect(cashoutQuote([], 1000, '2026-09-27').coins).toBe(0);
+  });
+  it('makes balanced ledger entries that do not count as earned', () => {
+    const entries = cashoutEntries(5);
+    expect(entries).toEqual([
+      { currency: 'chips', amount: -5 * CASHOUT_RATE, reason: 'cashout' },
+      { currency: 'coins', amount: 5, reason: 'cashout' },
+    ]);
+    const ledger = [e('coins', 30, 'task'), e('coins', 5, 'cashout'), e('coins', -10, 'game:blocks')];
+    expect(lifetimeEarned(ledger)).toBe(30);
+  });
+  it('accepts only well-formed power-up requests from games', () => {
+    expect(parsePowerup({ type: 'hwtodo:buy', id: 'reroll-1', label: 'Reroll pieces', cost: 5 })).toEqual({ id: 'reroll-1', label: 'Reroll pieces', cost: 5 });
+    expect(parsePowerup({ type: 'hwtodo:buy', id: 'x', label: 'x', cost: POWERUP_MAX_COST + 1 })).toBeNull();
+    expect(parsePowerup({ type: 'hwtodo:buy', id: 'x', label: 'x', cost: 2.5 })).toBeNull();
+    expect(parsePowerup({ type: 'hwtodo:buy', id: 'BAD ID', label: 'x', cost: 1 })).toBeNull();
+    expect(parsePowerup({ type: 'hwtodo:buy', id: 'x', label: '   ', cost: 1 })).toBeNull();
+    expect(parsePowerup({ type: 'hwtodo:score', score: 1 })).toBeNull();
+    expect(parsePowerup({ type: 'hwtodo:buy', id: 'x', label: 'a‮b', cost: 1 })?.label).toBe('ab');
   });
 });

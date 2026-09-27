@@ -1,6 +1,8 @@
 // Friends on this device: your card's name and emoji, the cards you've added, and the optional live copy in the
 // site's Supabase project (friend_cards table, see docs/supabase.sql). The list never leaves this device.
-import { addFriend, decodeCard, validateCard, type AddResult, type Friend, type FriendCard } from '../friends';
+import { addFriend, cardExtras, decodeCard, validateCard, type AddResult, type Friend, type FriendCard } from '../friends';
+import { balance } from '../economy';
+import { arcade } from '../arcade.svelte';
 import { randomId } from '../b64url';
 import { startOfWeekKey } from '../dates';
 import { levelForXp } from '../gamification';
@@ -19,6 +21,8 @@ interface Profile {
   name: string;
   emoji: string;
   pid?: string; // live copy id (only while live updates are on)
+  shareChips?: boolean; // opt-in: put the chip balance in my card (Play → Leaderboards)
+  shareScores?: boolean; // opt-in: put a few best arcade scores in my card
 }
 
 function read<T>(key: string, fallback: T): T {
@@ -41,7 +45,14 @@ function write(key: string, v: unknown): void {
 function loadProfile(): Profile {
   const p = read<Partial<Profile>>(PROFILE_KEY, {});
   const ok = typeof p.id === 'string' && /^[a-z0-9]{8,40}$/.test(p.id);
-  const profile = { id: ok ? p.id! : randomId(16), name: p.name ?? '', emoji: p.emoji ?? '🙂', pid: p.pid };
+  const profile: Profile = {
+    id: ok ? p.id! : randomId(16),
+    name: p.name ?? '',
+    emoji: p.emoji ?? '🙂',
+    pid: p.pid,
+    shareChips: p.shareChips === true,
+    shareScores: p.shareScores === true,
+  };
   // the id has to stay the same, or friends would get a second row for you after every reload
   if (!ok) write(PROFILE_KEY, profile);
   return profile;
@@ -78,7 +89,18 @@ class FriendsState {
       at: Math.floor(Date.now() / 1000),
     };
     if (this.profile.pid) card.pid = this.profile.pid;
-    return card;
+    // nothing extra unless the toggles are on
+    return {
+      ...card,
+      ...cardExtras({ shareChips: !!this.profile.shareChips, shareScores: !!this.profile.shareScores, chips: balance(store.ledger, 'chips'), scores: arcade.scores }),
+    };
+  }
+
+  /** The opt-in leaderboard toggles. Friends see the change in the next code you send (or the live card). */
+  setSharing(patch: { shareChips?: boolean; shareScores?: boolean }): void {
+    this.profile = { ...this.profile, ...patch };
+    write(PROFILE_KEY, this.profile);
+    if (this.profile.pid) schedulePublish();
   }
 
   setProfile(name: string, emoji: string): void {

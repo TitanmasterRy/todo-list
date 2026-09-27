@@ -9,6 +9,7 @@
   import Checkbox from './Checkbox.svelte';
   import SnoozeMenu from './SnoozeMenu.svelte';
   import { t } from '../lib/i18n/index.svelte';
+  import { swipe, type SwipeDir } from '../lib/swipe';
 
   interface Props {
     task: Task;
@@ -70,6 +71,11 @@
     else store.uncompleteTask(task.id);
   }
 
+  function onSwipe(dir: SwipeDir) {
+    if (dir === 'right') onComplete(!done);
+    else if (!done) store.snoozeTomorrow(task.id);
+  }
+
   function addSub(e: Event) {
     e.preventDefault();
     if (!newSub.trim()) return;
@@ -88,6 +94,9 @@
   class:frog={isFrog}
   class:blocked={blockers.length > 0}
   data-task-id={task.id}
+  data-swipe-done={t('task.swipeDone')}
+  data-swipe-snooze={t('task.swipeSnooze')}
+  use:swipe={{ enabled: store.settings.swipeGestures && !store.bulkMode, onswipe: onSwipe }}
   role="group"
   aria-label={task.title}
   onclick={onRowClick}
@@ -303,6 +312,44 @@
       opacity 300ms,
       transform 300ms var(--ease);
     position: relative;
+    touch-action: pan-y;
+  }
+  /* swipe (lib/swipe.ts): the row's content slides, the action shows behind it */
+  .task:global([data-swipe]) {
+    overflow: hidden;
+  }
+  .task:global([data-swipe]) > :global(*) {
+    transform: translateX(var(--swipe-x, 0));
+  }
+  .task:global([data-swipe])::before {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    padding: 0 14px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-muted);
+    border-radius: inherit;
+  }
+  .task:global([data-swipe='right'])::before {
+    content: '✓ ' attr(data-swipe-done);
+    justify-content: flex-start;
+    background: color-mix(in srgb, var(--success) 14%, var(--bg-elev));
+  }
+  .task:global([data-swipe='left'])::before {
+    content: attr(data-swipe-snooze) ' 💤';
+    justify-content: flex-end;
+    background: color-mix(in srgb, var(--info) 14%, var(--bg-elev));
+  }
+  .task:global([data-swipe][data-swipe-armed])::before {
+    color: var(--text);
+  }
+  .task:global([data-swipe='right'][data-swipe-armed])::before {
+    background: color-mix(in srgb, var(--success) 32%, var(--bg-elev));
+  }
+  .task:global([data-swipe='left'][data-swipe-armed])::before {
+    background: color-mix(in srgb, var(--info) 32%, var(--bg-elev));
   }
   .task:hover {
     border-color: var(--border-strong);

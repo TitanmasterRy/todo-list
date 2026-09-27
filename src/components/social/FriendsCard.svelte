@@ -89,6 +89,16 @@
     Swap friend codes to compare. A code holds only your name, emoji, streak, best streak, this week's XP, level and when it was made. No tasks, courses, grades or anything else,
     and there's no server: friends see what you had when you made the code.
   </p>
+  {#if friends.profile.shareChips || friends.profile.shareScores}
+    <p class="muted">
+      Also in your code, because you switched it on in Play → Leaderboards: {[
+        friends.profile.shareChips && 'your chip balance',
+        friends.profile.shareScores && 'your best arcade scores',
+      ]
+        .filter(Boolean)
+        .join(' and ')}.
+    </p>
+  {/if}
 
   <div class="me">
     <label class="field">Emoji <input class="input emoji" bind:value={emoji} maxlength="8" onchange={saveProfile} aria-label="Your emoji" /></label>

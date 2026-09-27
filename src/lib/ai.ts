@@ -1,6 +1,7 @@
 // AI helper. Anthropic goes through the official SDK; every other provider speaks the OpenAI-compatible chat API.
 import type Anthropic from '@anthropic-ai/sdk';
 import { store } from './store.svelte';
+import { site } from './site.svelte';
 import type { Found } from './syllabus';
 import { checkCap, recordUsage } from './aiusage';
 import type { AiProvider, TaskType } from './types';
@@ -38,6 +39,8 @@ export function currentModel(provider: AiProvider = currentProvider()): string {
 }
 
 export function aiAvailable(): boolean {
+  // the site admin can switch AI features off for everyone (site.json)
+  if (!site.on('ai')) return false;
   const p = currentProvider();
   if (p === 'ollama') return true;
   if (p === 'custom') return !!store.settings.aiBaseUrl;

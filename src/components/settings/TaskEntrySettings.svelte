@@ -1,5 +1,5 @@
 <script lang="ts">
-  // Settings → Adding tasks: auto-describe.
+  // Settings → Adding tasks: auto-describe and swipe gestures.
   import { store } from '../../lib/store.svelte';
   import { set } from './settings';
   import { t } from '../../lib/i18n/index.svelte';
@@ -13,6 +13,11 @@
     <input id="autod" type="checkbox" class="switch" checked={s.autoDescribe} onchange={(e) => set('autoDescribe', (e.target as HTMLInputElement).checked)} />
   </div>
   <p class="help">{t('settings.autoDescribeHelp')}</p>
+  <div class="row">
+    <label for="swipe">{t('settings.swipe')}</label>
+    <input id="swipe" type="checkbox" class="switch" checked={s.swipeGestures} onchange={(e) => set('swipeGestures', (e.target as HTMLInputElement).checked)} />
+  </div>
+  <p class="help">{t('settings.swipeHelp')}</p>
 </section>
 
 <style>

@@ -28,12 +28,17 @@
   const loadShortcuts = () => import('./components/ShortcutSheet.svelte');
   const loadOnboarding = () => import('./components/Onboarding.svelte');
   const loadUnlock = () => import('./components/UnlockDialog.svelte');
+  const loadAdmin = () => import('./components/admin/AdminPanel.svelte');
+  const loadShareTasks = () => import('./components/ShareTasks.svelte');
+  const loadReceiveTasks = () => import('./components/ReceiveTasks.svelte');
+  import { site } from './lib/site.svelte';
+  const loadRain = () => import('./components/CoinRain.svelte');
   import { hasSecret, promptAtStartup, vault } from './lib/secrets.svelte';
   import DailyPrompts from './components/DailyPrompts.svelte';
   import BulkBar from './components/BulkBar.svelte';
   import { ui } from './lib/ui.svelte';
   import { startAccount } from './lib/account.svelte';
-  import { startEconomy } from './lib/economy.svelte';
+  import { economy, startEconomy } from './lib/economy.svelte';
   import { startSocial } from './lib/social/links';
   import CoinPops from './components/CoinPops.svelte';
   import { t } from './lib/i18n/index.svelte';
@@ -51,6 +56,7 @@
       startReminders();
       void startLocalBackup();
       startSocial();
+      void site.load();
       // Spotify's code loads only when it's connected or we're coming back from its sign-in page
       if (hasSecret('spotifyRefreshToken') || new URLSearchParams(location.search).has('code')) void import('./lib/spotify.svelte').then((m) => m.init());
     });
@@ -69,12 +75,22 @@
       }
     };
     document.addEventListener('visibilitychange', onVis);
+    // the hidden admin panel: Ctrl+Alt+Shift+A (or ?admin in the address)
+    const onKey = (e: KeyboardEvent) => {
+      if (e.ctrlKey && e.altKey && e.shiftKey && e.code === 'KeyA') {
+        e.preventDefault();
+        ui.admin = true;
+      }
+    };
+    window.addEventListener('keydown', onKey);
     return () => {
       mq.removeEventListener('change', apply);
       document.removeEventListener('visibilitychange', onVis);
+      window.removeEventListener('keydown', onKey);
     };
   });
 
+  const announcement = $derived(site.announcement(store.today));
   const viewLabel = $derived(VIEWS.find((v) => v.id === store.view)?.label ?? '');
   const listViews = ['today', 'upcoming', 'courses', 'inbox'];
   function fab() {
@@ -88,6 +104,19 @@
   onMount(() => {
     // PWA share target / deep link: ?title=… (&text=…&url=…) prefills quick add.
     const params = new URLSearchParams(window.location.search);
+    // group projects: a #tasks=… link (the code stays in the hash, so it never reaches the web host)
+    const takeTasks = () => {
+      const code = /[#&]tasks=([A-Za-z0-9_-]+)/.exec(location.hash)?.[1];
+      if (!code) return;
+      ui.receivedTasks = code;
+      window.history.replaceState({}, '', window.location.pathname + window.location.search);
+    };
+    takeTasks();
+    window.addEventListener('hashchange', takeTasks);
+    if (params.has('admin')) {
+      ui.admin = true;
+      window.history.replaceState({}, '', window.location.pathname);
+    }
     // home-screen shortcuts: ?view=today|focus|play (&new=1 focuses quick add)
     const view = params.get('view');
     if (view && VIEWS.some((v) => v.id === view)) {
@@ -119,12 +148,24 @@
 
 {#if !store.ready}
   <div class="loading" aria-busy="true">
-    <div class="spinner"></div>
+    <div class="sk-side skeleton"></div>
+    <div class="sk-main">
+      <div class="skeleton sk-title"></div>
+      {#each [0, 1, 2, 3, 4] as i (i)}<div class="skeleton sk-row" style="opacity:{1 - i * 0.15}"></div>{/each}
+    </div>
   </div>
 {:else}
   <div class="shell">
     <Sidebar />
     <main class="main" id="main">
+      {#if announcement}
+        <div class="announce {announcement.level}" role="status">
+          <span>{announcement.level === 'party' ? '🎉' : announcement.level === 'warn' ? '⚠️' : '📣'}</span>
+          <span class="grow">{announcement.text}</span>
+          {#if announcement.link}<a href={announcement.link} target="_blank" rel="noopener noreferrer">{t('app.announcementMore')}</a>{/if}
+          <button class="btn ghost sm icon" aria-label={t('app.dismiss')} onclick={() => site.dismiss(announcement.id)}>×</button>
+        </div>
+      {/if}
       {#if store.loadError}
         <div class="page"><div class="card">{t('app.storageError', { error: store.loadError })}</div></div>
       {/if}
@@ -157,6 +198,9 @@
   <Toasts />
   <FeedbackLayer />
   <CoinPops />
+  {#if economy.rain}
+    {#await loadRain() then m}<m.default tick={economy.rain} />{/await}
+  {/if}
   <Keyboard />
   {#if store.editingTaskId}
     {#await loadEditor() then m}
@@ -179,25 +223,68 @@
   {#if vault.prompt}
     {#await loadUnlock() then m}<m.default />{/await}
   {/if}
+  {#if ui.shareTasks}
+    {#await loadShareTasks() then m}<m.default ids={ui.shareTasks} onclose={() => (ui.shareTasks = null)} />{/await}
+  {/if}
+  {#if ui.receivedTasks}
+    {#await loadReceiveTasks() then m}<m.default code={ui.receivedTasks} onclose={() => (ui.receivedTasks = null)} />{/await}
+  {/if}
+  {#if ui.admin}
+    {#await loadAdmin() then m}<m.default onclose={() => (ui.admin = false)} />{/await}
+  {/if}
 {/if}
 
 <style>
+  .announce {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 8px 12px 0;
+    padding: 8px 12px;
+    border-radius: 10px;
+    font-size: 14px;
+    background: var(--bg-elev);
+    border: 1px solid var(--border);
+  }
+  .announce.warn {
+    border-color: var(--warn);
+  }
+  .announce.party {
+    border-color: var(--accent);
+  }
+  .announce .grow {
+    flex: 1;
+  }
   .loading {
     height: 100vh;
-    display: grid;
-    place-items: center;
+    display: flex;
+    gap: 24px;
+    padding: 16px;
   }
-  .spinner {
-    width: 28px;
+  .sk-side {
+    width: calc(var(--sidebar-w) - 32px);
+    border-radius: var(--radius);
+  }
+  .sk-main {
+    flex: 1;
+    max-width: 760px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding-top: 12px;
+  }
+  .sk-title {
+    width: 40%;
     height: 28px;
-    border-radius: 50%;
-    border: 3px solid var(--border);
-    border-top-color: var(--accent);
-    animation: spin 0.8s linear infinite;
+    margin-bottom: 12px;
   }
-  @keyframes spin {
-    to {
-      transform: rotate(360deg);
+  .sk-row {
+    height: 52px;
+    border-radius: var(--radius);
+  }
+  @media (max-width: 760px) {
+    .sk-side {
+      display: none;
     }
   }
   .shell {

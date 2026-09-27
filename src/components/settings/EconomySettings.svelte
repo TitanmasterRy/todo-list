@@ -67,16 +67,12 @@
           />
         </div>
       {/if}
-      <div class="row">
-        <label for="adm">Show arcade admin (add games)</label>
-        <input id="adm" type="checkbox" class="switch" checked={s.arcadeAdmin} onchange={(e) => set('arcadeAdmin', (e.target as HTMLInputElement).checked)} />
-      </div>
     {/if}
   </fieldset>
   {#if s.economyEnabled}
     <p class="help">
-      Coins come only from schoolwork (tasks, the daily ring, streaks, grades, notecards, Pomodoros). There's no real money anywhere: nothing can be bought with cash, and chips
-      never turn back into coins.
+      Coins come only from schoolwork (tasks, the daily ring, streaks, grades, notecards, Pomodoros). There's no real money anywhere: nothing can be bought with cash. Chips can be
+      cashed back into coins at half value, a little a day (Play → Wallet).
     </p>
   {/if}
   <h3 class="sub">Parent lock</h3>

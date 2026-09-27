@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Fishing</title>
+<style>
+  :root { --accent: #2e7d32; }
+  html, body { margin: 0; height: 100%; background: #bfe6ff; color: #12324a; font: 15px system-ui, sans-serif; overflow: hidden; touch-action: none; user-select: none; }
+  canvas { display: block; width: 100vw; height: 100vh; }
+  .hud { position: fixed; top: 10px; left: 12px; font-weight: 800; }
+  .center { position: fixed; inset: 0; display: grid; place-items: center; text-align: center; pointer-events: none; }
+  .center > div { background: rgba(255, 255, 255, 0.8); padding: 16px 22px; border-radius: 18px; max-width: 360px; }
+  .center button { pointer-events: auto; font: inherit; padding: 10px 20px; border-radius: 999px; border: 0; background: var(--accent); color: #fff; font-weight: 800; cursor: pointer; }
+  body.dark .center > div { background: rgba(0, 0, 0, 0.55); color: #e6f4ff; }
+  body.dark { color: #e6f4ff; }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div class="hud">Score <span id="score">0</span> · ⏱ <span id="time">60</span>s <span id="last"></span></div>
+<div class="center" id="menu"><div><h2>🎣 Fishing</h2><p>Move the boat with the mouse, a finger or ← →. Click, tap or press Space to drop the line. Big fish swim deep and score more; leave the old boots alone. 60 seconds.</p><button id="go">Start</button></div></div>
+<script>
+  const q = new URLSearchParams(location.search);
+  if (q.get('accent')) document.documentElement.style.setProperty('--accent', q.get('accent'));
+  const dark = q.get('dark') === '1';
+  if (dark) document.body.classList.add('dark');
+  const report = (score) => parent.postMessage({ type: 'hwtodo:score', score }, '*');
+  const c = document.getElementById('c'), x = c.getContext('2d'), $ = (id) => document.getElementById(id);
+  // [emoji, points, depth band 0..1, speed]
+  const KINDS = [['🐟', 10, 0.15, 1.6], ['🐠', 20, 0.35, 1.9], ['🐡', 30, 0.55, 1.2], ['🦑', 45, 0.7, 2.2], ['🐙', 60, 0.85, 1], ['🥾', -15, 0.5, 0.6]];
+  let W, H, water, boat, fish, hook, score, left, running = false, t = 0, keys = {}, endAt = 0, last = '';
+  function size() { W = c.width = innerWidth; H = c.height = innerHeight; water = Math.max(90, H * 0.22); }
+  addEventListener('resize', size); size(); boat = W / 2;
+  function start() { fish = []; score = 0; hook = null; running = true; t = 0; endAt = performance.now() + 60000; last = ''; $('menu').style.display = 'none'; for (let i = 0; i < 7; i++) spawn(true); hud(); }
+  function hud() { $('score').textContent = score; $('time').textContent = Math.max(0, Math.ceil(left)); $('last').textContent = last; }
+  function spawn(anywhere) {
+    const k = KINDS[Math.random() < 0.12 ? 5 : Math.floor(Math.random() * 5)];
+    const dir = Math.random() < 0.5 ? 1 : -1;
+    const depth = water + 30 + (k[2] + (Math.random() - 0.5) * 0.15) * (H - water - 70);
+    fish.push({ e: k[0], pts: k[1], y: Math.min(H - 30, depth), x: anywhere ? Math.random() * W : dir > 0 ? -30 : W + 30, v: dir * k[3] * (0.7 + Math.random() * 0.6), wob: Math.random() * 6 });
+  }
+  function cast() {
+    if (!running) return start();
+    if (!hook) hook = { x: boat, y: water, dir: 1, caught: null };
+  }
+  function step(now) {
+    x.clearRect(0, 0, W, H);
+    // sky and water
+    x.fillStyle = dark ? '#0f2438' : '#bfe6ff'; x.fillRect(0, 0, W, water);
+    const g = x.createLinearGradient(0, water, 0, H); g.addColorStop(0, dark ? '#134a6b' : '#4fb3e8'); g.addColorStop(1, dark ? '#061a2a' : '#0b4f7c');
+    x.fillStyle = g; x.fillRect(0, water, W, H - water);
+    x.fillStyle = '#3f8f3a'; for (let i = 0; i < W; i += 38) { x.beginPath(); x.ellipse(i + 10, H, 12, 40 + (i % 3) * 14, 0, 0, Math.PI * 2); x.fill(); }
+    if (running) {
+      t++;
+      left = (endAt - now) / 1000;
+      if (keys.left) boat -= 7; if (keys.right) boat += 7; boat = Math.max(30, Math.min(W - 30, boat));
+      if (fish.length < 8 && t % 40 === 0) spawn(false);
+      for (const f of fish) f.x += f.v;
+      fish = fish.filter((f) => f.x > -60 && f.x < W + 60 || f.hooked);
+      if (hook) {
+        if (!hook.caught) {
+          hook.y += 6 * hook.dir;
+          if (hook.y > H - 20) hook.dir = -1;
+          for (const f of fish) if (!f.hooked && Math.abs(f.x - hook.x) < 22 && Math.abs(f.y - hook.y) < 16) { f.hooked = true; hook.caught = f; hook.dir = -1; break; }
+        } else hook.y -= 5;
+        if (hook.caught) { hook.caught.x = hook.x; hook.caught.y = hook.y + 14; }
+        if (hook.dir < 0 && hook.y <= water) {
+          if (hook.caught) { score = Math.max(0, score + hook.caught.pts); last = `${hook.caught.e} ${hook.caught.pts > 0 ? '+' : ''}${hook.caught.pts}`; fish = fish.filter((f) => f !== hook.caught); }
+          hook = null;
+        }
+      }
+      hud();
+      if (left <= 0) { running = false; hook = null; report(score); $('menu').style.display = 'grid'; $('menu').querySelector('h2').textContent = `🎣 Score ${score}`; $('go').textContent = 'Again'; }
+    }
+    x.font = '30px system-ui'; x.textAlign = 'center'; x.textBaseline = 'middle';
+    for (const f of fish || []) { x.save(); x.translate(f.x, f.y + Math.sin((t + f.wob * 20) / 20) * 3); if (f.v > 0 && !f.hooked) x.scale(-1, 1); x.fillText(f.e, 0, 0); x.restore(); }
+    // boat and line
+    x.font = '44px system-ui'; x.fillText('🛶', boat, water - 14);
+    x.font = '26px system-ui'; x.fillText('🧑', boat - 6, water - 38);
+    if (hook) { x.strokeStyle = dark ? '#e6f4ff' : '#12324a'; x.lineWidth = 1.5; x.beginPath(); x.moveTo(boat + 16, water - 46); x.lineTo(hook.x, hook.y); x.stroke(); x.font = '16px system-ui'; x.fillText('🪝', hook.x, hook.y); }
+    requestAnimationFrame(step);
+  }
+  addEventListener('pointermove', (e) => { if (!hook) boat = e.clientX; });
+  addEventListener('pointerdown', (e) => { if (e.target.id === 'go') return; if (running) { boat = hook ? boat : e.clientX; cast(); } });
+  addEventListener('keydown', (e) => { if (e.key === 'ArrowLeft' || e.key === 'a') keys.left = true; if (e.key === 'ArrowRight' || e.key === 'd') keys.right = true; if (e.key === ' ') { e.preventDefault(); cast(); } });
+  addEventListener('keyup', (e) => { if (e.key === 'ArrowLeft' || e.key === 'a') keys.left = false; if (e.key === 'ArrowRight' || e.key === 'd') keys.right = false; });
+  $('go').onclick = start; requestAnimationFrame(step);
+</script>
+</body>
+</html>

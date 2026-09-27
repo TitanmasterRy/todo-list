@@ -91,6 +91,9 @@ export default defineConfig({
       },
       workbox: {
         globPatterns: ['**/*.{js,css,html,svg,png,ico,woff2,json}'],
+        // site.json (the admin's announcement and switches) is fetched fresh, with the last copy kept for offline
+        globIgnores: ['**/site.json'],
+        runtimeCaching: [{ urlPattern: ({ url }) => url.pathname.endsWith('/site.json'), handler: 'NetworkFirst', options: { cacheName: 'hwtodo-site', networkTimeoutSeconds: 4 } }],
         navigateFallback: `${base}index.html`,
         navigateFallbackDenylist: [/^\/api\//],
         // notification clicks + periodic background digest/badge (public/sw-extra.js)

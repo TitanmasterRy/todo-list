@@ -2,6 +2,7 @@ import type { ExportBundle, Task, Course, Template, Stats, DayNote, Deck, Card, 
 import { DEFAULT_STATS } from './types';
 import { mergeBreaks } from './gamification';
 import { mergeTask } from './fieldmerge';
+import { normalizeHistory } from './history';
 
 /** Tombstones older than this are forgotten (every device has synced by then). */
 export const TOMBSTONE_DAYS = 60;
@@ -173,6 +174,7 @@ export function normalizeTask(t: Partial<Task>): Task {
     deckId: typeof t.deckId === 'string' ? t.deckId : undefined,
     fieldAt: t.fieldAt && typeof t.fieldAt === 'object' ? Object.fromEntries(Object.entries(t.fieldAt).filter(([, v]) => typeof v === 'string')) : undefined,
     fieldBase: typeof t.fieldBase === 'string' ? t.fieldBase : undefined,
+    history: normalizeHistory(t.history),
     parentId: typeof t.parentId === 'string' ? t.parentId : undefined,
     attachments: Array.isArray(t.attachments)
       ? t.attachments

@@ -2,6 +2,9 @@ import { mount } from 'svelte';
 import './app.css';
 import App from './App.svelte';
 import { setupPwa } from './lib/pwa.svelte';
+import { installErrorLog } from './lib/errlog';
+
+installErrorLog();
 
 const app = mount(App, { target: document.getElementById('app')! });
 setupPwa();

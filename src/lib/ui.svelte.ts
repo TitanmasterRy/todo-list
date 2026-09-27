@@ -21,6 +21,10 @@ class UIState {
   openDeck = $state<string | null>(null);
   practiceSet = $state<string | null>(null);
   openBook = $state<string | null>(null); // a shared PDF opens straight in the Book reader // Quiz maker → Practice opens this set // a task's "Study" button opens this deck in Notecards
+  admin = $state(false); // the hidden admin panel (Ctrl+Alt+Shift+A, ?admin, or tap the version 7 times)
+  adminUnlocked = $state(false); // unlocked for this session (the passphrase isn't kept after a reload)
+  shareTasks = $state<string[] | null>(null); // bulk bar → share these tasks by link
+  receivedTasks = $state<string | null>(null); // a #tasks=… link's code
   captureKeys = $state(false); // a tool (e.g. notecard study) owns single-key shortcuts
 }
 
