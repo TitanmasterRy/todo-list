@@ -35,6 +35,7 @@ Every host except GitHub Pages serves the site from the domain root, which is th
 | `VITE_SUPABASE_URL` | Supabase project URL. Turns on email + password accounts (see [Accounts](#accounts-email--password-sync)). |
 | `VITE_SUPABASE_ANON_KEY` | Supabase *anon public* key. Safe to ship: row-level security keeps each user's data private. |
 | `VITE_ARCADE_MANIFEST` | URL of a `games.json` to load arcade games from instead of the bundled `games/games.json`. Lets you change games without redeploying. The URL must allow CORS. |
+| `VITE_ADMIN_HASH` | Optional. The hidden admin panel's passphrase hash (`pbkdf2$…`, made in the panel → Security). Without it, each device sets its own admin passphrase. See [ADMIN.md](ADMIN.md). |
 | `VITE_CSP_CONNECT` | Extra origins the page may connect to, space or comma separated (e.g. `https://relay.myschool.org https://llm.example.com`). Needed only for a Schoology relay that isn't on `*.workers.dev` or a custom AI endpoint on another host. See [Content-Security-Policy](#content-security-policy). |
 | `VITE_CSP` | `off` leaves the Content-Security-Policy out of the build (not recommended). |
 

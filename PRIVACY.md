@@ -49,6 +49,11 @@ Study rooms, friend codes and class lists were built to work without a server, s
 - **Study room links** carry the room, not you. Nobody can see who opened a link unless everyone in the room turns on "Show who's in" with an account.
 - **Friend codes** carry only your name, emoji, streak, best streak, this week's XP (and which week), level and the time you made the code (plus a random id so a fresh code replaces the old one, and the live-card id if that's on). No tasks, courses, grades, coins, badges or anything else. Your friends list stays on this device.
 - **Class lists** a teacher publishes contain only the course name and color, an optional teacher name, and each assignment's title, due date, type, notes and link. Students' devices only download them; subscribing sends nothing back. Everything in a downloaded list is checked (size, types, lengths, http(s) links only) and shown as plain text or the app's own safe markdown.
+- **Shared task links** (select tasks → 🔗 Share) carry only the tasks' titles, due dates, types, estimates, steps and, if you tick it, notes, plus an optional list name and your name. The data is in the part of the link after `#`, which browsers never send to the web host. Nothing stays connected: the person who opens it gets their own copy.
+
+## Site announcements
+
+On each start the app downloads `site.json` from the site it's hosted on (the owner's announcement banner and feature switches). Nothing is sent with that request. The owner's hidden admin panel (see [ADMIN.md](ADMIN.md)) only works on the device it's opened on; its GitHub token is encrypted with the admin passphrase and never synced.
 
 ## Encryption
 

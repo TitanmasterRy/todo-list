@@ -25,7 +25,7 @@ Everything in this folder is served at `/games/` and listed in the app's **Play 
 | `theme` | Optional theme pack it matches: classic, sleek, cute, arcade, nature, space, paper. |
 | `tags` | Optional labels. |
 
-You can also try a game in the app first: **Settings → Arcade admin** lets you upload an HTML file or paste a link, preview it, and copy the `games.json` entry.
+You can also try a game in the app first: the hidden **admin panel** (see [ADMIN.md](../../ADMIN.md)) lets you upload an HTML file or paste a link, preview it, and publish it (or copy the `games.json` entry).
 
 ## Safety
 
