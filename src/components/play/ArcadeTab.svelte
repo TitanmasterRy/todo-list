@@ -9,6 +9,13 @@
   import GamePlayer from './GamePlayer.svelte';
 
   let playing = $state<ArcadeGame | null>(null);
+  let adding = $state(false);
+  const loadAddGame = () => import('./AddGame.svelte');
+
+  async function remove(g: ArcadeGame) {
+    if (!confirm(`Remove “${g.title}” from your arcade?`)) return;
+    await arcade.removeLocal(g.id);
+  }
   onMount(() => void arcade.load());
 
   const list = $derived.by(() => {
@@ -35,12 +42,20 @@
   }
 </script>
 
+<div class="bar">
+  <span class="muted">Games you add live in this browser.</span>
+  <button class="btn sm" onclick={() => (adding = true)}>➕ Add a game</button>
+</div>
+{#if adding}
+  {#await loadAddGame() then m}<m.default onclose={() => (adding = false)} />{/await}
+{/if}
+
 {#if arcade.loading && !arcade.loaded}
   <p class="muted">Loading games…</p>
 {:else if !list.length}
   <div class="card">
     <p>No arcade games yet.</p>
-    <p class="muted">Site admins add games by putting HTML files in <code>public/games/</code> and listing them in <code>games.json</code>, or from the admin panel.</p>
+    <p class="muted">Add one with ➕ Add a game (an HTML or JavaScript file, a .zip, or a link).</p>
   </div>
 {:else}
   <div class="games">
@@ -58,6 +73,7 @@
               : ''}
           </div>
         </div>
+        {#if g.local}<button class="btn ghost sm icon" aria-label="Remove {g.title}" title="Remove" onclick={() => void remove(g)}>🗑️</button>{/if}
         <button class="btn primary sm" onclick={() => play(g)} disabled={g.cost > economy.wallet.vouchers}>Play</button>
       </div>
     {/each}
@@ -78,6 +94,13 @@
 {/if}
 
 <style>
+  .bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    margin-bottom: 10px;
+  }
   .games {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
@@ -117,9 +140,5 @@
     color: var(--text-muted);
     font-size: 13px;
     margin-top: 12px;
-  }
-  code {
-    font-family: var(--mono);
-    font-size: 12px;
   }
 </style>
