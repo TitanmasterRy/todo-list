@@ -1,7 +1,7 @@
 # What's built: feature checklist
 
-Everything added since the roadmap was written, by area, with where to find it in the app. It's all on the branch
-`claude/happy-ptolemy-idw81c` (not merged into `main` yet). The full plan, including what's still open, is in
+Everything added since the roadmap was written, by area, with where to find it in the app. Everything checked here is
+merged into `main` and live on the GitHub Pages site. The full plan, including what's still open, is in
 [ROADMAP.md](ROADMAP.md); release notes are in [CHANGELOG.md](CHANGELOG.md).
 
 ## ✅ Tasks and planning
@@ -22,6 +22,10 @@ Everything added since the roadmap was written, by area, with where to find it i
 - [x] Printable weekly planner (Upcoming → 🖨️ Print week)
 - [x] Break mode that pauses your streak during school breaks (Settings → Goals)
 - [x] Keyboard rescheduling with `[` / `]`
+- [x] ✨ Break it down: AI steps, estimate, type and notes (task editor)
+- [x] Swipe right to complete, left to snooze, on phones (Settings → Adding tasks)
+- [x] Edit history: what changed and when (task editor → History)
+- [x] Long lists load as you scroll
 
 ## ✅ School
 
@@ -51,6 +55,13 @@ Everything added since the roadmap was written, by area, with where to find it i
 - [x] Arcade games: Breakout, Sudoku, Hangman, Lights Out, Typing defense, Solitaire, Invaders, Lunar lander, Paper-plane glider, and the originals
 - [x] Study games from your decks: Boss battle, Match rush, Crossword, Quiz race (Play → Study games)
 - [x] Star map: a star for every day you finished something (Play → Star map)
+- [x] Casino tables: Three Card Poker, Let It Ride, Texas Hold'em against bots; coin rain on big wins
+- [x] Chips cash back into coins at half value, up to 100 coins a day (Play → Wallet)
+- [x] Glow Grid (gem block puzzle with coin power-ups), Bubble pop, Fishing (Play → Arcade)
+- [x] Add your own games: HTML/JS files, a .zip or a folder, pasted code, or a link (Play → Arcade → ➕ Add a game)
+- [x] Games can save progress and sell power-ups for coins (you confirm each one)
+- [x] Pet, Garden and Homework dungeon (Play); focus companion under the timer (Focus)
+- [x] Seasonal events with limited items and event quests; gifts for friends; opt-in leaderboards
 
 ## ✅ Sharing and social (no server needed)
 
@@ -58,6 +69,7 @@ Everything added since the roadmap was written, by area, with where to find it i
 - [x] Friends by share code: compare streaks and weekly XP only (Stats → Friends)
 - [x] Class mode: teachers publish an assignment list; students subscribe (Tools → Connect → Class mode)
 - [x] Share my week: a stats image with no task titles (Stats → 📸 Share my week)
+- [x] Group projects: share selected tasks by link; friends add their own copy (select tasks → 🔗 Share)
 
 ## ✅ Sync, accounts and imports
 
@@ -97,16 +109,32 @@ Everything added since the roadmap was written, by area, with where to find it i
 - [x] Dates and numbers in your region's format; right-to-left layout support
 - [x] High contrast, reading fonts, text size, confetti toggle, reduced motion; contrast checked in every theme
 
+## ✅ Admin (hidden, for the site owner)
+
+- [x] Admin panel: Ctrl+Alt+Shift+A, `?admin`, or tap the version in Settings → Help 7 times (see ADMIN.md)
+- [x] Economy grants/undo, level and streak, announcement banner, feature switches (casino, arcade, shop, AI)
+- [x] One-click publishing to GitHub (site.json, arcade games), data browser, error log and debug tools
+
 ## ✅ Deploying and code health
 
 - [x] One-click deploy configs: Vercel, Netlify, Render, Replit, Cloudflare Pages, Firebase, Docker/Fly.io, GitHub Pages (DEPLOY.md)
-- [x] Lint, formatting, type checks, 600+ unit tests and ~100 browser tests (with accessibility checks) in CI
-- [x] First-load size budget (currently ~113 kB of 125 kB)
+- [x] Lint, formatting, type checks, 700+ unit tests and ~140 browser tests (with accessibility checks) in CI
+- [x] First-load size budget (currently ~119 kB of 125 kB)
+- [x] Lighthouse check on every pull request
 
-## ⏳ Still open (highlights)
+## 🚧 Being built right now (next merge)
 
-- [ ] Translating the remaining screens (Stats, Tools, Play, most Settings sections) and adding a right-to-left language
+- [ ] Spanish for the remaining screens (Stats, Tools, most Settings)
+- [ ] 🏭 Factory: an in-depth factory-building idle game with a coin shop (Play → Factory)
+- [ ] 📺 Watch: Jellyfin/Emby browsing and playback, Plex and other sites, video links and files (Play → Watch)
+- [ ] Case clicker game (original, like the CS:GO case clicker)
+- [ ] Casino visual overhaul: more eye candy on every casino game
+- [ ] Art list for image generation (ART_REQUESTS.md)
+
+## ⏳ Not done yet
+
+- [ ] Component tests for the task list, quick add and task editor (browser tests cover them today)
+- [ ] A right-to-left language (the layout supports it; no translation yet)
 - [ ] Microsoft Teams and Microsoft To Do (no feeds; would need a Microsoft Graph app)
 - [ ] True push reminders (needs a server), phone widgets and a Capacitor app
-- [ ] Swipe gestures, virtual scrolling for very long lists, per-task edit history
-- [ ] More casino games (Three Card Poker, Hold'em vs. bots), a virtual pet, a garden, seasonal events
+- [ ] Real artwork (illustrations, sprites, card art): needs an image generator, see ART_REQUESTS.md once it's written
