@@ -29,6 +29,8 @@
   const loadOnboarding = () => import('./components/Onboarding.svelte');
   const loadUnlock = () => import('./components/UnlockDialog.svelte');
   const loadAdmin = () => import('./components/admin/AdminPanel.svelte');
+  const loadShareTasks = () => import('./components/ShareTasks.svelte');
+  const loadReceiveTasks = () => import('./components/ReceiveTasks.svelte');
   import { site } from './lib/site.svelte';
   import { hasSecret, promptAtStartup, vault } from './lib/secrets.svelte';
   import DailyPrompts from './components/DailyPrompts.svelte';
@@ -101,6 +103,15 @@
   onMount(() => {
     // PWA share target / deep link: ?title=… (&text=…&url=…) prefills quick add.
     const params = new URLSearchParams(window.location.search);
+    // group projects: a #tasks=… link (the code stays in the hash, so it never reaches the web host)
+    const takeTasks = () => {
+      const code = /[#&]tasks=([A-Za-z0-9_-]+)/.exec(location.hash)?.[1];
+      if (!code) return;
+      ui.receivedTasks = code;
+      window.history.replaceState({}, '', window.location.pathname + window.location.search);
+    };
+    takeTasks();
+    window.addEventListener('hashchange', takeTasks);
     if (params.has('admin')) {
       ui.admin = true;
       window.history.replaceState({}, '', window.location.pathname);
@@ -203,6 +214,12 @@
   {/if}
   {#if vault.prompt}
     {#await loadUnlock() then m}<m.default />{/await}
+  {/if}
+  {#if ui.shareTasks}
+    {#await loadShareTasks() then m}<m.default ids={ui.shareTasks} onclose={() => (ui.shareTasks = null)} />{/await}
+  {/if}
+  {#if ui.receivedTasks}
+    {#await loadReceiveTasks() then m}<m.default code={ui.receivedTasks} onclose={() => (ui.receivedTasks = null)} />{/await}
   {/if}
   {#if ui.admin}
     {#await loadAdmin() then m}<m.default onclose={() => (ui.admin = false)} />{/await}
