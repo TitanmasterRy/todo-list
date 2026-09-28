@@ -217,6 +217,7 @@
   }
   .tile:disabled {
     cursor: default;
+    opacity: 1;
   }
   .tile.open {
     background: radial-gradient(circle at 50% 40%, #135e52, #0b3a36);
@@ -230,11 +231,13 @@
       transform: rotateY(90deg) scale(0.8);
     }
   }
-  .tile.mine {
+  .tile.mine,
+  .tile.mine:disabled {
     background: radial-gradient(circle at 50% 40%, #3a2230, #1c1018);
     opacity: 0.75;
   }
-  .tile.boom {
+  .tile.boom,
+  .tile.boom:disabled {
     opacity: 1;
     background: radial-gradient(circle at 50% 45%, #ff9a3c, #d6123a 55%, #5a0616);
     box-shadow:
@@ -273,10 +276,8 @@
     inset: 0;
     pointer-events: none;
     background:
-      radial-gradient(circle at 30% 30%, #fff 0 2px, transparent 3px),
-      radial-gradient(circle at 72% 26%, #fff 0 1.5px, transparent 2.5px),
-      radial-gradient(circle at 66% 74%, #fff 0 2px, transparent 3px),
-      radial-gradient(circle at 24% 70%, #fff 0 1.5px, transparent 2.5px);
+      radial-gradient(circle at 30% 30%, #fff 0 2px, transparent 3px), radial-gradient(circle at 72% 26%, #fff 0 1.5px, transparent 2.5px),
+      radial-gradient(circle at 66% 74%, #fff 0 2px, transparent 3px), radial-gradient(circle at 24% 70%, #fff 0 1.5px, transparent 2.5px);
     animation: spark 700ms ease-out forwards;
   }
   @keyframes spark {

@@ -222,6 +222,10 @@
   .spot:hover:not(:disabled) {
     background: rgba(255, 255, 255, 0.1);
   }
+  .spot:disabled {
+    opacity: 1;
+    cursor: default;
+  }
   .spot:focus-visible {
     outline: 3px solid #ffe39a;
     outline-offset: 2px;

@@ -77,7 +77,7 @@
 <div class="cz-game">
   <div class="cz-table bj">
     <svg class="cz-arc" viewBox="0 0 400 60" aria-hidden="true">
-      <path id="bj-arc" d="M20 12 Q200 70 380 12" fill="none" />
+      <path id="bj-arc" d="M8 8 Q200 66 392 8" fill="none" />
       <text><textPath href="#bj-arc" startOffset="50%" text-anchor="middle">Blackjack pays 3 to 2 · Dealer stands on soft 17</textPath></text>
     </svg>
     <div class="top">
@@ -132,6 +132,17 @@
 <style>
   .bj {
     gap: 8px;
+  }
+  .bj :global(.cz-arc text) {
+    font-size: 10px;
+    letter-spacing: 0.12em;
+  }
+  .bj > .cz-label,
+  .bj .cz-hand {
+    justify-content: center;
+  }
+  .bj .cz-result {
+    text-align: center;
   }
   .top {
     display: flex;

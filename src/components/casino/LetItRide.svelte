@@ -83,7 +83,9 @@
         </div>
       {/each}
     </div>
-    <div class="cz-label center">You {#if r}<span class="cz-badge">{settled ? label : 'three cards'}</span>{/if}</div>
+    <div class="cz-label center">
+      You {#if r}<span class="cz-badge">{settled ? label : 'three cards'}</span>{/if}
+    </div>
     {#key n}
       <div class="cz-hand center" style="--from-x: 130px; --from-y: -240px">
         {#if r}{#each r.player as c, i (i)}<PlayingCard card={c} delay={i * 200} />{/each}{/if}

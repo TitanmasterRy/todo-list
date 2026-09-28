@@ -133,7 +133,9 @@
         <span class="arrow r" aria-hidden="true"></span>
       </div>
     </div>
-    <div class="cz-result center" aria-live="polite" class:win={result?.win} class:lose={result && !result.win}>{result?.text ?? (spinning ? 'Good luck!' : 'Line up three to win')}</div>
+    <div class="cz-result center" aria-live="polite" class:win={result?.win} class:lose={result && !result.win}>
+      {result?.text ?? (spinning ? 'Good luck!' : 'Line up three to win')}
+    </div>
     <button class="lever" class:pulled tabindex="-1" aria-hidden="true" onclick={spin} disabled={spinning || bet > economy.wallet.chips}>
       <span class="rod"></span><span class="knob"></span>
     </button>
@@ -146,7 +148,9 @@
   </div>
   <div class="cz-paytable pays">
     {#each SLOT_PAY3 as m, i (i)}
-      <span class="combo" aria-label="Three {symbols[i]}">{#each [0, 1, 2] as k (k)}<span class="mini"><SlotSymbol {theme} index={i} /></span>{/each}</span><span>×{m}</span>
+      <span class="combo" aria-label="Three {symbols[i]}"
+        >{#each [0, 1, 2] as k (k)}<span class="mini"><SlotSymbol {theme} index={i} /></span>{/each}</span
+      ><span>×{m}</span>
     {/each}
     <span class="combo" aria-label="Two {symbols[0]}"
       >{#each [0, 1] as k (k)}<span class="mini"><SlotSymbol {theme} index={0} /></span>{/each}<span class="any">any</span></span
@@ -165,9 +169,7 @@
     padding: 16px 16px 18px;
     border-radius: 26px 26px 18px 18px;
     color: #fff4d6;
-    background:
-      radial-gradient(ellipse at 50% -10%, rgba(255, 120, 140, 0.35), transparent 60%),
-      linear-gradient(180deg, #8e1426 0%, #5a0a18 55%, #2c040b 100%);
+    background: radial-gradient(ellipse at 50% -10%, rgba(255, 120, 140, 0.35), transparent 60%), linear-gradient(180deg, #8e1426 0%, #5a0a18 55%, #2c040b 100%);
     box-shadow:
       inset 0 0 0 3px #e7b84a,
       inset 0 0 0 7px #3a0610,

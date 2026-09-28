@@ -2,25 +2,7 @@
 import { soundContext } from '../../lib/sounds';
 
 export type Sfx =
-  | 'chip'
-  | 'chips'
-  | 'deal'
-  | 'flip'
-  | 'reel'
-  | 'spin'
-  | 'tick'
-  | 'peg'
-  | 'win'
-  | 'bigwin'
-  | 'lose'
-  | 'dice'
-  | 'ball'
-  | 'gem'
-  | 'boom'
-  | 'scratch'
-  | 'pop'
-  | 'tease'
-  | 'click';
+  'chip' | 'chips' | 'deal' | 'flip' | 'reel' | 'spin' | 'tick' | 'peg' | 'win' | 'bigwin' | 'lose' | 'dice' | 'ball' | 'gem' | 'boom' | 'scratch' | 'pop' | 'tease' | 'click';
 
 interface Tone {
   f: number;

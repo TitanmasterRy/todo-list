@@ -280,9 +280,7 @@
     position: absolute;
     inset: -4%;
     border-radius: 50%;
-    background:
-      radial-gradient(circle, transparent 60%, rgba(0, 0, 0, 0.35) 61%, transparent 63%),
-      radial-gradient(circle at 40% 30%, #8a5426, #4a2a10 60%, #2a1605);
+    background: radial-gradient(circle, transparent 60%, rgba(0, 0, 0, 0.35) 61%, transparent 63%), radial-gradient(circle at 40% 30%, #8a5426, #4a2a10 60%, #2a1605);
     box-shadow:
       inset 0 0 0 3px #e7b84a,
       inset 0 0 0 7px #3a1d08,
@@ -426,6 +424,7 @@
   }
   .spotbtn:disabled {
     cursor: default;
+    opacity: 1;
   }
   .n .lab {
     display: grid;
@@ -459,7 +458,7 @@
     animation: winspot 0.9s ease-in-out 3;
     z-index: 1;
   }
-  .spotbtn.win .lab {
+  .n.spotbtn.win .lab {
     box-shadow:
       0 0 0 2px #fff3b0,
       0 0 14px 4px rgba(255, 215, 90, 0.95);
@@ -571,6 +570,44 @@
     .readout {
       flex-direction: column;
       align-items: flex-start;
+    }
+  }
+  @media (max-width: 520px) {
+    .roul {
+      padding: 12px 8px;
+    }
+    .layout {
+      padding: 8px 0;
+    }
+    .board {
+      grid-template-columns: 26px 1fr;
+      min-width: 0;
+    }
+    .nums {
+      grid-template-columns: repeat(13, minmax(20px, 1fr));
+    }
+    .n .lab {
+      width: 20px;
+      height: 20px;
+      font-size: 10px;
+    }
+    .n.col .lab {
+      font-size: 9px;
+    }
+    .spotbtn {
+      min-height: 34px;
+    }
+    .outs {
+      margin-left: 26px;
+      min-width: 0;
+    }
+    .o {
+      font-size: 10px;
+    }
+    .chipon {
+      right: -4px;
+      top: -6px;
+      transform: scale(0.85);
     }
   }
 </style>

@@ -311,8 +311,7 @@
     transform: rotateY(180deg);
     background:
       repeating-linear-gradient(45deg, rgba(255, 220, 140, 0.16) 0 1.5px, transparent 1.5px 7px),
-      repeating-linear-gradient(-45deg, rgba(255, 220, 140, 0.16) 0 1.5px, transparent 1.5px 7px),
-      radial-gradient(circle at 50% 40%, #b01e37, #6d0d1e);
+      repeating-linear-gradient(-45deg, rgba(255, 220, 140, 0.16) 0 1.5px, transparent 1.5px 7px), radial-gradient(circle at 50% 40%, #b01e37, #6d0d1e);
     border: calc(var(--w) * 0.05) solid #fbf7ee;
   }
   .back :global(.backsvg),

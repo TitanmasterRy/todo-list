@@ -84,7 +84,9 @@
       <div class="meter" aria-hidden="true">
         <span class="mv" class:hot={streak >= 3}>×{shownMult.current.toFixed(2)}</span>
         <span class="tube"><span class="liquid" style="height:{(heat * 100).toFixed(1)}%"></span></span>
-        <span class="flames">{#each Array.from({ length: Math.min(streak, 6) }, (_, i) => i) as i (i)}<span class="flame" style="--i:{i}"></span>{/each}</span>
+        <span class="flames"
+          >{#each Array.from({ length: Math.min(streak, 6) }, (_, i) => i) as i (i)}<span class="flame" style="--i:{i}"></span>{/each}</span
+        >
         <span class="st">{streak} streak</span>
       </div>
     </div>
@@ -94,7 +96,9 @@
       {/each}
     </div>
     {#if active}<div class="cash">Cash out now for <strong>{Math.floor(bet * mult).toLocaleString()}</strong></div>{/if}
-    <div class="cz-result center" aria-live="polite" class:win={result?.win} class:lose={result && !result.win}>{result?.text ?? (active ? 'Higher or lower?' : 'Start a run')}</div>
+    <div class="cz-result center" aria-live="polite" class:win={result?.win} class:lose={result && !result.win}>
+      {result?.text ?? (active ? 'Higher or lower?' : 'Start a run')}
+    </div>
     <WinFx bind:this={fx} />
   </div>
   <div class="cz-deck">

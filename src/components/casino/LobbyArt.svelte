@@ -60,7 +60,24 @@
       ];
     return [[0, '7', '♣', 80]];
   }
-  const WHEEL6 = ['#ffcf4a', '#4aa3ff', '#ffcf4a', '#b07cff', '#ffcf4a', '#4aa3ff', '#ffcf4a', '#3ddc97', '#ffcf4a', '#4aa3ff', '#ff7a59', '#ffcf4a', '#4aa3ff', '#b07cff', '#ffcf4a', '#1d1d24'];
+  const WHEEL6 = [
+    '#ffcf4a',
+    '#4aa3ff',
+    '#ffcf4a',
+    '#b07cff',
+    '#ffcf4a',
+    '#4aa3ff',
+    '#ffcf4a',
+    '#3ddc97',
+    '#ffcf4a',
+    '#4aa3ff',
+    '#ff7a59',
+    '#ffcf4a',
+    '#4aa3ff',
+    '#b07cff',
+    '#ffcf4a',
+    '#1d1d24',
+  ];
 </script>
 
 <svg viewBox="0 0 160 100" class="lobbyart" aria-hidden="true" preserveAspectRatio="xMidYMid slice">
@@ -77,11 +94,7 @@
   </defs>
   <rect width="160" height="100" fill="url(#la-bg-{id})" />
   <g opacity=".22" fill="#fff">
-    <circle cx="14" cy="14" r="1.2" /><circle cx="146" cy="20" r="1.4" /><circle cx="130" cy="84" r="1" /><circle cx="24" cy="80" r="1.3" /><circle
-      cx="80"
-      cy="8"
-      r="1"
-    />
+    <circle cx="14" cy="14" r="1.2" /><circle cx="146" cy="20" r="1.4" /><circle cx="130" cy="84" r="1" /><circle cx="24" cy="80" r="1.3" /><circle cx="80" cy="8" r="1" />
   </g>
 
   {#if id === 'slots'}
@@ -91,9 +104,7 @@
     <rect x="49" y="30" width="56" height="34" rx="4" fill="#fffaf0" />
     {#each [0, 1, 2] as i (i)}
       <rect x={51 + i * 18} y="32" width="16" height="30" rx="2" fill="url(#la-bg-{id})" opacity=".08" />
-      <text x={59 + i * 18} y="55" text-anchor="middle" font-size="22" font-weight="900" fill="#d6132f" stroke="#7a0010" stroke-width=".8" font-family="Georgia,serif"
-        >7</text
-      >
+      <text x={59 + i * 18} y="55" text-anchor="middle" font-size="22" font-weight="900" fill="#d6132f" stroke="#7a0010" stroke-width=".8" font-family="Georgia,serif">7</text>
     {/each}
     <line x1="49" y1="47" x2="105" y2="47" stroke="#ffcf4a" stroke-width="1.2" opacity=".9" />
     <rect x="54" y="70" width="46" height="12" rx="6" fill="url(#la-gold-{id})" />
@@ -127,7 +138,6 @@
       <path d="M74 4 L86 4 L80 16 Z" fill="#ffe39a" stroke="#9a6b12" />
     {/if}
   {:else if id === 'blackjack' || id === 'baccarat' || id === 'threecard' || id === 'hilo'}
-
     {#each cardsFor(id) as [rot, r, s, x], i (i)}
       <g transform="rotate({rot} {x} 90)">
         <rect x={x - 17} y="26" width="34" height="48" rx="4" fill="#fffdf6" stroke="#0003" />

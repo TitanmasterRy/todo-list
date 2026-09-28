@@ -51,7 +51,8 @@
     if (fieldBet) fieldHit = field > 0;
     const back = res.returned + field;
     economy.payout('craps', back);
-    lastNet = back - stake;
+    // a roll that only sets the point leaves the line bet riding: no result yet
+    lastNet = res.resolved || fieldBet ? back - (res.resolved ? state.passBet + state.dontPassBet : 0) - fieldBet : null;
     const lineBack = res.returned;
     if (lineBack > 0) chipsOut(state.passBet ? passEl : dontEl, lineBack);
     if (field > 0) chipsOut(fieldEl, field);
@@ -125,10 +126,8 @@
   <div class="cz-deck">
     <BetControl bind:value={fieldBet} min={0} label="Field (one roll)" />
     <div class="grow"></div>
-    <button
-      class="btn cz-go"
-      onclick={roll}
-      disabled={rolling || (!lineOn && lineBet + fieldBet <= 0) || (!lineOn ? lineBet : 0) + fieldBet > economy.wallet.chips}>{lineOn ? 'Roll for the point' : 'Come-out roll'}</button
+    <button class="btn cz-go" onclick={roll} disabled={rolling || (!lineOn && lineBet + fieldBet <= 0) || (!lineOn ? lineBet : 0) + fieldBet > economy.wallet.chips}
+      >{lineOn ? 'Roll for the point' : 'Come-out roll'}</button
     >
   </div>
   <p class="cz-edge">

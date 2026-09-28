@@ -98,8 +98,16 @@
   <div class="cz-table purple wheelwrap">
     <div class="stage">
       <div class="flapper" style="transform: translateX(-50%) rotate({flap}deg)" bind:this={pointerEl} aria-hidden="true">
-        <svg viewBox="0 0 40 60"><path d="M20 58 L6 14 Q4 4 20 2 Q36 4 34 14 Z" fill="url(#bs-flap)" stroke="#6b4200" stroke-width="2" /><circle cx="20" cy="12" r="5" fill="#fff6d0" stroke="#8a5c0c" /><defs
-            ><linearGradient id="bs-flap" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#b8861a" /><stop offset=".5" stop-color="#fff0a8" /><stop offset="1" stop-color="#b8861a" /></linearGradient
+        <svg viewBox="0 0 40 60"
+          ><path d="M20 58 L6 14 Q4 4 20 2 Q36 4 34 14 Z" fill="url(#bs-flap)" stroke="#6b4200" stroke-width="2" /><circle
+            cx="20"
+            cy="12"
+            r="5"
+            fill="#fff6d0"
+            stroke="#8a5c0c"
+          /><defs
+            ><linearGradient id="bs-flap" x1="0" y1="0" x2="1" y2="0"
+              ><stop offset="0" stop-color="#b8861a" /><stop offset=".5" stop-color="#fff0a8" /><stop offset="1" stop-color="#b8861a" /></linearGradient
             ></defs
           ></svg
         >
@@ -134,7 +142,7 @@
               text-anchor="middle"
               dominant-baseline="central"
               fill={id === 'joker' || id === 'star' ? '#fff' : '#2a1a00'}
-              transform="rotate({(i + 0.5) * SLOT + 90} {p.x} {p.y})">{seg(id).label}</text
+              transform="rotate({(i + 0.5) * SLOT < 180 ? (i + 0.5) * SLOT - 90 : (i + 0.5) * SLOT + 90} {p.x} {p.y})">{seg(id).label}</text
             >
             <circle cx={peg.x} cy={peg.y} r="2.6" fill="url(#bs-hub)" stroke="#6b4200" stroke-width=".5" />
           {/each}
@@ -148,7 +156,9 @@
         <path d="M150 138 l3.5 7.5 8 .9 -6 5.4 1.7 7.9 -7.2 -4.1 -7.2 4.1 1.7 -7.9 -6 -5.4 8 -.9 Z" fill="#b8101f" />
       </svg>
     </div>
-    <div class="cz-result center" aria-live="polite" class:win={result?.win} class:lose={result && !result.win}>{result?.text ?? (spinning ? 'Round and round…' : 'Pick a symbol, then spin')}</div>
+    <div class="cz-result center" aria-live="polite" class:win={result?.win} class:lose={result && !result.win}>
+      {result?.text ?? (spinning ? 'Round and round…' : 'Pick a symbol, then spin')}
+    </div>
     <div class="betspot" bind:this={spotEl} aria-hidden="true">
       <span class="tag" style="--c1:{COLORS[pick][0]};--c2:{COLORS[pick][1]};--ink:{pick === 'joker' || pick === 'star' ? '#fff' : '#1b1300'}">{seg(pick).label}</span>
       <span>pays {seg(pick).pays}:1</span>

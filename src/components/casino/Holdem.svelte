@@ -26,7 +26,15 @@
   function say(prev: HoldemState, a: Action) {
     const l = legal(prev);
     const text =
-      a === 'fold' ? 'Fold' : a === 'check' && l.canCheck ? 'Check' : a === 'raise' && l.canRaise ? `${prev.currentBet ? 'Raise' : 'Bet'} ${l.raiseTo}` : l.toCall ? `Call ${l.toCall}` : 'Check';
+      a === 'fold'
+        ? 'Fold'
+        : a === 'check' && l.canCheck
+          ? 'Check'
+          : a === 'raise' && l.canRaise
+            ? `${prev.currentBet ? 'Raise' : 'Bet'} ${l.raiseTo}`
+            : l.toCall
+              ? `Call ${l.toCall}`
+              : 'Check';
     bubbles = { ...bubbles, [prev.toAct]: { text, id: ++bid } };
     sfx(a === 'fold' ? 'deal' : a === 'check' ? 'click' : 'chips');
   }
@@ -164,7 +172,9 @@
               <div class="head">
                 <BotAvatar who={who(i)} size={44} label={x.name} />
                 <div class="nm">
-                  <span>{x.name}{#if t.dealer === i}<span class="dbtn" title="Dealer">D</span>{/if}</span>
+                  <span
+                    >{x.name}{#if t.dealer === i}<span class="dbtn" title="Dealer">D</span>{/if}</span
+                  >
                   <span class="st">{x.stack.toLocaleString()} chips</span>
                 </div>
               </div>
@@ -196,7 +206,9 @@
         <div class="head">
           <BotAvatar who="you" size={44} />
           <div class="nm">
-            <span>You{#if t.dealer === 0}<span class="dbtn" title="Dealer">D</span>{/if}</span>
+            <span
+              >You{#if t.dealer === 0}<span class="dbtn" title="Dealer">D</span>{/if}</span
+            >
             <span class="st">{t.seats[0].stack.toLocaleString()} chips{t.seats[0].bet ? ` · bet ${t.seats[0].bet}` : ''}</span>
           </div>
         </div>

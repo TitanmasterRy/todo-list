@@ -51,15 +51,15 @@
 </script>
 
 <span class="toss" bind:this={el} style="--s:{size}px;--delay:{delay}ms" aria-hidden="true">
-    <span class="shadow"></span>
-    <span class="cube {color}" style="transform:{rot}">
-      {#each SIDES as [n, t] (n)}
-        <span class="side" style="transform:{t}">
-          {#each Array.from({ length: 9 }, (_, i) => i) as i (i)}<i class:on={PIPS[n].includes(i)}></i>{/each}
-        </span>
-      {/each}
-    </span>
+  <span class="shadow"></span>
+  <span class="cube {color}" style="transform:{rot}">
+    {#each SIDES as [n, t] (n)}
+      <span class="side" style="transform:{t}">
+        {#each Array.from({ length: 9 }, (_, i) => i) as i (i)}<i class:on={PIPS[n].includes(i)}></i>{/each}
+      </span>
+    {/each}
   </span>
+</span>
 
 <style>
   .toss {

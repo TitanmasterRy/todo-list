@@ -77,8 +77,14 @@
       {#each Array.from({ length: KENO_NUMBERS }, (_, i) => i + 1) as n (n)}
         {@const picked = picks.includes(n)}
         {@const isDrawn = drawn.includes(n)}
-        <button class="num" class:on={picked && !isDrawn} class:hit={picked && isDrawn} class:drawn={isDrawn && !picked} onclick={() => toggle(n)} aria-pressed={picked} disabled={drawing}
-          >{n}</button
+        <button
+          class="num"
+          class:on={picked && !isDrawn}
+          class:hit={picked && isDrawn}
+          class:drawn={isDrawn && !picked}
+          onclick={() => toggle(n)}
+          aria-pressed={picked}
+          disabled={drawing}>{n}</button
         >
       {/each}
     </div>
@@ -96,8 +102,8 @@
   </div>
   {#if picks.length}
     <div class="cz-paytable">
-      {#each Object.entries(table) as [h, m] (h)}<span class:hit={Number(h) === hitsNow && drawn.length > 0}>{h} hits</span><span class:hit={Number(h) === hitsNow && drawn.length > 0}
-          >×{m}</span
+      {#each Object.entries(table) as [h, m] (h)}<span class:hit={Number(h) === hitsNow && drawn.length > 0}>{h} hits</span><span
+          class:hit={Number(h) === hitsNow && drawn.length > 0}>×{m}</span
         >{/each}
     </div>
   {/if}
@@ -194,9 +200,7 @@
     font-size: 13px;
     font-weight: 900;
     color: #1b1300;
-    background:
-      radial-gradient(circle at 50% 50%, #fff 0 42%, transparent 44%),
-      radial-gradient(circle at 35% 30%, #fff, var(--c) 45%, color-mix(in srgb, var(--c) 55%, #000));
+    background: radial-gradient(circle at 50% 50%, #fff 0 42%, transparent 44%), radial-gradient(circle at 35% 30%, #fff, var(--c) 45%, color-mix(in srgb, var(--c) 55%, #000));
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
     animation: pop 420ms cubic-bezier(0.3, 1.6, 0.5, 1);
   }
@@ -276,6 +280,7 @@
   }
   .num:disabled {
     cursor: default;
+    opacity: 1;
   }
   .keno .cz-result {
     grid-column: 1 / -1;

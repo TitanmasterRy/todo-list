@@ -228,14 +228,7 @@
               </button>
             {/each}
           </div>
-          <canvas
-            bind:this={canvas}
-            class:done={paid}
-            aria-hidden="true"
-            onpointerdown={down}
-            onpointermove={move}
-            onpointerup={up}
-            onpointercancel={() => (drawing = false)}
+          <canvas bind:this={canvas} class:done={paid} aria-hidden="true" onpointerdown={down} onpointermove={move} onpointerup={up} onpointercancel={() => (drawing = false)}
           ></canvas>
           {#each sparkles as s (s.id)}
             <span class="sparkle" style="left:{s.x}px;top:{s.y}px" aria-hidden="true"></span>
@@ -388,12 +381,21 @@
     margin: -45px 0 0 -45px;
     pointer-events: none;
     background:
-      radial-gradient(circle at 50% 50%, #fff 0 3px, transparent 4px),
-      radial-gradient(circle at 20% 30%, #fff6c8 0 2px, transparent 3px),
-      radial-gradient(circle at 78% 24%, #fff 0 2px, transparent 3px),
-      radial-gradient(circle at 70% 76%, #fff6c8 0 2.5px, transparent 3.5px),
+      radial-gradient(circle at 50% 50%, #fff 0 3px, transparent 4px), radial-gradient(circle at 20% 30%, #fff6c8 0 2px, transparent 3px),
+      radial-gradient(circle at 78% 24%, #fff 0 2px, transparent 3px), radial-gradient(circle at 70% 76%, #fff6c8 0 2.5px, transparent 3.5px),
       radial-gradient(circle at 26% 74%, #fff 0 2px, transparent 3px),
-      conic-gradient(from 0deg, transparent 0 40deg, rgba(255, 240, 180, 0.7) 45deg, transparent 50deg 130deg, rgba(255, 240, 180, 0.7) 135deg, transparent 140deg 220deg, rgba(255, 240, 180, 0.7) 225deg, transparent 230deg 310deg, rgba(255, 240, 180, 0.7) 315deg, transparent 320deg);
+      conic-gradient(
+        from 0deg,
+        transparent 0 40deg,
+        rgba(255, 240, 180, 0.7) 45deg,
+        transparent 50deg 130deg,
+        rgba(255, 240, 180, 0.7) 135deg,
+        transparent 140deg 220deg,
+        rgba(255, 240, 180, 0.7) 225deg,
+        transparent 230deg 310deg,
+        rgba(255, 240, 180, 0.7) 315deg,
+        transparent 320deg
+      );
     mask-image: radial-gradient(circle, #000 30%, transparent 70%);
     animation: sparkle 800ms ease-out forwards;
   }
@@ -430,9 +432,7 @@
     height: 120px;
     border-radius: 12px;
     transform: rotate(-4deg);
-    background:
-      repeating-linear-gradient(45deg, rgba(255, 255, 255, 0.25) 0 2px, transparent 2px 7px),
-      linear-gradient(135deg, #c9ced6, #f4f6f9 40%, #aeb5c0 60%, #e9ecf1);
+    background: repeating-linear-gradient(45deg, rgba(255, 255, 255, 0.25) 0 2px, transparent 2px 7px), linear-gradient(135deg, #c9ced6, #f4f6f9 40%, #aeb5c0 60%, #e9ecf1);
     box-shadow:
       0 0 0 3px #e7b84a,
       0 10px 20px rgba(0, 0, 0, 0.4);

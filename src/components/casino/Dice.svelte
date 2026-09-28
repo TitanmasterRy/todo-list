@@ -76,7 +76,9 @@
       <span>Chance <strong>{(diceChance(target, mode) * 100).toFixed(0)}%</strong></span>
       <span>Pays <strong>×{mult}</strong></span>
     </div>
-    <div class="cz-result center" aria-live="polite" class:win={result?.win} class:lose={result && !result.win}>{result?.text ?? (rolling ? 'Rolling…' : 'Set your odds and roll')}</div>
+    <div class="cz-result center" aria-live="polite" class:win={result?.win} class:lose={result && !result.win}>
+      {result?.text ?? (rolling ? 'Rolling…' : 'Set your odds and roll')}
+    </div>
     <WinFx bind:this={fx} />
   </div>
   <div class="cz-deck">

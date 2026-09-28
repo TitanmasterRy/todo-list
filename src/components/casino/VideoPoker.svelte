@@ -68,8 +68,9 @@
         {/if}
       </div>
       <div class="status cz-result" aria-live="polite" class:win={done && s!.payout > 0} class:lose={done && s!.payout === 0}>
-        {#if s?.phase === 'hold'}Tap cards to hold, then draw.{:else if done && s?.result}<span class="big">{VP_LABEL[s.result]}</span>{s.payout ? ` · +${s.payout.toLocaleString()}` : ''}{:else if !s}Jacks or
-          Better · press Deal{/if}
+        {#if s?.phase === 'hold'}Tap cards to hold, then draw.{:else if done && s?.result}<span class="big">{VP_LABEL[s.result]}</span>{s.payout
+            ? ` · +${s.payout.toLocaleString()}`
+            : ''}{:else if !s}Jacks or Better · press Deal{/if}
       </div>
       <div class="leds" aria-hidden="true">
         <span>Bet <b>{bet.toLocaleString()}</b></span>
@@ -111,9 +112,7 @@
     padding: 14px 14px 12px;
     border-radius: 18px / 22px;
     color: #fff;
-    background:
-      repeating-linear-gradient(180deg, rgba(0, 0, 0, 0.16) 0 1px, transparent 1px 3px),
-      radial-gradient(ellipse at 50% 40%, #1a3ad8 0%, #0c1f9a 55%, #06104f 100%);
+    background: repeating-linear-gradient(180deg, rgba(0, 0, 0, 0.16) 0 1px, transparent 1px 3px), radial-gradient(ellipse at 50% 40%, #1a3ad8 0%, #0c1f9a 55%, #06104f 100%);
     box-shadow:
       inset 0 0 40px rgba(0, 0, 30, 0.8),
       inset 0 0 0 2px rgba(120, 160, 255, 0.35),
@@ -172,6 +171,7 @@
   }
   .hold:disabled {
     cursor: default;
+    opacity: 1;
   }
   .status {
     text-align: center;

@@ -35,7 +35,13 @@
           <path d="M32 34 Q30 50 30 62" stroke="#fff" stroke-width="5" opacity=".55" fill="none" stroke-linecap="round" />
         {:else if index === 3}
           {#each [0, 90, 180, 270] as r (r)}
-            <path d="M50 50 C38 40 30 26 38 18 C44 12 50 18 50 24 C50 18 56 12 62 18 C70 26 62 40 50 50 Z" fill="#2eb85c" stroke="#136b31" stroke-width="2" transform="rotate({r + 45} 50 50)" />
+            <path
+              d="M50 50 C38 40 30 26 38 18 C44 12 50 18 50 24 C50 18 56 12 62 18 C70 26 62 40 50 50 Z"
+              fill="#2eb85c"
+              stroke="#136b31"
+              stroke-width="2"
+              transform="rotate({r + 45} 50 50)"
+            />
           {/each}
           <path d="M50 52 Q56 72 66 86" stroke="#136b31" stroke-width="4" fill="none" stroke-linecap="round" />
           <circle cx="50" cy="50" r="4" fill="#9ff0b8" />
@@ -46,10 +52,21 @@
           <path d="M58 38 L80 38 L50 86 Z" fill="#1f8fe0" opacity=".7" />
           <circle cx="36" cy="26" r="3" fill="#fff" />
         {:else}
-          <text x="50" y="82" text-anchor="middle" font-family="Impact,'Arial Black',sans-serif" font-weight="900" font-size="86" fill="#e3132f" stroke="#ffd24a" stroke-width="4" paint-order="stroke"
+          <text
+            x="50"
+            y="82"
+            text-anchor="middle"
+            font-family="Impact,'Arial Black',sans-serif"
+            font-weight="900"
+            font-size="86"
+            fill="#e3132f"
+            stroke="#ffd24a"
+            stroke-width="4"
+            paint-order="stroke">7</text
+          >
+          <text x="50" y="82" text-anchor="middle" font-family="Impact,'Arial Black',sans-serif" font-weight="900" font-size="86" fill="none" stroke="#7a0010" stroke-width="1.2"
             >7</text
           >
-          <text x="50" y="82" text-anchor="middle" font-family="Impact,'Arial Black',sans-serif" font-weight="900" font-size="86" fill="none" stroke="#7a0010" stroke-width="1.2">7</text>
         {/if}
       </svg>
     {:else}

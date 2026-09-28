@@ -22,16 +22,7 @@
 
 <div class="bet" role="group" aria-label="{label} amount">
   <span class="lbl">{label}</span>
-  <input
-    class="input num"
-    type="number"
-    {min}
-    step="1"
-    {disabled}
-    {value}
-    onchange={(e) => set(Number((e.target as HTMLInputElement).value))}
-    aria-label="{label} in chips"
-  />
+  <input class="input num" type="number" {min} step="1" {disabled} {value} onchange={(e) => set(Number((e.target as HTMLInputElement).value))} aria-label="{label} in chips" />
   <div class="rack">
     {#each DENOMS.filter((d) => d <= Math.max(chips, min)) as d (d)}
       <button class="chipbtn" {disabled} onclick={() => set(d)} class:on={value === d} aria-pressed={value === d} aria-label="{label} {d}">

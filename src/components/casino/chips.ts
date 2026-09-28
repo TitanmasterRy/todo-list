@@ -70,7 +70,9 @@ export function chipSvg(v: number, label = true): string {
     `<circle cx="50" cy="50" r="33" fill="${k.base}"/>` +
     `<circle cx="50" cy="50" r="30" fill="none" stroke="${k.edge}" stroke-width="1.6" stroke-dasharray="3 2.4"/>` +
     `<circle cx="50" cy="50" r="25" fill="${k.inlay}"/>` +
-    (label ? `<text x="50" y="51" text-anchor="middle" dominant-baseline="central" font-family="system-ui,sans-serif" font-weight="900" font-size="${fs}" fill="${k.ink}">${text}</text>` : '') +
+    (label
+      ? `<text x="50" y="51" text-anchor="middle" dominant-baseline="central" font-family="system-ui,sans-serif" font-weight="900" font-size="${fs}" fill="${k.ink}">${text}</text>`
+      : '') +
     `<ellipse cx="38" cy="28" rx="26" ry="13" fill="#fff" opacity=".16" transform="rotate(-24 38 28)"/>` +
     `</svg>`
   );

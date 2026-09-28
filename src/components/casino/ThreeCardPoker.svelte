@@ -69,13 +69,17 @@
       </div>
       <span class="cz-shoe" aria-hidden="true"></span>
     </div>
-    <div class="cz-label">Dealer {#if done}<span class="cz-badge dark">{TC_LABEL[done.dealer.cat]}{done.qualified ? '' : ' (no queen high)'}</span>{/if}</div>
+    <div class="cz-label">
+      Dealer {#if done}<span class="cz-badge dark">{TC_LABEL[done.dealer.cat]}{done.qualified ? '' : ' (no queen high)'}</span>{/if}
+    </div>
     {#key n}
       <div class="cz-hand center" style="--from-x: 100px; --from-y: -80px">
-        {#if r}{#each r.dealer as c, i (i)}<PlayingCard card={c} hidden={r.phase !== 'done'} delay={dealerDelay(i)} flipDelay={120 + i * 220} />{/each}{:else}{#each [0, 1, 2] as i (i)}<PlayingCard
-              hidden
-              deal={false}
-            />{/each}{/if}
+        {#if r}{#each r.dealer as c, i (i)}<PlayingCard
+              card={c}
+              hidden={r.phase !== 'done'}
+              delay={dealerDelay(i)}
+              flipDelay={120 + i * 220}
+            />{/each}{:else}{#each [0, 1, 2] as i (i)}<PlayingCard hidden deal={false} />{/each}{/if}
       </div>
     {/key}
     <div class="spots" aria-hidden="true">
@@ -89,7 +93,9 @@
         {#if r?.played}<ChipStack amount={r.bets.ante} size={26} />{/if}<span class="cz-spot-label">Play</span>
       </div>
     </div>
-    <div class="cz-label">You {#if r}<span class="cz-badge">{TC_LABEL[evalThree(r.player).cat]}</span>{/if}</div>
+    <div class="cz-label">
+      You {#if r}<span class="cz-badge">{TC_LABEL[evalThree(r.player).cat]}</span>{/if}
+    </div>
     {#key n}
       <div class="cz-hand center" style="--from-x: 140px; --from-y: -220px">
         {#if r}{#each r.player as c, i (i)}<PlayingCard card={c} delay={youDelay(i)} />{/each}{/if}
