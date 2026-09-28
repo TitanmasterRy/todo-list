@@ -21,6 +21,11 @@ export function configureSounds(opts: { enabled: boolean; pack: SoundPack }): vo
   pack = opts.pack;
 }
 
+/** The audio context while sounds are on (lazy chunks, like the casino, synthesize their own effects), else null. */
+export function soundContext(): AudioContext | null {
+  return enabled ? getCtx() : null;
+}
+
 /** Unlock audio on the first user gesture (mobile browsers). */
 export function primeAudio(): void {
   if (!enabled) return;

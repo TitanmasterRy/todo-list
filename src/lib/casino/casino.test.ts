@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { seeded, randInt, shuffle } from './rng';
 import type { PlayingCard } from './cards';
-import { slotsRtp, slotPayout, spinSlots } from './slots';
+import { SLOT_SYMBOL_IDS, SLOT_SYMBOLS, slotsRtp, slotPayout, spinSlots, SLOT_WEIGHTS } from './slots';
 import { handValue, deal, hit, stand, doubleDown } from './blackjack';
 import { wins, settleRoulette, color } from './roulette';
 import { evaluatePoker, vpDeal, vpDraw } from './videopoker';
@@ -44,6 +44,13 @@ describe('slots', () => {
   it('returns about 95% in theory', () => {
     expect(slotsRtp()).toBeGreaterThan(0.93);
     expect(slotsRtp()).toBeLessThan(0.97);
+  });
+  it('has an art id for every symbol of every theme pack', () => {
+    expect(Object.keys(SLOT_SYMBOL_IDS).sort()).toEqual(Object.keys(SLOT_SYMBOLS).sort());
+    for (const ids of Object.values(SLOT_SYMBOL_IDS)) {
+      expect(ids).toHaveLength(SLOT_WEIGHTS.length);
+      for (const id of ids) expect(id).toMatch(/^[a-z][a-z-]*$/);
+    }
   });
   it('pays three of a kind and two cherries', () => {
     expect(slotPayout([5, 5, 5]).multiplier).toBe(500);
