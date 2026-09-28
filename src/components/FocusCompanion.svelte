@@ -162,7 +162,7 @@
     gap: 6px;
     flex-wrap: wrap;
     width: 100%;
-    animation: rise-in var(--dur-slow) var(--ease) both;
+    animation: rise-in var(--dur-slow) var(--ease) backwards;
   }
   @keyframes float {
     50% {

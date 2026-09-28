@@ -85,7 +85,7 @@
 
 <style>
   .now {
-    animation: rise-in var(--dur-slow) var(--ease) both;
+    animation: rise-in var(--dur-slow) var(--ease) backwards;
     display: flex;
     flex-wrap: wrap;
     align-items: center;

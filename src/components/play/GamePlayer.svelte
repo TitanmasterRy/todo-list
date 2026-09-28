@@ -199,7 +199,7 @@
     background: #000;
     display: grid;
     grid-template-rows: auto 1fr;
-    animation: fade-in 200ms var(--ease) both;
+    animation: fade-in 200ms var(--ease) backwards;
   }
   header {
     display: flex;
@@ -263,7 +263,7 @@
     padding: 14px 18px;
     text-align: center;
     min-width: 240px;
-    animation: modal-in 300ms var(--spring) both;
+    animation: modal-in 300ms var(--spring) backwards;
   }
   .buy p {
     margin: 0 0 6px;

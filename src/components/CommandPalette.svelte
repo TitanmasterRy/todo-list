@@ -232,7 +232,7 @@
     overflow-y: auto;
   }
   li {
-    animation: rise-in 260ms var(--ease) both;
+    animation: rise-in 260ms var(--ease) backwards;
   }
   li button {
     position: relative;

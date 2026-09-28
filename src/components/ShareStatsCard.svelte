@@ -104,7 +104,7 @@
     box-shadow:
       var(--shadow-lg),
       0 0 40px -12px color-mix(in srgb, var(--accent) 60%, transparent);
-    animation: pop-in var(--dur-slow) var(--spring) both;
+    animation: pop-in var(--dur-slow) var(--spring) backwards;
     transition: transform var(--dur-slow) var(--spring);
   }
   canvas:hover {

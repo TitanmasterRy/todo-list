@@ -216,7 +216,7 @@
     overflow: hidden;
     --mood: var(--accent);
     background: radial-gradient(60% 70% at 18% 40%, color-mix(in srgb, var(--mood) 14%, transparent), transparent 70%), var(--bg-elev);
-    animation: pop-in var(--dur-slow) var(--spring) both;
+    animation: pop-in var(--dur-slow) var(--spring) backwards;
   }
   .mood-happy {
     --mood: #ff6fae;

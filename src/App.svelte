@@ -246,7 +246,7 @@
     background: var(--bg-elev);
     border: 1px solid var(--border);
     box-shadow: var(--shadow-sm);
-    animation: rise-in var(--dur-slow) var(--ease) both;
+    animation: rise-in var(--dur-slow) var(--ease) backwards;
   }
   .announce.warn {
     border-color: color-mix(in srgb, var(--warn) 60%, var(--border));

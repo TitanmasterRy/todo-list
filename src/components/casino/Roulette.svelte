@@ -170,7 +170,7 @@
     filter: blur(0.4px);
   }
   .ball.land {
-    animation: rl-land 900ms var(--spring) both;
+    animation: rl-land 900ms var(--spring) backwards;
   }
   @keyframes rl-spin {
     to {
@@ -211,7 +211,7 @@
       inset 0 1px 0 rgba(255, 255, 255, 0.25),
       0 2px 4px rgba(0, 0, 0, 0.35);
     text-shadow: 0 1px 1px rgba(0, 0, 0, 0.5);
-    animation: cz-pop 320ms var(--spring) both;
+    animation: cz-pop 320ms var(--spring) backwards;
   }
   .h.red {
     background: linear-gradient(180deg, #e74c3c, #c0392b);

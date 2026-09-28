@@ -86,7 +86,7 @@
     background: var(--bg-elev-2);
     border: 1px solid var(--border);
     box-shadow: inset 0 1px 0 var(--sheen);
-    animation: rise-in 360ms var(--ease) both;
+    animation: rise-in 360ms var(--ease) backwards;
     transition:
       border-color var(--dur),
       box-shadow var(--dur-slow) var(--ease);

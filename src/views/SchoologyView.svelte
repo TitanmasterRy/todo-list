@@ -499,7 +499,7 @@
     padding: 6px 0;
     border-top: 1px solid var(--border);
     font-size: 14px;
-    animation: rise-in 300ms var(--ease) both;
+    animation: rise-in 300ms var(--ease) backwards;
   }
   .map-row .select {
     width: auto;
@@ -509,7 +509,7 @@
   }
   section.card {
     margin-bottom: 12px;
-    animation: rise-in var(--dur-slow) var(--ease) both;
+    animation: rise-in var(--dur-slow) var(--ease) backwards;
   }
   .section-title .count {
     font-variant-numeric: tabular-nums;

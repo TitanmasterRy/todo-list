@@ -275,7 +275,7 @@
     box-shadow: inset 0 1px 0 var(--sheen);
   }
   .savelist {
-    animation: pop-in var(--dur-slow) var(--spring) both;
+    animation: pop-in var(--dur-slow) var(--spring) backwards;
   }
   .presets .chip {
     cursor: pointer;

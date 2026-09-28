@@ -134,7 +134,7 @@
     border-radius: 6px;
     padding: 2px 6px;
     box-shadow: 0 3px 8px rgba(0, 0, 0, 0.4);
-    animation: dc-drop 420ms var(--spring) both;
+    animation: dc-drop 420ms var(--spring) backwards;
   }
   .marker::after {
     content: '';

@@ -112,7 +112,7 @@
     color: #fff;
     text-shadow: 0 0 8px #fff;
     pointer-events: none;
-    animation: mn-sparkle 900ms var(--ease) both;
+    animation: mn-sparkle 900ms var(--ease) backwards;
   }
   @keyframes mn-sparkle {
     0% {
@@ -130,7 +130,7 @@
   }
   .mine {
     background: linear-gradient(180deg, rgba(0, 0, 0, 0.35), rgba(0, 0, 0, 0.5));
-    animation: cz-pop 320ms var(--spring) both;
+    animation: cz-pop 320ms var(--spring) backwards;
   }
   .stats {
     display: flex;

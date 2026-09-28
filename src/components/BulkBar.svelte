@@ -144,7 +144,7 @@
     gap: 4px;
     box-shadow: var(--shadow-lg);
     min-width: 180px;
-    animation: pop-in 160ms var(--spring) both;
+    animation: pop-in 160ms var(--spring) backwards;
   }
   .pop form {
     display: flex;

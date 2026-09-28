@@ -160,7 +160,7 @@
   }
   section {
     margin: 14px 0;
-    animation: rise-in 360ms var(--ease) both;
+    animation: rise-in 360ms var(--ease) backwards;
   }
   section:nth-of-type(2) {
     animation-delay: 50ms;
@@ -279,7 +279,7 @@
     height: 100%;
     border-radius: 4px;
     box-shadow: 0 0 8px -2px currentColor;
-    animation: grow-x 600ms var(--ease) both;
+    animation: grow-x 600ms var(--ease) backwards;
     transform-origin: left;
   }
   :global([dir='rtl']) .track .fill {

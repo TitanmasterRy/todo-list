@@ -317,7 +317,7 @@
       transform 300ms var(--spring);
     position: relative;
     touch-action: pan-y;
-    animation: rise-in var(--dur-slow) var(--ease) both;
+    animation: rise-in var(--dur-slow) var(--ease) backwards;
   }
   /* the course color runs down the leading edge */
   .task::after {

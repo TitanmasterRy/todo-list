@@ -114,7 +114,7 @@
   }
   .presets .chip {
     cursor: pointer;
-    animation: rise-in 300ms var(--ease) both;
+    animation: rise-in 300ms var(--ease) backwards;
   }
   .presets .chip:hover {
     transform: translateY(-2px) scale(1.04);
@@ -135,7 +135,7 @@
     display: flex;
     gap: 6px;
     align-items: center;
-    animation: rise-in 260ms var(--ease) both;
+    animation: rise-in 260ms var(--ease) backwards;
   }
   .color {
     border-radius: 50%;

@@ -229,7 +229,7 @@
     pointer-events: none;
     box-shadow: var(--shadow);
     z-index: 2;
-    animation: pop-in 140ms var(--ease) both;
+    animation: pop-in 140ms var(--ease) backwards;
   }
   /* near the ends, pin the tooltip to that side of the crosshair so it stays inside the chart */
   .tip.edge-l {

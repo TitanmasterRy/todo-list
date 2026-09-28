@@ -206,7 +206,7 @@
     color: var(--text-muted);
   }
   .syntax li {
-    animation: rise-in 320ms var(--ease) both;
+    animation: rise-in 320ms var(--ease) backwards;
   }
   .syntax li:nth-child(2) {
     animation-delay: 60ms;

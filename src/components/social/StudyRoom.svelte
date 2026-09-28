@@ -202,7 +202,7 @@
     box-shadow:
       inset 0 1px 0 var(--sheen),
       0 0 30px -12px color-mix(in srgb, var(--tint) 55%, transparent);
-    animation: pop-in var(--dur-slow) var(--spring) both;
+    animation: pop-in var(--dur-slow) var(--spring) backwards;
   }
   .live[data-phase='break'],
   .live[data-phase='long'] {

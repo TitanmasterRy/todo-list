@@ -362,7 +362,7 @@
     color: var(--text-muted);
     cursor: default;
     box-shadow: none;
-    animation: matched 600ms var(--spring) both;
+    animation: matched 600ms var(--spring) backwards;
   }
   .tile.dragging {
     position: relative;
@@ -388,7 +388,7 @@
     color: #fff;
     background: var(--success);
     box-shadow: 0 0 10px -2px color-mix(in srgb, var(--success) 70%, transparent);
-    animation: pop-in var(--dur-slow) var(--spring) both;
+    animation: pop-in var(--dur-slow) var(--spring) backwards;
   }
   .status {
     min-height: 1.4em;
@@ -404,7 +404,7 @@
     gap: 6px;
     justify-items: center;
     background: radial-gradient(60% 50% at 50% 0%, color-mix(in srgb, var(--accent) 16%, transparent), transparent 70%), var(--bg-elev);
-    animation: pop-in var(--dur-slow) var(--spring) both;
+    animation: pop-in var(--dur-slow) var(--spring) backwards;
   }
   .end h3 {
     margin: 0;

@@ -178,7 +178,7 @@
     position: relative;
     overflow: hidden;
     background: radial-gradient(60% 50% at 50% 0%, color-mix(in srgb, var(--c) 18%, transparent), transparent 70%), color-mix(in srgb, #2d2a3e 18%, var(--bg-elev));
-    animation: pop-in var(--dur-slow) var(--spring) both;
+    animation: pop-in var(--dur-slow) var(--spring) backwards;
   }
   .map-card.cleared {
     border-color: transparent;
@@ -230,7 +230,7 @@
   .rooms li {
     display: grid;
     place-items: center;
-    animation: rise-in 360ms var(--ease) both;
+    animation: rise-in 360ms var(--ease) backwards;
     animation-delay: calc(var(--i, 0) * 40ms);
   }
   /* rooms: little cards that lift on hover; open ones glow in the course color, cleared floors turn them gold */

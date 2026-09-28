@@ -298,7 +298,7 @@
     padding: 8px 12px;
     background: color-mix(in srgb, var(--danger) 6%, transparent);
     box-shadow: 0 0 24px -10px color-mix(in srgb, var(--danger) 60%, transparent);
-    animation: pop-in var(--dur-slow) var(--spring) both;
+    animation: pop-in var(--dur-slow) var(--spring) backwards;
   }
   .where summary {
     transition: color var(--dur);

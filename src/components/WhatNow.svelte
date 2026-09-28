@@ -45,7 +45,7 @@
     position: relative;
     overflow: hidden;
     margin-bottom: 14px;
-    animation: pop-in var(--dur-slow) var(--spring) both;
+    animation: pop-in var(--dur-slow) var(--spring) backwards;
   }
   .whatnow.glow-edge {
     background:

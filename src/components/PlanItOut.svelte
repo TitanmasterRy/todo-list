@@ -211,7 +211,7 @@
     display: flex;
     align-items: center;
     gap: 6px;
-    animation: rise-in 260ms var(--ease) both;
+    animation: rise-in 260ms var(--ease) backwards;
   }
   .steps li::marker {
     color: var(--accent-text);
@@ -219,7 +219,7 @@
     font-variant-numeric: tabular-nums;
   }
   .sessions li {
-    animation: rise-in 260ms var(--ease) both;
+    animation: rise-in 260ms var(--ease) backwards;
   }
   .sessions li::marker {
     color: var(--accent-text);

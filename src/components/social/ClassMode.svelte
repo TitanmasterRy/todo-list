@@ -260,7 +260,7 @@
     border: 1px solid color-mix(in srgb, var(--accent) 25%, var(--border));
     box-shadow: inset 0 1px 0 var(--sheen);
     font-size: 13px;
-    animation: rise-in var(--dur-slow) var(--ease) both;
+    animation: rise-in var(--dur-slow) var(--ease) backwards;
   }
   .row {
     display: flex;
@@ -298,7 +298,7 @@
     border-radius: 10px;
     background: var(--bg-elev-2);
     box-shadow: inset 0 1px 0 var(--sheen);
-    animation: rise-in 300ms var(--ease) both;
+    animation: rise-in 300ms var(--ease) backwards;
     transition:
       border-color var(--dur),
       transform var(--dur) var(--spring),

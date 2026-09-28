@@ -395,7 +395,7 @@
     grid-auto-rows: var(--cell);
     padding: 1px 0 0 1px;
     flex: none;
-    animation: pop-in var(--dur-slow) var(--spring) both;
+    animation: pop-in var(--dur-slow) var(--spring) backwards;
   }
   /* only letter squares are drawn (a freeform grid); the -1px margins collapse neighbouring borders into one line.
      Squares are softly inset; the square you're on glows in the accent above its neighbours. */
@@ -527,7 +527,7 @@
     box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 25%, transparent);
   }
   .clue.solved {
-    animation: solved-flash 900ms var(--ease) both;
+    animation: solved-flash 900ms var(--ease) backwards;
   }
   .clue.solved .ct {
     color: var(--text-muted);
@@ -553,7 +553,7 @@
     color: #fff;
     background: var(--success);
     box-shadow: 0 0 10px -2px color-mix(in srgb, var(--success) 70%, transparent);
-    animation: pop-in var(--dur-slow) var(--spring) both;
+    animation: pop-in var(--dur-slow) var(--spring) backwards;
     flex-shrink: 0;
   }
   .status {
@@ -576,7 +576,7 @@
     gap: 6px;
     justify-items: center;
     background: radial-gradient(60% 50% at 50% 0%, color-mix(in srgb, var(--accent) 14%, transparent), transparent 70%), var(--bg-elev);
-    animation: pop-in var(--dur-slow) var(--spring) both;
+    animation: pop-in var(--dur-slow) var(--spring) backwards;
   }
   .end h3 {
     margin: 0;

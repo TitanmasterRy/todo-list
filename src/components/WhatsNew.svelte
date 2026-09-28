@@ -46,7 +46,7 @@
   }
   .md :global(li) {
     margin: 4px 0;
-    animation: rise-in 360ms var(--ease) both;
+    animation: rise-in 360ms var(--ease) backwards;
   }
   .md :global(li:nth-child(2)) {
     animation-delay: 40ms;

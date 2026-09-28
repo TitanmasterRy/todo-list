@@ -319,7 +319,7 @@
     gap: 14px;
     overflow: hidden;
     background: radial-gradient(50% 45% at 50% 0%, color-mix(in srgb, var(--accent) 12%, transparent), transparent 70%), var(--bg-elev);
-    animation: pop-in var(--dur-slow) var(--spring) both;
+    animation: pop-in var(--dur-slow) var(--spring) backwards;
   }
   .q {
     display: grid;
@@ -331,7 +331,7 @@
     border: 1px solid color-mix(in srgb, var(--accent) 20%, var(--border));
     box-shadow: inset 0 1px 0 var(--sheen);
     text-align: center;
-    animation: rise-in var(--dur-slow) var(--ease) both;
+    animation: rise-in var(--dur-slow) var(--ease) backwards;
   }
   .q img,
   .choice img {
@@ -406,7 +406,7 @@
     gap: 8px;
     justify-items: center;
     background: radial-gradient(60% 50% at 50% 0%, color-mix(in srgb, var(--gold) 12%, transparent), transparent 70%), var(--bg-elev);
-    animation: pop-in var(--dur-slow) var(--spring) both;
+    animation: pop-in var(--dur-slow) var(--spring) backwards;
   }
   .big {
     font-size: 56px;

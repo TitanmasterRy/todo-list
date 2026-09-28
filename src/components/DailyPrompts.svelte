@@ -264,7 +264,7 @@
     flex-direction: column;
     align-items: center;
     box-shadow: inset 0 1px 0 var(--sheen);
-    animation: rise-in 320ms var(--ease) both;
+    animation: rise-in 320ms var(--ease) backwards;
   }
   .stats > div:nth-child(2) {
     animation-delay: 50ms;

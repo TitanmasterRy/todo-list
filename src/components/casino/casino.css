@@ -2,7 +2,7 @@
 .cz-game {
   display: grid;
   gap: 14px;
-  animation: rise-in var(--dur-slow) var(--ease) both;
+  animation: rise-in var(--dur-slow) var(--ease) backwards;
 }
 /* the felt: a green table with a vignette, a wooden rail and a gold trim */
 .cz-table {

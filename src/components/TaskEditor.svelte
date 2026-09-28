@@ -450,7 +450,7 @@
       var(--glow);
   }
   .field {
-    animation: rise-in 300ms var(--ease) both;
+    animation: rise-in 300ms var(--ease) backwards;
   }
   .subs li {
     transition: transform var(--dur) var(--spring);
@@ -589,7 +589,7 @@
     padding: 10px;
     border-radius: var(--radius-sm);
     box-shadow: inset 0 1px 0 var(--sheen);
-    animation: pop-in var(--dur-slow) var(--spring) both;
+    animation: pop-in var(--dur-slow) var(--spring) backwards;
   }
   .n,
   .n2,

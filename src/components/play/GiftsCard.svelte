@@ -313,7 +313,7 @@
     border-radius: var(--radius-sm);
     background: color-mix(in srgb, var(--warn) 10%, transparent);
     border: 1px solid color-mix(in srgb, var(--warn) 35%, transparent);
-    animation: pop-in var(--dur-slow) var(--spring) both;
+    animation: pop-in var(--dur-slow) var(--spring) backwards;
   }
   .msg {
     font-size: 13px;

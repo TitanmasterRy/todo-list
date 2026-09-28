@@ -499,7 +499,7 @@ a.card:hover,
   max-width: 820px;
   margin: 0 auto;
   padding: 20px 16px 120px;
-  animation: page-in var(--dur-slow) var(--ease) both;
+  animation: page-in var(--dur-slow) var(--ease) backwards;
 }
 .page-head {
   display: flex;
@@ -555,7 +555,7 @@ a.card:hover,
   padding: 8vh 16px 16px;
   z-index: 100;
   overflow-y: auto;
-  animation: fade-in 200ms var(--ease) both;
+  animation: fade-in 200ms var(--ease) backwards;
 }
 .modal {
   width: 100%;
@@ -568,7 +568,7 @@ a.card:hover,
     var(--shadow-lg),
     0 0 60px -20px color-mix(in srgb, var(--accent) 50%, transparent);
   padding: 20px;
-  animation: modal-in 320ms var(--spring) both;
+  animation: modal-in 320ms var(--spring) backwards;
 }
 .modal h2 {
   margin: 0 0 12px;
@@ -745,7 +745,7 @@ a.card:hover,
 
 /* utilities */
 .rise-in {
-  animation: rise-in var(--dur-slow) var(--ease) both;
+  animation: rise-in var(--dur-slow) var(--ease) backwards;
 }
 .bump {
   display: inline-block;
@@ -765,7 +765,7 @@ a.card:hover,
 }
 /* staggered list entrances: .stagger > * fade up one after another */
 .stagger > * {
-  animation: rise-in 360ms var(--ease) both;
+  animation: rise-in 360ms var(--ease) backwards;
 }
 .stagger > :nth-child(2) {
   animation-delay: 40ms;

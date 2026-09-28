@@ -146,7 +146,7 @@
     padding: 8px;
     overflow: hidden;
     background: linear-gradient(180deg, color-mix(in srgb, var(--info) 14%, var(--bg-elev)), color-mix(in srgb, #7bc47f 12%, var(--bg-elev)) 70%, var(--bg-elev));
-    animation: pop-in var(--dur-slow) var(--spring) both;
+    animation: pop-in var(--dur-slow) var(--spring) backwards;
   }
   .sun {
     position: absolute;

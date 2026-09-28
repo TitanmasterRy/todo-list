@@ -136,7 +136,7 @@
       inset 0 1px 0 var(--sheen),
       var(--shadow-sm),
       0 0 34px -10px color-mix(in srgb, var(--gold) 60%, transparent);
-    animation: pop-in var(--dur-slow) var(--spring) both;
+    animation: pop-in var(--dur-slow) var(--spring) backwards;
   }
   .deal::before {
     content: '';
@@ -349,7 +349,7 @@
     font-size: 10px;
     color: #fff;
     background: var(--success);
-    animation: pop-in var(--dur-slow) var(--spring) both;
+    animation: pop-in var(--dur-slow) var(--spring) backwards;
   }
   .deal .got {
     padding: 4px 12px;

@@ -218,7 +218,7 @@
       inset 0 1px 0 rgba(255, 255, 255, 0.08),
       var(--shadow),
       0 0 40px -12px color-mix(in srgb, var(--accent) 55%, transparent);
-    animation: pop-in var(--dur-slow) var(--spring) both;
+    animation: pop-in var(--dur-slow) var(--spring) backwards;
   }
   .dots {
     position: absolute;

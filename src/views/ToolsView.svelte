@@ -294,7 +294,7 @@
       inset 0 1px 0 var(--sheen),
       var(--shadow-sm);
     overflow: hidden;
-    animation: rise-in 320ms var(--ease) both;
+    animation: rise-in 320ms var(--ease) backwards;
     transition:
       transform var(--dur-slow) var(--spring),
       border-color var(--dur),

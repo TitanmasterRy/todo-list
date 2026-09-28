@@ -101,7 +101,7 @@
       inset 0 1px 0 var(--sheen),
       inset 0 14px 28px -22px var(--cc),
       var(--shadow-sm);
-    animation: rise-in var(--dur-slow) var(--ease) both;
+    animation: rise-in var(--dur-slow) var(--ease) backwards;
     transition:
       border-color 0.15s,
       background 0.15s,

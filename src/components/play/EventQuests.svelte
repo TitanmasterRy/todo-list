@@ -232,7 +232,7 @@
     background: color-mix(in srgb, var(--success) 12%, transparent);
     border: 1px solid color-mix(in srgb, var(--success) 35%, transparent);
     font-variant-numeric: tabular-nums;
-    animation: pop-in var(--dur-slow) var(--spring) both;
+    animation: pop-in var(--dur-slow) var(--spring) backwards;
   }
   .burst {
     position: absolute;
@@ -240,7 +240,7 @@
     border-radius: 999px;
     pointer-events: none;
     box-shadow: 0 0 0 0 color-mix(in srgb, var(--success) 60%, transparent);
-    animation: burst 700ms var(--ease) both;
+    animation: burst 700ms var(--ease) backwards;
   }
   @keyframes burst {
     to {

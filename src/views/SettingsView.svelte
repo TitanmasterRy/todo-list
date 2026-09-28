@@ -55,7 +55,7 @@
   .settings :global(section.card) {
     position: relative;
     overflow: hidden;
-    animation: rise-in 360ms var(--ease) both;
+    animation: rise-in 360ms var(--ease) backwards;
     transition:
       border-color var(--dur),
       box-shadow var(--dur-slow) var(--ease);
