@@ -43,46 +43,78 @@
     pointer-events: none;
   }
   .toast {
+    position: relative;
     pointer-events: auto;
     display: flex;
     align-items: center;
     gap: 10px;
-    background: var(--bg-elev-2);
+    background: var(--glass);
+    backdrop-filter: blur(14px) saturate(1.3);
+    -webkit-backdrop-filter: blur(14px) saturate(1.3);
     border: 1px solid var(--border-strong);
-    border-radius: 12px;
-    padding: 10px 12px;
-    box-shadow: var(--shadow);
+    border-radius: 14px;
+    padding: 10px 12px 10px 16px;
+    box-shadow: var(--shadow-lg);
     font-size: 14px;
+    overflow: hidden;
+    --tone: var(--border-strong);
+  }
+  /* a glowing color bar on the leading edge says what kind of news this is */
+  .toast::before {
+    content: '';
+    position: absolute;
+    inset-inline-start: 0;
+    top: 0;
+    bottom: 0;
+    width: 4px;
+    background: var(--tone);
+    box-shadow: 0 0 12px var(--tone);
   }
   .toast.success {
-    border-color: color-mix(in srgb, var(--success) 50%, transparent);
+    --tone: var(--success);
+    border-color: color-mix(in srgb, var(--success) 45%, var(--border));
   }
   .toast.warn {
-    border-color: color-mix(in srgb, var(--warn) 50%, transparent);
+    --tone: var(--warn);
+    border-color: color-mix(in srgb, var(--warn) 50%, var(--border));
+  }
+  .toast.info {
+    --tone: var(--info);
   }
   .toast.xp {
-    border-color: color-mix(in srgb, var(--accent) calc(40% + var(--combo) * 6%), transparent);
+    --tone: var(--accent);
+    border-color: color-mix(in srgb, var(--accent) calc(40% + var(--combo) * 6%), var(--border));
     box-shadow:
-      var(--shadow),
-      0 0 calc(var(--combo) * 4px) color-mix(in srgb, var(--accent) calc(var(--combo) * 8%), transparent);
-    transform: scale(calc(1 + var(--combo) * 0.01));
+      var(--shadow-lg),
+      0 0 calc(var(--combo) * 6px) color-mix(in srgb, var(--accent) calc(var(--combo) * 8%), transparent);
+    transform: scale(calc(1 + var(--combo) * 0.012));
+  }
+  .toast.xp::before {
+    background: var(--grad-accent);
+  }
+  .toast.combo .emoji {
+    animation: wiggle 500ms var(--spring);
   }
   .toast.levelup {
-    background: linear-gradient(135deg, color-mix(in srgb, var(--accent) 35%, var(--bg-elev-2)), var(--bg-elev-2));
+    --tone: var(--accent-2);
+    background: linear-gradient(135deg, color-mix(in srgb, var(--accent) 35%, var(--bg-elev-2)), color-mix(in srgb, var(--accent-2) 18%, var(--bg-elev-2)));
     border-color: var(--accent);
   }
   .toast.badge {
-    border-color: var(--warn);
+    --tone: var(--gold);
+    border-color: color-mix(in srgb, var(--gold) 60%, var(--border));
   }
   .emoji {
-    font-size: 22px;
+    font-size: 24px;
+    filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.25));
+    animation: bump 480ms var(--spring);
   }
   .body {
     flex: 1;
     min-width: 0;
   }
   .msg {
-    font-weight: 600;
+    font-weight: 700;
   }
   .detail {
     color: var(--text-muted);
@@ -92,6 +124,11 @@
     color: var(--text-faint);
     font-size: 18px;
     padding: 0 4px;
+    border-radius: 6px;
+  }
+  .x:hover {
+    color: var(--text);
+    background: var(--bg-hover);
   }
   @media (max-width: 720px) {
     .toasts {

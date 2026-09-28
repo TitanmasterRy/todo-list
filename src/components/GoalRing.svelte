@@ -16,6 +16,12 @@
 
 <div class="ring" class:closed style="width:{size}px;height:{size}px" role="img" aria-label={t('goal.ring', { value, count: goal })}>
   <svg viewBox="0 0 {size} {size}" width={size} height={size}>
+    <defs>
+      <linearGradient id="ring-grad-{size}" x1="0" y1="0" x2="1" y2="1">
+        <stop offset="0" stop-color="var(--accent)" />
+        <stop offset="1" stop-color="var(--accent-2)" />
+      </linearGradient>
+    </defs>
     <circle cx={size / 2} cy={size / 2} {r} fill="none" stroke="var(--border)" stroke-width={stroke} />
     <circle
       class="fg"
@@ -23,7 +29,7 @@
       cy={size / 2}
       {r}
       fill="none"
-      stroke="var(--accent)"
+      stroke="url(#ring-grad-{size})"
       stroke-width={stroke}
       stroke-linecap="round"
       stroke-dasharray={c}
@@ -45,20 +51,25 @@
   svg {
     position: absolute;
     inset: 0;
+    overflow: visible;
   }
   .fg {
-    transition: stroke-dashoffset 600ms var(--ease);
+    transition: stroke-dashoffset 700ms var(--spring);
+    filter: drop-shadow(0 0 4px color-mix(in srgb, var(--accent) 45%, transparent));
   }
   .closed .fg {
-    filter: drop-shadow(0 0 4px var(--accent));
+    filter: drop-shadow(0 0 8px var(--accent));
+  }
+  .closed {
+    animation: bump 600ms var(--spring);
   }
   .lbl {
     font-size: 12px;
-    font-weight: 700;
+    font-weight: 800;
     font-variant-numeric: tabular-nums;
   }
   .closed .lbl {
     color: var(--accent-text);
-    font-size: 16px;
+    font-size: 17px;
   }
 </style>

@@ -106,9 +106,9 @@
       {/await}
     {/if}
   {:else}
-    <div class="lobby">
-      {#each GAMES as g (g.id)}
-        <button class="card tile" onclick={() => (current = g.id)}>
+    <div class="lobby stagger">
+      {#each GAMES as g, i (g.id)}
+        <button class="card tile" style="--hue:{(i * 37) % 360}" onclick={() => (current = g.id)}>
           <span class="e">{g.emoji}</span>
           <span class="n">{g.name}</span>
           <span class="b">{g.blurb}</span>
@@ -135,11 +135,12 @@
 <style>
   .ach-h {
     font-size: 15px;
-    margin: 18px 0 8px;
+    margin: 22px 0 8px;
+    font-weight: 800;
   }
   .count {
     color: var(--text-muted);
-    font-weight: 400;
+    font-weight: 500;
   }
   .ach {
     display: grid;
@@ -153,13 +154,19 @@
   }
   .a:not(.on) {
     border-style: dashed;
+    box-shadow: none;
   }
   .a:not(.on) .ae {
     filter: grayscale(1);
     opacity: 0.6;
   }
+  .a.on {
+    border-color: color-mix(in srgb, var(--gold) 55%, var(--border));
+    background: linear-gradient(135deg, color-mix(in srgb, var(--gold) 12%, var(--bg-elev)), var(--bg-elev) 60%);
+  }
   .ae {
-    font-size: 22px;
+    font-size: 24px;
+    filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.25));
   }
   .an {
     font-weight: 700;
@@ -172,27 +179,52 @@
   .lobby {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-    gap: 8px;
+    gap: 10px;
   }
+  /* every game gets its own hue for a colored glow pool behind the emoji */
   .tile {
+    position: relative;
     display: grid;
     gap: 2px;
     justify-items: start;
     text-align: left;
-    padding: 14px;
-    transition:
-      transform var(--dur) var(--spring),
-      border-color var(--dur);
+    padding: 16px 14px 14px;
+    overflow: hidden;
+    background: radial-gradient(70% 60% at 100% 0%, hsl(var(--hue) 90% 60% / 0.22), transparent 70%), var(--bg-elev);
+  }
+  .tile::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(115deg, transparent 40%, rgba(255, 255, 255, 0.12) 50%, transparent 60%);
+    transform: translateX(-130%);
+    pointer-events: none;
+  }
+  .tile:hover::before {
+    animation: sheen 700ms var(--ease);
   }
   .tile:hover {
-    transform: translateY(-2px);
-    border-color: var(--accent);
+    border-color: hsl(var(--hue) 80% 60% / 0.7);
+    box-shadow:
+      var(--shadow),
+      0 0 30px -8px hsl(var(--hue) 90% 60% / 0.6);
+    transform: translateY(-3px) scale(1.02);
+  }
+  .tile:hover .e {
+    transform: scale(1.25) rotate(-8deg);
   }
   .e {
-    font-size: 28px;
+    font-size: 32px;
+    line-height: 1;
+    height: 40px;
+    display: grid;
+    align-items: center;
+    filter: drop-shadow(0 4px 8px hsl(var(--hue) 90% 50% / 0.5));
+    transition: transform var(--dur-slow) var(--spring);
   }
   .n {
-    font-weight: 700;
+    font-weight: 800;
+    margin-top: 4px;
   }
   .b {
     font-size: 12px;
@@ -208,6 +240,7 @@
   .bar h2 {
     font-size: 18px;
     margin: 0;
+    font-weight: 800;
   }
   .grow {
     flex: 1;
@@ -215,14 +248,19 @@
   .sess {
     font-size: 13px;
     color: var(--text-muted);
+    padding: 4px 10px;
+    border-radius: 999px;
+    background: var(--bg-elev);
+    border: 1px solid var(--border);
+    font-variant-numeric: tabular-nums;
   }
   .pos {
     color: var(--success-text);
-    font-weight: 700;
+    font-weight: 800;
   }
   .neg {
     color: var(--danger-text);
-    font-weight: 700;
+    font-weight: 800;
   }
   .note {
     margin-bottom: 10px;

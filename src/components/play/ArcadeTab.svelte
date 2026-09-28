@@ -58,9 +58,9 @@
     <p class="muted">Add one with ➕ Add a game (an HTML or JavaScript file, a .zip, or a link).</p>
   </div>
 {:else}
-  <div class="games">
-    {#each list as g (g.id + (g.local ? ':l' : ''))}
-      <div class="card game" class:match={g.theme === store.settings.themePack}>
+  <div class="games stagger">
+    {#each list as g, i (g.id + (g.local ? ':l' : ''))}
+      <div class="card game lift" class:match={g.theme === store.settings.themePack} style="--hue:{(i * 47 + 200) % 360}">
         <div class="e">{g.emoji ?? '🎮'}</div>
         <div class="info">
           <div class="n">
@@ -104,24 +104,48 @@
   .games {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
-    gap: 8px;
+    gap: 10px;
   }
   .game {
+    position: relative;
     display: grid;
-    grid-template-columns: 44px 1fr auto;
+    grid-template-columns: 52px 1fr auto;
     gap: 10px;
     align-items: center;
     padding: 12px;
+    overflow: hidden;
+    background: radial-gradient(60% 100% at 0% 50%, hsl(var(--hue) 90% 60% / 0.18), transparent 70%), var(--bg-elev);
   }
   .game.match {
     border-color: color-mix(in srgb, var(--accent) 50%, var(--border));
   }
+  .game.match::after {
+    content: '✦ matches your theme';
+    position: absolute;
+    top: 6px;
+    right: 10px;
+    font-size: 10px;
+    font-weight: 700;
+    color: var(--accent-text);
+    letter-spacing: 0.04em;
+  }
   .e {
+    width: 52px;
+    height: 52px;
+    display: grid;
+    place-items: center;
     font-size: 30px;
-    text-align: center;
+    border-radius: 14px;
+    background: linear-gradient(135deg, hsl(var(--hue) 80% 60% / 0.35), hsl(calc(var(--hue) + 40) 80% 60% / 0.2));
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.2);
+    filter: drop-shadow(0 4px 8px hsl(var(--hue) 90% 50% / 0.4));
+    transition: transform var(--dur-slow) var(--spring);
+  }
+  .game:hover .e {
+    transform: scale(1.12) rotate(-6deg);
   }
   .n {
-    font-weight: 700;
+    font-weight: 800;
     display: flex;
     gap: 6px;
     align-items: center;

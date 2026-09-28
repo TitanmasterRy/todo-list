@@ -241,16 +241,20 @@
     gap: 8px;
     margin: 8px 12px 0;
     padding: 8px 12px;
-    border-radius: 10px;
+    border-radius: 12px;
     font-size: 14px;
     background: var(--bg-elev);
     border: 1px solid var(--border);
+    box-shadow: var(--shadow-sm);
+    animation: rise-in var(--dur-slow) var(--ease) both;
   }
   .announce.warn {
-    border-color: var(--warn);
+    border-color: color-mix(in srgb, var(--warn) 60%, var(--border));
+    background: linear-gradient(90deg, color-mix(in srgb, var(--warn) 14%, var(--bg-elev)), var(--bg-elev));
   }
   .announce.party {
-    border-color: var(--accent);
+    border-color: color-mix(in srgb, var(--accent) 60%, var(--border));
+    background: linear-gradient(90deg, color-mix(in srgb, var(--accent) 16%, var(--bg-elev)), color-mix(in srgb, var(--accent-2) 10%, var(--bg-elev)));
   }
   .announce .grow {
     flex: 1;
@@ -305,18 +309,28 @@
     position: fixed;
     inset-inline-end: 16px;
     bottom: calc(var(--tabbar-h) + 16px + env(safe-area-inset-bottom));
-    width: 54px;
-    height: 54px;
+    width: 56px;
+    height: 56px;
     border-radius: 50%;
-    background: var(--accent);
+    background: var(--grad-accent);
     color: var(--accent-contrast, #fff);
     font-size: 30px;
     line-height: 1;
-    box-shadow: 0 8px 24px color-mix(in srgb, var(--accent) 45%, transparent);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.3),
+      0 10px 28px -6px color-mix(in srgb, var(--accent) 70%, transparent);
     z-index: 30;
+    transition: transform var(--dur) var(--spring);
+  }
+  .fab::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: 50%;
+    animation: glow-pulse 2.4s ease-out infinite;
   }
   .fab:active {
-    transform: scale(0.94);
+    transform: scale(0.92);
   }
   @media (max-width: 720px) {
     .fab {

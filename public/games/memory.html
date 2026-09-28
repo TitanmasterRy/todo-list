@@ -5,20 +5,46 @@
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Memory match</title>
 <style>
-  :root { --bg: #fff0f6; --fg: #5a2a45; --accent: #ff6fae; }
-  html, body { margin: 0; height: 100%; background: var(--bg); color: var(--fg); font: 15px system-ui, sans-serif; display: grid; place-items: center; }
-  .wrap { display: grid; gap: 10px; justify-items: center; }
-  .hud { display: flex; gap: 16px; font-weight: 700; align-items: center; }
-  .grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; width: min(380px, 92vw); }
-  .card { aspect-ratio: 1; border-radius: 14px; border: 0; font-size: clamp(26px, 9vw, 40px); background: var(--accent); cursor: pointer; transition: transform 200ms; box-shadow: 0 4px 0 rgba(0,0,0,.12); }
-  .card.up, .card.done { background: #fff; transform: rotateY(180deg); }
-  .card.done { opacity: .55; }
+  :root { --bg: #fff0f6; --fg: #5a2a45; --accent: #ff6fae; --accent-2: #ff9f6e; --glow: color-mix(in srgb, var(--accent) 55%, transparent); --panel: rgba(255,255,255,.6); --line: rgba(120,40,90,.12); --shadow: rgba(120,40,90,.22); --face: #fff; --btn-ink: #fff; }
+  html.dark { --panel: rgba(255,255,255,.08); --line: rgba(255,255,255,.14); --shadow: rgba(0,0,0,.5); --face: #3a2033; }
+  html, body { margin: 0; height: 100%; color: var(--fg); font: 500 15px/1.35 system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif; display: grid; place-items: center; }
+  body { background: radial-gradient(120% 80% at 50% -10%, color-mix(in srgb, var(--accent) 28%, var(--bg)), var(--bg) 60%), var(--bg); }
+  .wrap { display: grid; gap: 12px; justify-items: center; padding: 10px; }
+  .title { margin: 0; font-size: clamp(24px, 6vw, 34px); font-weight: 900; letter-spacing: -0.02em; background: linear-gradient(90deg, var(--accent), var(--accent-2)); -webkit-background-clip: text; background-clip: text; color: transparent; filter: drop-shadow(0 0 14px var(--glow)); }
+  .hud { display: flex; gap: 10px; font-weight: 800; align-items: center; flex-wrap: wrap; justify-content: center; }
+  .hud span { padding: 6px 14px; border-radius: 999px; background: linear-gradient(180deg, color-mix(in srgb, var(--panel) 100%, #fff 6%), var(--panel)); border: 1px solid var(--line); box-shadow: inset 0 1px 0 rgba(255,255,255,.3), 0 4px 14px var(--shadow); font-size: 13px; letter-spacing: .04em; text-transform: uppercase; opacity: .95; }
+  .hud b { display: inline-block; font-size: 16px; font-variant-numeric: tabular-nums; color: var(--accent); margin-left: 4px; text-shadow: 0 0 10px var(--glow); }
+  .grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; width: min(380px, 92vw); padding: 10px; border-radius: 18px; background: var(--panel); border: 1px solid var(--line); box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 35%, transparent), 0 0 34px var(--glow), 0 22px 50px var(--shadow); }
+  .card { aspect-ratio: 1; border-radius: 14px; border: 0; font-size: clamp(26px, 9vw, 40px); background: linear-gradient(145deg, color-mix(in srgb, var(--accent) 100%, #fff 18%), var(--accent) 55%, color-mix(in srgb, var(--accent) 100%, #000 12%)); cursor: pointer; transition: transform 220ms, box-shadow .15s; box-shadow: inset 0 1px 0 rgba(255,255,255,.4), 0 5px 0 color-mix(in srgb, var(--accent) 100%, #000 30%), 0 8px 16px var(--shadow); padding: 0; }
+  .card:hover { transform: translateY(-3px); box-shadow: inset 0 1px 0 rgba(255,255,255,.4), 0 8px 0 color-mix(in srgb, var(--accent) 100%, #000 30%), 0 14px 24px var(--shadow); }
+  .card.up, .card.done { background: var(--face); transform: rotateY(180deg); box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--accent) 40%, transparent), 0 6px 18px var(--shadow); }
+  .card.done { opacity: .6; box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--accent) 60%, transparent), 0 0 18px var(--glow); }
+  .card.just { animation: match .5s cubic-bezier(.3,1.6,.5,1); }
+  @keyframes match { 40% { transform: rotateY(180deg) scale(1.15); } to { transform: rotateY(180deg); } }
   .card span { display: inline-block; transform: rotateY(180deg); }
-  button.new { font: inherit; padding: 6px 14px; border-radius: 999px; border: 0; background: var(--accent); color: #fff; font-weight: 700; cursor: pointer; }
+  button.new { font: inherit; padding: 8px 18px; border-radius: 999px; border: 0; background: linear-gradient(135deg, var(--accent), var(--accent-2)); color: var(--btn-ink); font-weight: 900; letter-spacing: .02em; cursor: pointer; box-shadow: 0 8px 22px var(--glow), inset 0 1px 0 rgba(255,255,255,.4); transition: filter .12s, box-shadow .12s, transform .12s; }
+  button.new:hover { filter: brightness(1.08); transform: translateY(-1px); box-shadow: 0 12px 28px var(--glow), inset 0 1px 0 rgba(255,255,255,.4); }
+  button.new:active { transform: scale(.96); animation: none; }
+  #msg { font-weight: 700; opacity: .85; min-height: 20px; text-align: center; }
+  /* juice */
+  .pop { animation: pop .38s cubic-bezier(.3,1.6,.5,1); }
+  @keyframes pop { 35% { transform: scale(1.35); } }
+  .fx { position: fixed; z-index: 9; pointer-events: none; font: 900 20px system-ui, sans-serif; color: var(--accent); text-shadow: 0 0 12px var(--glow), 0 2px 0 rgba(0,0,0,.3); transform: translate(-50%, -50%); animation: rise .8s ease-out forwards; white-space: nowrap; }
+  @keyframes rise { to { transform: translate(-50%, -160%); opacity: 0; } }
+  .spark { position: fixed; z-index: 9; pointer-events: none; width: 7px; height: 7px; border-radius: 50%; margin: -3px 0 0 -3px; box-shadow: 0 0 8px currentColor; animation: spark .6s ease-out forwards; }
+  @keyframes spark { to { transform: translate(var(--dx), var(--dy)) scale(0); opacity: 0; } }
+  body.flash::after { content: ''; position: fixed; inset: 0; z-index: 8; pointer-events: none; background: var(--flash, rgba(255,70,90,.4)); animation: flash .45s ease-out forwards; }
+  @keyframes flash { to { opacity: 0; } }
+  body.shake .wrap { animation: shake .4s; }
+  @keyframes shake { 20%, 60% { transform: translateX(-6px); } 40%, 80% { transform: translateX(6px); } }
+  @media (prefers-reduced-motion: no-preference) { #new { animation: float 2.4s ease-in-out infinite; } }
+  @keyframes float { 50% { transform: translateY(-3px); } }
+  @media (prefers-reduced-motion: reduce) { .pop, .fx, .spark, .card.just, body.flash::after, body.shake .wrap { animation-duration: .01s; } .card { transition: none; } }
 </style>
 </head>
 <body>
 <div class="wrap">
+  <h1 class="title">🐾 Memory match</h1>
   <div class="hud"><span>Moves <b id="moves">0</b></span><span>Time <b id="time">0</b>s</span><button class="new" id="new">Shuffle</button></div>
   <div class="grid" id="g"></div>
   <div id="msg"></div>
@@ -26,16 +52,29 @@
 <script>
   const q = new URLSearchParams(location.search);
   if (q.get('accent')) document.documentElement.style.setProperty('--accent', q.get('accent'));
-  if (q.get('dark') === '1') { document.documentElement.style.setProperty('--bg', '#2a1523'); document.documentElement.style.setProperty('--fg', '#ffd6e7'); }
+  if (q.get('dark') === '1') { document.documentElement.style.setProperty('--bg', '#2a1523'); document.documentElement.style.setProperty('--fg', '#ffd6e7'); document.documentElement.classList.add('dark'); }
   const report = (score) => parent.postMessage({ type: 'hwtodo:score', score }, '*');
+  // --- visual juice (no game logic here) ---
+  const FX = (() => {
+    const calm = matchMedia('(prefers-reduced-motion: reduce)').matches; let live = 0;
+    const re = (el, cls) => { el.classList.remove(cls); void el.offsetWidth; el.classList.add(cls); };
+    const at = (el) => { const r = el.getBoundingClientRect(); return [r.left + r.width / 2, r.top + r.height / 2]; };
+    const text = (t, x, y, color) => { if (live > 40) return; live++; const d = document.createElement('div'); d.className = 'fx'; d.textContent = t; d.style.left = x + 'px'; d.style.top = y + 'px'; if (color) d.style.color = color; document.body.appendChild(d); setTimeout(() => { d.remove(); live--; }, 800); };
+    const burst = (x, y, color, k = 8) => { if (calm) return; for (let i = 0; i < k && live < 40; i++) { live++; const d = document.createElement('i'); d.className = 'spark'; const a = Math.random() * 6.283, r = 26 + Math.random() * 44; d.style.cssText = `left:${x}px;top:${y}px;color:${color};background:${color};--dx:${Math.cos(a) * r}px;--dy:${Math.sin(a) * r}px`; document.body.appendChild(d); setTimeout(() => { d.remove(); live--; }, 600); } };
+    const flash = (color) => { document.body.style.setProperty('--flash', color || ''); re(document.body, 'flash'); setTimeout(() => document.body.classList.remove('flash'), 500); };
+    const shake = () => { if (calm) return; re(document.body, 'shake'); setTimeout(() => document.body.classList.remove('shake'), 450); };
+    const watch = (id, opts = {}) => { const el = document.getElementById(id); if (!el) return; let prev = parseFloat(el.textContent) || 0; new MutationObserver(() => { const v = parseFloat(el.textContent); if (isNaN(v) || v === prev) return; const d = v - prev; prev = v; re(el, 'pop'); if (opts.delta && d > 0) { const [x, y] = at(el); text('+' + Math.round(d), x, y - 8); } }).observe(el, { childList: true, characterData: true, subtree: true }); };
+    return { calm, text, burst, flash, shake, watch, at };
+  })();
+  FX.watch('moves');
   const ANIMALS = ['🐱', '🐶', '🐰', '🦊', '🐼', '🐨', '🐸', '🐥'];
   const $ = (id) => document.getElementById(id);
-  let cards, open, moves, matched, t0, clock, lock;
+  let cards, open, moves, matched, t0, clock, lock, just = [];
   function start() {
     cards = [...ANIMALS, ...ANIMALS].sort(() => Math.random() - 0.5).map((e) => ({ e, up: false, done: false }));
     open = []; moves = 0; matched = 0; t0 = 0; lock = false; clearInterval(clock); $('time').textContent = 0; $('moves').textContent = 0; $('msg').textContent = 'Find all the pairs.'; render();
   }
-  function render() { $('g').innerHTML = cards.map((c, i) => `<button class="card ${c.up ? 'up' : ''} ${c.done ? 'done' : ''}" data-i="${i}" aria-label="${c.up || c.done ? c.e : 'hidden card'}"><span>${c.up || c.done ? c.e : ''}</span></button>`).join(''); }
+  function render() { $('g').innerHTML = cards.map((c, i) => `<button class="card ${c.up ? 'up' : ''} ${c.done ? 'done' : ''} ${just.includes(i) ? 'just' : ''}" data-i="${i}" aria-label="${c.up || c.done ? c.e : 'hidden card'}"><span>${c.up || c.done ? c.e : ''}</span></button>`).join(''); just = []; }
   $('g').addEventListener('click', (ev) => {
     const b = ev.target.closest('.card'); if (!b || lock) return;
     const c = cards[+b.dataset.i]; if (c.up || c.done) return;
@@ -43,11 +82,11 @@
     c.up = true; open.push(c); render();
     if (open.length === 2) {
       moves++; $('moves').textContent = moves;
-      if (open[0].e === open[1].e) { open.forEach((x) => (x.done = true)); open = []; matched++; render(); if (matched === ANIMALS.length) win(); }
+      if (open[0].e === open[1].e) { just = open.map((x) => cards.indexOf(x)); just.forEach((i) => { const el = $('g').children[i]; if (el) { const [x, y] = FX.at(el); FX.burst(x, y, '#ffd54a', 7); } }); const el = $('g').children[just[1]]; if (el) FX.text('Pair!', ...FX.at(el)); open.forEach((x) => (x.done = true)); open = []; matched++; render(); if (matched === ANIMALS.length) win(); }
       else { lock = true; setTimeout(() => { open.forEach((x) => (x.up = false)); open = []; lock = false; render(); }, 700); }
     }
   });
-  function win() { clearInterval(clock); const secs = Math.floor((Date.now() - t0) / 1000); const score = Math.max(10, 1000 - moves * 20 - secs * 5); $('msg').textContent = `All pairs in ${moves} moves and ${secs}s! Score ${score}.`; report(score); }
+  function win() { clearInterval(clock); const secs = Math.floor((Date.now() - t0) / 1000); const score = Math.max(10, 1000 - moves * 20 - secs * 5); $('msg').textContent = `All pairs in ${moves} moves and ${secs}s! Score ${score}.`; FX.flash('rgba(255,213,74,.35)'); FX.burst(...FX.at($('g')), '#ffd54a', 16); FX.text('Score ' + score, ...FX.at($('g')), '#ffd54a'); report(score); }
   $('new').onclick = start; start();
 </script>
 </body>

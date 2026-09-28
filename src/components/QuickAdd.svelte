@@ -266,21 +266,38 @@
     align-items: center;
     gap: 8px;
     padding: 6px 10px 6px 14px;
-    border-radius: 12px;
+    border-radius: 14px;
     background: var(--bg-elev);
     border: 1px solid var(--border);
+    box-shadow:
+      inset 0 1px 0 var(--sheen),
+      var(--shadow-sm);
     transition:
       border-color var(--dur),
-      box-shadow var(--dur);
+      box-shadow var(--dur-slow) var(--ease),
+      transform var(--dur-slow) var(--spring);
+  }
+  .quick:hover {
+    border-color: var(--border-strong);
   }
   .quick.focused {
-    border-color: var(--accent);
-    box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 22%, transparent);
+    border-color: transparent;
+    background:
+      linear-gradient(var(--bg-elev), var(--bg-elev)) padding-box,
+      var(--grad-accent) border-box;
+    box-shadow:
+      0 0 0 4px color-mix(in srgb, var(--accent) 16%, transparent),
+      var(--glow);
+    transform: translateY(-1px);
   }
   .plus {
     color: var(--accent-text);
-    font-size: 20px;
-    font-weight: 600;
+    font-size: 22px;
+    font-weight: 700;
+    transition: transform var(--dur-slow) var(--spring);
+  }
+  .quick.focused .plus {
+    transform: rotate(90deg) scale(1.15);
   }
   input {
     flex: 1;

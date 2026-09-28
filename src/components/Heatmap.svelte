@@ -110,6 +110,9 @@
   }
   .head strong {
     color: var(--text);
+    font-size: 15px;
+    font-weight: 800;
+    font-variant-numeric: tabular-nums;
   }
   .hover {
     min-height: 1.4em;
@@ -158,10 +161,13 @@
   .cell {
     width: var(--cell);
     height: var(--cell);
-    border-radius: 2px;
+    border-radius: 3px;
     background: var(--bg-elev-2);
     border: 1px solid var(--border);
     display: inline-block;
+    transition:
+      transform var(--dur) var(--spring),
+      box-shadow var(--dur);
   }
   .cell.future {
     opacity: 0.3;
@@ -174,12 +180,24 @@
   }
   .cell.l3 {
     background: color-mix(in srgb, var(--accent) 80%, var(--bg-elev-2));
+    border-color: color-mix(in srgb, var(--accent) 60%, var(--border));
+    box-shadow: 0 0 6px -1px color-mix(in srgb, var(--accent) 60%, transparent);
   }
   .cell.l4 {
-    background: var(--accent);
+    background: linear-gradient(135deg, var(--accent-2), var(--accent));
+    border-color: transparent;
+    box-shadow: 0 0 8px color-mix(in srgb, var(--accent) 70%, transparent);
   }
-  .cell:hover {
+  .grid .cell:hover {
     outline: 1px solid var(--text);
+    transform: scale(1.5);
+    z-index: 1;
+    position: relative;
+  }
+  .head .hover {
+    color: var(--accent-text);
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
   }
   .legend {
     display: flex;

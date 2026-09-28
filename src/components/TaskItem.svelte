@@ -306,13 +306,40 @@
     border-radius: var(--radius);
     background: var(--bg-elev);
     border: 1px solid var(--border);
+    box-shadow:
+      inset 0 1px 0 var(--sheen),
+      var(--shadow-sm);
     transition:
       background var(--dur),
       border-color var(--dur),
+      box-shadow var(--dur-slow) var(--ease),
       opacity 300ms,
-      transform 300ms var(--ease);
+      transform 300ms var(--spring);
     position: relative;
     touch-action: pan-y;
+    animation: rise-in var(--dur-slow) var(--ease) both;
+  }
+  /* the course color runs down the leading edge */
+  .task::after {
+    content: '';
+    position: absolute;
+    inset-inline-start: 0;
+    top: 10px;
+    bottom: 10px;
+    width: 3px;
+    border-radius: 0 3px 3px 0;
+    background: var(--course);
+    opacity: 0.75;
+    transition:
+      opacity var(--dur),
+      top var(--dur),
+      bottom var(--dur);
+  }
+  .task:hover::after {
+    top: 6px;
+    bottom: 6px;
+    opacity: 1;
+    box-shadow: 0 0 10px var(--course);
   }
   /* swipe (lib/swipe.ts): the row's content slides, the action shows behind it */
   .task:global([data-swipe]) {
@@ -352,21 +379,43 @@
     background: color-mix(in srgb, var(--info) 32%, var(--bg-elev));
   }
   .task:hover {
-    border-color: var(--border-strong);
+    border-color: color-mix(in srgb, var(--course) 45%, var(--border-strong));
+    transform: translateY(-1px);
+    box-shadow:
+      inset 0 1px 0 var(--sheen),
+      var(--shadow),
+      0 0 24px -12px var(--course);
   }
   .task.selected {
     border-color: var(--accent);
-    box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 30%, transparent);
+    box-shadow:
+      0 0 0 2px color-mix(in srgb, var(--accent) 30%, transparent),
+      var(--glow);
   }
   .task.checked {
     background: color-mix(in srgb, var(--accent) 10%, var(--bg-elev));
   }
   .task.frog {
     border-color: color-mix(in srgb, #22c55e 50%, var(--border));
-    background: color-mix(in srgb, #22c55e 6%, var(--bg-elev));
+    background: linear-gradient(90deg, color-mix(in srgb, #22c55e 12%, var(--bg-elev)), var(--bg-elev) 60%);
   }
   .task.done {
     opacity: 0.6;
+    animation: done-flash 700ms var(--ease);
+  }
+  /* a wash of the course color sweeps across the row when it's checked off */
+  @keyframes done-flash {
+    0% {
+      background: color-mix(in srgb, var(--course) 30%, var(--bg-elev));
+      transform: scale(1.015);
+    }
+    100% {
+      background: var(--bg-elev);
+      transform: scale(1);
+    }
+  }
+  .task.done::after {
+    opacity: 0.3;
   }
   .handle {
     cursor: grab;
@@ -413,8 +462,10 @@
     position: absolute;
     inset-inline-end: 6px;
     top: 4px;
-    background: var(--bg-elev);
-    border-radius: 8px;
+    background: var(--glass);
+    backdrop-filter: blur(8px);
+    border: 1px solid var(--border);
+    border-radius: 10px;
     box-shadow: var(--shadow);
   }
   .strike {
@@ -490,9 +541,13 @@
     font-weight: 600;
   }
   .chip.score.aced {
-    background: linear-gradient(135deg, #f6b93b, #f9d976);
+    background: var(--grad-gold);
     color: #4a3200;
     border-color: transparent;
+    box-shadow: 0 2px 10px -3px rgba(245, 197, 66, 0.8);
+  }
+  .meta .chip:hover {
+    transform: translateY(-1px);
   }
   .subtasks {
     list-style: none;
@@ -548,13 +603,17 @@
     display: flex;
     gap: 2px;
     opacity: 0;
-    transition: opacity var(--dur);
+    transform: translateX(6px);
+    transition:
+      opacity var(--dur),
+      transform var(--dur) var(--ease);
     position: relative;
   }
   .task:hover .actions,
   .task:focus-within .actions,
   .task.selected .actions {
     opacity: 1;
+    transform: none;
   }
   .snooze-wrap {
     position: relative;
@@ -565,6 +624,7 @@
   @media (hover: none) {
     .actions {
       opacity: 1;
+      transform: none;
     }
   }
   @media (max-width: 720px) {

@@ -115,7 +115,7 @@
     <div class="grid">
       {#each store.activeCourses as c (c.id)}
         {@const tasks = tasksFor(c)}
-        <section class="col card" style="--course:{c.color}" aria-label={c.name}>
+        <section class="col card lift" style="--course:{c.color}" aria-label={c.name}>
           <header class="col-head">
             <button class="col-title" onclick={() => store.go('courses', { courseId: c.id })}>
               <span class="dot"></span>
@@ -170,12 +170,16 @@
     align-items: center;
     gap: 10px;
   }
+  .course-title h1 {
+    background-image: linear-gradient(135deg, var(--text) 30%, color-mix(in srgb, var(--course) 70%, var(--text)));
+  }
   .dot {
     width: 12px;
     height: 12px;
     border-radius: 50%;
     background: var(--course);
     flex-shrink: 0;
+    box-shadow: 0 0 10px -1px var(--course);
   }
   .workload {
     display: flex;
@@ -184,9 +188,14 @@
     font-size: 13px;
     color: var(--text-muted);
     margin: 0 0 12px;
+    padding: 8px 12px;
+    border-radius: 12px;
+    background: color-mix(in srgb, var(--bg-elev) 60%, transparent);
+    border: 1px dashed var(--border);
   }
   .workload strong {
     color: var(--text);
+    font-variant-numeric: tabular-nums;
   }
   .sep {
     color: var(--text-faint);
@@ -207,6 +216,17 @@
     flex-direction: column;
     gap: 8px;
     min-height: 160px;
+    box-shadow:
+      inset 0 1px 0 var(--sheen),
+      inset 0 14px 28px -22px var(--course),
+      var(--shadow-sm);
+  }
+  .grid .col:hover {
+    border-color: color-mix(in srgb, var(--course) 55%, var(--border));
+    box-shadow:
+      inset 0 14px 28px -20px var(--course),
+      var(--shadow),
+      0 0 28px -10px var(--course);
   }
   .col-head {
     display: flex;
@@ -225,10 +245,22 @@
   }
   .col-stats {
     display: flex;
-    gap: 10px;
+    gap: 6px;
     font-size: 12px;
     color: var(--text-muted);
     flex-wrap: wrap;
+  }
+  .col-stats span {
+    padding: 1px 8px;
+    border-radius: 999px;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    background: color-mix(in srgb, var(--course) 12%, var(--bg-elev-2));
+    border: 1px solid color-mix(in srgb, var(--course) 30%, var(--border));
+  }
+  .col-stats .over {
+    background: color-mix(in srgb, var(--overdue) 12%, var(--bg-elev-2));
+    border-color: color-mix(in srgb, var(--overdue) 40%, var(--border));
   }
   .col-tasks {
     display: flex;
@@ -264,19 +296,24 @@
   .seg {
     display: inline-flex;
     gap: 2px;
-    background: var(--bg-sunken, var(--bg-elev));
-    border-radius: 8px;
-    padding: 2px;
+    background: var(--bg-elev-2);
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    padding: 3px;
   }
   .seg button {
-    padding: 4px 10px;
-    border-radius: 6px;
+    padding: 4px 12px;
+    border-radius: 999px;
     font-size: 13px;
     color: var(--text-muted);
+    transition:
+      background var(--dur),
+      color var(--dur);
   }
   .seg button.on {
-    background: var(--bg-elev);
-    color: var(--text);
+    background: var(--grad-accent);
+    color: var(--accent-contrast, #fff);
     font-weight: 600;
+    box-shadow: 0 2px 10px -3px color-mix(in srgb, var(--accent) 70%, transparent);
   }
 </style>

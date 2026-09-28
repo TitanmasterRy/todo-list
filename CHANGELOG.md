@@ -1,5 +1,17 @@
 # Changelog
 
+## Visual overhaul: eye candy everywhere, including the games
+
+- **A new look for the whole app:** gradient accents with a companion hue derived from your accent color, layered shadows and glows, glass panels (tab bar, toasts, dialogs), an ambient color wash that drifts slowly behind everything, slim accent scrollbars, and pages and lists that rise in as they load.
+- **Shell:** a gradient logo, a glowing active-page pill in the sidebar, a gold wallet pill that bounces when your coins change, an XP bar with a shimmer, a glass bottom tab bar on phones with a lit indicator, and a pulsing add button.
+- **Tasks:** rows carry their course color as a glowing edge and lift on hover; checking one off sweeps the course color across the row, the checkbox fills with a gradient and sends out a ring; the streak flame glows; the daily ring is a gradient with a glow when closed; quick add lights up with a gradient border when focused.
+- **Rewards:** toasts with a glowing color bar per kind and bouncing emoji; coin pops as gold pills; level-ups get rotating light rays, gradient numbers and confetti; badges arrive on a shining medal.
+- **Play:** a hero header, glossy coin/chip/voucher tiles, pill tabs, lobby tiles with a colored glow and a sheen sweep per game, and a game player with a glowing header and a countdown that pulses when time is short.
+- **Casino:** a real felt table with a wooden rail and gold trim, striped casino chips, glossy playing cards with a highlight, slot reels with a marquee that chases after a win, wins that flash gold and losses that shake; every table game got its own polish (roulette, plinko, mines, dice, wheel, scratch, keno, hi-lo, craps, baccarat, blackjack, poker variants).
+- **Play worlds and study games:** the shop, wallet, quests, star map, pet, garden, dungeon, leaderboards, boss battle, match rush, quiz race and crossword all pick up the same language: gradient progress bars, hue-glow cards, gold owned/claimed states, bouncing numbers.
+- **Arcade games:** all twenty built-in games got a modern arcade look with glowing frames, glossy HUD pills, gradient buttons, score pops, particle bursts and flashes on scoring and game over, in dark and light.
+- Everything still respects reduced motion (the app setting or the OS), high contrast, and the WCAG contrast checks; the first-load CSS budget is unchanged.
+
 ## Roadmap pass 7: admin panel, new games and casino tables, group projects, coins in games
 
 - **Hidden admin panel** (Ctrl+Alt+Shift+A, `?admin`, or tap the version in Settings → Help 7 times; see ADMIN.md): passphrase-protected; economy grants and undo, a site-wide announcement banner and feature switches, one-click publishing to GitHub, a data browser and debug tools.

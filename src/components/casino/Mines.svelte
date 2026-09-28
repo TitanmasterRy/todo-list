@@ -47,19 +47,33 @@
 
 <div class="cz-game">
   <div class="cz-table">
-    <div class="cz-grid" style="grid-template-columns: repeat(5, 1fr); max-width: 340px; margin: 0 auto; width: 100%">
+    <div class="cz-grid field" class:boom={boom !== null} style="grid-template-columns: repeat(5, 1fr); max-width: 340px; margin: 0 auto; width: 100%">
       {#each Array.from({ length: MINES_TILES }, (_, i) => i) as i (i)}
-        <button class="cz-tile" class:hit={open.has(i)} class:bad={boom === i} disabled={!active || open.has(i)} onclick={() => pick(i)} aria-label="Tile {i + 1}">
+        <button
+          class="cz-tile"
+          class:hit={open.has(i)}
+          class:gem={open.has(i)}
+          class:bad={boom === i}
+          class:mine={revealed && mines.has(i) && boom !== i}
+          disabled={!active || open.has(i)}
+          onclick={() => pick(i)}
+          aria-label="Tile {i + 1}"
+        >
           {open.has(i) ? '💎' : revealed && mines.has(i) ? '💣' : ''}
         </button>
       {/each}
     </div>
-    {#if active}<div class="cz-label">Now ×{mult} · next safe tile ×{nextMult}</div>{/if}
+    {#if active}
+      <div class="stats">
+        <span class="pill now" class:hot={mult >= 3}>Now <strong>×{mult}</strong></span>
+        <span class="pill">Next safe tile <strong>×{nextMult}</strong></span>
+      </div>
+    {/if}
     <div class="cz-result" aria-live="polite" class:win={result?.win} class:lose={result && !result.win}>{result?.text ?? ''}</div>
   </div>
   <div class="cz-actions">
     {#if active}
-      <button class="btn primary" onclick={cashOut} disabled={!open.size}>Cash out {Math.floor(bet * mult).toLocaleString()}</button>
+      <button class="btn primary cash" class:hot={mult >= 3} onclick={cashOut} disabled={!open.size}>Cash out {Math.floor(bet * mult).toLocaleString()}</button>
     {:else}
       <label class="mc"
         >Mines <select class="select" bind:value={count}
@@ -80,5 +94,101 @@
     align-items: center;
     font-size: 13px;
     color: var(--text-muted);
+  }
+  .field.boom {
+    animation: shake 450ms var(--ease);
+  }
+  .cz-tile {
+    position: relative;
+    overflow: visible;
+  }
+  /* a revealed gem throws off a sparkle */
+  .gem::after {
+    content: '✦';
+    position: absolute;
+    top: -4px;
+    right: -2px;
+    font-size: 14px;
+    color: #fff;
+    text-shadow: 0 0 8px #fff;
+    pointer-events: none;
+    animation: mn-sparkle 900ms var(--ease) both;
+  }
+  @keyframes mn-sparkle {
+    0% {
+      opacity: 0;
+      transform: scale(0.2) rotate(0deg);
+    }
+    40% {
+      opacity: 1;
+      transform: scale(1.3) rotate(90deg);
+    }
+    100% {
+      opacity: 0;
+      transform: scale(0.6) rotate(180deg) translateY(-8px);
+    }
+  }
+  .mine {
+    background: linear-gradient(180deg, rgba(0, 0, 0, 0.35), rgba(0, 0, 0, 0.5));
+    animation: cz-pop 320ms var(--spring) both;
+  }
+  .stats {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+  .pill {
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    font-weight: 700;
+    padding: 5px 12px;
+    border-radius: 999px;
+    background: rgba(0, 0, 0, 0.3);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.15);
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+    font-variant-numeric: tabular-nums;
+    transition:
+      box-shadow var(--dur-slow),
+      color var(--dur-slow);
+  }
+  .pill strong {
+    font-size: 14px;
+    letter-spacing: 0;
+  }
+  .pill.hot {
+    color: #ffe066;
+    border-color: rgba(255, 224, 102, 0.6);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.15),
+      0 0 16px rgba(255, 224, 102, 0.5);
+  }
+  .cash {
+    font-variant-numeric: tabular-nums;
+    transition:
+      background var(--dur) var(--ease),
+      transform var(--dur) var(--spring),
+      box-shadow var(--dur-slow);
+  }
+  /* a fat multiplier makes the cash-out button glow gold */
+  .cash.hot:not(:disabled) {
+    background: var(--grad-gold);
+    color: #3a2e00;
+    animation: mn-gold 1.4s ease-in-out infinite;
+  }
+  @keyframes mn-gold {
+    0%,
+    100% {
+      box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.5),
+        0 0 10px rgba(255, 224, 102, 0.5);
+    }
+    50% {
+      box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.5),
+        0 0 28px rgba(255, 224, 102, 0.95);
+    }
   }
 </style>

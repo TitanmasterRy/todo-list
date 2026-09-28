@@ -37,9 +37,10 @@
 </script>
 
 <div class="cz-game">
-  <div class="cz-table slots">
+  <div class="cz-table slots" class:jackpot={result?.win}>
+    <div class="marquee" aria-hidden="true"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></div>
     <div class="reels" aria-live="polite" aria-label="Reels: {reels.map((i) => symbols[i]).join(' ')}">
-      {#each reels as i, k (k)}<div class="reel" class:spin={spinning}>{symbols[i]}</div>{/each}
+      {#each reels as i, k (k)}<div class="reel" class:spin={spinning} class:lit={result?.win}><span class="sym">{symbols[i]}</span></div>{/each}
     </div>
     <div class="cz-result" class:win={result?.win} class:lose={result && !result.win}>{result?.text ?? ''}</div>
   </div>
@@ -55,26 +56,110 @@
 </div>
 
 <style>
+  .slots {
+    padding-top: 26px;
+  }
+  /* a row of marquee bulbs along the top of the cabinet; they chase after a win */
+  .marquee {
+    position: absolute;
+    top: 8px;
+    left: 16px;
+    right: 16px;
+    display: flex;
+    justify-content: space-between;
+  }
+  .marquee span {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: rgba(255, 224, 102, 0.35);
+    box-shadow: inset 0 0 2px rgba(0, 0, 0, 0.4);
+  }
+  .jackpot .marquee span {
+    animation: bulb 600ms ease-in-out infinite;
+  }
+  .jackpot .marquee span:nth-child(even) {
+    animation-delay: 300ms;
+  }
+  @keyframes bulb {
+    0%,
+    100% {
+      background: rgba(255, 224, 102, 0.35);
+      box-shadow: none;
+    }
+    50% {
+      background: #ffe066;
+      box-shadow: 0 0 10px #ffe066;
+    }
+  }
   .reels {
     display: flex;
     gap: 10px;
     justify-content: center;
+    padding: 10px;
+    border-radius: 16px;
+    background: linear-gradient(180deg, #1a1a1f, #2a2a33);
+    box-shadow:
+      inset 0 2px 8px rgba(0, 0, 0, 0.6),
+      0 0 0 3px #f5c542,
+      0 0 0 5px #4a2a12;
+    width: fit-content;
+    margin: 0 auto;
   }
   .reel {
+    position: relative;
     width: 86px;
-    height: 100px;
+    height: 104px;
     border-radius: 12px;
-    background: #fff;
+    background: linear-gradient(180deg, #d9d9d9 0%, #ffffff 30%, #ffffff 70%, #cfcfcf 100%);
     color: #111;
     font-size: 52px;
     display: grid;
     place-items: center;
-    box-shadow: inset 0 -8px 16px rgba(0, 0, 0, 0.15);
+    overflow: hidden;
+    box-shadow:
+      inset 0 10px 14px -8px rgba(0, 0, 0, 0.45),
+      inset 0 -10px 14px -8px rgba(0, 0, 0, 0.45);
+    transition: box-shadow var(--dur-slow);
   }
-  .reel.spin {
-    filter: blur(1px);
+  .reel::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 50%;
+    height: 2px;
+    margin-top: -1px;
+    background: rgba(214, 48, 49, 0.35);
+    pointer-events: none;
+  }
+  .reel.spin .sym {
+    filter: blur(1.5px);
+    animation: reel-roll 120ms linear infinite;
+  }
+  @keyframes reel-roll {
+    from {
+      transform: translateY(-14px);
+    }
+    to {
+      transform: translateY(14px);
+    }
+  }
+  .reel.lit {
+    box-shadow:
+      inset 0 10px 14px -8px rgba(0, 0, 0, 0.45),
+      inset 0 -10px 14px -8px rgba(0, 0, 0, 0.45),
+      0 0 24px #ffe066;
+  }
+  .reel.lit .sym {
+    animation: bump 600ms var(--spring);
+  }
+  .sym {
+    display: inline-block;
+    filter: drop-shadow(0 2px 2px rgba(0, 0, 0, 0.2));
   }
   .slots .cz-result {
     text-align: center;
+    font-size: 20px;
   }
 </style>
