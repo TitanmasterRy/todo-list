@@ -268,6 +268,21 @@
         "puzzle"
       ],
       "builtIn": true
+    },
+    {
+      "id": "craterush",
+      "title": "Crate Rush",
+      "emoji": "📦",
+      "description": "Click for cash, crack open crates on a spinning reel and collect rare gear. Trade up, upgrade, fill the book.",
+      "src": "craterush.html",
+      "cost": 1,
+      "minutes": 20,
+      "theme": "arcade",
+      "tags": [
+        "clicker",
+        "idle"
+      ],
+      "builtIn": true
     }
   ]
 }
