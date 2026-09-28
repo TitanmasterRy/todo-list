@@ -183,8 +183,25 @@
   .section-title.overdue span:first-child {
     color: var(--overdue);
   }
+  .section-title.overdue::before {
+    background: var(--overdue);
+    box-shadow: 0 0 8px var(--overdue);
+  }
+  /* today's heading sits in a soft accent pill */
   .section-title.today span:first-child {
     color: var(--accent-text);
+    padding: 1px 10px;
+    border-radius: 999px;
+    background: linear-gradient(90deg, color-mix(in srgb, var(--accent) 18%, transparent), color-mix(in srgb, var(--accent-2) 10%, transparent));
+    border: 1px solid color-mix(in srgb, var(--accent) 35%, transparent);
+    box-shadow: 0 0 14px -4px color-mix(in srgb, var(--accent) 60%, transparent);
+  }
+  .section-title.today .count {
+    color: var(--accent-text);
+    background: color-mix(in srgb, var(--accent) 12%, var(--bg-elev-2));
+  }
+  .section-title .count {
+    font-variant-numeric: tabular-nums;
   }
   .section-title.weekend span:first-child {
     color: var(--text-faint);

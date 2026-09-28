@@ -2,17 +2,35 @@
 .cz-game {
   display: grid;
   gap: 14px;
+  animation: rise-in var(--dur-slow) var(--ease) backwards;
 }
+/* the felt: a green table with a vignette, a wooden rail and a gold trim */
 .cz-table {
-  background: radial-gradient(ellipse at center, color-mix(in srgb, #1e8a4c 88%, var(--accent)) 0%, #0d4d2a 100%);
-  border-radius: var(--radius);
-  padding: 16px;
+  position: relative;
+  background:
+    radial-gradient(ellipse at 50% 30%, color-mix(in srgb, #1e8a4c 88%, var(--accent)) 0%, #0f5a31 55%, #0a3d22 100%),
+    repeating-linear-gradient(45deg, rgba(255, 255, 255, 0.02) 0 2px, transparent 2px 4px);
+  border-radius: var(--radius-lg);
+  padding: 18px;
   color: #f4f7f2;
   min-height: 180px;
   display: grid;
   gap: 12px;
   align-content: start;
-  box-shadow: inset 0 0 40px rgba(0, 0, 0, 0.35);
+  border: 6px solid #4a2a12;
+  box-shadow:
+    inset 0 0 60px rgba(0, 0, 0, 0.45),
+    inset 0 0 0 2px rgba(245, 197, 66, 0.55),
+    0 1px 0 #6b3d1c,
+    0 12px 30px -10px rgba(0, 0, 0, 0.6);
+}
+.cz-table::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.07), transparent 40%);
+  pointer-events: none;
 }
 .cz-row {
   display: flex;
@@ -23,8 +41,10 @@
 .cz-label {
   font-size: 12px;
   text-transform: uppercase;
-  letter-spacing: 0.08em;
-  opacity: 0.8;
+  letter-spacing: 0.1em;
+  font-weight: 700;
+  opacity: 0.85;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
 }
 .cz-hand {
   display: flex;
@@ -34,15 +54,35 @@
   align-items: center;
 }
 .cz-result {
-  font-weight: 700;
-  font-size: 16px;
+  font-weight: 800;
+  font-size: 17px;
   min-height: 24px;
+  letter-spacing: -0.01em;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
 }
 .cz-result.win {
   color: #ffe066;
+  text-shadow:
+    0 0 12px rgba(255, 224, 102, 0.8),
+    0 1px 2px rgba(0, 0, 0, 0.4);
+  animation: cz-win 700ms var(--spring);
 }
 .cz-result.lose {
   color: #ffb3b3;
+  animation: shake 400ms var(--ease);
+}
+@keyframes cz-win {
+  0% {
+    transform: scale(0.7);
+    opacity: 0;
+  }
+  60% {
+    transform: scale(1.12);
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
 }
 .cz-actions {
   display: flex;
@@ -57,6 +97,10 @@
   /* label and payout columns always come in pairs */
   grid-template-columns: repeat(auto-fill, minmax(110px, 1fr) 64px);
   gap: 2px 14px;
+  padding: 10px 12px;
+  border-radius: var(--radius);
+  background: var(--bg-elev);
+  border: 1px solid var(--border);
 }
 .cz-paytable span:nth-child(even) {
   text-align: right;
@@ -64,7 +108,8 @@
 }
 .cz-paytable .hit {
   color: var(--accent-text);
-  font-weight: 700;
+  font-weight: 800;
+  text-shadow: 0 0 10px color-mix(in srgb, var(--accent) 50%, transparent);
 }
 .cz-edge {
   font-size: 12px;
@@ -77,29 +122,51 @@
 .cz-tile {
   aspect-ratio: 1;
   border-radius: var(--radius-sm);
-  background: rgba(255, 255, 255, 0.12);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.18), rgba(255, 255, 255, 0.08));
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.25),
+    0 3px 0 rgba(0, 0, 0, 0.25);
   color: inherit;
   font-size: 20px;
   display: grid;
   place-items: center;
   transition:
     transform var(--dur) var(--spring),
-    background var(--dur);
+    background var(--dur),
+    box-shadow var(--dur);
 }
 .cz-tile:not(:disabled):hover {
-  background: rgba(255, 255, 255, 0.22);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.3), rgba(255, 255, 255, 0.14));
+  transform: translateY(-2px);
+}
+.cz-tile:not(:disabled):active {
+  transform: translateY(1px);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.25);
 }
 .cz-tile.on {
-  background: #ffe066;
+  background: var(--grad-gold);
   color: #3a2e00;
+  border-color: #fff3b0;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.6),
+    0 0 16px rgba(255, 224, 102, 0.6);
 }
 .cz-tile.hit {
-  background: #22c55e;
+  background: linear-gradient(180deg, #4ade80, #16a34a);
   color: #fff;
+  border-color: #86efac;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.4),
+    0 0 16px rgba(34, 197, 94, 0.6);
+  animation: cz-pop 320ms var(--spring);
 }
 .cz-tile.bad {
-  background: #ef4444;
+  background: linear-gradient(180deg, #f87171, #dc2626);
   color: #fff;
+  border-color: #fca5a5;
+  box-shadow: 0 0 20px rgba(239, 68, 68, 0.7);
+  animation: shake 400ms var(--ease);
 }
 @keyframes cz-pop {
   0% {

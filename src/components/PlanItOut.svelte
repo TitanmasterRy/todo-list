@@ -134,11 +134,26 @@
     border-radius: var(--radius-sm, 8px);
     padding: 8px 10px;
     margin: 4px 0 12px;
+    background: var(--bg-elev-2);
+    box-shadow: inset 0 1px 0 var(--sheen);
+    transition:
+      border-color var(--dur),
+      box-shadow var(--dur-slow) var(--ease);
+  }
+  .plan[open] {
+    border-color: color-mix(in srgb, var(--accent) 35%, var(--border));
+    box-shadow:
+      inset 0 1px 0 var(--sheen),
+      0 0 24px -12px color-mix(in srgb, var(--accent) 60%, transparent);
   }
   summary {
     cursor: pointer;
     font-weight: 600;
     font-size: 14px;
+    transition: color var(--dur);
+  }
+  summary:hover {
+    color: var(--accent-text);
   }
   .muted {
     font-size: 12px;
@@ -149,20 +164,29 @@
     display: inline-flex;
     gap: 2px;
     margin-top: 8px;
-    background: var(--bg-sunken, var(--bg-elev));
-    border-radius: 8px;
-    padding: 2px;
+    background: var(--bg-elev);
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    padding: 3px;
   }
   .seg button {
-    padding: 4px 10px;
-    border-radius: 6px;
+    padding: 4px 12px;
+    border-radius: 999px;
     font-size: 13px;
+    font-weight: 600;
     color: var(--text-muted);
+    transition:
+      background var(--dur),
+      color var(--dur),
+      box-shadow var(--dur);
+  }
+  .seg button:hover {
+    color: var(--text);
   }
   .seg button.on {
-    background: var(--bg-elev);
-    color: var(--text);
-    font-weight: 600;
+    background: var(--grad-accent);
+    color: var(--accent-contrast, #fff);
+    box-shadow: 0 2px 10px -3px color-mix(in srgb, var(--accent) 70%, transparent);
   }
   .row {
     display: flex;
@@ -187,6 +211,18 @@
     display: flex;
     align-items: center;
     gap: 6px;
+    animation: rise-in 260ms var(--ease) backwards;
+  }
+  .steps li::marker {
+    color: var(--accent-text);
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+  }
+  .sessions li {
+    animation: rise-in 260ms var(--ease) backwards;
+  }
+  .sessions li::marker {
+    color: var(--accent-text);
   }
   .steps .input {
     flex: 1;

@@ -64,16 +64,21 @@
     position: absolute;
     inset-inline-end: 0;
     top: 34px;
-    background: var(--bg-elev-2);
-    border: 1px solid var(--border-strong);
-    border-radius: 10px;
-    box-shadow: var(--shadow);
+    background: var(--glass);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid color-mix(in srgb, var(--accent) 30%, var(--border-strong));
+    border-radius: 12px;
+    box-shadow:
+      var(--shadow-lg),
+      0 0 30px -12px color-mix(in srgb, var(--accent) 50%, transparent);
     padding: 6px;
     display: flex;
     flex-direction: column;
     min-width: 190px;
     z-index: 50;
-    animation: pop-in 120ms var(--ease);
+    animation: pop-in 200ms var(--spring);
+    transform-origin: top right;
   }
   .menu > button {
     display: flex;
@@ -84,13 +89,20 @@
     font-size: 14px;
     text-align: start;
     color: var(--text);
+    transition:
+      background var(--dur),
+      transform var(--dur) var(--spring);
   }
   .menu > button span {
     color: var(--text-faint);
     font-size: 12px;
   }
   .menu > button:hover {
-    background: var(--bg-hover);
+    background: color-mix(in srgb, var(--accent) 12%, transparent);
+    transform: translateX(3px);
+  }
+  :global([dir='rtl']) .menu > button:hover {
+    transform: translateX(-3px);
   }
   .pick {
     display: flex;

@@ -121,7 +121,9 @@
         {/each}
       </div>
       <ul class="who">
-        {#each BOTS.slice(0, bots) as b (b.name)}<li>{b.emoji} <strong>{b.name}</strong>: {b.blurb}</li>{/each}
+        {#each BOTS.slice(0, bots) as b, i (b.name)}<li style="animation-delay: {i * 60}ms">
+            <span class="avatar" aria-hidden="true">{b.emoji}</span> <strong>{b.name}</strong>: {b.blurb}
+          </li>{/each}
       </ul>
     </div>
     <div class="cz-actions">
@@ -133,9 +135,10 @@
         {#each t.seats as x, i (i)}
           {#if i > 0}
             <div class="seat" class:out={x.folded} class:turn={!t.over && t.toAct === i} class:winner={!!won(i)}>
-              <div class="nm">{x.emoji} {x.name}{t.dealer === i ? ' · D' : ''}</div>
+              <div class="nm"><span class="avatar" aria-hidden="true">{x.emoji}</span> {x.name}{t.dealer === i ? ' · D' : ''}</div>
               <div class="cz-hand small">
-                {#if x.hole.length}{#each x.hole as c, k (k)}<PlayingCard card={c} hidden={!reveal(i)} small />{/each}{/if}
+                {#if x.hole.length}{#each x.hole as c, k (k)}<span class="deal" style="animation-delay: {k * 60}ms"><PlayingCard card={c} hidden={!reveal(i)} small /></span
+                    >{/each}{/if}
               </div>
               <div class="st">{x.stack.toLocaleString()} chips{x.bet ? ` · bet ${x.bet}` : ''}</div>
               <div class="tag">{won(i) ? `wins ${won(i)!.amount}` : status(i)}</div>
@@ -144,16 +147,18 @@
         {/each}
       </div>
       <div class="middle">
-        <div class="cz-label">Board · pot {pot(t).toLocaleString()}{t.rake && t.over ? ` · rake ${t.rake}` : ''}</div>
+        <div class="cz-label">
+          Board · {#key pot(t)}<span class="pot bump">pot {pot(t).toLocaleString()}</span>{/key}{t.rake && t.over ? ` · rake ${t.rake}` : ''}
+        </div>
         <div class="cz-hand">
-          {#each t.board as c, k (k)}<PlayingCard card={c} />{/each}
+          {#each t.board as c, k (k)}<span class="deal" style="animation-delay: {k * 60}ms"><PlayingCard card={c} /></span>{/each}
           {#each Array.from({ length: 5 - t.board.length }, (_, k) => k) as k (k)}<span class="slot" aria-hidden="true"></span>{/each}
         </div>
       </div>
       <div class="seat me" class:out={t.seats[0].folded} class:turn={!t.over && t.toAct === 0} class:winner={!!won(0)}>
         <div class="nm">You{t.dealer === 0 ? ' · D' : ''} · {t.seats[0].stack.toLocaleString()} chips{t.seats[0].bet ? ` · bet ${t.seats[0].bet}` : ''}</div>
         <div class="cz-hand">
-          {#each t.seats[0].hole as c, k (k)}<PlayingCard card={c} />{/each}
+          {#each t.seats[0].hole as c, k (k)}<span class="deal" style="animation-delay: {k * 60}ms"><PlayingCard card={c} /></span>{/each}
         </div>
         <div class="tag">{won(0) ? `You win ${won(0)!.amount}` : status(0)}</div>
       </div>
@@ -190,8 +195,35 @@
   }
   .who {
     margin: 0;
-    padding-inline-start: 18px;
+    padding: 0;
+    list-style: none;
+    display: grid;
+    gap: 6px;
     font-size: 13px;
+  }
+  .who li {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    padding: 6px 10px;
+    border-radius: 999px;
+    background: rgba(0, 0, 0, 0.2);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    animation: cz-pop 260ms var(--spring) backwards;
+  }
+  /* a round avatar chip for each bot */
+  .avatar {
+    display: inline-grid;
+    place-items: center;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    font-size: 16px;
+    background: radial-gradient(circle at 35% 30%, #ffffff, #d8dde3 55%, #9aa4ae);
+    box-shadow:
+      inset 0 -2px 4px rgba(0, 0, 0, 0.2),
+      0 2px 4px rgba(0, 0, 0, 0.4);
+    flex: none;
   }
   .seats {
     display: grid;
@@ -199,40 +231,110 @@
     gap: 8px;
   }
   .seat {
-    background: rgba(0, 0, 0, 0.18);
-    border-radius: var(--radius-sm);
-    padding: 8px;
+    position: relative;
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: var(--radius);
+    padding: 8px 10px;
     display: grid;
     gap: 4px;
-    border: 2px solid transparent;
+    border: 2px solid rgba(255, 255, 255, 0.1);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
+    transition:
+      border-color var(--dur-slow),
+      box-shadow var(--dur-slow),
+      opacity var(--dur-slow),
+      transform var(--dur) var(--spring);
   }
+  /* the seat whose turn it is gets a pulsing gold ring */
   .seat.turn {
     border-color: #ffe066;
+    transform: translateY(-2px);
+    animation: hd-turn 1.2s ease-in-out infinite;
+  }
+  .seat.turn .avatar {
+    box-shadow:
+      0 0 0 2px #ffe066,
+      0 0 12px rgba(255, 224, 102, 0.8);
+  }
+  @keyframes hd-turn {
+    0%,
+    100% {
+      box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.08),
+        0 0 8px rgba(255, 224, 102, 0.4);
+    }
+    50% {
+      box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.08),
+        0 0 22px rgba(255, 224, 102, 0.9);
+    }
   }
   .seat.winner {
-    border-color: #22c55e;
+    border-color: #4ade80;
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.08),
+      0 0 22px rgba(34, 197, 94, 0.7);
+  }
+  .seat.winner .tag {
+    color: #ffe066;
+    font-weight: 800;
+    text-shadow: 0 0 10px rgba(255, 224, 102, 0.8);
   }
   .seat.out {
     opacity: 0.55;
   }
+  .seat.me {
+    border-top: 3px solid #ffe066;
+  }
   .nm {
     font-weight: 700;
     font-size: 13px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-variant-numeric: tabular-nums;
   }
   .st,
   .tag {
     font-size: 12px;
     opacity: 0.9;
     min-height: 16px;
+    font-variant-numeric: tabular-nums;
   }
   .small {
     min-height: 0;
+  }
+  .deal {
+    display: inline-block;
+    animation: cz-pop 260ms var(--spring) backwards;
+  }
+  .middle .cz-label {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+  }
+  /* the pot: a gold pill that bumps whenever it grows */
+  .pot {
+    font-size: 12px;
+    font-weight: 900;
+    font-variant-numeric: tabular-nums;
+    padding: 2px 10px;
+    border-radius: 999px;
+    background: var(--grad-gold);
+    color: #3a2e00;
+    text-shadow: none;
+    border: 1px solid #fff3b0;
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.6),
+      0 0 12px rgba(255, 224, 102, 0.5);
   }
   .slot {
     width: 56px;
     height: 80px;
     border-radius: 8px;
-    border: 2px dashed rgba(255, 255, 255, 0.25);
+    border: 2px dashed rgba(255, 224, 102, 0.35);
+    background: rgba(0, 0, 0, 0.12);
   }
   .log {
     font-size: 13px;

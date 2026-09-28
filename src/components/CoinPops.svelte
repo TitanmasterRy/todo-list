@@ -25,13 +25,17 @@
     pointer-events: none;
   }
   .pop {
-    background: var(--bg-elev);
-    border: 1px solid color-mix(in srgb, #f5c542 60%, var(--border));
-    color: var(--text);
-    font-weight: 800;
-    font-size: 14px;
-    padding: 6px 12px;
+    background: var(--grad-gold);
+    border: 1px solid rgba(255, 255, 255, 0.5);
+    color: #3a2a00;
+    font-weight: 900;
+    font-size: 15px;
+    padding: 6px 14px;
     border-radius: 999px;
-    box-shadow: var(--shadow);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.7),
+      0 8px 24px -6px rgba(245, 197, 66, 0.8);
+    font-variant-numeric: tabular-nums;
+    animation: bump 500ms var(--spring);
   }
 </style>

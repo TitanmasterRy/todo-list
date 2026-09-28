@@ -14,7 +14,8 @@
 </script>
 
 {#if ui.whatNow}
-  <section class="card whatnow" aria-live="polite" aria-label={t('now.label')}>
+  <section class="card whatnow glow-edge" aria-live="polite" aria-label={t('now.label')}>
+    <span class="orb" aria-hidden="true">🧭</span>
     {#if !pick}
       <p>{t('now.nothing')}</p>
       <button class="btn sm" onclick={() => (ui.whatNow = false)}>{t('common.close')}</button>
@@ -41,9 +42,25 @@
 
 <style>
   .whatnow {
+    position: relative;
+    overflow: hidden;
     margin-bottom: 14px;
-    border-color: color-mix(in srgb, var(--accent) 45%, var(--border));
-    background: color-mix(in srgb, var(--accent) 6%, var(--bg-elev));
+    animation: pop-in var(--dur-slow) var(--spring) backwards;
+  }
+  .whatnow.glow-edge {
+    background:
+      linear-gradient(135deg, color-mix(in srgb, var(--accent) 10%, var(--bg-elev)), var(--bg-elev) 60%) padding-box,
+      linear-gradient(135deg, color-mix(in srgb, var(--accent) 70%, var(--border)), color-mix(in srgb, var(--accent-2) 60%, var(--border))) border-box;
+  }
+  .orb {
+    position: absolute;
+    top: 10px;
+    inset-inline-end: 44px;
+    font-size: 40px;
+    opacity: 0.35;
+    pointer-events: none;
+    animation: float 3.4s ease-in-out infinite;
+    filter: drop-shadow(0 6px 12px color-mix(in srgb, var(--accent) 50%, transparent));
   }
   .head {
     display: flex;
@@ -58,8 +75,9 @@
     font-weight: 700;
   }
   .title {
-    font-size: 18px;
-    font-weight: 700;
+    font-size: 19px;
+    font-weight: 800;
+    letter-spacing: -0.01em;
     margin: 4px 0 6px;
   }
   .meta {

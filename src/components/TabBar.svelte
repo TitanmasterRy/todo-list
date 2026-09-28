@@ -55,12 +55,16 @@
     right: 0;
     bottom: 0;
     height: calc(var(--tabbar-h) + env(safe-area-inset-bottom));
-    padding-bottom: env(safe-area-inset-bottom);
-    background: var(--bg-elev);
-    border-top: 1px solid var(--border);
+    padding: 4px 6px env(safe-area-inset-bottom);
+    background: var(--glass);
+    backdrop-filter: blur(16px) saturate(1.4);
+    -webkit-backdrop-filter: blur(16px) saturate(1.4);
+    border-top: 1px solid color-mix(in srgb, var(--accent) 18%, var(--border));
+    box-shadow: 0 -8px 30px -12px rgba(0, 0, 0, 0.35);
     z-index: 20;
   }
   .tabbar button {
+    position: relative;
     flex: 1;
     display: flex;
     flex-direction: column;
@@ -69,13 +73,36 @@
     gap: 2px;
     color: var(--text-faint);
     font-size: 10px;
-    font-weight: 600;
+    font-weight: 700;
+    border-radius: 14px;
+    transition:
+      color var(--dur),
+      background var(--dur);
   }
   .tabbar button.active {
     color: var(--accent-text);
+    background: linear-gradient(180deg, color-mix(in srgb, var(--accent) 18%, transparent), color-mix(in srgb, var(--accent) 6%, transparent));
+  }
+  .tabbar button.active::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    width: 22px;
+    height: 3px;
+    border-radius: 0 0 3px 3px;
+    background: var(--grad-accent);
+    box-shadow: 0 0 10px var(--accent);
   }
   .tabbar .ico {
-    font-size: 20px;
+    font-size: 21px;
+    transition: transform var(--dur-slow) var(--spring);
+  }
+  .tabbar button.active .ico {
+    transform: translateY(-2px) scale(1.15);
+    filter: drop-shadow(0 4px 8px color-mix(in srgb, var(--accent) 50%, transparent));
+  }
+  .tabbar button:active .ico {
+    transform: scale(0.9);
   }
   .more-backdrop {
     display: none;
@@ -88,13 +115,15 @@
     position: fixed;
     inset-inline-end: 8px;
     bottom: calc(var(--tabbar-h) + 8px + env(safe-area-inset-bottom));
-    background: var(--bg-elev-2);
-    border: 1px solid var(--border-strong);
-    border-radius: 12px;
-    box-shadow: var(--shadow);
+    background: var(--glass);
+    backdrop-filter: blur(16px) saturate(1.4);
+    -webkit-backdrop-filter: blur(16px) saturate(1.4);
+    border: 1px solid color-mix(in srgb, var(--accent) 25%, var(--border-strong));
+    border-radius: 16px;
+    box-shadow: var(--shadow-lg);
     padding: 6px;
     flex-direction: column;
-    min-width: 170px;
+    min-width: 180px;
     z-index: 22;
   }
   .more button {
@@ -102,13 +131,17 @@
     align-items: center;
     gap: 10px;
     padding: 10px 12px;
-    border-radius: 8px;
+    border-radius: 10px;
     font-size: 15px;
+    font-weight: 600;
     color: var(--text);
     text-align: start;
   }
+  .more button:hover {
+    background: var(--bg-hover);
+  }
   .more button.active {
-    background: color-mix(in srgb, var(--accent) 16%, transparent);
+    background: linear-gradient(90deg, color-mix(in srgb, var(--accent) 22%, transparent), transparent);
   }
   @media (max-width: 720px) {
     .tabbar,

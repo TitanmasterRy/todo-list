@@ -101,6 +101,14 @@
     display: block;
     margin: 0 auto 10px;
     border-radius: 14px;
+    box-shadow:
+      var(--shadow-lg),
+      0 0 40px -12px color-mix(in srgb, var(--accent) 60%, transparent);
+    animation: pop-in var(--dur-slow) var(--spring) backwards;
+    transition: transform var(--dur-slow) var(--spring);
+  }
+  canvas:hover {
+    transform: translateY(-3px) rotate(-0.5deg);
   }
   .opts {
     display: flex;

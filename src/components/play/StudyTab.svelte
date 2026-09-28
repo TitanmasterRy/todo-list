@@ -79,9 +79,10 @@
     </div>
   {:else}
     <p class="muted">{info.blurb} Pick a deck:</p>
-    <div class="decks">
+    <div class="decks stagger">
       {#each decks as d (d.deck.id)}
         <button class="card deck" disabled={!d.ok} onclick={() => (playing = { deck: d.deck, cards: [...d.cards] })}>
+          <span class="dk" aria-hidden="true">🗂️</span>
           <span class="n">{d.deck.name}</span>
           <span class="m">{d.cards.length} card{d.cards.length === 1 ? '' : 's'}{bestFor(info.id, d.deck.id) ? ` · ${bestFor(info.id, d.deck.id)}` : ''}</span>
           {#if !d.ok}
@@ -92,9 +93,10 @@
     </div>
     {#if quizSets.length}
       <h3 class="sets">Quiz sets from Tools → Quiz maker</h3>
-      <div class="decks">
+      <div class="decks stagger">
         {#each quizSets as q (q.set.id)}
           <button class="card deck" disabled={!q.ok} onclick={() => (racingSet = q.set)}>
+            <span class="dk" aria-hidden="true">📝</span>
             <span class="n">{q.set.title}</span>
             <span class="m"
               >{q.set.questions.length} question{q.set.questions.length === 1 ? '' : 's'}{ghostText(`quiz:${q.set.id}`) ? ` · ${ghostText(`quiz:${q.set.id}`)}` : ''}</span
@@ -106,9 +108,9 @@
     {/if}
   {/if}
 {:else}
-  <div class="lobby">
-    {#each GAMES as g (g.id)}
-      <button class="card tile" onclick={() => (game = g.id)}>
+  <div class="lobby stagger">
+    {#each GAMES as g, i (g.id)}
+      <button class="card tile" style="--hue:{(i * 71 + 250) % 360}" onclick={() => (game = g.id)}>
         <span class="e" aria-hidden="true">{g.emoji}</span>
         <span class="n">{g.name}</span>
         <span class="b">{g.blurb}</span>
@@ -122,32 +124,62 @@
   .lobby {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-    gap: 8px;
+    gap: 10px;
   }
+  /* every game gets its own hue for a colored glow pool behind the emoji, like the casino lobby */
   .tile {
+    position: relative;
     display: grid;
     gap: 2px;
     justify-items: start;
     text-align: left;
-    padding: 14px;
-    transition:
-      transform var(--dur) var(--spring),
-      border-color var(--dur);
+    padding: 16px 14px 14px;
+    overflow: hidden;
+    background: radial-gradient(70% 60% at 100% 0%, hsl(var(--hue) 90% 60% / 0.22), transparent 70%), var(--bg-elev);
+  }
+  .tile::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(115deg, transparent 40%, rgba(255, 255, 255, 0.12) 50%, transparent 60%);
+    transform: translateX(-130%);
+    pointer-events: none;
+  }
+  .tile:hover::before {
+    animation: sheen 700ms var(--ease);
   }
   .tile:hover {
-    transform: translateY(-2px);
-    border-color: var(--accent);
+    border-color: hsl(var(--hue) 80% 60% / 0.7);
+    box-shadow:
+      var(--shadow),
+      0 0 30px -8px hsl(var(--hue) 90% 60% / 0.6);
+    transform: translateY(-3px) scale(1.02);
+  }
+  .tile:hover .e {
+    transform: scale(1.25) rotate(-8deg);
   }
   .e {
-    font-size: 30px;
+    font-size: 32px;
+    line-height: 1;
+    height: 40px;
+    display: grid;
+    align-items: center;
+    filter: drop-shadow(0 4px 8px hsl(var(--hue) 90% 50% / 0.5));
+    transition: transform var(--dur-slow) var(--spring);
   }
   .n {
-    font-weight: 700;
+    font-weight: 800;
+  }
+  .tile .n {
+    margin-top: 4px;
   }
   .b,
   .m {
     font-size: 12px;
     color: var(--text-muted);
+  }
+  .m {
+    font-variant-numeric: tabular-nums;
   }
   .bar {
     display: flex;
@@ -159,32 +191,80 @@
   .bar h2 {
     font-size: 18px;
     margin: 0;
+    font-weight: 800;
   }
   .decks {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
     gap: 8px;
   }
+  /* deck cards: an accent-tinted corner, a folder badge that tilts on hover, dashed when the deck is too small */
   .deck {
+    position: relative;
     display: grid;
-    gap: 2px;
+    grid-template-columns: 36px 1fr;
+    gap: 2px 10px;
+    align-items: center;
     text-align: left;
     padding: 12px;
+    overflow: hidden;
+    background: radial-gradient(60% 50% at 100% 0%, color-mix(in srgb, var(--accent) 12%, transparent), transparent 70%), var(--bg-elev);
   }
-  .deck:not(:disabled):hover {
-    border-color: var(--accent);
+  .deck > :not(.dk) {
+    grid-column: 2;
+  }
+  .dk {
+    grid-row: span 2;
+    display: grid;
+    place-items: center;
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+    font-size: 20px;
+    background: linear-gradient(135deg, color-mix(in srgb, var(--accent) 28%, transparent), color-mix(in srgb, var(--accent-2) 10%, transparent));
+    border: 1px solid color-mix(in srgb, var(--accent) 30%, transparent);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.25);
+    transition: transform var(--dur-slow) var(--spring);
+  }
+  .deck:not(:disabled):hover .dk {
+    transform: scale(1.12) rotate(-6deg);
   }
   .deck:disabled {
     cursor: default;
     border-style: dashed;
+    background: var(--bg-elev);
+    opacity: 0.75;
+  }
+  .deck:disabled:hover {
+    transform: none;
+    border-color: var(--border);
+    box-shadow:
+      inset 0 1px 0 var(--sheen),
+      var(--shadow-sm);
+  }
+  .deck:disabled .dk {
+    filter: grayscale(1);
+    opacity: 0.6;
   }
   .why {
     font-size: 12px;
     color: var(--text);
   }
   .sets {
+    display: flex;
+    align-items: center;
+    gap: 8px;
     font-size: 14px;
     margin: 16px 0 8px;
+  }
+  .sets::before {
+    content: '';
+    width: 4px;
+    height: 14px;
+    border-radius: 2px;
+    background: var(--grad-accent);
+    box-shadow: 0 0 8px color-mix(in srgb, var(--accent) 50%, transparent);
+    flex-shrink: 0;
   }
   .note p {
     margin: 0 0 8px;

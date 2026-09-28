@@ -11,6 +11,8 @@
   let rolling = $state(false);
   let lastNet = $state<number | null>(null);
   const FACES = ['⚀', '⚁', '⚂', '⚃', '⚄', '⚅'];
+  // pip positions (0–8 on a 3×3 grid) for each die face; presentation only
+  const PIPS = [[4], [0, 8], [0, 4, 8], [0, 2, 6, 8], [0, 2, 4, 6, 8], [0, 2, 3, 5, 6, 8]];
 
   async function roll() {
     if (rolling) return;
@@ -38,16 +40,31 @@
 
 <div class="cz-game">
   <div class="cz-table">
-    <div class="cz-row">
-      <div class="dice" class:roll={rolling} aria-live="polite">{s.last ? `${FACES[s.last[0] - 1]} ${FACES[s.last[1] - 1]}` : '🎲 🎲'}</div>
-      <div>
+    <div class="cz-row top">
+      <div class="dice" class:roll={rolling} aria-live="polite">
+        <span class="sr">{s.last ? `${FACES[s.last[0] - 1]} ${FACES[s.last[1] - 1]}` : '🎲 🎲'}</span>
+        {#key s.last}
+          {#each [0, 1] as d (d)}
+            <span class="die" class:blank={!s.last} aria-hidden="true">
+              {#if s.last}{#each PIPS[s.last[d] - 1] as p (p)}<i class="pip" style="grid-area: {Math.floor(p / 3) + 1} / {(p % 3) + 1}"></i>{/each}{/if}
+            </span>
+          {/each}
+        {/key}
+      </div>
+      <div class="pointbox">
         <div class="cz-label">Point</div>
-        <div class="point">{s.point ?? 'Off'}</div>
+        {#key s.point}<div class="point puck" class:on={s.point !== null}>{s.point ?? 'Off'}<small aria-hidden="true">{s.point !== null ? 'on' : ''}</small></div>{/key}
       </div>
     </div>
-    <div>{s.message}</div>
+    <div class="msg">{s.message}</div>
     <div class="cz-result" class:win={lastNet !== null && lastNet > 0} class:lose={lastNet !== null && lastNet < 0}>
       {lastNet === null ? '' : lastNet > 0 ? `+${lastNet}` : lastNet < 0 ? `${lastNet}` : 'Even'}
+    </div>
+    <div class="spots" aria-hidden="true">
+      <span class="spot" class:filled={lineOn}
+        >{lineOn ? (s.passBet ? 'Pass' : "Don't") : line === 'pass' ? 'Pass' : "Don't"}<small>{lineOn ? s.passBet || s.dontPassBet : lineBet || '—'}</small></span
+      >
+      <span class="spot" class:filled={fieldBet > 0}>Field<small>{fieldBet || '—'}</small></span>
     </div>
     {#if lineOn}<div class="cz-label">On the line: {s.passBet ? `Pass ${s.passBet}` : `Don't pass ${s.dontPassBet}`}</div>{/if}
   </div>
@@ -73,20 +90,166 @@
 </div>
 
 <style>
+  .top {
+    gap: 22px;
+  }
+  .sr {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+  }
   .dice {
-    font-size: 54px;
-    line-height: 1;
+    position: relative;
+    display: flex;
+    gap: 14px;
+    padding: 6px;
   }
-  .dice.roll {
-    animation: shake 0.15s linear infinite;
+  /* white cubes with a bevelled edge, a soft shadow and real pips */
+  .die {
+    width: 56px;
+    height: 56px;
+    border-radius: 12px;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    grid-template-rows: repeat(3, 1fr);
+    padding: 8px;
+    background: linear-gradient(145deg, #ffffff 0%, #eceff2 60%, #d5dae0 100%);
+    box-shadow:
+      inset 0 1px 0 #fff,
+      inset 0 -3px 0 rgba(0, 0, 0, 0.12),
+      0 8px 14px -4px rgba(0, 0, 0, 0.6);
+    animation: cr-land 480ms var(--spring) backwards;
   }
-  @keyframes shake {
-    50% {
-      transform: rotate(8deg) translateY(-3px);
+  .die.blank {
+    opacity: 0.55;
+    animation: none;
+  }
+  .pip {
+    width: 100%;
+    aspect-ratio: 1;
+    border-radius: 50%;
+    align-self: center;
+    background: radial-gradient(circle at 35% 30%, #4b4b55, #111 70%);
+    box-shadow: inset 0 1px 1px rgba(0, 0, 0, 0.6);
+  }
+  @keyframes cr-land {
+    0% {
+      transform: rotate(-200deg) scale(0.4) translateY(-30px);
+      opacity: 0;
+    }
+    100% {
+      transform: none;
+      opacity: 1;
     }
   }
-  .point {
-    font-size: 28px;
+  .roll .die {
+    animation: cr-tumble 0.32s linear infinite;
+  }
+  .roll .die:last-child {
+    animation-direction: reverse;
+  }
+  @keyframes cr-tumble {
+    0% {
+      transform: rotate(0) translateY(0);
+    }
+    50% {
+      transform: rotate(180deg) translateY(-8px);
+    }
+    100% {
+      transform: rotate(360deg) translateY(0);
+    }
+  }
+  .pointbox {
+    display: grid;
+    gap: 4px;
+    justify-items: center;
+  }
+  /* the point puck: black OFF, white ON with the number */
+  .puck {
+    width: 58px;
+    height: 58px;
+    border-radius: 50%;
+    display: grid;
+    place-content: center;
+    line-height: 1;
+    font-size: 22px;
+    font-weight: 900;
+    font-variant-numeric: tabular-nums;
+    text-align: center;
+    color: #fff;
+    background: radial-gradient(circle at 35% 30%, #5a5a5a, #1e1e1e 60%, #050505);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.25),
+      inset 0 -4px 6px rgba(0, 0, 0, 0.5),
+      0 6px 12px -3px rgba(0, 0, 0, 0.6);
+    animation: cz-pop 320ms var(--spring) backwards;
+  }
+  .puck.on {
+    color: #1b1b1f;
+    background: radial-gradient(circle at 35% 30%, #ffffff, #e7eaee 60%, #b7bec7);
+    box-shadow:
+      inset 0 1px 0 #fff,
+      inset 0 -4px 6px rgba(0, 0, 0, 0.18),
+      0 0 18px rgba(255, 224, 102, 0.7),
+      0 6px 12px -3px rgba(0, 0, 0, 0.6);
+  }
+  .puck small {
+    font-size: 9px;
     font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+    min-height: 9px;
+    opacity: 0.75;
+  }
+  .msg {
+    font-weight: 500;
+  }
+  /* bet spots: dashed gold rings that fill once a bet is down */
+  .spots {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+  .spot {
+    min-width: 64px;
+    height: 64px;
+    padding: 0 8px;
+    border-radius: 50%;
+    border: 2px dashed rgba(255, 224, 102, 0.75);
+    display: grid;
+    place-content: center;
+    text-align: center;
+    line-height: 1.1;
+    font-size: 12px;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    font-variant-numeric: tabular-nums;
+    color: #ffe066;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+    transition:
+      background var(--dur-slow),
+      box-shadow var(--dur-slow),
+      color var(--dur-slow),
+      transform var(--dur) var(--spring);
+  }
+  .spot small {
+    font-size: 13px;
+    font-weight: 900;
+    letter-spacing: 0;
+  }
+  .spot.filled {
+    background: var(--grad-gold);
+    color: #3a2e00;
+    text-shadow: none;
+    border-style: solid;
+    border-color: #fff3b0;
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.7),
+      0 0 16px rgba(255, 224, 102, 0.6);
+    transform: scale(1.06);
   }
 </style>

@@ -152,10 +152,24 @@
     height: 24px;
     border-radius: 50%;
     border: 2px solid transparent;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.3);
+    transition:
+      transform var(--dur) var(--spring),
+      box-shadow var(--dur);
+  }
+  .sw:not(:disabled):hover {
+    transform: scale(1.2);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.3),
+      0 4px 12px -4px rgba(0, 0, 0, 0.5);
   }
   .sw.on {
     border-color: var(--text);
-    transform: scale(1.15);
+    transform: scale(1.2);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.3),
+      0 0 0 3px color-mix(in srgb, var(--accent) 30%, transparent),
+      0 0 14px -2px var(--accent);
   }
   .sw.locked {
     opacity: 0.35;
@@ -168,6 +182,10 @@
     border: none;
     padding: 0;
     background: none;
+    transition: transform var(--dur) var(--spring);
+  }
+  .custom:hover {
+    transform: scale(1.2);
   }
   .help {
     font-size: 13px;

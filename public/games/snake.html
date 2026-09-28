@@ -5,19 +5,43 @@
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Snake</title>
 <style>
-  :root { --bg: #0b0f1a; --fg: #e8eaf0; --accent: #00e676; }
-  html, body { margin: 0; height: 100%; background: var(--bg); color: var(--fg); font: 15px system-ui, sans-serif; display: grid; place-items: center; touch-action: none; }
-  .wrap { display: grid; gap: 8px; justify-items: center; }
-  canvas { background: #111827; border-radius: 10px; image-rendering: pixelated; max-width: 96vw; max-height: 78vh; }
-  .hud { display: flex; gap: 16px; font-weight: 700; }
-  button { font: inherit; padding: 8px 16px; border-radius: 8px; border: 0; background: var(--accent); color: #062; font-weight: 700; cursor: pointer; }
-  .pad { display: grid; grid-template-columns: repeat(3, 48px); gap: 6px; }
-  .pad button { padding: 10px 0; background: #1f2937; color: var(--fg); }
+  :root { --bg: #0b0f1a; --fg: #e8eaf0; --accent: #00e676; --accent-2: #00b0ff; --glow: color-mix(in srgb, var(--accent) 55%, transparent); --panel: rgba(255,255,255,.08); --line: rgba(255,255,255,.14); --shadow: rgba(0,0,0,.5); --field: #0f1524; --btn-ink: #062; }
+  html.light { --panel: rgba(0,0,0,.06); --line: rgba(0,0,0,.1); --shadow: rgba(30,40,80,.22); --field: #10182b; }
+  html, body { margin: 0; height: 100%; color: var(--fg); font: 500 15px/1.35 system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif; display: grid; place-items: center; touch-action: none; }
+  body { background: radial-gradient(120% 80% at 50% -10%, color-mix(in srgb, var(--accent) 24%, var(--bg)), var(--bg) 60%), var(--bg); }
+  .wrap { display: grid; gap: 12px; justify-items: center; padding: 10px; }
+  .title { margin: 0; font-size: clamp(24px, 6vw, 34px); font-weight: 900; letter-spacing: -0.02em; background: linear-gradient(90deg, var(--accent), var(--accent-2)); -webkit-background-clip: text; background-clip: text; color: transparent; filter: drop-shadow(0 0 14px var(--glow)); }
+  .hud { display: flex; gap: 10px; font-weight: 800; }
+  .hud span { padding: 6px 14px; border-radius: 999px; background: linear-gradient(180deg, color-mix(in srgb, var(--panel) 100%, #fff 6%), var(--panel)); border: 1px solid var(--line); box-shadow: inset 0 1px 0 rgba(255,255,255,.14), 0 4px 14px var(--shadow); font-size: 13px; letter-spacing: .04em; text-transform: uppercase; opacity: .95; }
+  .hud b { display: inline-block; font-size: 16px; font-variant-numeric: tabular-nums; color: var(--accent); margin-left: 4px; text-shadow: 0 0 10px var(--glow); }
+  canvas { background: var(--field); border-radius: 14px; image-rendering: pixelated; max-width: calc(100vw - 24px); max-height: 70vh; box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 45%, transparent), 0 0 34px var(--glow), 0 22px 50px var(--shadow); }
+  button { font: inherit; padding: 10px 22px; border-radius: 999px; border: 0; background: linear-gradient(135deg, var(--accent), var(--accent-2)); color: var(--btn-ink); font-weight: 900; letter-spacing: .02em; cursor: pointer; box-shadow: 0 8px 22px var(--glow), inset 0 1px 0 rgba(255,255,255,.4); transition: filter .12s, box-shadow .12s, transform .12s; }
+  button:hover { filter: brightness(1.08); box-shadow: 0 12px 28px var(--glow), inset 0 1px 0 rgba(255,255,255,.4); }
+  button:active { transform: scale(.96); animation: none; }
+  .pad { display: grid; grid-template-columns: repeat(3, 52px); gap: 6px; }
+  .pad button { padding: 12px 0; background: var(--panel); color: var(--fg); border: 1px solid var(--line); box-shadow: inset 0 1px 0 rgba(255,255,255,.12), 0 4px 12px var(--shadow); }
   @media (hover: hover) { .pad { display: none; } }
+  /* juice */
+  .pop { animation: pop .38s cubic-bezier(.3,1.6,.5,1); }
+  @keyframes pop { 35% { transform: scale(1.35); } }
+  .nb { animation: nb 1.1s ease-in-out 3; }
+  @keyframes nb { 50% { color: #ffd54a; text-shadow: 0 0 14px #ffc93a, 0 0 28px #ff9f1a; } }
+  .fx { position: fixed; z-index: 9; pointer-events: none; font: 900 20px system-ui, sans-serif; color: var(--accent); text-shadow: 0 0 12px var(--glow), 0 2px 0 rgba(0,0,0,.3); transform: translate(-50%, -50%); animation: rise .8s ease-out forwards; white-space: nowrap; }
+  @keyframes rise { to { transform: translate(-50%, -160%); opacity: 0; } }
+  .spark { position: fixed; z-index: 9; pointer-events: none; width: 7px; height: 7px; border-radius: 50%; margin: -3px 0 0 -3px; box-shadow: 0 0 8px currentColor; animation: spark .6s ease-out forwards; }
+  @keyframes spark { to { transform: translate(var(--dx), var(--dy)) scale(0); opacity: 0; } }
+  body.flash::after { content: ''; position: fixed; inset: 0; z-index: 8; pointer-events: none; background: var(--flash, rgba(255,70,90,.4)); animation: flash .45s ease-out forwards; }
+  @keyframes flash { to { opacity: 0; } }
+  body.shake .wrap { animation: shake .4s; }
+  @keyframes shake { 20%, 60% { transform: translateX(-6px); } 40%, 80% { transform: translateX(6px); } }
+  @media (prefers-reduced-motion: no-preference) { #go { animation: float 2.4s ease-in-out infinite; } }
+  @keyframes float { 50% { filter: brightness(1.18) drop-shadow(0 0 10px var(--accent)); } }
+  @media (prefers-reduced-motion: reduce) { .pop, .nb, .fx, .spark, body.flash::after, body.shake .wrap { animation-duration: .01s; } }
 </style>
 </head>
 <body>
 <div class="wrap">
+  <h1 class="title">🐍 Snake</h1>
   <div class="hud"><span>Score <b id="score">0</b></span><span>Best <b id="best">0</b></span></div>
   <canvas id="c" width="400" height="400"></canvas>
   <button id="go">Start</button>
@@ -27,8 +51,22 @@
   // Homework To-Do arcade game. Report scores with parent.postMessage({ type: 'hwtodo:score', score }, '*').
   const q = new URLSearchParams(location.search);
   if (q.get('accent')) document.documentElement.style.setProperty('--accent', q.get('accent'));
-  if (q.get('dark') === '0') { document.documentElement.style.setProperty('--bg', '#f4f6fb'); document.documentElement.style.setProperty('--fg', '#111'); }
+  if (q.get('dark') === '0') { document.documentElement.style.setProperty('--bg', '#f4f6fb'); document.documentElement.style.setProperty('--fg', '#111'); document.documentElement.classList.add('light'); }
   const report = (score) => parent.postMessage({ type: 'hwtodo:score', score }, '*');
+  // --- visual juice (no game logic here) ---
+  const FX = (() => {
+    const calm = matchMedia('(prefers-reduced-motion: reduce)').matches; let live = 0;
+    const re = (el, cls) => { el.classList.remove(cls); void el.offsetWidth; el.classList.add(cls); };
+    const at = (el) => { const r = el.getBoundingClientRect(); return [r.left + r.width / 2, r.top + r.height / 2]; };
+    const text = (t, x, y, color) => { if (live > 40) return; live++; const d = document.createElement('div'); d.className = 'fx'; d.textContent = t; d.style.left = x + 'px'; d.style.top = y + 'px'; if (color) d.style.color = color; document.body.appendChild(d); setTimeout(() => { d.remove(); live--; }, 800); };
+    const burst = (x, y, color, k = 8) => { if (calm) return; for (let i = 0; i < k && live < 40; i++) { live++; const d = document.createElement('i'); d.className = 'spark'; const a = Math.random() * 6.283, r = 26 + Math.random() * 44; d.style.cssText = `left:${x}px;top:${y}px;color:${color};background:${color};--dx:${Math.cos(a) * r}px;--dy:${Math.sin(a) * r}px`; document.body.appendChild(d); setTimeout(() => { d.remove(); live--; }, 600); } };
+    const flash = (color) => { document.body.style.setProperty('--flash', color || ''); re(document.body, 'flash'); setTimeout(() => document.body.classList.remove('flash'), 500); };
+    const shake = () => { if (calm) return; re(document.body, 'shake'); setTimeout(() => document.body.classList.remove('shake'), 450); };
+    const watch = (id, opts = {}) => { const el = document.getElementById(id); if (!el) return; let prev = parseFloat(el.textContent) || 0; new MutationObserver(() => { const v = parseFloat(el.textContent); if (isNaN(v) || v === prev) return; const d = v - prev; prev = v; re(el, 'pop'); if (opts.best) { re(el, 'nb'); const [x, y] = at(el); text('New best!', x, y - 10, '#ffd54a'); } else if (opts.delta && d > 0) { const [x, y] = at(el); text('+' + Math.round(d), x, y - 8); } }).observe(el, { childList: true, characterData: true, subtree: true }); };
+    const cpt = (cv, cx, cy, cw, ch) => { const r = cv.getBoundingClientRect(); return [r.left + (cx / cw) * r.width, r.top + (cy / ch) * r.height]; };
+    return { calm, text, burst, flash, shake, watch, at, cpt };
+  })();
+  FX.watch('score', { delta: true }); FX.watch('best', { best: true });
   const N = 20, S = 20, c = document.getElementById('c'), x = c.getContext('2d');
   let snake, dir, next, food, score, best = 0, timer, speed;
   const $ = (id) => document.getElementById(id);
@@ -42,16 +80,23 @@
     const head = { x: (snake[0].x + dir.x + N) % N, y: (snake[0].y + dir.y + N) % N };
     if (snake.some((p) => p.x === head.x && p.y === head.y)) return over();
     snake.unshift(head);
-    if (head.x === food.x && head.y === food.y) { score += 10; $('score').textContent = score; place(); speed = Math.max(55, speed - 3); } else snake.pop();
+    if (head.x === food.x && head.y === food.y) { FX.burst(...FX.cpt(c, food.x * S + S / 2, food.y * S + S / 2, 400, 400), '#ff5c8a'); score += 10; $('score').textContent = score; place(); speed = Math.max(55, speed - 3); } else snake.pop();
     draw(); timer = setTimeout(tick, speed);
   }
   function draw() {
-    x.fillStyle = '#111827'; x.fillRect(0, 0, 400, 400);
+    const css = getComputedStyle(document.documentElement);
+    x.fillStyle = css.getPropertyValue('--field'); x.fillRect(0, 0, 400, 400);
+    x.strokeStyle = 'rgba(255,255,255,.045)'; x.lineWidth = 1; x.beginPath();
+    for (let i = 1; i < N; i++) { x.moveTo(i * S, 0); x.lineTo(i * S, 400); x.moveTo(0, i * S); x.lineTo(400, i * S); }
+    x.stroke();
+    x.shadowColor = '#ff5c8a'; x.shadowBlur = 16;
     x.fillStyle = '#ff5c8a'; x.beginPath(); x.arc(food.x * S + S / 2, food.y * S + S / 2, S / 2.6, 0, 7); x.fill();
-    const accent = getComputedStyle(document.documentElement).getPropertyValue('--accent');
-    snake.forEach((p, i) => { x.fillStyle = i ? accent : '#fff'; x.fillRect(p.x * S + 1, p.y * S + 1, S - 2, S - 2); });
+    const accent = css.getPropertyValue('--accent');
+    x.shadowColor = accent; x.shadowBlur = 0;
+    snake.forEach((p, i) => { x.globalAlpha = i ? Math.max(0.45, 1 - i / (snake.length + 6)) : 1; x.shadowBlur = i ? 0 : 14; x.fillStyle = i ? accent : '#fff'; x.fillRect(p.x * S + 1, p.y * S + 1, S - 2, S - 2); });
+    x.globalAlpha = 1; x.shadowBlur = 0;
   }
-  function over() { best = Math.max(best, score); $('best').textContent = best; report(score); $('go').textContent = 'Play again'; $('go').style.visibility = 'visible'; }
+  function over() { FX.flash(); FX.shake(); best = Math.max(best, score); $('best').textContent = best; report(score); $('go').textContent = 'Play again'; $('go').style.visibility = 'visible'; }
   function turn(d) { const m = { up: [0, -1], down: [0, 1], left: [-1, 0], right: [1, 0] }[d]; if (!m || (m[0] === -dir.x && m[1] === -dir.y)) return; next = { x: m[0], y: m[1] }; }
   addEventListener('keydown', (e) => { const k = { ArrowUp: 'up', w: 'up', ArrowDown: 'down', s: 'down', ArrowLeft: 'left', a: 'left', ArrowRight: 'right', d: 'right' }[e.key]; if (k) { e.preventDefault(); turn(k); } if (e.key === ' ' && $('go').style.visibility !== 'hidden') start(); });
   document.querySelectorAll('.pad button').forEach((b) => b.addEventListener('click', () => turn(b.dataset.d)));

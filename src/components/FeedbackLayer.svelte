@@ -127,6 +127,7 @@
         if (!store.settings.gamification) return;
         enqueue(() => {
           levelUp = level;
+          confetti++;
           playSound('levelup');
           setTimeout(() => (levelUp = null), 2200);
           done(2400);
@@ -193,6 +194,7 @@
 {#if levelUp !== null}
   <div class="overlay" transition:fade={{ duration: 200 }} aria-live="assertive">
     <div class="levelup" in:scale={{ start: 0.6, duration: 500, opacity: 0 }}>
+      <div class="rays" aria-hidden="true"></div>
       <div class="glow"></div>
       <div class="lbl">{tr('xp.levelUp')}</div>
       <div class="num">{levelUp}</div>
@@ -203,7 +205,7 @@
 
 {#if badge}
   <div class="badge-pop" transition:scale={{ start: 0.5, duration: 400 }} role="status">
-    <div class="medal"><span>{badge.emoji}</span></div>
+    <div class="medal"><span>{badge.emoji}</span><i class="shine" aria-hidden="true"></i></div>
     <div>
       <div class="lbl">{tr('xp.badge')}</div>
       <div class="name">{badge.name}</div>
@@ -218,24 +220,41 @@
     inset: 0;
     display: grid;
     place-items: center;
-    background: rgba(0, 0, 0, 0.35);
+    background: radial-gradient(circle at 50% 50%, color-mix(in srgb, var(--accent) 30%, transparent), rgba(0, 0, 0, 0.55) 70%);
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
     z-index: 400;
     pointer-events: none;
+    overflow: hidden;
   }
   .levelup {
     position: relative;
     text-align: center;
     color: #fff;
-    padding: 40px 60px;
-    border-radius: 24px;
-    background: linear-gradient(135deg, var(--accent), color-mix(in srgb, var(--accent) 50%, #ff7675));
-    box-shadow: 0 20px 80px color-mix(in srgb, var(--accent) 60%, transparent);
+    padding: 44px 72px;
+    border-radius: 28px;
+    background: linear-gradient(135deg, var(--accent), color-mix(in srgb, var(--accent-2) 80%, var(--accent)) 60%, color-mix(in srgb, var(--accent) 50%, #ff7675));
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.4),
+      0 30px 90px color-mix(in srgb, var(--accent) 70%, transparent),
+      0 0 0 6px rgba(255, 255, 255, 0.12);
+  }
+  /* rotating light rays behind the card */
+  .rays {
+    position: absolute;
+    inset: -260px;
+    background: repeating-conic-gradient(from 0deg, rgba(255, 255, 255, 0.16) 0deg 9deg, transparent 9deg 22deg);
+    border-radius: 50%;
+    animation: spin 14s linear infinite;
+    z-index: -2;
+    -webkit-mask: radial-gradient(circle, #000 20%, transparent 65%);
+    mask: radial-gradient(circle, #000 20%, transparent 65%);
   }
   .glow {
     position: absolute;
     inset: -30px;
     border-radius: 40px;
-    background: radial-gradient(circle, color-mix(in srgb, var(--accent) 50%, transparent), transparent 70%);
+    background: radial-gradient(circle, color-mix(in srgb, var(--accent) 60%, transparent), transparent 70%);
     animation: pulse 1.2s ease-in-out infinite;
     z-index: -1;
   }
@@ -246,34 +265,43 @@
       opacity: 0.8;
     }
     50% {
-      transform: scale(1.1);
+      transform: scale(1.12);
       opacity: 1;
     }
   }
   .levelup .lbl {
     text-transform: uppercase;
-    letter-spacing: 0.2em;
+    letter-spacing: 0.22em;
     font-size: 13px;
-    font-weight: 700;
-    opacity: 0.9;
+    font-weight: 800;
+    opacity: 0.95;
+    text-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
   }
   .num {
-    font-size: 84px;
-    font-weight: 800;
+    font-size: 96px;
+    font-weight: 900;
     line-height: 1;
     margin: 6px 0;
-    animation: bounce 600ms var(--spring);
+    animation: bounce 700ms var(--spring);
+    text-shadow:
+      0 4px 0 rgba(0, 0, 0, 0.15),
+      0 10px 30px rgba(0, 0, 0, 0.35);
+    background: linear-gradient(180deg, #fff, rgba(255, 255, 255, 0.75));
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
   }
   @keyframes bounce {
     from {
-      transform: scale(0.4);
+      transform: scale(0.4) rotate(-6deg);
     }
     to {
-      transform: scale(1);
+      transform: scale(1) rotate(0);
     }
   }
   .sub {
-    opacity: 0.9;
+    opacity: 0.95;
+    font-weight: 600;
   }
   .badge-pop {
     position: fixed;
@@ -283,26 +311,40 @@
     display: flex;
     align-items: center;
     gap: 14px;
-    background: var(--bg-elev);
-    border: 1px solid var(--warn);
-    border-radius: 16px;
-    padding: 12px 18px 12px 12px;
+    background: var(--glass);
+    backdrop-filter: blur(14px) saturate(1.3);
+    -webkit-backdrop-filter: blur(14px) saturate(1.3);
+    border: 1px solid color-mix(in srgb, var(--gold) 70%, var(--border));
+    border-radius: 18px;
+    padding: 12px 20px 12px 12px;
     box-shadow:
-      var(--shadow),
-      0 0 40px color-mix(in srgb, var(--warn) 35%, transparent);
+      var(--shadow-lg),
+      0 0 50px color-mix(in srgb, var(--gold) 40%, transparent);
     z-index: 401;
     max-width: calc(100vw - 32px);
   }
   .medal {
-    width: 56px;
-    height: 56px;
+    position: relative;
+    width: 60px;
+    height: 60px;
     border-radius: 50%;
     display: grid;
     place-items: center;
-    font-size: 28px;
+    font-size: 30px;
     background: radial-gradient(circle at 30% 30%, #fff3b0, #f6b93b 60%, #d4880f);
-    box-shadow: inset 0 -3px 6px rgba(0, 0, 0, 0.25);
+    box-shadow:
+      inset 0 -3px 6px rgba(0, 0, 0, 0.25),
+      0 0 0 3px rgba(255, 255, 255, 0.25),
+      0 8px 20px -6px rgba(212, 136, 15, 0.8);
     animation: spin-in 700ms var(--spring);
+    overflow: hidden;
+  }
+  .medal .shine {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(115deg, transparent 35%, rgba(255, 255, 255, 0.7) 50%, transparent 65%);
+    background-size: 200% 100%;
+    animation: shimmer 1.8s linear infinite;
   }
   @keyframes spin-in {
     from {
@@ -315,12 +357,12 @@
   .badge-pop .lbl {
     font-size: 11px;
     text-transform: uppercase;
-    letter-spacing: 0.1em;
+    letter-spacing: 0.12em;
     color: var(--warn-text);
-    font-weight: 700;
+    font-weight: 800;
   }
   .name {
-    font-weight: 700;
+    font-weight: 800;
     font-size: 16px;
   }
   .desc {
@@ -332,7 +374,7 @@
       padding: 30px 40px;
     }
     .num {
-      font-size: 64px;
+      font-size: 68px;
     }
   }
 </style>

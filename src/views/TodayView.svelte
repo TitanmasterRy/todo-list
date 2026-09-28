@@ -199,20 +199,32 @@
   .stat {
     display: flex;
     align-items: center;
-    gap: 4px;
-    font-weight: 700;
+    gap: 6px;
+    font-weight: 800;
     font-size: 16px;
+    padding: 4px 12px 4px 8px;
+    border-radius: 999px;
+    background: var(--bg-elev);
+    border: 1px solid var(--border);
+    box-shadow: var(--shadow-sm);
+    font-variant-numeric: tabular-nums;
+  }
+  .stat:has(.hot) {
+    border-color: color-mix(in srgb, #ff7a18 55%, var(--border));
+    background: linear-gradient(135deg, color-mix(in srgb, #ff7a18 18%, var(--bg-elev)), var(--bg-elev));
+    box-shadow: 0 0 18px -6px rgba(255, 122, 24, 0.7);
   }
   .flame {
     filter: grayscale(1);
     opacity: 0.5;
+    font-size: 18px;
     transition:
       filter 300ms,
       opacity 300ms,
       transform 300ms var(--spring);
   }
   .flame.hot {
-    filter: none;
+    filter: drop-shadow(0 0 6px rgba(255, 140, 0, 0.8));
     opacity: 1;
     animation: flicker 1.6s ease-in-out infinite;
   }
@@ -226,13 +238,25 @@
     }
   }
   .power {
+    position: relative;
     margin: 0 0 10px;
-    padding: 8px 12px;
-    border-radius: 10px;
-    background: linear-gradient(90deg, color-mix(in srgb, var(--warn) 25%, var(--bg-elev)), var(--bg-elev));
-    border: 1px solid color-mix(in srgb, var(--warn) 50%, var(--border));
+    padding: 9px 12px;
+    border-radius: 12px;
+    background: linear-gradient(90deg, color-mix(in srgb, var(--warn) 28%, var(--bg-elev)), var(--bg-elev));
+    border: 1px solid color-mix(in srgb, var(--warn) 55%, var(--border));
+    box-shadow: 0 0 24px -8px color-mix(in srgb, var(--warn) 70%, transparent);
     font-size: 13px;
     animation: pop-in 200ms var(--ease);
+    overflow: hidden;
+  }
+  .power:not(.soon)::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(115deg, transparent 30%, rgba(255, 255, 255, 0.18) 50%, transparent 70%);
+    background-size: 200% 100%;
+    animation: shimmer 2.8s linear infinite;
+    pointer-events: none;
   }
   .power.soon {
     background: var(--bg-elev);
@@ -251,6 +275,11 @@
   .course-chips .chip.on {
     border-color: var(--cc, var(--accent));
     color: var(--text);
+    background: color-mix(in srgb, var(--cc, var(--accent)) 16%, var(--bg-elev-2));
+    box-shadow: 0 0 12px -4px var(--cc, var(--accent));
+  }
+  .course-chips .chip:hover {
+    transform: translateY(-1px);
   }
   .course-chips .dot {
     width: 8px;
@@ -265,6 +294,10 @@
     font-size: 13px;
     color: var(--text-muted);
     margin: 0 0 12px;
+    padding: 8px 12px;
+    border-radius: 12px;
+    background: color-mix(in srgb, var(--bg-elev) 60%, transparent);
+    border: 1px dashed var(--border);
   }
   .workload strong {
     color: var(--text);

@@ -174,34 +174,62 @@
     fill-opacity: 0.55;
     stroke: var(--bg-elev);
     stroke-width: 2;
+    transition:
+      r var(--dur) var(--spring),
+      fill-opacity var(--dur);
+  }
+  svg:hover .score {
+    fill-opacity: 0.8;
   }
   .end {
     stroke: var(--bg-elev);
     stroke-width: 2;
+    filter: drop-shadow(0 0 5px currentColor);
+  }
+  path {
+    filter: drop-shadow(0 2px 6px rgb(0 0 0 / 0.25));
+    stroke-dasharray: 2000;
+    stroke-dashoffset: 2000;
+    animation: draw 1.1s var(--ease) forwards;
+  }
+  @keyframes draw {
+    to {
+      stroke-dashoffset: 0;
+    }
   }
   .endlabel {
     position: absolute;
     right: 0;
     transform: translateY(-50%);
     font-size: 12px;
-    font-weight: 600;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
     color: var(--text);
     white-space: nowrap;
+    padding: 2px 8px;
+    border-radius: 999px;
+    background: var(--bg-elev-2);
+    border: 1px solid var(--border);
+    box-shadow: inset 0 1px 0 var(--sheen);
   }
   .tip {
     position: absolute;
     top: 4px;
     transform: translateX(-50%);
-    background: var(--bg-elev-2, var(--bg-elev));
-    border: 1px solid var(--border);
+    background: var(--glass);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border: 1px solid color-mix(in srgb, var(--accent) 30%, var(--border));
     border-radius: 8px;
     padding: 6px 8px;
     font-size: 12px;
+    font-variant-numeric: tabular-nums;
     color: var(--text);
     white-space: nowrap;
     pointer-events: none;
-    box-shadow: 0 4px 14px rgb(0 0 0 / 0.15);
+    box-shadow: var(--shadow);
     z-index: 2;
+    animation: pop-in 140ms var(--ease) backwards;
   }
   /* near the ends, pin the tooltip to that side of the crosshair so it stays inside the chart */
   .tip.edge-l {

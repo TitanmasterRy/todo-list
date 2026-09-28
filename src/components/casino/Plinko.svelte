@@ -47,12 +47,38 @@
 <div class="cz-game">
   <div class="cz-table board">
     <svg viewBox="0 0 {W} {H + 30}" role="img" aria-label="Plinko board">
-      {#each pegs as row, r (r)}{#each row as p, i (i)}<circle cx={p.x} cy={p.y} r="3" fill="rgba(255,255,255,0.7)" />{/each}{/each}
-      {#each balls as b (b.id)}<circle cx={b.x} cy={b.y} r="7" fill="#ffe066" style="transition: cx 70ms linear, cy 70ms linear" />{/each}
+      <defs>
+        <filter id="pk-glow" x="-100%" y="-100%" width="300%" height="300%">
+          <feGaussianBlur stdDeviation="1.6" result="b" />
+          <feMerge><feMergeNode in="b" /><feMergeNode in="SourceGraphic" /></feMerge>
+        </filter>
+        <radialGradient id="pk-ball" cx="35%" cy="30%" r="70%">
+          <stop offset="0%" stop-color="#fff6c8" />
+          <stop offset="45%" stop-color="#ffe066" />
+          <stop offset="100%" stop-color="#d99a10" />
+        </radialGradient>
+        <linearGradient id="pk-hi" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="#ff8f7a" />
+          <stop offset="100%" stop-color="#d94b32" />
+        </linearGradient>
+        <linearGradient id="pk-mid" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="#ffe08a" />
+          <stop offset="100%" stop-color="#e0a020" />
+        </linearGradient>
+        <linearGradient id="pk-lo" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="rgba(255,255,255,0.35)" />
+          <stop offset="100%" stop-color="rgba(255,255,255,0.15)" />
+        </linearGradient>
+      </defs>
+      {#each pegs as row, r (r)}{#each row as p, i (i)}<circle class="peg" cx={p.x} cy={p.y} r="3" />{/each}{/each}
+      {#each balls as b (b.id)}
+        <circle class="trail" cx={b.x} cy={b.y} r="10" aria-hidden="true" />
+        <circle class="ball" cx={b.x} cy={b.y} r="7" />
+      {/each}
       {#each PLINKO_TABLE[risk] as m, i (i)}
         <g transform="translate({W / 2 + (i - PLINKO_ROWS / 2) * gap - gap / 2 + 1}, {H})">
-          <rect width={gap - 2} height="24" rx="4" fill={lastBucket === i ? '#ffe066' : m >= 3 ? '#e17055' : m >= 1 ? '#fdcb6e' : 'rgba(255,255,255,0.25)'} />
-          <text x={(gap - 2) / 2} y="16" text-anchor="middle" font-size="9" font-weight="700" fill="#222">{m}×</text>
+          <rect class="bk" class:hi={m >= 3} class:mid={m >= 1 && m < 3} class:lo={m < 1} class:lit={lastBucket === i} width={gap - 2} height="24" rx="5" />
+          <text class="bt" class:dark={m >= 1} x={(gap - 2) / 2} y="16" text-anchor="middle" font-size="9" font-weight="700">{m}×</text>
         </g>
       {/each}
     </svg>
@@ -76,6 +102,70 @@
     max-width: 480px;
     margin: 0 auto;
     display: block;
+    overflow: visible;
+  }
+  .peg {
+    fill: rgba(255, 255, 255, 0.85);
+    filter: url(#pk-glow);
+  }
+  /* the ball is glossy gold; the trail is a bigger, fainter copy that lags a beat behind */
+  .ball {
+    fill: url(#pk-ball);
+    filter: drop-shadow(0 0 4px rgba(255, 224, 102, 0.9)) drop-shadow(0 2px 2px rgba(0, 0, 0, 0.4));
+    transition:
+      cx 70ms linear,
+      cy 70ms linear;
+  }
+  .trail {
+    fill: rgba(255, 224, 102, 0.28);
+    transition:
+      cx 150ms linear,
+      cy 150ms linear;
+  }
+  .bk {
+    stroke: rgba(255, 255, 255, 0.35);
+    stroke-width: 0.6;
+    transform-box: fill-box;
+    transform-origin: center;
+    transition: filter var(--dur);
+  }
+  .bk.hi {
+    fill: url(#pk-hi);
+  }
+  .bk.mid {
+    fill: url(#pk-mid);
+  }
+  .bk.lo {
+    fill: url(#pk-lo);
+  }
+  .bk.lit {
+    animation: pk-flash 700ms var(--spring);
+    filter: drop-shadow(0 0 8px rgba(255, 224, 102, 1));
+  }
+  @keyframes pk-flash {
+    0% {
+      transform: scaleY(0.6);
+      fill: #fff;
+    }
+    40% {
+      transform: scaleY(1.25);
+      fill: #ffe066;
+    }
+    100% {
+      transform: scaleY(1);
+    }
+  }
+  .bt {
+    fill: #fff;
+    font-variant-numeric: tabular-nums;
+    paint-order: stroke;
+    stroke: rgba(0, 0, 0, 0.35);
+    stroke-width: 1.5;
+    pointer-events: none;
+  }
+  .bt.dark {
+    fill: #2a1d00;
+    stroke: rgba(255, 255, 255, 0.35);
   }
   .board .cz-result {
     text-align: center;

@@ -5,40 +5,84 @@
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Leaf catcher</title>
 <style>
-  :root { --accent: #2e7d32; }
-  html, body { margin: 0; height: 100%; background: linear-gradient(#cdebd3, #eaf6e0); color: #1b3d1f; font: 15px system-ui, sans-serif; overflow: hidden; touch-action: none; }
+  :root { --bg: #d8f0dc; --fg: #1b3d1f; --accent: #2e7d32; --accent-2: #f9a825; --glow: color-mix(in srgb, var(--accent) 50%, transparent); --panel: rgba(255,255,255,.55); --line: rgba(20,60,30,.14); --shadow: rgba(20,60,30,.25); --btn-ink: #fff; }
+  html.dark { --bg: #10261a; --fg: #e6f4e8; --panel: rgba(255,255,255,.08); --line: rgba(255,255,255,.14); --shadow: rgba(0,0,0,.5); }
+  html, body { margin: 0; height: 100%; color: var(--fg); font: 500 15px/1.35 system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif; overflow: hidden; touch-action: none; }
+  body { background: radial-gradient(120% 70% at 50% -10%, color-mix(in srgb, var(--accent) 30%, var(--bg)), var(--bg) 60%), var(--bg); }
   canvas { display: block; width: 100vw; height: 100vh; }
-  .hud { position: fixed; top: 10px; left: 12px; font-weight: 800; }
-  .center { position: fixed; inset: 0; display: grid; place-items: center; text-align: center; pointer-events: none; }
-  .center button { pointer-events: auto; font: inherit; padding: 10px 20px; border-radius: 999px; border: 0; background: var(--accent); color: #fff; font-weight: 800; cursor: pointer; }
+  .hud { position: fixed; top: 10px; left: 12px; display: flex; gap: 8px; font-weight: 800; z-index: 2; }
+  .hud span { padding: 6px 14px; border-radius: 999px; background: linear-gradient(180deg, color-mix(in srgb, var(--panel) 100%, #fff 6%), var(--panel)); border: 1px solid var(--line); box-shadow: inset 0 1px 0 rgba(255,255,255,.3), 0 4px 14px var(--shadow); font-size: 13px; letter-spacing: .04em; text-transform: uppercase; backdrop-filter: blur(6px); }
+  .hud b { display: inline-block; font-size: 16px; font-variant-numeric: tabular-nums; color: var(--accent); margin-left: 4px; text-shadow: 0 0 10px var(--glow); }
+  .center { position: fixed; inset: 0; display: grid; place-items: center; text-align: center; pointer-events: none; z-index: 3; }
+  .center > div { padding: 22px 26px; border-radius: 22px; background: linear-gradient(180deg, color-mix(in srgb, var(--panel) 100%, #fff 8%), var(--panel)); border: 1px solid var(--line); box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 35%, transparent), 0 0 34px var(--glow), 0 22px 50px var(--shadow); backdrop-filter: blur(10px); max-width: 86vw; }
+  .center h2 { margin: 0 0 6px; font-size: clamp(24px, 6vw, 34px); font-weight: 900; letter-spacing: -0.02em; background: linear-gradient(90deg, var(--accent), var(--accent-2)); -webkit-background-clip: text; background-clip: text; color: transparent; filter: drop-shadow(0 0 14px var(--glow)); }
+  .center p { margin: 0 0 14px; font-weight: 600; opacity: .85; }
+  .center button { pointer-events: auto; font: inherit; padding: 10px 22px; border-radius: 999px; border: 0; background: linear-gradient(135deg, var(--accent), var(--accent-2)); color: var(--btn-ink); font-weight: 900; letter-spacing: .02em; cursor: pointer; box-shadow: 0 8px 22px var(--glow), inset 0 1px 0 rgba(255,255,255,.4); transition: filter .12s, box-shadow .12s, transform .12s; }
+  .center button:hover { filter: brightness(1.08); box-shadow: 0 12px 28px var(--glow), inset 0 1px 0 rgba(255,255,255,.4); }
+  .center button:active { transform: scale(.96); animation: none; }
+  /* juice */
+  .pop { animation: pop .38s cubic-bezier(.3,1.6,.5,1); }
+  @keyframes pop { 35% { transform: scale(1.35); } }
+  .fx { position: fixed; z-index: 9; pointer-events: none; font: 900 20px system-ui, sans-serif; color: var(--accent); text-shadow: 0 0 12px var(--glow), 0 2px 0 rgba(0,0,0,.3); transform: translate(-50%, -50%); animation: rise .8s ease-out forwards; white-space: nowrap; }
+  @keyframes rise { to { transform: translate(-50%, -160%); opacity: 0; } }
+  .spark { position: fixed; z-index: 9; pointer-events: none; width: 7px; height: 7px; border-radius: 50%; margin: -3px 0 0 -3px; box-shadow: 0 0 8px currentColor; animation: spark .6s ease-out forwards; }
+  @keyframes spark { to { transform: translate(var(--dx), var(--dy)) scale(0); opacity: 0; } }
+  body.flash::after { content: ''; position: fixed; inset: 0; z-index: 8; pointer-events: none; background: var(--flash, rgba(255,70,90,.4)); animation: flash .45s ease-out forwards; }
+  @keyframes flash { to { opacity: 0; } }
+  body.shake canvas { animation: shake .4s; }
+  @keyframes shake { 20%, 60% { transform: translateX(-6px); } 40%, 80% { transform: translateX(6px); } }
+  @media (prefers-reduced-motion: no-preference) { #go { animation: float 2.4s ease-in-out infinite; } }
+  @keyframes float { 50% { filter: brightness(1.18) drop-shadow(0 0 10px var(--accent)); } }
+  @media (prefers-reduced-motion: reduce) { .pop, .fx, .spark, body.flash::after, body.shake canvas { animation-duration: .01s; } }
 </style>
 </head>
 <body>
 <canvas id="c"></canvas>
-<div class="hud">Score <span id="score">0</span> · <span id="lives">❤️❤️❤️</span></div>
+<div class="hud"><span>Score <b id="score">0</b></span><span id="lives">❤️❤️❤️</span></div>
 <div class="center" id="menu"><div><h2>🍃 Leaf catcher</h2><p>Catch leaves and fruit, dodge the bugs.<br />Move with the mouse, a finger, or ← →.</p><button id="go">Start</button></div></div>
 <script>
   const q = new URLSearchParams(location.search);
   if (q.get('accent')) document.documentElement.style.setProperty('--accent', q.get('accent'));
-  if (q.get('dark') === '1') document.body.style.background = 'linear-gradient(#10261a, #1c3a26)';
+  if (q.get('dark') === '1') document.documentElement.classList.add('dark');
   const report = (score) => parent.postMessage({ type: 'hwtodo:score', score }, '*');
+  // --- visual juice (no game logic here) ---
+  const FX = (() => {
+    const calm = matchMedia('(prefers-reduced-motion: reduce)').matches; let live = 0;
+    const re = (el, cls) => { el.classList.remove(cls); void el.offsetWidth; el.classList.add(cls); };
+    const at = (el) => { const r = el.getBoundingClientRect(); return [r.left + r.width / 2, r.top + r.height / 2]; };
+    const text = (t, x, y, color) => { if (live > 40) return; live++; const d = document.createElement('div'); d.className = 'fx'; d.textContent = t; d.style.left = x + 'px'; d.style.top = y + 'px'; if (color) d.style.color = color; document.body.appendChild(d); setTimeout(() => { d.remove(); live--; }, 800); };
+    const burst = (x, y, color, k = 8) => { if (calm) return; for (let i = 0; i < k && live < 40; i++) { live++; const d = document.createElement('i'); d.className = 'spark'; const a = Math.random() * 6.283, r = 26 + Math.random() * 44; d.style.cssText = `left:${x}px;top:${y}px;color:${color};background:${color};--dx:${Math.cos(a) * r}px;--dy:${Math.sin(a) * r}px`; document.body.appendChild(d); setTimeout(() => { d.remove(); live--; }, 600); } };
+    const flash = (color) => { document.body.style.setProperty('--flash', color || ''); re(document.body, 'flash'); setTimeout(() => document.body.classList.remove('flash'), 500); };
+    const shake = () => { if (calm) return; re(document.body, 'shake'); setTimeout(() => document.body.classList.remove('shake'), 450); };
+    const watch = (id) => { const el = document.getElementById(id); if (!el) return; let prev = el.textContent; new MutationObserver(() => { if (el.textContent === prev) return; prev = el.textContent; re(el, 'pop'); }).observe(el, { childList: true, characterData: true, subtree: true }); };
+    return { calm, text, burst, flash, shake, watch, at };
+  })();
+  FX.watch('score'); FX.watch('lives');
   const c = document.getElementById('c'), x = c.getContext('2d'), $ = (id) => document.getElementById(id);
   const GOOD = [['🍃', 10], ['🍂', 10], ['🍎', 25], ['🍐', 25], ['🌰', 15], ['🍄', 40]], BAD = ['🐛', '🐝', '🕷️'];
   let W, H, bx, items, score, lives, running = false, t = 0, keys = {};
+  const motes = Array.from({ length: 28 }, () => ({ x: Math.random(), y: Math.random(), r: 1 + Math.random() * 2.5, s: 0.2 + Math.random() * 0.5 }));
   function size() { W = c.width = innerWidth; H = c.height = innerHeight; }
   addEventListener('resize', size); size(); bx = W / 2;
   function start() { items = []; score = 0; lives = 3; t = 0; running = true; $('menu').style.display = 'none'; hud(); }
   function hud() { $('score').textContent = score; $('lives').textContent = '❤️'.repeat(Math.max(0, lives)) || '💔'; }
   function spawn() { const bad = Math.random() < 0.18 + Math.min(0.15, t / 20000); const g = GOOD[Math.floor(Math.random() * GOOD.length)]; items.push({ x: 30 + Math.random() * (W - 60), y: -30, v: 1.6 + Math.random() * 1.4 + t / 2500, e: bad ? BAD[Math.floor(Math.random() * BAD.length)] : g[0], pts: bad ? 0 : g[1], bad, sway: Math.random() * 6 }); }
+  function ambient() {
+    const dark = document.documentElement.classList.contains('dark');
+    x.fillStyle = dark ? 'rgba(180,255,200,.16)' : 'rgba(255,255,255,.55)';
+    for (const m of motes) { m.y += m.s * 0.0008; m.x += Math.sin((t + m.y * 900) / 60) * 0.0004; if (m.y > 1.02) { m.y = -0.02; m.x = Math.random(); } x.beginPath(); x.arc(m.x * W, m.y * H, m.r, 0, 6.283); x.fill(); }
+    x.fillStyle = dark ? 'rgba(40,90,60,.35)' : 'rgba(46,125,50,.14)'; x.fillRect(0, H - 14, W, 14);
+  }
   function step() {
     x.clearRect(0, 0, W, H);
+    ambient();
     if (running) {
       t++;
       if (keys.left) bx -= 9; if (keys.right) bx += 9; bx = Math.max(40, Math.min(W - 40, bx));
       if (t % Math.max(14, 40 - Math.floor(t / 300)) === 0) spawn();
       items.forEach((it) => { it.y += it.v; it.x += Math.sin((t + it.sway * 40) / 30) * 0.8; });
       for (const it of items) {
-        if (!it.gone && it.y > H - 80 && it.y < H - 30 && Math.abs(it.x - bx) < 50) { it.gone = true; if (it.bad) { lives--; hud(); } else { score += it.pts; hud(); } }
+        if (!it.gone && it.y > H - 80 && it.y < H - 30 && Math.abs(it.x - bx) < 50) { it.gone = true; if (it.bad) { lives--; hud(); FX.flash(); FX.shake(); FX.burst(it.x, H - 55, '#ff5c5c', 8); } else { score += it.pts; hud(); FX.burst(it.x, H - 55, it.pts >= 25 ? '#ffd54a' : '#7ed957', 6); FX.text('+' + it.pts, it.x, H - 90, it.pts >= 25 ? '#ffd54a' : ''); } }
         else if (!it.gone && it.y > H + 20) it.gone = true;
       }
       items = items.filter((it) => !it.gone);
@@ -46,7 +90,9 @@
     }
     x.font = '32px system-ui'; x.textAlign = 'center';
     (items || []).forEach((it) => x.fillText(it.e, it.x, it.y));
+    x.shadowColor = 'rgba(0,0,0,.35)'; x.shadowBlur = 14; x.shadowOffsetY = 6;
     x.font = '56px system-ui'; x.fillText('🧺', bx, H - 30);
+    x.shadowBlur = 0; x.shadowOffsetY = 0;
     requestAnimationFrame(step);
   }
   addEventListener('pointermove', (e) => (bx = e.clientX));

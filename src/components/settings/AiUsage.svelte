@@ -87,6 +87,12 @@
     padding: 2px 10px 2px 0;
     border-top: 1px solid var(--border);
   }
+  tr {
+    transition: background var(--dur);
+  }
+  tbody tr:hover {
+    background: color-mix(in srgb, var(--accent) 8%, transparent);
+  }
   .meter {
     height: 6px;
     border-radius: 3px;
@@ -96,12 +102,26 @@
     margin-top: 8px;
   }
   .meter span {
+    position: relative;
     display: block;
     height: 100%;
-    background: var(--accent);
+    border-radius: 3px;
+    background: var(--grad-accent);
+    box-shadow: 0 0 10px -2px var(--accent);
+    overflow: hidden;
+    transition: width 400ms var(--ease);
+  }
+  .meter span::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(115deg, transparent 30%, rgba(255, 255, 255, 0.45) 50%, transparent 70%);
+    background-size: 200% 100%;
+    animation: shimmer 2.6s linear infinite;
   }
   .meter.full span {
     background: var(--danger, #e5484d);
+    box-shadow: 0 0 10px -2px var(--danger);
   }
   .row {
     display: flex;

@@ -108,6 +108,7 @@ merged into `main` and live on the GitHub Pages site. The full plan, including w
 - [x] Spanish (Settings → Language), including Spanish dates in quick add
 - [x] Dates and numbers in your region's format; right-to-left layout support
 - [x] High contrast, reading fonts, text size, confetti toggle, reduced motion; contrast checked in every theme
+- [x] Visual overhaul: gradients, glows, glass panels, an ambient background and celebration animations across the app, the casino and all arcade games (respects reduced motion)
 
 ## ✅ Admin (hidden, for the site owner)
 

@@ -114,6 +114,16 @@
   }
   .presets .chip {
     cursor: pointer;
+    animation: rise-in 300ms var(--ease) backwards;
+  }
+  .presets .chip:hover {
+    transform: translateY(-2px) scale(1.04);
+    color: var(--text);
+    background: var(--bg-hover);
+    box-shadow: 0 6px 16px -8px currentColor;
+  }
+  .presets .chip:active {
+    transform: scale(0.96);
   }
   .rows {
     display: flex;
@@ -125,6 +135,14 @@
     display: flex;
     gap: 6px;
     align-items: center;
+    animation: rise-in 260ms var(--ease) backwards;
+  }
+  .color {
+    border-radius: 50%;
+    transition: transform var(--dur) var(--spring);
+  }
+  .color:hover {
+    transform: scale(1.15);
   }
   .em {
     width: 52px;

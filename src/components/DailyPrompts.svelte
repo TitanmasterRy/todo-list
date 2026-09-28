@@ -151,7 +151,11 @@
     >
       <h2>🌙 {tr('prompt.recap')}</h2>
       <div class="stats">
-        <div><span class="big">{doneToday.length}</span><span class="lbl">{tr('prompt.done')}</span></div>
+        <div>
+          <span class="big"
+            >{#key doneToday.length}<span class="bump">{doneToday.length}</span>{/key}</span
+          ><span class="lbl">{tr('prompt.done')}</span>
+        </div>
         {#if store.settings.gamification}
           <div><span class="big">{store.stats.xp}</span><span class="lbl">{tr('prompt.totalXp')}</span></div>
           <div>
@@ -219,15 +223,26 @@
     color: var(--text);
     font-size: 15px;
     border: 1px solid var(--border);
+    transition:
+      background var(--dur),
+      border-color var(--dur),
+      transform var(--dur) var(--spring),
+      box-shadow var(--dur);
   }
   .choices button:hover {
-    background: color-mix(in srgb, #22c55e 10%, var(--bg-elev));
-    border-color: #22c55e;
+    background: color-mix(in srgb, var(--success) 10%, var(--bg-elev));
+    border-color: var(--success);
+    transform: translateX(3px);
+    box-shadow: 0 0 16px -6px var(--success);
+  }
+  .choices button:hover .dot {
+    transform: scale(1.4);
   }
   .dot {
     width: 10px;
     height: 10px;
     border-radius: 50%;
+    transition: transform var(--dur) var(--spring);
   }
   .grow {
     flex: 1;
@@ -242,15 +257,33 @@
     flex: 1;
     min-width: 90px;
     background: var(--bg-elev-2);
+    border: 1px solid var(--border);
     border-radius: 10px;
     padding: 10px;
     display: flex;
     flex-direction: column;
     align-items: center;
+    box-shadow: inset 0 1px 0 var(--sheen);
+    animation: rise-in 320ms var(--ease) backwards;
+  }
+  .stats > div:nth-child(2) {
+    animation-delay: 50ms;
+  }
+  .stats > div:nth-child(3) {
+    animation-delay: 100ms;
+  }
+  .stats > div:nth-child(4) {
+    animation-delay: 150ms;
   }
   .big {
-    font-size: 24px;
-    font-weight: 700;
+    font-size: 28px;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    font-variant-numeric: tabular-nums;
+    background: linear-gradient(135deg, var(--text) 25%, color-mix(in srgb, var(--accent) 75%, var(--text)));
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
   }
   .lbl {
     font-size: 12px;

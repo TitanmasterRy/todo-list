@@ -159,6 +159,7 @@
     border-bottom: 1px solid var(--border);
   }
   .day {
+    position: relative;
     min-height: 92px;
     padding: 4px 6px;
     border-inline-end: 1px solid var(--border);
@@ -168,12 +169,26 @@
     gap: 2px;
     cursor: pointer;
     min-width: 0;
+    transition:
+      background var(--dur),
+      transform var(--dur) var(--spring),
+      box-shadow var(--dur);
   }
   .row .day:last-child {
     border-inline-end: 0;
   }
   .day:hover {
     background: var(--bg-hover);
+    transform: translateY(-2px);
+    z-index: 1;
+    border-radius: 8px;
+    box-shadow:
+      var(--shadow),
+      0 0 0 1px color-mix(in srgb, var(--accent) 35%, transparent);
+  }
+  .day.today {
+    background: color-mix(in srgb, var(--accent) 7%, var(--bg-elev));
+    box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--accent) 55%, transparent);
   }
   .day.out {
     background: var(--bg-elev-2);
@@ -193,11 +208,27 @@
     font-weight: 700;
   }
   .today .n {
-    background: var(--accent);
+    background: var(--grad-accent);
     color: var(--accent-contrast, #fff);
     border-radius: 999px;
     padding: 0 7px;
     align-self: flex-start;
+    box-shadow: 0 0 12px -2px color-mix(in srgb, var(--accent) 80%, transparent);
+  }
+  .n {
+    font-variant-numeric: tabular-nums;
+  }
+  .t {
+    border-radius: 0 4px 4px 0;
+    transition: background var(--dur);
+  }
+  .t:hover {
+    background: color-mix(in srgb, var(--c) 14%, transparent);
+  }
+  .grid {
+    box-shadow:
+      inset 0 1px 0 var(--sheen),
+      var(--shadow-sm);
   }
   .past .n::after {
     content: ' •';

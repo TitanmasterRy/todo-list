@@ -199,31 +199,45 @@
     background: #000;
     display: grid;
     grid-template-rows: auto 1fr;
+    animation: fade-in 200ms var(--ease) backwards;
   }
   header {
     display: flex;
     align-items: center;
     gap: 10px;
     padding: 8px 12px;
-    background: var(--bg-elev);
-    border-bottom: 1px solid var(--border);
+    background: linear-gradient(90deg, color-mix(in srgb, var(--accent) 14%, var(--bg-elev)), var(--bg-elev));
+    border-bottom: 1px solid color-mix(in srgb, var(--accent) 30%, var(--border));
+    box-shadow: 0 4px 20px -8px color-mix(in srgb, var(--accent) 60%, transparent);
   }
   .t {
-    font-weight: 700;
+    font-weight: 800;
   }
   .grow {
     flex: 1;
   }
   .best {
     font-size: 13px;
+    font-weight: 700;
     color: var(--text-muted);
+    padding: 2px 10px;
+    border-radius: 999px;
+    background: var(--bg-elev-2);
+    border: 1px solid var(--border);
+    font-variant-numeric: tabular-nums;
   }
   .time {
     font-variant-numeric: tabular-nums;
-    font-weight: 700;
+    font-weight: 800;
+    padding: 2px 10px;
+    border-radius: 999px;
+    background: var(--bg-elev-2);
+    border: 1px solid var(--border);
   }
   .time.low {
     color: var(--danger-text);
+    border-color: color-mix(in srgb, var(--danger) 60%, var(--border));
+    animation: glow-pulse 1s ease-out infinite;
   }
   /* the uploaded-game frame lives in SandboxFrame */
   .player :global(iframe) {
@@ -238,13 +252,18 @@
     left: 50%;
     top: 64px;
     transform: translateX(-50%);
-    background: var(--bg-elev);
-    border: 1px solid var(--border-strong);
-    border-radius: var(--radius);
-    box-shadow: var(--shadow);
-    padding: 12px 16px;
+    background: var(--glass);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    border: 1px solid color-mix(in srgb, var(--gold) 60%, var(--border-strong));
+    border-radius: var(--radius-lg);
+    box-shadow:
+      var(--shadow-lg),
+      0 0 40px -10px color-mix(in srgb, var(--gold) 60%, transparent);
+    padding: 14px 18px;
     text-align: center;
     min-width: 240px;
+    animation: modal-in 300ms var(--spring) backwards;
   }
   .buy p {
     margin: 0 0 6px;
@@ -259,6 +278,17 @@
     text-align: center;
     color: #fff;
     gap: 8px;
+    background: radial-gradient(circle at 50% 40%, color-mix(in srgb, var(--accent) 35%, transparent), transparent 60%);
+  }
+  .up h2 {
+    font-size: 36px;
+    margin: 0;
+    font-weight: 900;
+    background: var(--grad-accent);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    animation: bump 600ms var(--spring);
   }
   .btns {
     display: flex;
