@@ -758,12 +758,14 @@ export function sellItems(st: State, uids: number[]): number {
 
 /** Every copy of an item beyond the most valuable one (never locked or showcased items). */
 export function duplicates(st: State): number[] {
+  const safe = (x: Item) => x.l === 1 || x.u === st.showcase;
+  // the copy to keep: the most valuable, and on a tie one that's locked or showcased anyway
   const keep = new Map<number, Item>();
   for (const x of st.inv) {
     const k = keep.get(x.d);
-    if (!k || x.l || x.u === st.showcase || (!k.l && k.u !== st.showcase && itemValue(x) > itemValue(k))) keep.set(x.d, x);
+    if (!k || itemValue(x) > itemValue(k) || (itemValue(x) === itemValue(k) && safe(x) && !safe(k))) keep.set(x.d, x);
   }
-  return st.inv.filter((x) => !x.l && x.u !== st.showcase && keep.get(x.d) !== x).map((x) => x.u);
+  return st.inv.filter((x) => !safe(x) && keep.get(x.d) !== x).map((x) => x.u);
 }
 
 function takeItems(st: State, uids: number[]): Item[] | null {
@@ -899,8 +901,8 @@ const int = (x: unknown, def: number, min = 0, max = Number.MAX_SAFE_INTEGER) =>
 function cleanItem(x: unknown): Item | null {
   if (!x || typeof x !== 'object') return null;
   const o = x as Record<string, unknown>;
-  const d = int(o.d, -1, -1, ITEMS.length - 1);
-  if (d < 0) return null;
+  const d = o.d;
+  if (typeof d !== 'number' || !Number.isInteger(d) || d < 0 || d >= ITEMS.length) return null;
   return { u: int(o.u, 0), d, w: num(o.w, 0.5, 0, 0.9999), s: int(o.s, 500, 0, 999), t: int(o.t, -1, -1), l: o.l ? 1 : 0 };
 }
 

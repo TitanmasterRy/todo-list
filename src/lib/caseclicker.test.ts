@@ -33,7 +33,13 @@ function session(m: typeof ts, seed: number) {
     const commons = st.inv.filter((x) => m.ITEMS[x.d].rarity === 0).slice(0, 10);
     if (commons.length === 10) {
       log.push(plain(m.tradeUpOutcomes(commons)));
-      log.push(m.doTradeUp(st, rng, commons.map((x) => x.u)));
+      log.push(
+        m.doTradeUp(
+          st,
+          rng,
+          commons.map((x) => x.u),
+        ),
+      );
     }
     const stake = st.inv[st.inv.length - 1];
     if (stake && round % 4 === 1) {
@@ -129,7 +135,7 @@ describe.each([
     expect(m.itemValue(item(d, { w: 0.2, s: 3 }))).toBeCloseTo(m.itemValue(item(d, { w: 0.2 })) * 2, 1);
     expect(m.itemValue(item(d, { w: 0.005 }))).toBeCloseTo(m.itemValue(item(d, { w: 0.0101 })) * 1.5, 0);
     // rarer is always worth more at the same wear
-    for (let r = 1; r < m.RARITIES.length; r++) expect(m.itemValue(item(defOf(3, r), { w: 0.9 }))).toBeGreaterThan(m.itemValue(item(defOf(3, r - 1), { w: 0.001, t: 0, s: 0 })) * 0.5);
+    for (let r = 1; r < m.RARITIES.length; r++) expect(m.itemValue(item(defOf(3, r)))).toBeGreaterThan(m.itemValue(item(m.crateDefs(3, r - 1).at(-1)!)));
   });
 
   it('pays back most of a crate on average, so cash still comes from clicking', () => {
@@ -274,7 +280,11 @@ describe.each([
     expect(m.tradeUp(rng, ten(0, { t: 4 }))!.t).toBe(0); // all Tracked in → Tracked out
     // in a state: the inputs go, the result arrives
     const st = holding(ten(3));
-    const out = m.doTradeUp(st, rng, st.inv.map((x) => x.u))!;
+    const out = m.doTradeUp(
+      st,
+      rng,
+      st.inv.map((x) => x.u),
+    )!;
     expect(st.inv).toEqual([out]);
     expect(st.stats.tradeups).toBe(1);
     expect(m.doTradeUp(st, rng, [out.u])).toBeNull();
@@ -445,7 +455,7 @@ describe.each([
     // a full inventory stays under the app's 1 MB save limit
     const full = m.newState(T0);
     full.inv = Array.from({ length: m.INVENTORY_MAX }, (_, k) => item(m.ITEMS.length - 1, { u: k + 1, w: 0.123456, s: 999, t: 123456, l: 1 }));
-    expect(JSON.stringify(full).length).toBeLessThan(1024 * 1024 / 4);
+    expect(JSON.stringify(full).length).toBeLessThan((1024 * 1024) / 4);
   });
 
   it('reports a score within the app’s limit', () => {
