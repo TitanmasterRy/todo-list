@@ -80,12 +80,46 @@
     grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
     gap: 16px;
   }
+  section {
+    padding: 12px 14px;
+    border-radius: var(--radius);
+    background: var(--bg-elev-2);
+    border: 1px solid var(--border);
+    box-shadow: inset 0 1px 0 var(--sheen);
+    animation: rise-in 360ms var(--ease) both;
+    transition:
+      border-color var(--dur),
+      box-shadow var(--dur-slow) var(--ease);
+  }
+  section:nth-child(2) {
+    animation-delay: 60ms;
+  }
+  section:nth-child(3) {
+    animation-delay: 120ms;
+  }
+  section:hover {
+    border-color: color-mix(in srgb, var(--accent) 40%, var(--border));
+    box-shadow:
+      inset 0 1px 0 var(--sheen),
+      0 0 24px -12px color-mix(in srgb, var(--accent) 60%, transparent);
+  }
   h3 {
+    display: flex;
+    align-items: center;
+    gap: 8px;
     font-size: 12px;
     text-transform: uppercase;
     letter-spacing: 0.06em;
     color: var(--text-muted);
-    margin: 0 0 8px;
+    margin: 0 0 10px;
+  }
+  h3::before {
+    content: '';
+    width: 4px;
+    height: 13px;
+    border-radius: 2px;
+    background: var(--grad-accent);
+    box-shadow: 0 0 8px color-mix(in srgb, var(--accent) 50%, transparent);
   }
   dl {
     margin: 0;
@@ -98,6 +132,26 @@
     gap: 10px;
     align-items: baseline;
     font-size: 13px;
+    padding: 2px 4px;
+    margin: 0 -4px;
+    border-radius: 6px;
+    transition: background var(--dur);
+  }
+  dl > div:hover {
+    background: color-mix(in srgb, var(--accent) 10%, transparent);
+  }
+  dl > div:hover .kbd {
+    border-color: color-mix(in srgb, var(--accent) 60%, var(--border-strong));
+    color: var(--text);
+    box-shadow:
+      0 1px 0 var(--border-strong),
+      0 0 8px -2px var(--accent);
+  }
+  .kbd {
+    transition:
+      border-color var(--dur),
+      box-shadow var(--dur),
+      color var(--dur);
   }
   dt {
     min-width: 92px;

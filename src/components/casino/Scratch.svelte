@@ -35,15 +35,27 @@
     result = won ? { text: `Match three! ×${card.mult} · ${won.toLocaleString()} chips`, win: true } : { text: 'No match this time', win: false };
     if (won) playSound('pop');
   }
+  // the symbol that appears three times, so the winning cells can glow once the card is settled
+  const winSym = $derived(card && paid && card.mult > 0 ? (card.cells.find((c) => card!.cells.filter((x) => x === c).length >= 3) ?? null) : null);
 </script>
 
 <div class="cz-game">
   <div class="cz-table">
     {#if card}
-      <div class="cz-grid" style="grid-template-columns: repeat(3, 1fr); max-width: 280px; margin: 0 auto; width: 100%">
-        {#each card.cells as c, i (i)}
-          <button class="cz-tile cell" class:scratched={shown[i]} onclick={() => scratch(i)} aria-label={shown[i] ? c : 'Scratch'}>{shown[i] ? c : '✨'}</button>
-        {/each}
+      <div class="foil" class:done={paid}>
+        <span class="holo" aria-hidden="true"></span>
+        <div class="cz-grid" style="grid-template-columns: repeat(3, 1fr)">
+          {#each card.cells as c, i (i)}
+            <button
+              class="cz-tile cell"
+              class:scratched={shown[i]}
+              class:cz-pop={shown[i]}
+              class:gold={shown[i] && c === winSym}
+              onclick={() => scratch(i)}
+              aria-label={shown[i] ? c : 'Scratch'}>{shown[i] ? c : '✨'}</button
+            >
+          {/each}
+        </div>
       </div>
     {:else}
       <p>Buy a card, then tap each square to scratch it. Three of a symbol wins its prize.</p>
@@ -67,13 +79,60 @@
 </div>
 
 <style>
+  /* the card: brushed silver with a faint holographic rainbow sweeping across it */
+  .foil {
+    position: relative;
+    max-width: 280px;
+    margin: 0 auto;
+    width: 100%;
+    padding: 10px;
+    border-radius: var(--radius);
+    background: linear-gradient(160deg, #e9edf1 0%, #b9c2cb 35%, #eef1f4 55%, #a7b1bb 100%);
+    border: 1px solid rgba(255, 255, 255, 0.85);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.9),
+      0 10px 24px -8px rgba(0, 0, 0, 0.6);
+    overflow: hidden;
+    animation: cz-pop 320ms var(--spring) backwards;
+  }
+  .holo {
+    position: absolute;
+    inset: -40%;
+    background: conic-gradient(from 0deg, #ff6b6b, #ffd93d, #6bcb77, #4d96ff, #c77dff, #ff6b6b);
+    opacity: 0.18;
+    mix-blend-mode: color;
+    animation: spin 14s linear infinite;
+    pointer-events: none;
+  }
+  .foil.done .holo {
+    opacity: 0.3;
+  }
+  .foil .cz-grid {
+    position: relative;
+  }
   .cell {
     font-size: 32px;
-    background: linear-gradient(135deg, #b2bec3, #dfe6e9);
-    color: #636e72;
+    background: linear-gradient(135deg, #cfd6dc, #f3f5f7 50%, #b8c1c9);
+    color: #5b6672;
+    border-color: rgba(255, 255, 255, 0.9);
+    text-shadow: 0 1px 0 #fff;
   }
   .cell.scratched {
-    background: #fff;
+    background: linear-gradient(180deg, #ffffff, #f2f2ee);
     color: #111;
+    text-shadow: none;
+    cursor: default;
+  }
+  .cell.scratched:hover {
+    transform: none;
+  }
+  /* the three matching symbols light up gold */
+  .cell.gold {
+    background: var(--grad-gold);
+    border-color: #fff3b0;
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.7),
+      0 0 18px rgba(255, 224, 102, 0.85);
+    animation: bump 480ms var(--spring);
   }
 </style>

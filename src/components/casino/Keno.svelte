@@ -50,10 +50,15 @@
           class:on={picks.includes(n) && !drawn.includes(n)}
           class:hit={picks.includes(n) && drawn.includes(n)}
           class:drawn={drawn.includes(n) && !picks.includes(n)}
+          style={drawn.includes(n) ? `animation-delay: ${drawn.indexOf(n) * 30}ms` : undefined}
           onclick={() => toggle(n)}
           aria-pressed={picks.includes(n)}>{n}</button
         >
       {/each}
+    </div>
+    <div class="tray" aria-label="Drawn numbers">
+      {#each drawn as n, i (n)}<span class="ball" class:hit={picks.includes(n)} style="animation-delay: {i * 30}ms">{n}</span>{/each}
+      {#each Array.from({ length: 10 - drawn.length }, (_, i) => i) as i (i)}<span class="ball empty" aria-hidden="true"></span>{/each}
     </div>
     <div class="cz-result" aria-live="polite" class:win={result?.win} class:lose={result && !result.win}>{result?.text ?? `${picks.length}/10 picked`}</div>
   </div>
@@ -75,10 +80,64 @@
   .num {
     font-size: 13px;
     font-weight: 700;
+    font-variant-numeric: tabular-nums;
     aspect-ratio: auto;
     padding: 8px 0;
   }
+  /* a drawn number that you did not pick: a white ring and a pop */
   .drawn {
-    outline: 2px solid rgba(255, 255, 255, 0.6);
+    border-color: rgba(255, 255, 255, 0.8);
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.32), rgba(255, 255, 255, 0.16));
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.4),
+      0 0 0 2px rgba(255, 255, 255, 0.55),
+      0 3px 0 rgba(0, 0, 0, 0.25);
+    animation: cz-pop 320ms var(--spring) backwards;
+  }
+  .cz-tile.hit {
+    animation-fill-mode: backwards;
+  }
+  /* the rack of drawn balls */
+  .tray {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+    justify-content: center;
+    padding: 8px 10px;
+    border-radius: 999px;
+    background: rgba(0, 0, 0, 0.28);
+    box-shadow:
+      inset 0 2px 6px rgba(0, 0, 0, 0.45),
+      inset 0 -1px 0 rgba(255, 255, 255, 0.08);
+  }
+  .ball {
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    display: grid;
+    place-items: center;
+    font-size: 12px;
+    font-weight: 800;
+    font-variant-numeric: tabular-nums;
+    color: #1b1b1f;
+    background: radial-gradient(circle at 35% 30%, #ffffff, #d8dde3 55%, #9aa4ae);
+    box-shadow:
+      inset 0 -3px 5px rgba(0, 0, 0, 0.18),
+      0 3px 6px rgba(0, 0, 0, 0.45);
+    animation: cz-pop 320ms var(--spring) backwards;
+  }
+  .ball.hit {
+    color: #fff;
+    background: radial-gradient(circle at 35% 30%, #86efac, #22c55e 55%, #15803d);
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+    box-shadow:
+      inset 0 -3px 5px rgba(0, 0, 0, 0.2),
+      0 0 12px rgba(34, 197, 94, 0.7),
+      0 3px 6px rgba(0, 0, 0, 0.45);
+  }
+  .ball.empty {
+    background: rgba(255, 255, 255, 0.06);
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.12);
+    animation: none;
   }
 </style>

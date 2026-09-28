@@ -222,14 +222,29 @@
     padding: 8px 10px;
     border-radius: 10px;
     border: 1px solid var(--border);
+    background: var(--bg-elev-2);
+    box-shadow: inset 0 1px 0 var(--sheen);
     font-size: 13px;
     color: var(--text);
     min-width: 120px;
-    text-align: left;
+    text-align: start;
+    transition:
+      transform var(--dur) var(--spring),
+      border-color var(--dur),
+      box-shadow var(--dur),
+      background var(--dur);
+  }
+  .prov:hover {
+    transform: translateY(-2px);
+    border-color: color-mix(in srgb, var(--accent) 45%, var(--border));
   }
   .prov.on {
-    border-color: var(--accent);
-    background: color-mix(in srgb, var(--accent) 12%, transparent);
+    border-color: color-mix(in srgb, var(--accent) 70%, var(--border));
+    background: linear-gradient(135deg, color-mix(in srgb, var(--accent) 16%, var(--bg-elev-2)), color-mix(in srgb, var(--accent-2) 8%, var(--bg-elev-2)));
+    box-shadow:
+      inset 0 1px 0 var(--sheen),
+      0 0 0 1px color-mix(in srgb, var(--accent) 25%, transparent),
+      0 0 18px -6px color-mix(in srgb, var(--accent) 70%, transparent);
   }
   .pn {
     font-weight: 600;

@@ -431,8 +431,32 @@
 
 <style>
   .title {
-    font-size: 17px;
-    font-weight: 600;
+    font-size: 19px;
+    font-weight: 700;
+    padding: 12px 14px;
+    border-radius: var(--radius);
+    border-color: transparent;
+    background:
+      linear-gradient(var(--bg-elev), var(--bg-elev)) padding-box,
+      linear-gradient(135deg, color-mix(in srgb, var(--accent) 40%, var(--border)), color-mix(in srgb, var(--accent-2) 35%, var(--border))) border-box;
+  }
+  .title:focus {
+    border-color: transparent;
+    background:
+      linear-gradient(var(--bg-elev), var(--bg-elev)) padding-box,
+      var(--grad-accent) border-box;
+    box-shadow:
+      0 0 0 3px color-mix(in srgb, var(--accent) 18%, transparent),
+      var(--glow);
+  }
+  .field {
+    animation: rise-in 300ms var(--ease) both;
+  }
+  .subs li {
+    transition: transform var(--dur) var(--spring);
+  }
+  .subs li:hover {
+    transform: translateX(2px);
   }
   .subs {
     list-style: none;
@@ -464,14 +488,30 @@
     height: 32px;
     border-radius: 50%;
     border: 1px solid var(--border);
+    background: var(--bg-elev-2);
     font-size: 12px;
     font-weight: 600;
     color: var(--text-muted);
+    box-shadow: inset 0 1px 0 var(--sheen);
+    transition:
+      transform var(--dur) var(--spring),
+      border-color var(--dur),
+      background var(--dur),
+      box-shadow var(--dur);
+  }
+  .day:hover {
+    transform: translateY(-2px) scale(1.06);
+    border-color: color-mix(in srgb, var(--accent) 50%, var(--border));
+    color: var(--text);
   }
   .day.on {
-    background: var(--accent);
+    background: var(--grad-accent);
     color: var(--accent-contrast, #fff);
-    border-color: var(--accent);
+    border-color: transparent;
+    transform: scale(1.08);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.3),
+      0 2px 10px -3px color-mix(in srgb, var(--accent) 80%, transparent);
   }
   .grow {
     flex: 1;
@@ -484,11 +524,19 @@
     margin: 0 0 6px;
     padding: 0;
   }
+  .chip.pick:not(:disabled):hover {
+    transform: translateY(-1px);
+    border-color: color-mix(in srgb, var(--accent) 50%, var(--border));
+    color: var(--text);
+  }
   .chip.pick.on,
   .chips .chip.on {
-    background: var(--accent);
+    background: var(--grad-accent);
     color: var(--accent-contrast, #fff);
     border-color: transparent;
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.28),
+      0 2px 10px -3px color-mix(in srgb, var(--accent) 80%, transparent);
   }
   .chip.done {
     text-decoration: line-through;
@@ -528,14 +576,25 @@
     align-items: center;
     justify-content: space-between;
     gap: 8px;
-    background: var(--bg-elev-2);
+    background: color-mix(in srgb, var(--accent) 8%, var(--bg-elev-2));
+    border: 1px solid color-mix(in srgb, var(--accent) 25%, var(--border));
     padding: 8px 10px;
-    border-radius: 8px;
+    border-radius: var(--radius-sm);
+    margin-bottom: 12px;
+    box-shadow: inset 0 1px 0 var(--sheen);
   }
   .tpl {
-    background: var(--bg-elev-2);
+    background: color-mix(in srgb, var(--accent) 8%, var(--bg-elev-2));
+    border: 1px solid color-mix(in srgb, var(--accent) 25%, var(--border));
     padding: 10px;
-    border-radius: 8px;
+    border-radius: var(--radius-sm);
+    box-shadow: inset 0 1px 0 var(--sheen);
+    animation: pop-in var(--dur-slow) var(--spring) both;
+  }
+  .n,
+  .n2,
+  input[type='number'] {
+    font-variant-numeric: tabular-nums;
   }
   .actions {
     flex-wrap: wrap;

@@ -36,7 +36,7 @@
     {#key step}
       <div class="body" in:fly={{ x: document.documentElement.dir === 'rtl' ? -30 : 30, duration: 220 }}>
         {#if step === 0}
-          <div class="hero">✓</div>
+          <div class="hero" aria-hidden="true">✓</div>
           <h2>{t('onb.welcome')}</h2>
           <p>{t('onb.intro')}</p>
           <p class="muted">{t('onb.start')}</p>
@@ -48,7 +48,7 @@
             </select></label
           >
         {:else if step === 1}
-          <div class="hero">⌨️</div>
+          <div class="hero" aria-hidden="true">⌨️</div>
           <h2>{t('onb.typeTitle')}</h2>
           <div class="example">
             <span class="plus">+</span>
@@ -62,7 +62,7 @@
           </ul>
           <p class="muted">{t('onb.press')} <span class="kbd">n</span> {t('onb.pressAdd')} <span class="kbd">?</span> {t('onb.pressAll')}</p>
         {:else}
-          <div class="hero">🔥</div>
+          <div class="hero" aria-hidden="true">🔥</div>
           <h2>{t('onb.goalTitle')}</h2>
           <p>{t('onb.goalText')}</p>
           <div class="goal">
@@ -94,6 +94,7 @@
   .ob {
     max-width: 480px;
     text-align: center;
+    background: radial-gradient(70% 45% at 50% 0%, color-mix(in srgb, var(--accent) 16%, transparent), transparent 70%), var(--bg-elev);
   }
   .dots {
     display: flex;
@@ -104,24 +105,65 @@
   .dots span {
     width: 8px;
     height: 8px;
-    border-radius: 50%;
+    border-radius: 999px;
     background: var(--border-strong);
+    transition:
+      width var(--dur-slow) var(--spring),
+      background var(--dur);
   }
   .dots span.on {
-    background: var(--accent);
+    width: 22px;
+    background: var(--grad-accent);
+    box-shadow: 0 0 12px color-mix(in srgb, var(--accent) 70%, transparent);
+    animation: glow-pulse 2s ease-out infinite;
   }
+  /* the hero orb: gradient sphere with a highlight, drifting gently */
   .hero {
-    width: 64px;
-    height: 64px;
-    margin: 8px auto 12px;
-    border-radius: 18px;
+    position: relative;
+    width: 84px;
+    height: 84px;
+    margin: 10px auto 16px;
+    border-radius: 50%;
     display: grid;
     place-items: center;
-    font-size: 30px;
-    background: color-mix(in srgb, var(--accent) 18%, transparent);
+    font-size: 38px;
+    color: #fff;
+    background: radial-gradient(circle at 30% 25%, rgba(255, 255, 255, 0.55), transparent 45%), var(--grad-accent);
+    box-shadow:
+      inset 0 -8px 20px rgba(0, 0, 0, 0.18),
+      var(--glow-strong),
+      0 14px 30px -12px color-mix(in srgb, var(--accent) 80%, transparent);
+    animation:
+      pop-in 420ms var(--spring) both,
+      float 3.4s ease-in-out 420ms infinite;
+    text-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+  }
+  .hero::after {
+    content: '';
+    position: absolute;
+    inset: -14px;
+    border-radius: 50%;
+    border: 1px solid color-mix(in srgb, var(--accent) 35%, transparent);
+    animation: ring 2.8s ease-out infinite;
+  }
+  @keyframes ring {
+    from {
+      transform: scale(0.8);
+      opacity: 0.8;
+    }
+    to {
+      transform: scale(1.25);
+      opacity: 0;
+    }
   }
   h2 {
     margin: 0 0 8px;
+    font-size: 22px;
+    letter-spacing: -0.02em;
+    background: linear-gradient(135deg, var(--text) 30%, color-mix(in srgb, var(--accent) 70%, var(--text)));
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
   }
   p {
     margin: 0 0 10px;
@@ -132,17 +174,24 @@
     font-size: 13px;
   }
   .example {
+    position: relative;
     background: var(--bg-elev-2);
-    border: 1px solid var(--border);
+    border: 1px solid color-mix(in srgb, var(--accent) 30%, var(--border));
     border-radius: 10px;
     padding: 10px 12px;
     text-align: start;
     margin: 8px 0 10px;
     font-size: 15px;
+    box-shadow:
+      inset 0 1px 0 var(--sheen),
+      0 0 24px -12px color-mix(in srgb, var(--accent) 60%, transparent);
   }
   .example b {
     color: var(--accent-text);
     font-weight: 600;
+    padding: 0 4px;
+    border-radius: 5px;
+    background: color-mix(in srgb, var(--accent) 12%, transparent);
   }
   .plus {
     color: var(--accent-text);
@@ -156,29 +205,59 @@
     font-size: 13px;
     color: var(--text-muted);
   }
+  .syntax li {
+    animation: rise-in 320ms var(--ease) both;
+  }
+  .syntax li:nth-child(2) {
+    animation-delay: 60ms;
+  }
+  .syntax li:nth-child(3) {
+    animation-delay: 120ms;
+  }
+  .syntax li:nth-child(4) {
+    animation-delay: 180ms;
+  }
   .syntax b {
     color: var(--text);
     font-weight: 600;
   }
   .goal {
     display: flex;
-    gap: 6px;
+    gap: 8px;
     justify-content: center;
     align-items: center;
     margin: 12px 0;
   }
   .g {
-    width: 40px;
-    height: 40px;
+    width: 42px;
+    height: 42px;
     border-radius: 50%;
     border: 1px solid var(--border);
+    background: var(--bg-elev-2);
     font-weight: 700;
     font-size: 16px;
+    font-variant-numeric: tabular-nums;
+    box-shadow: inset 0 1px 0 var(--sheen);
+    transition:
+      transform var(--dur) var(--spring),
+      border-color var(--dur),
+      box-shadow var(--dur);
+  }
+  .g:hover {
+    transform: translateY(-2px) scale(1.06);
+    border-color: color-mix(in srgb, var(--accent) 50%, var(--border));
+  }
+  .g:active {
+    transform: scale(0.94);
   }
   .g.on {
-    background: var(--accent);
+    background: var(--grad-accent);
     color: var(--accent-contrast, #fff);
-    border-color: var(--accent);
+    border-color: transparent;
+    transform: scale(1.12);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.3),
+      var(--glow);
   }
   .check {
     display: flex;
@@ -190,6 +269,8 @@
   }
   .check input {
     accent-color: var(--accent);
+    width: 16px;
+    height: 16px;
   }
   .grow {
     flex: 1;

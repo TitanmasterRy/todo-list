@@ -45,18 +45,34 @@
     gap: 6px;
   }
   .coll {
-    width: 40px;
-    height: 40px;
-    border-radius: 10px;
+    width: 44px;
+    height: 44px;
+    border-radius: 12px;
     display: grid;
     place-items: center;
     font-size: 22px;
     background: var(--bg-elev-2);
     border: 1px solid var(--border);
     opacity: 0.5;
+    transition:
+      transform var(--dur-slow) var(--spring),
+      box-shadow var(--dur);
   }
   .coll.on {
     opacity: 1;
-    border-color: var(--warn);
+    border-color: color-mix(in srgb, var(--gold) 60%, var(--border));
+    background: linear-gradient(180deg, color-mix(in srgb, var(--gold) 16%, var(--bg-elev-2)), var(--bg-elev-2));
+    box-shadow:
+      inset 0 1px 0 var(--sheen),
+      0 0 16px -6px color-mix(in srgb, var(--gold) 70%, transparent);
+  }
+  .coll.on:hover {
+    transform: translateY(-3px) scale(1.1) rotate(-6deg);
+    box-shadow:
+      inset 0 1px 0 var(--sheen),
+      0 8px 20px -8px color-mix(in srgb, var(--gold) 90%, transparent);
+  }
+  .muted {
+    font-variant-numeric: tabular-nums;
   }
 </style>

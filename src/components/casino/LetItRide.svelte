@@ -36,17 +36,26 @@
 
 <div class="cz-game">
   <div class="cz-table">
-    <div class="cz-label">Community cards</div>
-    <div class="cz-hand">
-      {#if r}{#each r.community as c, i (i)}<PlayingCard card={c} hidden={i >= shown} />{/each}{:else}<PlayingCard hidden /><PlayingCard hidden />{/if}
+    <div class="zone">
+      <div class="cz-label">Community cards</div>
+      <div class="cz-hand">
+        {#if r}{#each r.community as c, i (i)}<span class="deal" style="animation-delay: {i * 60}ms"><PlayingCard card={c} hidden={i >= shown} /></span>{/each}{:else}<span
+            class="deal"><PlayingCard hidden /></span
+          ><span class="deal" style="animation-delay: 60ms"><PlayingCard hidden /></span>{/if}
+      </div>
     </div>
-    <div class="cz-label">You {r ? `· ${r.step === 'done' ? label : 'three cards'}` : ''}</div>
-    <div class="cz-hand">
-      {#if r}{#each r.player as c, i (i)}<PlayingCard card={c} />{/each}{/if}
+    <div class="zone me" class:won={r?.step === 'done' && net > 0}>
+      <div class="cz-label">
+        You {#if r}<span class="pill">{r.step === 'done' ? label : 'three cards'}</span>{/if}
+      </div>
+      <div class="cz-hand">
+        {#if r}{#each r.player as c, i (i)}<span class="deal" style="animation-delay: {i * 60}ms"><PlayingCard card={c} /></span>{/each}{/if}
+      </div>
     </div>
-    <div class="bets" aria-label="Your three bets">
+    <div class="spots" aria-label="Your three bets">
       {#each [0, 1, 2] as i (i)}
-        <span class="spot" class:pulled={r && !r.riding[i]}>{i === 2 ? '$' : i + 1}<small>{r ? (r.riding[i] ? r.unit : 'back') : unit}</small></span>
+        <span class="spot" class:filled={r && r.riding[i]} class:pulled={r && !r.riding[i]}>{i === 2 ? '$' : i + 1}<small>{r ? (r.riding[i] ? r.unit : 'back') : unit}</small></span
+        >
       {/each}
     </div>
     <div class="cz-result" aria-live="polite" class:win={r?.step === 'done' && net > 0} class:lose={r?.step === 'done' && net < 0}>
@@ -80,27 +89,111 @@
 </div>
 
 <style>
-  .bets {
+  .zone {
+    padding: 8px 10px;
+    border-radius: var(--radius);
+    background: rgba(0, 0, 0, 0.18);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
+    transition: box-shadow var(--dur-slow);
+  }
+  .zone.me {
+    border-top: 3px solid #ffe066;
+  }
+  .zone.won {
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.08),
+      0 0 0 2px #ffe066,
+      0 0 22px rgba(255, 224, 102, 0.6);
+  }
+  .cz-label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+  /* hand names in glossy pills */
+  .pill {
+    font-size: 12px;
+    font-weight: 900;
+    letter-spacing: 0;
+    text-transform: none;
+    padding: 2px 10px;
+    border-radius: 999px;
+    background: rgba(0, 0, 0, 0.35);
+    border: 1px solid rgba(255, 255, 255, 0.25);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.2);
+    animation: bump 420ms var(--spring);
+  }
+  .won .pill {
+    background: var(--grad-gold);
+    color: #3a2e00;
+    text-shadow: none;
+    border-color: #fff3b0;
+  }
+  .deal {
+    display: inline-block;
+    animation: cz-pop 260ms var(--spring) backwards;
+  }
+  /* bet spots: dashed gold rings that fill once a bet is down */
+  .spots {
     display: flex;
     gap: 10px;
+    flex-wrap: wrap;
   }
   .spot {
-    width: 46px;
-    height: 46px;
+    min-width: 56px;
+    height: 56px;
+    padding: 0 8px;
     border-radius: 50%;
-    border: 2px dashed rgba(255, 255, 255, 0.7);
+    border: 2px dashed rgba(255, 224, 102, 0.75);
     display: grid;
-    place-items: center;
+    place-content: center;
+    text-align: center;
+    line-height: 1.1;
+    font-size: 10px;
     font-weight: 800;
-    line-height: 1;
-    font-size: 15px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    font-variant-numeric: tabular-nums;
+    color: #ffe066;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+    transition:
+      background var(--dur-slow),
+      box-shadow var(--dur-slow),
+      color var(--dur-slow),
+      opacity var(--dur-slow),
+      transform var(--dur) var(--spring);
   }
   .spot small {
-    font-size: 10px;
-    font-weight: 600;
+    font-size: 13px;
+    font-weight: 900;
+    letter-spacing: 0;
+    min-height: 13px;
+  }
+  .spot.filled {
+    background: var(--grad-gold);
+    color: #3a2e00;
+    text-shadow: none;
+    border-style: solid;
+    border-color: #fff3b0;
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.7),
+      0 0 16px rgba(255, 224, 102, 0.6);
+    transform: scale(1.06);
   }
   .spot.pulled {
     opacity: 0.45;
+    border-style: dotted;
+  }
+  .spots .spot:first-child {
+    font-size: 15px;
+  }
+  .spots .spot:nth-child(2) {
+    font-size: 15px;
+  }
+  .spots .spot:last-child {
+    font-size: 17px;
   }
   .tip {
     display: block;

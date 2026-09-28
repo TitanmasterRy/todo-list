@@ -316,12 +316,26 @@
   .status {
     font-size: 13px;
     font-weight: 600;
+    padding: 3px 10px;
+    border-radius: 999px;
+    border: 1px solid var(--border);
+    background: var(--bg-elev-2);
+    box-shadow: inset 0 1px 0 var(--sheen);
+  }
+  .status.syncing {
+    border-color: color-mix(in srgb, var(--accent) 40%, transparent);
+    animation: glow-pulse 1.6s ease-out infinite;
   }
   .status.ok {
     color: var(--success-text);
+    border-color: color-mix(in srgb, var(--success) 40%, transparent);
+    background: color-mix(in srgb, var(--success) 10%, transparent);
+    box-shadow: 0 0 12px -4px color-mix(in srgb, var(--success) 60%, transparent);
   }
   .status.error {
     color: var(--danger-text);
+    border-color: color-mix(in srgb, var(--danger) 40%, transparent);
+    background: color-mix(in srgb, var(--danger) 10%, transparent);
   }
   .muted {
     color: var(--text-muted);
@@ -331,11 +345,32 @@
   .err {
     color: var(--danger-text);
     margin-bottom: 12px;
+    border-color: color-mix(in srgb, var(--danger) 40%, var(--border));
+    background: color-mix(in srgb, var(--danger) 6%, var(--bg-elev));
+    animation: shake 400ms var(--ease);
   }
   .setup h2,
   section h2 {
+    display: flex;
+    align-items: center;
+    gap: 8px;
     font-size: 16px;
+    font-weight: 800;
+    letter-spacing: -0.01em;
     margin: 0 0 8px;
+  }
+  section h2::before {
+    content: '';
+    width: 4px;
+    height: 15px;
+    border-radius: 2px;
+    background: var(--grad-accent);
+    box-shadow: 0 0 8px color-mix(in srgb, var(--accent) 50%, transparent);
+    flex-shrink: 0;
+  }
+  .steps li::marker {
+    color: var(--accent-text);
+    font-weight: 700;
   }
   .steps {
     font-size: 14px;
@@ -367,6 +402,8 @@
     padding: 8px 12px;
     border-radius: 10px;
     border: 1px solid var(--border);
+    background: var(--bg-elev-2);
+    box-shadow: inset 0 1px 0 var(--sheen);
     font-weight: 600;
     font-size: 13px;
     color: var(--text-muted);
@@ -374,11 +411,25 @@
     flex-direction: column;
     align-items: flex-start;
     gap: 2px;
+    transition:
+      transform var(--dur) var(--spring),
+      border-color var(--dur),
+      background var(--dur),
+      box-shadow var(--dur);
+  }
+  .modes button:hover {
+    transform: translateY(-2px);
+    color: var(--text);
+    border-color: color-mix(in srgb, var(--accent) 45%, var(--border));
   }
   .modes button.on {
-    border-color: var(--accent);
+    border-color: color-mix(in srgb, var(--accent) 70%, var(--border));
     color: var(--text);
-    background: color-mix(in srgb, var(--accent) 12%, transparent);
+    background: linear-gradient(135deg, color-mix(in srgb, var(--accent) 16%, var(--bg-elev-2)), color-mix(in srgb, var(--accent-2) 8%, var(--bg-elev-2)));
+    box-shadow:
+      inset 0 1px 0 var(--sheen),
+      0 0 0 1px color-mix(in srgb, var(--accent) 25%, transparent),
+      0 0 18px -6px color-mix(in srgb, var(--accent) 70%, transparent);
   }
   .modes .rec {
     font-size: 11px;
@@ -448,6 +499,7 @@
     padding: 6px 0;
     border-top: 1px solid var(--border);
     font-size: 14px;
+    animation: rise-in 300ms var(--ease) both;
   }
   .map-row .select {
     width: auto;
@@ -457,6 +509,16 @@
   }
   section.card {
     margin-bottom: 12px;
+    animation: rise-in var(--dur-slow) var(--ease) both;
+  }
+  .section-title .count {
+    font-variant-numeric: tabular-nums;
+  }
+  .toggle {
+    transition: color var(--dur);
+  }
+  .toggle:hover {
+    color: var(--text);
   }
   .section-title.overdue span:first-child {
     color: var(--overdue);

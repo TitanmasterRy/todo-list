@@ -29,15 +29,21 @@
 
 <div class="cz-game">
   <div class="cz-table">
+    <div class="cz-label">Your hand <span class="spot" class:filled={!!s} aria-hidden="true">Bet<small>{bet}</small></span></div>
     <div class="cz-hand cards">
       {#if s}
         {#each s.hand as c, i (i + c.suit + c.rank)}
-          <button class="hold" onclick={() => toggle(i)} disabled={s.phase !== 'hold'} aria-pressed={s.held[i]}
-            ><PlayingCard card={c} held={s.phase === 'hold' && s.held[i]} /></button
+          <button
+            class="hold deal"
+            class:held={s.phase === 'hold' && s.held[i]}
+            style="animation-delay: {i * 60}ms"
+            onclick={() => toggle(i)}
+            disabled={s.phase !== 'hold'}
+            aria-pressed={s.held[i]}><PlayingCard card={c} held={s.phase === 'hold' && s.held[i]} /></button
           >
         {/each}
       {:else}
-        {#each [0, 1, 2, 3, 4] as i (i)}<PlayingCard hidden />{/each}
+        {#each [0, 1, 2, 3, 4] as i (i)}<span class="deal" style="animation-delay: {i * 60}ms"><PlayingCard hidden /></span>{/each}
       {/if}
     </div>
     <div class="cz-result" aria-live="polite" class:win={s?.phase === 'done' && s.payout > 0} class:lose={s?.phase === 'done' && s.payout === 0}>
@@ -59,12 +65,69 @@
 </div>
 
 <style>
+  .cz-label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
   .cards {
     justify-content: center;
     padding-bottom: 18px;
   }
+  .deal {
+    display: inline-block;
+    animation: cz-pop 260ms var(--spring) backwards;
+  }
+  /* each card is a button: it lifts on hover and glows gold while held */
   .hold {
     background: none;
     padding: 0;
+    border-radius: 9px;
+    transition:
+      transform var(--dur) var(--spring),
+      box-shadow var(--dur-slow);
+  }
+  .hold:not(:disabled):hover {
+    transform: translateY(-4px);
+  }
+  .hold.held {
+    box-shadow: 0 0 22px rgba(255, 224, 102, 0.6);
+  }
+  .spot {
+    margin-inline-start: auto;
+    min-width: 46px;
+    height: 46px;
+    padding: 0 6px;
+    border-radius: 50%;
+    border: 2px dashed rgba(255, 224, 102, 0.75);
+    display: grid;
+    place-content: center;
+    text-align: center;
+    line-height: 1.1;
+    font-size: 9px;
+    letter-spacing: 0.08em;
+    color: #ffe066;
+    font-variant-numeric: tabular-nums;
+    transition:
+      background var(--dur-slow),
+      box-shadow var(--dur-slow),
+      color var(--dur-slow),
+      transform var(--dur) var(--spring);
+  }
+  .spot small {
+    font-size: 12px;
+    font-weight: 900;
+    letter-spacing: 0;
+  }
+  .spot.filled {
+    background: var(--grad-gold);
+    color: #3a2e00;
+    text-shadow: none;
+    border-style: solid;
+    border-color: #fff3b0;
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.7),
+      0 0 16px rgba(255, 224, 102, 0.6);
+    transform: scale(1.08);
   }
 </style>

@@ -42,7 +42,9 @@
 
 {#if store.bulkMode}
   <div class="bulk" transition:fly={{ y: 30, duration: 200 }} role="toolbar" aria-label={t('bulk.label')}>
-    <span class="n">{t('bulk.selected', { count: n })}</span>
+    <span class="n"
+      >{#key n}<span class="bump">{t('bulk.selected', { count: n })}</span>{/key}</span
+    >
     <select class="select" onchange={course} aria-label={t('bulk.moveTo')} disabled={!n}>
       <option value="__none">{t('bulk.course')}</option>
       <option value="">{t('inbox.noCourse')}</option>
@@ -98,18 +100,28 @@
     align-items: center;
     gap: 6px;
     flex-wrap: wrap;
-    background: var(--bg-elev-2);
-    border: 1px solid var(--border-strong);
-    border-radius: 14px;
-    padding: 8px 10px;
-    box-shadow: var(--shadow);
+    background: var(--glass);
+    backdrop-filter: blur(14px) saturate(1.3);
+    -webkit-backdrop-filter: blur(14px) saturate(1.3);
+    border: 1px solid color-mix(in srgb, var(--accent) 45%, var(--border-strong));
+    border-radius: 999px;
+    padding: 8px 12px;
+    box-shadow:
+      inset 0 1px 0 var(--sheen),
+      var(--shadow-lg),
+      var(--glow);
     z-index: 150;
     width: min(760px, calc(100vw - 24px));
   }
   .n {
-    font-weight: 600;
+    font-weight: 700;
     font-size: 13px;
-    padding: 0 6px;
+    padding: 2px 10px;
+    border-radius: 999px;
+    background: var(--grad-accent);
+    color: var(--accent-contrast, #fff);
+    font-variant-numeric: tabular-nums;
+    box-shadow: 0 2px 10px -3px color-mix(in srgb, var(--accent) 70%, transparent);
   }
   .select {
     width: auto;
@@ -130,8 +142,9 @@
     display: flex;
     flex-direction: column;
     gap: 4px;
-    box-shadow: var(--shadow);
+    box-shadow: var(--shadow-lg);
     min-width: 180px;
+    animation: pop-in 160ms var(--spring) both;
   }
   .pop form {
     display: flex;

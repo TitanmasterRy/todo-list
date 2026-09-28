@@ -84,6 +84,18 @@
     place-items: center;
     position: relative;
     min-width: 64px;
+    padding: 6px 10px;
+    border-radius: var(--radius);
+    background: radial-gradient(circle at 50% 60%, color-mix(in srgb, var(--accent) 18%, transparent), transparent 70%);
+    transition: transform var(--dur-slow) var(--spring);
+  }
+  .pal:hover {
+    transform: scale(1.06);
+  }
+  .companion .btn.primary {
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.28),
+      var(--glow);
   }
   .fur {
     fill: #f6b26b;
@@ -127,6 +139,7 @@
   .emoji {
     font-size: 40px;
     line-height: 1;
+    filter: drop-shadow(0 6px 12px color-mix(in srgb, var(--accent) 40%, transparent));
   }
   .sleeping .emoji {
     filter: saturate(0.6);
@@ -149,6 +162,7 @@
     gap: 6px;
     flex-wrap: wrap;
     width: 100%;
+    animation: rise-in var(--dur-slow) var(--ease) both;
   }
   @keyframes float {
     50% {
