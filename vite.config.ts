@@ -93,8 +93,17 @@ export default defineConfig({
       workbox: {
         globPatterns: ['**/*.{js,css,html,svg,png,ico,woff2,json}'],
         // site.json (the admin's announcement and switches) is fetched fresh, with the last copy kept for offline
-        globIgnores: ['**/site.json'],
-        runtimeCaching: [{ urlPattern: ({ url }) => url.pathname.endsWith('/site.json'), handler: 'NetworkFirst', options: { cacheName: 'hwtodo-site', networkTimeoutSeconds: 4 } }],
+        // so is the art manifest (public/art: generated images replace drawn art once listed there); the images cache on first use
+        globIgnores: ['**/site.json', '**/art/manifest.json'],
+        runtimeCaching: [
+          { urlPattern: ({ url }) => url.pathname.endsWith('/site.json'), handler: 'NetworkFirst', options: { cacheName: 'hwtodo-site', networkTimeoutSeconds: 4 } },
+          { urlPattern: ({ url }) => url.pathname.endsWith('/art/manifest.json'), handler: 'NetworkFirst', options: { cacheName: 'hwtodo-art', networkTimeoutSeconds: 4 } },
+          {
+            urlPattern: ({ url }) => /\/art\/.+\.(webp|png|jpg|svg)$/.test(url.pathname),
+            handler: 'StaleWhileRevalidate',
+            options: { cacheName: 'hwtodo-art-img', expiration: { maxEntries: 200 } },
+          },
+        ],
         navigateFallback: `${base}index.html`,
         navigateFallbackDenylist: [/^\/api\//],
         // notification clicks + periodic background digest/badge (public/sw-extra.js)

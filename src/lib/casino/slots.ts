@@ -17,6 +17,17 @@ export const SLOT_SYMBOLS: Record<string, string[]> = {
   paper: ['✏️', '📎', '📐', '📓', '📜', '🖋️'],
 };
 
+/** Stable ids for the reel symbols (same order as SLOT_SYMBOLS): art slots are casino/slots/<id>.webp. */
+export const SLOT_SYMBOL_IDS: Record<string, string[]> = {
+  classic: ['cherry', 'lemon', 'bell', 'clover', 'diamond', 'seven'],
+  sleek: ['sleek-diamond', 'sleek-circle', 'sleek-triangle', 'sleek-square', 'sleek-star', 'sleek-sparkle'],
+  cute: ['strawberry', 'cupcake', 'cat', 'bunny', 'unicorn', 'rainbow'],
+  arcade: ['cherry', 'alien', 'joystick', 'money-bag', 'crown', 'trophy'],
+  nature: ['leaf', 'sunflower', 'mushroom', 'bee', 'butterfly', 'tree'],
+  space: ['comet', 'moon', 'planet', 'ufo', 'rocket', 'galaxy'],
+  paper: ['pencil', 'paperclip', 'ruler', 'notebook', 'scroll', 'pen'],
+};
+
 export interface SlotResult {
   reels: [number, number, number];
   multiplier: number;

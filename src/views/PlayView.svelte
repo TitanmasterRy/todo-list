@@ -2,7 +2,6 @@
   import { economy } from '../lib/economy.svelte';
   import { store } from '../lib/store.svelte';
   import ShopTab from '../components/play/ShopTab.svelte';
-  import CasinoTab from '../components/play/CasinoTab.svelte';
   import ArcadeTab from '../components/play/ArcadeTab.svelte';
   import WalletTab from '../components/play/WalletTab.svelte';
   import { activeSeason, daysLeft } from '../lib/seasons';
@@ -11,6 +10,7 @@
   type Tab = 'shop' | 'casino' | 'arcade' | 'study' | 'stars' | 'pet' | 'garden' | 'dungeon' | 'boards' | 'factory' | 'watch' | 'wallet';
   // the newer tabs load on first open (each is its own chunk)
   const LAZY: Partial<Record<Tab, { load: () => Promise<{ default: import('svelte').Component }>; what: string }>> = {
+    casino: { load: () => import('../components/play/CasinoTab.svelte'), what: 'the casino' },
     study: { load: () => import('../components/play/StudyTab.svelte'), what: 'study games' },
     stars: { load: () => import('../components/play/StarMapTab.svelte'), what: 'the star map' },
     pet: { load: () => import('../components/play/PetTab.svelte'), what: 'your pet' },
@@ -99,8 +99,6 @@
 
   {#if active === 'shop'}
     <ShopTab />
-  {:else if active === 'casino'}
-    <CasinoTab />
   {:else if active === 'arcade'}
     <ArcadeTab />
   {:else if LAZY[active]}
