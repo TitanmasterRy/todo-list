@@ -5,6 +5,7 @@
 - **Hidden admin panel** (Ctrl+Alt+Shift+A, `?admin`, or tap the version in Settings → Help 7 times; see ADMIN.md): passphrase-protected; economy grants and undo, a site-wide announcement banner and feature switches, one-click publishing to GitHub, a data browser and debug tools.
 - **Add your own games** (Play → Arcade → ➕ Add a game): drop an HTML or JavaScript file, a .zip or a folder, paste code, or paste a link (Scratch, CodePen, Replit and more become embeds). Games can now save progress and sell power-ups for coins.
 - **New games:** Glow Grid (a gem block puzzle), Bubble pop and Fishing in the arcade; Three Card Poker, Let It Ride and Texas Hold'em against bots in the casino; a pet, a garden and a homework dungeon in Play; coin rain on big wins.
+- **A casino that feels like one:** an illustrated lobby, felt tables with real chips that fly to the bet and back, dealt and flipped cards, spinning reels with near-miss teases, a roulette ball that drops into its pocket, a ticking Big Six flapper, bouncing Plinko balls, tumbling dice, scratch-off foil, big-win banners and new sound effects. Reduced motion keeps it all quick and still. Generated art can replace the drawn art later (public/art).
 - **Chips → coins:** cash chips back at half value, up to 100 coins a day (Play → Wallet).
 - **Seasonal events** with limited items and event quests, **gifts** for friends, and opt-in **leaderboards**.
 - **Group projects:** select tasks → 🔗 Share makes a link; whoever opens it adds their own copy.

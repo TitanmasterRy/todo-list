@@ -130,9 +130,7 @@
         <h2>{game.name}</h2>
         <div class="grow"></div>
         {#if economy.session.rounds}
-          <span class="sess"
-            >Session: {economy.session.rounds} rounds · <span class:pos={net > 0} class:neg={net < 0}>{net > 0 ? '+' : ''}{net.toLocaleString()}</span></span
-          >
+          <span class="sess">Session: {economy.session.rounds} rounds · <span class:pos={net > 0} class:neg={net < 0}>{net > 0 ? '+' : ''}{net.toLocaleString()}</span></span>
         {/if}
         <ChipBalance />
       </div>
@@ -154,9 +152,7 @@
         <div class="side">
           <ChipBalance />
           {#if economy.session.rounds}
-            <span class="sess"
-              >Session: {economy.session.rounds} rounds · <span class:pos={net > 0} class:neg={net < 0}>{net > 0 ? '+' : ''}{net.toLocaleString()}</span></span
-            >
+            <span class="sess">Session: {economy.session.rounds} rounds · <span class:pos={net > 0} class:neg={net < 0}>{net > 0 ? '+' : ''}{net.toLocaleString()}</span></span>
           {/if}
         </div>
       </header>
@@ -194,8 +190,8 @@
         {/each}
       </div>
       <p class="muted">
-        Play chips only: no real money. Chips cash back into coins at half value, up to a daily limit (Wallet). Every game shows its odds. A reminder pops up after {store
-          .settings.casinoBreakMin || 'no'} minutes of play (Settings → Economy).
+        Play chips only: no real money. Chips cash back into coins at half value, up to a daily limit (Wallet). Every game shows its odds. A reminder pops up after {store.settings
+          .casinoBreakMin || 'no'} minutes of play (Settings → Economy).
       </p>
     {/if}
   </div>
@@ -215,8 +211,7 @@
     border-radius: 20px;
     color: #fff3cf;
     background:
-      radial-gradient(ellipse at 20% 0%, rgba(255, 90, 110, 0.35), transparent 55%),
-      radial-gradient(ellipse at 90% 100%, rgba(120, 80, 255, 0.35), transparent 60%),
+      radial-gradient(ellipse at 20% 0%, rgba(255, 90, 110, 0.35), transparent 55%), radial-gradient(ellipse at 90% 100%, rgba(120, 80, 255, 0.35), transparent 60%),
       linear-gradient(135deg, #3b0a1a 0%, #1a0822 55%, #0c0a1f 100%);
     box-shadow:
       inset 0 0 0 2px #e7b84a,
@@ -388,9 +383,7 @@
   .shine {
     position: absolute;
     inset: 0;
-    background:
-      radial-gradient(circle at var(--mx) var(--my), rgba(255, 255, 255, 0.35), transparent 45%),
-      linear-gradient(180deg, transparent 60%, rgba(0, 0, 0, 0.35));
+    background: radial-gradient(circle at var(--mx) var(--my), rgba(255, 255, 255, 0.35), transparent 45%), linear-gradient(180deg, transparent 60%, rgba(0, 0, 0, 0.35));
     opacity: 0.5;
     transition: opacity 200ms;
     pointer-events: none;
