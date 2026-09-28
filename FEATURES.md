@@ -55,6 +55,7 @@ merged into `main` and live on the GitHub Pages site. The full plan, including w
 - [x] Arcade games: Breakout, Sudoku, Hangman, Lights Out, Typing defense, Solitaire, Invaders, Lunar lander, Paper-plane glider, and the originals
 - [x] Study games from your decks: Boss battle, Match rush, Crossword, Quiz race (Play → Study games)
 - [x] Star map: a star for every day you finished something (Play → Star map)
+- [x] Casino makeover: felt tables, flying chips, dealt and flipped cards, spinning reels, roulette ball, 3D dice, scratch-off foil, big-win effects and sounds on all 16 games
 - [x] Casino tables: Three Card Poker, Let It Ride, Texas Hold'em against bots; coin rain on big wins
 - [x] Chips cash back into coins at half value, up to 100 coins a day (Play → Wallet)
 - [x] Glow Grid (gem block puzzle with coin power-ups), Bubble pop, Fishing (Play → Arcade)
@@ -129,10 +130,6 @@ merged into `main` and live on the GitHub Pages site. The full plan, including w
 - [x] Lint, formatting, type checks, 700+ unit tests and ~140 browser tests (with accessibility checks) in CI
 - [x] First-load size budget (currently ~119 kB of 125 kB)
 - [x] Lighthouse check on every pull request
-
-## 🚧 Being built right now (next merge)
-
-- [ ] Casino visual overhaul: more eye candy on every casino game
 
 ## ⏳ Not done yet
 

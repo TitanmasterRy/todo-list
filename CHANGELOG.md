@@ -1,7 +1,8 @@
 # Changelog
 
-## Roadmap pass 8: Orebelt factory, Watch, Spanish everywhere, patch notes
+## Roadmap pass 8: casino makeover, Orebelt factory, Crate Rush, Watch, Spanish everywhere, patch notes
 
+- **🎰 Casino makeover:** every game got real tables, chips, cards and animation: felt tables with flying chips, dealt and flipped cards, spinning slot reels with near misses and big-win banners, a roulette ball that drops into its pocket, a ticking Big Six wheel, bouncing Plinko balls, 3D dice, exploding mines, a Keno globe, scratch-off foil you rub with your finger, a CRT video poker cabinet and a Hold'em table with the three bots. New lobby with illustrated tiles and synthesized sound effects.
 - **🏭 Orebelt** (Play → Factory): a factory-building idle game. Mine ore, smelt and build parts through six tiers, route belts with throughput limits, run a power grid with overclocking, deliver to the Launch Tower, and keep producing while you're away. Finished homework gives shards, research and production boosts; coins buy a few daily supply drops.
 - **📺 Watch** (Play → Watch): sign in to your Jellyfin or Emby server to browse and play with resume across devices, show Plex or any other site, play YouTube/Vimeo/Twitch links, direct video links and files from your device. Optional homework rules: finish your ring first, vouchers for watch time, a daily limit. See WATCH.md.
 - **📦 Crate Rush** (Play → Arcade): a crate-opening clicker. Click and build income, open crates on a spinning reel, collect 104 procedurally drawn items with wear and patterns, trade up, upgrade, fill the collection book and rebirth. Coins buy a few power-ups.
