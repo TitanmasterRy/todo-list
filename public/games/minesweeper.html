@@ -5,21 +5,47 @@
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Minesweeper</title>
 <style>
-  :root { --bg: #0f1115; --fg: #e8eaf0; --accent: #6c5ce7; }
-  html, body { margin: 0; height: 100%; background: var(--bg); color: var(--fg); font: 15px system-ui, sans-serif; display: grid; place-items: center; user-select: none; }
-  .wrap { display: grid; gap: 10px; justify-items: center; }
-  .hud { display: flex; gap: 14px; font-weight: 700; align-items: center; }
-  .grid { display: grid; gap: 2px; background: #2a2f3a; padding: 4px; border-radius: 8px; }
-  .c { width: min(34px, 9vw); height: min(34px, 9vw); border: 0; border-radius: 4px; background: #3a4150; color: #fff; font-weight: 800; font-size: 15px; cursor: pointer; padding: 0; }
-  .c.o { background: #1f232c; cursor: default; }
-  .c.b { background: #ef4444; }
+  :root { --bg: #0f1115; --fg: #e8eaf0; --accent: #6c5ce7; --accent-2: #00cec9; --glow: color-mix(in srgb, var(--accent) 55%, transparent); --panel: rgba(255,255,255,.08); --line: rgba(255,255,255,.14); --shadow: rgba(0,0,0,.5); --field: #181c26; --tile: #3a4150; --open: #1f232c; --btn-ink: #fff; }
+  html.light { --panel: rgba(0,0,0,.06); --line: rgba(0,0,0,.1); --shadow: rgba(30,40,80,.22); --field: #1c2130; }
+  html, body { margin: 0; height: 100%; color: var(--fg); font: 500 15px/1.35 system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif; display: grid; place-items: center; user-select: none; }
+  body { background: radial-gradient(120% 80% at 50% -10%, color-mix(in srgb, var(--accent) 26%, var(--bg)), var(--bg) 60%), var(--bg); }
+  .wrap { display: grid; gap: 12px; justify-items: center; padding: 10px; }
+  .title { margin: 0; font-size: clamp(24px, 6vw, 34px); font-weight: 900; letter-spacing: -0.02em; background: linear-gradient(90deg, var(--accent), var(--accent-2)); -webkit-background-clip: text; background-clip: text; color: transparent; filter: drop-shadow(0 0 14px var(--glow)); }
+  .hud { display: flex; gap: 8px; font-weight: 800; align-items: center; flex-wrap: wrap; justify-content: center; }
+  .hud span { padding: 6px 14px; border-radius: 999px; background: linear-gradient(180deg, color-mix(in srgb, var(--panel) 100%, #fff 6%), var(--panel)); border: 1px solid var(--line); box-shadow: inset 0 1px 0 rgba(255,255,255,.14), 0 4px 14px var(--shadow); font-size: 13px; letter-spacing: .04em; }
+  .hud b { display: inline-block; font-size: 16px; font-variant-numeric: tabular-nums; color: var(--accent); margin-left: 4px; text-shadow: 0 0 10px var(--glow); }
+  .grid { display: grid; gap: 3px; background: linear-gradient(160deg, color-mix(in srgb, var(--field) 100%, #fff 5%), var(--field)); padding: 6px; border-radius: 14px; box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 45%, transparent), 0 0 34px var(--glow), 0 22px 50px var(--shadow); }
+  .c { width: min(34px, 9vw); height: min(34px, 9vw); border: 0; border-radius: 6px; background: linear-gradient(180deg, color-mix(in srgb, var(--tile) 100%, #fff 12%), var(--tile)); color: #fff; font-weight: 900; font-size: 15px; font-variant-numeric: tabular-nums; cursor: pointer; padding: 0; box-shadow: inset 0 1px 0 rgba(255,255,255,.18), 0 2px 0 rgba(0,0,0,.35); transition: transform .1s, filter .1s; }
+  .c:not(.o):hover { transform: translateY(-1px); filter: brightness(1.15); }
+  .c.o { background: var(--open); cursor: default; box-shadow: inset 0 1px 3px rgba(0,0,0,.4); }
+  .c.in { animation: reveal .25s cubic-bezier(.3,1.5,.5,1) backwards; }
+  @keyframes reveal { from { transform: scale(.5); opacity: .2; } }
+  .c.b { background: radial-gradient(circle, #ff8a80, #ef4444); box-shadow: 0 0 16px #ef4444; }
   .n1 { color: #74b9ff; } .n2 { color: #55efc4; } .n3 { color: #ff7675; } .n4 { color: #a29bfe; } .n5 { color: #fdcb6e; } .n6 { color: #81ecec; }
-  button.t { font: inherit; padding: 6px 12px; border-radius: 8px; border: 0; background: var(--accent); color: #fff; font-weight: 700; cursor: pointer; }
-  button.t.off { background: #3a4150; }
+  button.t { font: inherit; padding: 7px 14px; border-radius: 999px; border: 0; background: linear-gradient(135deg, var(--accent), var(--accent-2)); color: var(--btn-ink); font-weight: 900; letter-spacing: .02em; cursor: pointer; box-shadow: 0 8px 22px var(--glow), inset 0 1px 0 rgba(255,255,255,.4); transition: filter .12s, box-shadow .12s, transform .12s; }
+  button.t:hover { filter: brightness(1.08); transform: translateY(-1px); }
+  button.t:active { transform: scale(.96); animation: none; }
+  button.t.off { background: var(--panel); color: var(--fg); border: 1px solid var(--line); box-shadow: inset 0 1px 0 rgba(255,255,255,.12), 0 4px 12px var(--shadow); }
+  #msg { font-weight: 700; opacity: .85; text-align: center; }
+  /* juice */
+  .pop { animation: pop .38s cubic-bezier(.3,1.6,.5,1); }
+  @keyframes pop { 35% { transform: scale(1.35); } }
+  .fx { position: fixed; z-index: 9; pointer-events: none; font: 900 20px system-ui, sans-serif; color: var(--accent); text-shadow: 0 0 12px var(--glow), 0 2px 0 rgba(0,0,0,.3); transform: translate(-50%, -50%); animation: rise .8s ease-out forwards; white-space: nowrap; }
+  @keyframes rise { to { transform: translate(-50%, -160%); opacity: 0; } }
+  .spark { position: fixed; z-index: 9; pointer-events: none; width: 7px; height: 7px; border-radius: 50%; margin: -3px 0 0 -3px; box-shadow: 0 0 8px currentColor; animation: spark .6s ease-out forwards; }
+  @keyframes spark { to { transform: translate(var(--dx), var(--dy)) scale(0); opacity: 0; } }
+  body.flash::after { content: ''; position: fixed; inset: 0; z-index: 8; pointer-events: none; background: var(--flash, rgba(255,70,90,.4)); animation: flash .45s ease-out forwards; }
+  @keyframes flash { to { opacity: 0; } }
+  body.shake .wrap { animation: shake .4s; }
+  @keyframes shake { 20%, 60% { transform: translateX(-6px); } 40%, 80% { transform: translateX(6px); } }
+  @media (prefers-reduced-motion: no-preference) { #new { animation: float 2.4s ease-in-out infinite; } }
+  @keyframes float { 50% { transform: translateY(-3px); } }
+  @media (prefers-reduced-motion: reduce) { .pop, .fx, .spark, .c.in, body.flash::after, body.shake .wrap { animation-duration: .01s; } }
 </style>
 </head>
 <body>
 <div class="wrap">
+  <h1 class="title">💣 Minesweeper</h1>
   <div class="hud"><span>💣 <b id="left">10</b></span><span>⏱ <b id="time">0</b></span><button class="t off" id="flag">🚩 Flag mode</button><button class="t" id="new">New</button></div>
   <div class="grid" id="g"></div>
   <div id="msg">Right-click (or Flag mode) to flag.</div>
@@ -27,18 +53,31 @@
 <script>
   const q = new URLSearchParams(location.search);
   if (q.get('accent')) document.documentElement.style.setProperty('--accent', q.get('accent'));
-  if (q.get('dark') === '0') { document.documentElement.style.setProperty('--bg', '#f6f7fb'); document.documentElement.style.setProperty('--fg', '#171923'); }
+  if (q.get('dark') === '0') { document.documentElement.style.setProperty('--bg', '#f6f7fb'); document.documentElement.style.setProperty('--fg', '#171923'); document.documentElement.classList.add('light'); }
   const report = (score) => parent.postMessage({ type: 'hwtodo:score', score }, '*');
+  // --- visual juice (no game logic here) ---
+  const FX = (() => {
+    const calm = matchMedia('(prefers-reduced-motion: reduce)').matches; let live = 0;
+    const re = (el, cls) => { el.classList.remove(cls); void el.offsetWidth; el.classList.add(cls); };
+    const at = (el) => { const r = el.getBoundingClientRect(); return [r.left + r.width / 2, r.top + r.height / 2]; };
+    const text = (t, x, y, color) => { if (live > 40) return; live++; const d = document.createElement('div'); d.className = 'fx'; d.textContent = t; d.style.left = x + 'px'; d.style.top = y + 'px'; if (color) d.style.color = color; document.body.appendChild(d); setTimeout(() => { d.remove(); live--; }, 800); };
+    const burst = (x, y, color, k = 8) => { if (calm) return; for (let i = 0; i < k && live < 40; i++) { live++; const d = document.createElement('i'); d.className = 'spark'; const a = Math.random() * 6.283, r = 26 + Math.random() * 44; d.style.cssText = `left:${x}px;top:${y}px;color:${color};background:${color};--dx:${Math.cos(a) * r}px;--dy:${Math.sin(a) * r}px`; document.body.appendChild(d); setTimeout(() => { d.remove(); live--; }, 600); } };
+    const flash = (color) => { document.body.style.setProperty('--flash', color || ''); re(document.body, 'flash'); setTimeout(() => document.body.classList.remove('flash'), 500); };
+    const shake = () => { if (calm) return; re(document.body, 'shake'); setTimeout(() => document.body.classList.remove('shake'), 450); };
+    const watch = (id) => { const el = document.getElementById(id); if (!el) return; let prev = parseFloat(el.textContent) || 0; new MutationObserver(() => { const v = parseFloat(el.textContent); if (isNaN(v) || v === prev) return; prev = v; re(el, 'pop'); }).observe(el, { childList: true, characterData: true, subtree: true }); };
+    return { calm, text, burst, flash, shake, watch, at };
+  })();
+  FX.watch('left');
   const W = 9, H = 9, M = 10, $ = (id) => document.getElementById(id);
-  let cells, first, over, t0, clock, flagMode = false;
-  function start() { cells = Array.from({ length: W * H }, () => ({ m: false, o: false, f: false, n: 0 })); first = true; over = false; t0 = 0; clearInterval(clock); $('time').textContent = 0; $('msg').textContent = 'Right-click (or Flag mode) to flag.'; render(); }
+  let cells, first, over, t0, clock, flagMode = false, seen = [];
+  function start() { cells = Array.from({ length: W * H }, () => ({ m: false, o: false, f: false, n: 0 })); first = true; over = false; t0 = 0; seen = []; clearInterval(clock); $('time').textContent = 0; $('msg').textContent = 'Right-click (or Flag mode) to flag.'; render(); }
   const nb = (i) => { const x = i % W, y = (i / W) | 0, out = []; for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) { const a = x + dx, b = y + dy; if ((dx || dy) && a >= 0 && b >= 0 && a < W && b < H) out.push(b * W + a); } return out; };
   function seed(safe) { const ban = new Set([safe, ...nb(safe)]); let k = 0; while (k < M) { const i = Math.floor(Math.random() * W * H); if (!cells[i].m && !ban.has(i)) { cells[i].m = true; k++; } } cells.forEach((c, i) => (c.n = nb(i).filter((j) => cells[j].m).length)); }
   function openCell(i) {
     const c = cells[i]; if (c.o || c.f || over) return;
     if (first) { first = false; seed(i); t0 = Date.now(); clock = setInterval(() => ($('time').textContent = Math.floor((Date.now() - t0) / 1000)), 500); }
     c.o = true;
-    if (c.m) { over = true; clearInterval(clock); cells.forEach((x) => x.m && (x.o = true)); $('msg').textContent = '💥 Boom. Try again!'; render(i); return; }
+    if (c.m) { over = true; clearInterval(clock); cells.forEach((x) => x.m && (x.o = true)); $('msg').textContent = '💥 Boom. Try again!'; render(i); FX.flash(); FX.shake(); const el = $('g').children[i]; if (el) FX.burst(...FX.at(el), '#ff7675', 14); return; }
     if (!c.n) nb(i).forEach(openCell);
   }
   function click(i, flag) {
@@ -48,11 +87,12 @@
     else if (c.o && c.n) { const f = nb(i).filter((j) => cells[j].f).length; if (f === c.n) nb(i).forEach(openCell); }
     else openCell(i);
     render();
-    if (!over && cells.every((x) => x.m || x.o)) { over = true; clearInterval(clock); const s = Math.floor((Date.now() - t0) / 1000); const score = Math.max(50, 1000 - s * 5); $('msg').textContent = `Cleared in ${s}s! Score ${score}.`; report(score); }
+    if (!over && cells.every((x) => x.m || x.o)) { over = true; clearInterval(clock); const s = Math.floor((Date.now() - t0) / 1000); const score = Math.max(50, 1000 - s * 5); $('msg').textContent = `Cleared in ${s}s! Score ${score}.`; FX.flash('rgba(0,230,118,.35)'); FX.burst(...FX.at($('g')), '#ffd54a', 16); FX.text('Score ' + score, ...FX.at($('g')), '#ffd54a'); report(score); }
   }
   function render(boom) {
     $('g').style.gridTemplateColumns = `repeat(${W}, auto)`;
-    $('g').innerHTML = cells.map((c, i) => `<button class="c ${c.o ? 'o' : ''} ${boom === i ? 'b' : ''} n${c.n}" data-i="${i}" aria-label="cell">${c.o ? (c.m ? '💣' : c.n || '') : c.f ? '🚩' : ''}</button>`).join('');
+    $('g').innerHTML = cells.map((c, i) => `<button class="c ${c.o ? 'o' : ''} ${c.o && !seen[i] ? 'in' : ''} ${boom === i ? 'b' : ''} n${c.n}" data-i="${i}" aria-label="cell">${c.o ? (c.m ? '💣' : c.n || '') : c.f ? '🚩' : ''}</button>`).join('');
+    seen = cells.map((c) => c.o);
     $('left').textContent = M - cells.filter((c) => c.f).length;
   }
   $('g').addEventListener('click', (e) => { const b = e.target.closest('.c'); if (b) click(+b.dataset.i, flagMode); });

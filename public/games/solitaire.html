@@ -5,37 +5,61 @@
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Solitaire</title>
 <style>
-  :root { --felt: #0d3b26; --fg: #f1f5f2; --accent: #ffd43b; --back: #3b5bdb; --cw: 80px; --ch: 112px; }
-  html, body { margin: 0; min-height: 100%; background: var(--felt); color: var(--fg); font: 14px system-ui, sans-serif; user-select: none; -webkit-user-select: none; }
-  .bar { display: flex; flex-wrap: wrap; gap: 6px 10px; align-items: center; justify-content: center; padding: 8px; }
-  .bar button, .bar select { font: inherit; padding: 6px 12px; border-radius: 8px; border: 1px solid rgba(255,255,255,.35); background: rgba(0,0,0,.22); color: var(--fg); font-weight: 700; cursor: pointer; }
+  :root { --felt: #0d3b26; --fg: #f1f5f2; --accent: #ffd43b; --accent-2: #ff9f1a; --back: #3b5bdb; --cw: 80px; --ch: 112px; --glow: color-mix(in srgb, var(--accent) 50%, transparent); --panel: rgba(255,255,255,.1); --line: rgba(255,255,255,.2); --shadow: rgba(0,0,0,.45); }
+  html, body { margin: 0; min-height: 100%; color: var(--fg); font: 500 14px/1.35 system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif; user-select: none; -webkit-user-select: none; }
+  body { background: radial-gradient(120% 90% at 50% 0%, color-mix(in srgb, var(--felt) 100%, #fff 14%), var(--felt) 55%, color-mix(in srgb, var(--felt) 100%, #000 35%)), var(--felt); }
+  .bar { display: flex; flex-wrap: wrap; gap: 6px 10px; align-items: center; justify-content: center; padding: 10px 8px; }
+  .bar button, .bar select { font: inherit; padding: 7px 14px; border-radius: 999px; border: 1px solid var(--line); background: linear-gradient(180deg, rgba(255,255,255,.16), rgba(0,0,0,.2)); color: var(--fg); font-weight: 800; cursor: pointer; box-shadow: inset 0 1px 0 rgba(255,255,255,.2), 0 4px 12px var(--shadow); transition: transform .12s, filter .12s; }
+  .bar button:hover:not(:disabled) { transform: translateY(-1px); filter: brightness(1.12); }
+  .bar button:active:not(:disabled) { transform: scale(.96); animation: none; }
   .bar button:disabled { opacity: .45; cursor: default; }
-  .stats { font-variant-numeric: tabular-nums; }
+  .bar #new, .bar #auto { border: 0; background: linear-gradient(135deg, var(--accent), var(--accent-2)); color: #1b1f24; box-shadow: 0 8px 22px var(--glow), inset 0 1px 0 rgba(255,255,255,.4); }
+  .bar select option { color: #111; }
+  .stats { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; font-variant-numeric: tabular-nums; }
+  .stats span { padding: 6px 14px; border-radius: 999px; background: linear-gradient(180deg, color-mix(in srgb, var(--panel) 100%, #fff 6%), var(--panel)); border: 1px solid var(--line); box-shadow: inset 0 1px 0 rgba(255,255,255,.14), 0 4px 14px var(--shadow); font-size: 12px; letter-spacing: .04em; text-transform: uppercase; font-weight: 800; }
+  .stats b { display: inline-block; font-size: 15px; color: var(--accent); margin-left: 4px; text-shadow: 0 0 10px var(--glow); }
   #board { position: relative; margin: 0 auto; touch-action: none; }
-  .slot { position: absolute; width: var(--cw); height: var(--ch); box-sizing: border-box; border: 2px dashed rgba(255,255,255,.4); border-radius: 8px; display: grid; place-items: center; color: rgba(255,255,255,.55); font-size: calc(var(--cw) * .36); font-weight: 800; }
+  .slot { position: absolute; width: var(--cw); height: var(--ch); box-sizing: border-box; border: 2px dashed rgba(255,255,255,.4); border-radius: 8px; display: grid; place-items: center; color: rgba(255,255,255,.55); font-size: calc(var(--cw) * .36); font-weight: 800; background: rgba(0,0,0,.12); box-shadow: inset 0 2px 8px rgba(0,0,0,.25); }
   .slot[role="button"] { cursor: pointer; }
-  .card { position: absolute; width: var(--cw); height: var(--ch); box-sizing: border-box; border-radius: 7px; background: #fff; color: #1b1f24; border: 1px solid #b9bec6; box-shadow: 0 1px 2px rgba(0,0,0,.35); font-weight: 800; cursor: pointer; }
+  .card { position: absolute; width: var(--cw); height: var(--ch); box-sizing: border-box; border-radius: 7px; background: linear-gradient(160deg, #fff, #eef1f5); color: #1b1f24; border: 1px solid #b9bec6; box-shadow: 0 1px 2px rgba(0,0,0,.35), 0 4px 10px rgba(0,0,0,.25); font-weight: 800; cursor: pointer; transition: box-shadow .12s, transform .12s; }
+  .card[data-src]:hover { box-shadow: 0 2px 4px rgba(0,0,0,.35), 0 10px 20px rgba(0,0,0,.35); transform: translateY(-2px); }
   .card.red { color: #c92a2a; }
   .card .tl, .card .br { position: absolute; line-height: 1; text-align: center; font-size: max(11px, calc(var(--cw) * .2)); }
   .card .tl { top: 4px; left: 5px; } .card .br { bottom: 4px; right: 5px; transform: rotate(180deg); }
   .card .mid { position: absolute; inset: 0; display: grid; place-items: center; font-size: calc(var(--cw) * .46); }
   .card.down { cursor: default; border: 3px solid #fff; background: repeating-linear-gradient(45deg, var(--back) 0 5px, color-mix(in srgb, var(--back) 70%, #000) 5px 10px); }
   .card.down.stock { cursor: pointer; }
-  .card.sel { outline: 3px solid var(--accent); outline-offset: 1px; }
+  .card.down.stock:hover { transform: translateY(-2px); box-shadow: 0 10px 20px rgba(0,0,0,.35); }
+  .card.sel { outline: 3px solid var(--accent); outline-offset: 1px; box-shadow: 0 0 18px var(--glow), 0 6px 14px rgba(0,0,0,.35); }
   .card:focus-visible, .slot:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
-  .card.drag { z-index: 999 !important; box-shadow: 0 10px 22px rgba(0,0,0,.45); }
-  #msg { text-align: center; min-height: 1.4em; font-weight: 600; }
-  .rules { font-size: 12px; opacity: .9; text-align: center; max-width: 760px; margin: 4px auto 14px; padding: 0 10px; }
-  .win { position: fixed; inset: 0; display: none; place-items: center; background: rgba(0,0,0,.5); }
-  .win > div { background: var(--felt); padding: 18px 28px; border-radius: 14px; text-align: center; border: 2px solid var(--accent); }
-  .win button { font: inherit; padding: 10px 22px; border: 0; border-radius: 10px; background: var(--accent); color: #1b1f24; font-weight: 800; cursor: pointer; }
+  .card.drag { z-index: 999 !important; box-shadow: 0 14px 28px rgba(0,0,0,.5); transition: none; }
+  #board.dealing .card { animation: dealIn .4s cubic-bezier(.2,.9,.3,1.2) backwards; }
+  @keyframes dealIn { from { transform: translateY(-30px) scale(.9); opacity: 0; } }
+  #msg { text-align: center; min-height: 1.4em; font-weight: 700; opacity: .9; }
+  .rules { font-size: 12px; opacity: .85; text-align: center; max-width: 760px; margin: 4px auto 14px; padding: 0 10px; }
+  .win { position: fixed; inset: 0; display: none; place-items: center; background: rgba(0,0,0,.55); backdrop-filter: blur(4px); z-index: 20; }
+  .win > div { background: linear-gradient(160deg, color-mix(in srgb, var(--felt) 100%, #fff 10%), var(--felt)); padding: 22px 30px; border-radius: 18px; text-align: center; border: 2px solid var(--accent); box-shadow: 0 0 40px var(--glow), 0 22px 50px var(--shadow); }
+  .win h2 { margin: 0 0 8px; font-size: clamp(24px, 6vw, 34px); font-weight: 900; background: linear-gradient(90deg, var(--accent), var(--accent-2)); -webkit-background-clip: text; background-clip: text; color: transparent; filter: drop-shadow(0 0 14px var(--glow)); }
+  .win button { font: inherit; padding: 10px 22px; border: 0; border-radius: 999px; background: linear-gradient(135deg, var(--accent), var(--accent-2)); color: #1b1f24; font-weight: 900; cursor: pointer; box-shadow: 0 8px 22px var(--glow), inset 0 1px 0 rgba(255,255,255,.4); }
+  /* juice */
+  .pop { animation: pop .38s cubic-bezier(.3,1.6,.5,1); }
+  @keyframes pop { 35% { transform: scale(1.35); } }
+  .fx { position: fixed; z-index: 30; pointer-events: none; font: 900 20px system-ui, sans-serif; color: var(--accent); text-shadow: 0 0 12px var(--glow), 0 2px 0 rgba(0,0,0,.3); transform: translate(-50%, -50%); animation: rise .8s ease-out forwards; white-space: nowrap; }
+  @keyframes rise { to { transform: translate(-50%, -160%); opacity: 0; } }
+  .spark { position: fixed; z-index: 30; pointer-events: none; width: 7px; height: 7px; border-radius: 50%; margin: -3px 0 0 -3px; box-shadow: 0 0 8px currentColor; animation: spark .6s ease-out forwards; }
+  @keyframes spark { to { transform: translate(var(--dx), var(--dy)) scale(0); opacity: 0; } }
+  body.flash::after { content: ''; position: fixed; inset: 0; z-index: 25; pointer-events: none; background: var(--flash, rgba(255,70,90,.4)); animation: flash .45s ease-out forwards; }
+  @keyframes flash { to { opacity: 0; } }
+  @media (prefers-reduced-motion: no-preference) { #auto { animation: float 2.4s ease-in-out infinite; } }
+  @keyframes float { 50% { transform: translateY(-3px); } }
+  @media (prefers-reduced-motion: reduce) { .pop, .fx, .spark, #board.dealing .card, body.flash::after { animation-duration: .01s; } .card { transition: none; } }
 </style>
 </head>
 <body>
 <div class="bar">
   <label>Draw <select id="draw" aria-label="Cards to draw from the stock"><option value="1">1</option><option value="3">3</option></select></label>
   <button id="new">New game</button><button id="undo" title="Undo (U)">↶ Undo</button><button id="auto" hidden>Finish ✨</button>
-  <span class="stats">Score <b id="score">0</b> · Time <b id="time">0:00</b> · Moves <b id="moves">0</b></span>
+  <span class="stats"><span>Score <b id="score">0</b></span><span>Time <b id="time">0:00</b></span><span>Moves <b id="moves">0</b></span></span>
 </div>
 <div id="board" role="group" aria-label="Solitaire table"></div>
 <div id="msg" aria-live="polite"></div>
@@ -48,6 +72,18 @@
   if (q.get('dark') === '0') root.setProperty('--felt', '#1c7547');
   const calm = matchMedia('(prefers-reduced-motion: reduce)').matches;
   const report = (score) => parent.postMessage({ type: 'hwtodo:score', score }, '*');
+  // --- visual juice (no game logic here) ---
+  const FX = (() => {
+    let live = 0;
+    const re = (el, cls) => { el.classList.remove(cls); void el.offsetWidth; el.classList.add(cls); };
+    const at = (el) => { const r = el.getBoundingClientRect(); return [r.left + r.width / 2, r.top + r.height / 2]; };
+    const text = (t, x, y, color) => { if (live > 40) return; live++; const d = document.createElement('div'); d.className = 'fx'; d.textContent = t; d.style.left = x + 'px'; d.style.top = y + 'px'; if (color) d.style.color = color; document.body.appendChild(d); setTimeout(() => { d.remove(); live--; }, 800); };
+    const burst = (x, y, color, k = 8) => { if (calm) return; for (let i = 0; i < k && live < 40; i++) { live++; const d = document.createElement('i'); d.className = 'spark'; const a = Math.random() * 6.283, r = 26 + Math.random() * 44; d.style.cssText = `left:${x}px;top:${y}px;color:${color};background:${color};--dx:${Math.cos(a) * r}px;--dy:${Math.sin(a) * r}px`; document.body.appendChild(d); setTimeout(() => { d.remove(); live--; }, 600); } };
+    const flash = (color) => { document.body.style.setProperty('--flash', color || ''); re(document.body, 'flash'); setTimeout(() => document.body.classList.remove('flash'), 500); };
+    const watch = (id, opts = {}) => { const el = document.getElementById(id); if (!el) return; let prev = parseFloat(el.textContent) || 0; new MutationObserver(() => { const v = parseFloat(el.textContent); if (isNaN(v) || v === prev) return; const d = v - prev; prev = v; if (d > 0) { re(el, 'pop'); if (opts.delta) { const [x, y] = at(el); text('+' + Math.round(d), x, y - 8); } } }).observe(el, { childList: true, characterData: true, subtree: true }); };
+    return { text, burst, flash, watch, at };
+  })();
+  FX.watch('score', { delta: true }); FX.watch('moves');
   const $ = (id) => document.getElementById(id), board = $('board');
   const SUITS = ['♠', '♥', '♦', '♣'], SUIT_NAMES = ['spades', 'hearts', 'diamonds', 'clubs'];
   const RANKS = ['', 'A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K'], RANK_NAMES = ['', 'Ace', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'Jack', 'Queen', 'King'];
@@ -62,6 +98,7 @@
     for (let row = 0; row < 7; row++) for (let col = row; col < 7; col++) { const c = deck.pop(); c.up = col === row; g.tab[col].push(c); }
     g.stock = deck;
     history = []; sel = null; secs = 0; started = false; won = false; $('win').style.display = 'none'; say('');
+    board.classList.add('dealing'); setTimeout(() => board.classList.remove('dealing'), 600);
     render();
   }
   const pileOf = (p) => (p.t === 'tab' ? g.tab[p.i] : p.t === 'found' ? g.found[p.i] : g[p.t]);
@@ -91,7 +128,9 @@
     g.moves++; sel = null;
     const to = pileOf(dst); focusAfter = keyOf({ ...dst, n: to.length - cards.length });
     say(`${name(cards[0])}${cards.length > 1 ? ` and ${cards.length - 1} more` : ''} → ${dst.t === 'found' ? 'foundation' : `column ${dst.i + 1}`}`);
+    const fxKey = keyOf({ ...dst, n: to.length - cards.length });
     render();
+    if (dst.t === 'found') { const el = board.querySelector(`[data-src="${fxKey}"]`); if (el) FX.burst(...FX.at(el), '#ffd43b', 7); }
     return true;
   }
   function drawStock() {
@@ -124,7 +163,7 @@
     won = true;
     const bonus = secs >= 30 ? Math.round(700000 / secs) : 0, total = g.score + bonus;
     $('winp').textContent = `Score ${total.toLocaleString()} (${g.score} + ${bonus.toLocaleString()} time bonus) · ${fmt(secs)} · ${g.moves} moves`;
-    $('win').style.display = 'grid'; $('again').focus(); report(total);
+    $('win').style.display = 'grid'; $('again').focus(); FX.flash('rgba(255,212,59,.35)'); FX.burst(innerWidth / 2, innerHeight / 2, '#ffd43b', 20); report(total);
   }
   function autoFinish() {
     if (won) return;

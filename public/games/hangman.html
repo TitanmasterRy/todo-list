@@ -5,26 +5,58 @@
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Hangman</title>
 <style>
-  :root { --bg: #fbf8f1; --fg: #2d2a26; --accent: #c0392b; }
-  html, body { margin: 0; min-height: 100%; background: var(--bg); color: var(--fg); font: 16px Georgia, serif; display: grid; place-items: center; }
-  .wrap { display: grid; gap: 14px; justify-items: center; padding: 12px; max-width: 560px; }
-  svg { width: 180px; height: 180px; }
-  .word { font: 700 30px/1 ui-monospace, monospace; letter-spacing: 0.3em; text-align: center; }
+  :root { --bg: #fbf8f1; --fg: #2d2a26; --accent: #c0392b; --accent-2: #e67e22; --glow: color-mix(in srgb, var(--accent) 45%, transparent); --panel: rgba(255,255,255,.75); --line: rgba(60,40,20,.14); --shadow: rgba(90,60,30,.22); --key: #fff; --key-ink: #2d2a26; --btn-ink: #fff; }
+  html.dark { --panel: rgba(255,255,255,.07); --line: rgba(255,255,255,.14); --shadow: rgba(0,0,0,.5); --key: #2b2925; --key-ink: #efe8dc; }
+  html, body { margin: 0; min-height: 100%; color: var(--fg); font: 500 16px/1.35 Georgia, serif; display: grid; place-items: center; }
+  body { background: radial-gradient(120% 80% at 50% -10%, color-mix(in srgb, var(--accent) 18%, var(--bg)), var(--bg) 60%), var(--bg); }
+  .wrap { display: grid; gap: 14px; justify-items: center; padding: 12px; max-width: 560px; box-sizing: border-box; }
+  .title { margin: 0; font: 900 clamp(22px, 6vw, 32px)/1.2 system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif; letter-spacing: -0.02em; background: linear-gradient(90deg, var(--accent), var(--accent-2)); -webkit-background-clip: text; background-clip: text; color: transparent; filter: drop-shadow(0 0 12px var(--glow)); }
+  .hud { display: flex; gap: 8px; font-weight: 800; font-family: system-ui, sans-serif; }
+  .hud span { padding: 6px 14px; border-radius: 999px; background: linear-gradient(180deg, color-mix(in srgb, var(--panel) 100%, #fff 6%), var(--panel)); border: 1px solid var(--line); box-shadow: inset 0 1px 0 rgba(255,255,255,.3), 0 4px 14px var(--shadow); font-size: 13px; letter-spacing: .04em; text-transform: uppercase; }
+  .hud b { display: inline-block; font-size: 16px; font-variant-numeric: tabular-nums; color: var(--accent); margin-left: 4px; text-shadow: 0 0 10px var(--glow); }
+  .stage { padding: 12px 20px; border-radius: 18px; background: var(--panel); border: 1px solid var(--line); box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 30%, transparent), 0 0 30px var(--glow), 0 18px 40px var(--shadow); display: grid; gap: 8px; justify-items: center; }
+  svg { width: 180px; height: 180px; filter: drop-shadow(0 2px 4px var(--shadow)); }
+  svg :nth-child(n + 5) { stroke: var(--accent); filter: drop-shadow(0 0 4px var(--glow)); }
+  .word { font: 700 30px/1 ui-monospace, monospace; letter-spacing: 0.3em; text-align: center; text-shadow: 0 0 10px var(--glow); }
   .keys { display: grid; grid-template-columns: repeat(9, 1fr); gap: 5px; }
-  .keys button { font: 700 16px system-ui; padding: 8px 0; min-width: 34px; border: 1px solid var(--fg); background: #fff; border-radius: 4px; cursor: pointer; color: #2d2a26; }
-  .keys button:disabled { opacity: 0.35; cursor: default; }
-  .keys button.hit { background: #d4edda; }
+  .keys button { font: 800 16px system-ui; padding: 9px 0; min-width: 34px; border: 1px solid var(--line); background: linear-gradient(180deg, color-mix(in srgb, var(--key) 100%, #fff 8%), var(--key)); border-radius: 8px; cursor: pointer; color: var(--key-ink); box-shadow: inset 0 1px 0 rgba(255,255,255,.4), 0 3px 0 rgba(0,0,0,.14); transition: transform .1s, filter .1s; }
+  .keys button:hover:not(:disabled) { transform: translateY(-2px); filter: brightness(1.05); }
+  .keys button:active:not(:disabled) { transform: scale(.94); }
+  .keys button:disabled { opacity: 0.35; cursor: default; box-shadow: none; }
+  .keys button.hit { background: linear-gradient(180deg, #8ef0b1, #4cd884); color: #10361f; box-shadow: 0 0 12px rgba(76,216,132,.6); }
   .keys button.hit:disabled { opacity: 1; }
   .hint { font-style: italic; opacity: 0.8; text-align: center; }
-  .new { font: inherit; padding: 6px 16px; border: 1px solid var(--fg); background: #fff; border-radius: 4px; cursor: pointer; color: #2d2a26; }
+  #msg { font-weight: 700; text-align: center; min-height: 20px; }
+  .new { font: 900 14px system-ui, sans-serif; padding: 8px 18px; border-radius: 999px; border: 0; background: linear-gradient(135deg, var(--accent), var(--accent-2)); color: var(--btn-ink); letter-spacing: .02em; cursor: pointer; box-shadow: 0 8px 22px var(--glow), inset 0 1px 0 rgba(255,255,255,.4); transition: filter .12s, box-shadow .12s, transform .12s; }
+  .new:hover { filter: brightness(1.08); transform: translateY(-1px); }
+  .new:active { transform: scale(.96); animation: none; }
+  /* juice */
+  .pop { animation: pop .38s cubic-bezier(.3,1.6,.5,1); }
+  @keyframes pop { 35% { transform: scale(1.35); } }
+  .word.pop { animation: wpop .38s cubic-bezier(.3,1.6,.5,1); }
+  @keyframes wpop { 35% { transform: scale(1.08); } }
+  .fx { position: fixed; z-index: 9; pointer-events: none; font: 900 20px system-ui, sans-serif; color: var(--accent); text-shadow: 0 0 12px var(--glow), 0 2px 0 rgba(0,0,0,.3); transform: translate(-50%, -50%); animation: rise .8s ease-out forwards; white-space: nowrap; }
+  @keyframes rise { to { transform: translate(-50%, -160%); opacity: 0; } }
+  .spark { position: fixed; z-index: 9; pointer-events: none; width: 7px; height: 7px; border-radius: 50%; margin: -3px 0 0 -3px; box-shadow: 0 0 8px currentColor; animation: spark .6s ease-out forwards; }
+  @keyframes spark { to { transform: translate(var(--dx), var(--dy)) scale(0); opacity: 0; } }
+  body.flash::after { content: ''; position: fixed; inset: 0; z-index: 8; pointer-events: none; background: var(--flash, rgba(255,70,90,.4)); animation: flash .45s ease-out forwards; }
+  @keyframes flash { to { opacity: 0; } }
+  body.shake .stage { animation: shake .4s; }
+  @keyframes shake { 20%, 60% { transform: translateX(-6px); } 40%, 80% { transform: translateX(6px); } }
+  @media (prefers-reduced-motion: no-preference) { #new { animation: float 2.4s ease-in-out infinite; } }
+  @keyframes float { 50% { transform: translateY(-3px); } }
+  @media (prefers-reduced-motion: reduce) { .pop, .fx, .spark, body.flash::after, body.shake .stage { animation-duration: .01s; } }
 </style>
 </head>
 <body>
 <div class="wrap">
-  <div><b>✏️ Hangman</b> · Score <span id="score">0</span> · Streak <span id="streak">0</span></div>
-  <svg viewBox="0 0 120 120" aria-hidden="true" id="art" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"></svg>
-  <div class="word" id="word" aria-live="polite"></div>
-  <div class="hint" id="hint"></div>
+  <h1 class="title">✏️ Hangman</h1>
+  <div class="hud"><span>Score <b id="score">0</b></span><span>Streak <b id="streak">0</b></span></div>
+  <div class="stage">
+    <svg viewBox="0 0 120 120" aria-hidden="true" id="art" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"></svg>
+    <div class="word" id="word" aria-live="polite"></div>
+    <div class="hint" id="hint"></div>
+  </div>
   <div class="keys" id="keys"></div>
   <div id="msg"></div>
   <button class="new" id="new">New word</button>
@@ -32,8 +64,21 @@
 <script>
   const q = new URLSearchParams(location.search);
   if (q.get('accent')) document.documentElement.style.setProperty('--accent', q.get('accent'));
-  if (q.get('dark') === '1') { document.documentElement.style.setProperty('--bg', '#1c1b19'); document.documentElement.style.setProperty('--fg', '#efe8dc'); }
+  if (q.get('dark') === '1') { document.documentElement.style.setProperty('--bg', '#1c1b19'); document.documentElement.style.setProperty('--fg', '#efe8dc'); document.documentElement.classList.add('dark'); }
   const report = (score) => parent.postMessage({ type: 'hwtodo:score', score }, '*');
+  // --- visual juice (no game logic here) ---
+  const FX = (() => {
+    const calm = matchMedia('(prefers-reduced-motion: reduce)').matches; let live = 0;
+    const re = (el, cls) => { el.classList.remove(cls); void el.offsetWidth; el.classList.add(cls); };
+    const at = (el) => { const r = el.getBoundingClientRect(); return [r.left + r.width / 2, r.top + r.height / 2]; };
+    const text = (t, x, y, color) => { if (live > 40) return; live++; const d = document.createElement('div'); d.className = 'fx'; d.textContent = t; d.style.left = x + 'px'; d.style.top = y + 'px'; if (color) d.style.color = color; document.body.appendChild(d); setTimeout(() => { d.remove(); live--; }, 800); };
+    const burst = (x, y, color, k = 8) => { if (calm) return; for (let i = 0; i < k && live < 40; i++) { live++; const d = document.createElement('i'); d.className = 'spark'; const a = Math.random() * 6.283, r = 26 + Math.random() * 44; d.style.cssText = `left:${x}px;top:${y}px;color:${color};background:${color};--dx:${Math.cos(a) * r}px;--dy:${Math.sin(a) * r}px`; document.body.appendChild(d); setTimeout(() => { d.remove(); live--; }, 600); } };
+    const flash = (color) => { document.body.style.setProperty('--flash', color || ''); re(document.body, 'flash'); setTimeout(() => document.body.classList.remove('flash'), 500); };
+    const shake = () => { if (calm) return; re(document.body, 'shake'); setTimeout(() => document.body.classList.remove('shake'), 450); };
+    const watch = (id, opts = {}) => { const el = document.getElementById(id); if (!el) return; let prev = parseFloat(el.textContent) || 0; new MutationObserver(() => { const v = parseFloat(el.textContent); if (isNaN(v) || v === prev) return; const d = v - prev; prev = v; re(el, 'pop'); if (opts.delta && d > 0) { const [x, y] = at(el); text('+' + Math.round(d), x, y - 8); } }).observe(el, { childList: true, characterData: true, subtree: true }); };
+    return { calm, text, burst, flash, shake, watch, at, re };
+  })();
+  FX.watch('score', { delta: true }); FX.watch('streak');
   const DEFAULT = ['PHOTOSYNTHESIS', 'MITOCHONDRIA', 'DEMOCRACY', 'HYPOTENUSE', 'METAPHOR', 'ALGORITHM', 'MOLECULE', 'RENAISSANCE', 'EQUATION', 'PARAGRAPH', 'ECOSYSTEM', 'GRAVITY', 'CONSTITUTION', 'FRACTION', 'VOLCANO'];
   const custom = (q.get('words') || '').split(',').map((w) => w.toUpperCase().replace(/[^A-Z]/g, '')).filter((w) => w.length >= 3 && w.length <= 14);
   const POOL = custom.length >= 4 ? custom : DEFAULT;
@@ -49,9 +94,9 @@
   }
   function guess(k) {
     if (over || guessed.has(k)) return; guessed.add(k);
-    if (!word.includes(k)) misses++;
-    if ([...word].every((ch) => guessed.has(ch))) { over = true; streak++; score += 10 * word.length + (7 - misses) * 5 + streak * 5; $('msg').textContent = `✓ ${word}!`; report(score); }
-    else if (misses >= 7) { over = true; streak = 0; $('msg').textContent = `The word was ${word}.`; report(score); }
+    if (!word.includes(k)) { misses++; FX.flash('rgba(255,70,90,.22)'); FX.shake(); } else { FX.re($('word'), 'pop'); FX.burst(...FX.at($('word')), '#4cd884', 6); }
+    if ([...word].every((ch) => guessed.has(ch))) { over = true; streak++; score += 10 * word.length + (7 - misses) * 5 + streak * 5; $('msg').textContent = `✓ ${word}!`; FX.flash('rgba(255,213,74,.35)'); FX.burst(...FX.at($('word')), '#ffd54a', 16); report(score); }
+    else if (misses >= 7) { over = true; streak = 0; $('msg').textContent = `The word was ${word}.`; FX.flash(); report(score); }
     render();
   }
   $('keys').addEventListener('click', (e) => { const b = e.target.closest('button'); if (b) guess(b.dataset.k); });

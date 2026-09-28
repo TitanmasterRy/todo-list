@@ -5,18 +5,44 @@
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Lights Out</title>
 <style>
-  :root { --bg: #0f1115; --fg: #e8eaf0; --accent: #6c5ce7; }
-  html, body { margin: 0; min-height: 100%; background: var(--bg); color: var(--fg); font: 15px system-ui, sans-serif; display: grid; place-items: center; }
-  .wrap { display: grid; gap: 12px; justify-items: center; }
-  .grid { display: grid; gap: 8px; }
-  .l { width: min(64px, 17vw); height: min(64px, 17vw); border-radius: 12px; border: 0; background: #252a35; cursor: pointer; transition: background 120ms, box-shadow 120ms; }
-  .l.on { background: #ffe066; box-shadow: 0 0 18px #ffe06699; }
-  button.b { font: inherit; padding: 6px 14px; border: 0; border-radius: 8px; background: var(--accent); color: #fff; font-weight: 700; cursor: pointer; }
+  :root { --bg: #0f1115; --fg: #e8eaf0; --accent: #6c5ce7; --accent-2: #ffe066; --glow: color-mix(in srgb, var(--accent) 55%, transparent); --panel: rgba(255,255,255,.08); --line: rgba(255,255,255,.14); --shadow: rgba(0,0,0,.5); --field: #181c26; --off: #252a35; --btn-ink: #fff; }
+  html.light { --panel: rgba(0,0,0,.06); --line: rgba(0,0,0,.1); --shadow: rgba(30,40,80,.22); --field: #1c2130; --off: #2a3040; }
+  html, body { margin: 0; min-height: 100%; color: var(--fg); font: 500 15px/1.35 system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif; display: grid; place-items: center; }
+  body { background: radial-gradient(120% 80% at 50% -10%, color-mix(in srgb, var(--accent) 26%, var(--bg)), var(--bg) 60%), var(--bg); }
+  .wrap { display: grid; gap: 12px; justify-items: center; padding: 10px; }
+  .title { margin: 0; font-size: clamp(24px, 6vw, 34px); font-weight: 900; letter-spacing: -0.02em; background: linear-gradient(90deg, var(--accent), var(--accent-2)); -webkit-background-clip: text; background-clip: text; color: transparent; filter: drop-shadow(0 0 14px var(--glow)); }
+  .hud { display: flex; gap: 10px; font-weight: 800; }
+  .hud span { padding: 6px 14px; border-radius: 999px; background: linear-gradient(180deg, color-mix(in srgb, var(--panel) 100%, #fff 6%), var(--panel)); border: 1px solid var(--line); box-shadow: inset 0 1px 0 rgba(255,255,255,.14), 0 4px 14px var(--shadow); font-size: 13px; letter-spacing: .04em; text-transform: uppercase; opacity: .95; }
+  .hud b { display: inline-block; font-size: 16px; font-variant-numeric: tabular-nums; color: var(--accent); margin-left: 4px; text-shadow: 0 0 10px var(--glow); }
+  .grid { display: grid; gap: 8px; padding: 12px; border-radius: 18px; background: linear-gradient(160deg, color-mix(in srgb, var(--field) 100%, #fff 5%), var(--field)); box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 45%, transparent), 0 0 34px var(--glow), 0 22px 50px var(--shadow); }
+  .l { width: min(64px, 15vw); height: min(64px, 15vw); border-radius: 14px; border: 0; background: linear-gradient(180deg, color-mix(in srgb, var(--off) 100%, #fff 8%), var(--off)); cursor: pointer; transition: background 120ms, box-shadow 120ms, transform .1s; box-shadow: inset 0 1px 0 rgba(255,255,255,.1), inset 0 -3px 0 rgba(0,0,0,.25); }
+  .l:hover { transform: translateY(-2px); }
+  .l:active { transform: scale(.94); }
+  .l.on { background: radial-gradient(circle at 40% 35%, #fff6c2, #ffe066 55%, #f5c400); box-shadow: 0 0 22px #ffe066bb, 0 0 44px #ffe06655, inset 0 1px 0 rgba(255,255,255,.7); }
+  button.b { font: inherit; padding: 8px 18px; border: 0; border-radius: 999px; background: linear-gradient(135deg, var(--accent), var(--accent-2)); color: var(--btn-ink); font-weight: 900; letter-spacing: .02em; cursor: pointer; box-shadow: 0 8px 22px var(--glow), inset 0 1px 0 rgba(255,255,255,.4); transition: filter .12s, box-shadow .12s, transform .12s; }
+  button.b:hover { filter: brightness(1.08); transform: translateY(-1px); }
+  button.b:active { transform: scale(.96); animation: none; }
+  #msg { font-weight: 700; opacity: .85; text-align: center; max-width: 360px; }
+  /* juice */
+  .pop { animation: pop .38s cubic-bezier(.3,1.6,.5,1); }
+  @keyframes pop { 35% { transform: scale(1.35); } }
+  .l.hit { animation: tap .25s cubic-bezier(.3,1.6,.5,1); }
+  @keyframes tap { 40% { transform: scale(.85); } }
+  .fx { position: fixed; z-index: 9; pointer-events: none; font: 900 20px system-ui, sans-serif; color: var(--accent); text-shadow: 0 0 12px var(--glow), 0 2px 0 rgba(0,0,0,.3); transform: translate(-50%, -50%); animation: rise .8s ease-out forwards; white-space: nowrap; }
+  @keyframes rise { to { transform: translate(-50%, -160%); opacity: 0; } }
+  .spark { position: fixed; z-index: 9; pointer-events: none; width: 7px; height: 7px; border-radius: 50%; margin: -3px 0 0 -3px; box-shadow: 0 0 8px currentColor; animation: spark .6s ease-out forwards; }
+  @keyframes spark { to { transform: translate(var(--dx), var(--dy)) scale(0); opacity: 0; } }
+  body.flash::after { content: ''; position: fixed; inset: 0; z-index: 8; pointer-events: none; background: var(--flash, rgba(255,70,90,.4)); animation: flash .45s ease-out forwards; }
+  @keyframes flash { to { opacity: 0; } }
+  @media (prefers-reduced-motion: no-preference) { #restart { animation: float 2.4s ease-in-out infinite; } }
+  @keyframes float { 50% { transform: translateY(-3px); } }
+  @media (prefers-reduced-motion: reduce) { .pop, .fx, .spark, .l.hit, body.flash::after { animation-duration: .01s; } }
 </style>
 </head>
 <body>
 <div class="wrap">
-  <div><b>💡 Lights Out</b> · Level <span id="lvl">1</span> · Moves <span id="moves">0</span></div>
+  <h1 class="title">💡 Lights Out</h1>
+  <div class="hud"><span>Level <b id="lvl">1</b></span><span>Moves <b id="moves">0</b></span></div>
   <div class="grid" id="g"></div>
   <div id="msg">Turn every light off. Each press flips a light and its neighbors.</div>
   <div><button class="b" id="restart">Restart level</button></div>
@@ -24,16 +50,28 @@
 <script>
   const q = new URLSearchParams(location.search);
   if (q.get('accent')) document.documentElement.style.setProperty('--accent', q.get('accent'));
-  if (q.get('dark') === '0') { document.documentElement.style.setProperty('--bg', '#f6f7fb'); document.documentElement.style.setProperty('--fg', '#171923'); }
+  if (q.get('dark') === '0') { document.documentElement.style.setProperty('--bg', '#f6f7fb'); document.documentElement.style.setProperty('--fg', '#171923'); document.documentElement.classList.add('light'); }
   const report = (score) => parent.postMessage({ type: 'hwtodo:score', score }, '*');
+  // --- visual juice (no game logic here) ---
+  const FX = (() => {
+    const calm = matchMedia('(prefers-reduced-motion: reduce)').matches; let live = 0;
+    const re = (el, cls) => { el.classList.remove(cls); void el.offsetWidth; el.classList.add(cls); };
+    const at = (el) => { const r = el.getBoundingClientRect(); return [r.left + r.width / 2, r.top + r.height / 2]; };
+    const text = (t, x, y, color) => { if (live > 40) return; live++; const d = document.createElement('div'); d.className = 'fx'; d.textContent = t; d.style.left = x + 'px'; d.style.top = y + 'px'; if (color) d.style.color = color; document.body.appendChild(d); setTimeout(() => { d.remove(); live--; }, 800); };
+    const burst = (x, y, color, k = 8) => { if (calm) return; for (let i = 0; i < k && live < 40; i++) { live++; const d = document.createElement('i'); d.className = 'spark'; const a = Math.random() * 6.283, r = 26 + Math.random() * 44; d.style.cssText = `left:${x}px;top:${y}px;color:${color};background:${color};--dx:${Math.cos(a) * r}px;--dy:${Math.sin(a) * r}px`; document.body.appendChild(d); setTimeout(() => { d.remove(); live--; }, 600); } };
+    const flash = (color) => { document.body.style.setProperty('--flash', color || ''); re(document.body, 'flash'); setTimeout(() => document.body.classList.remove('flash'), 500); };
+    const watch = (id) => { const el = document.getElementById(id); if (!el) return; let prev = el.textContent; new MutationObserver(() => { if (el.textContent === prev) return; prev = el.textContent; re(el, 'pop'); }).observe(el, { childList: true, characterData: true, subtree: true }); };
+    return { calm, text, burst, flash, watch, at, re };
+  })();
+  FX.watch('lvl'); FX.watch('moves');
   const $ = (id) => document.getElementById(id);
-  let N = 5, cells, start, level = 1, moves = 0, score = 0;
+  let N = 5, cells, start, level = 1, moves = 0, score = 0, last = -1;
   function press(b, i) { const r = (i / N) | 0, c = i % N; for (const [dr, dc] of [[0, 0], [1, 0], [-1, 0], [0, 1], [0, -1]]) { const rr = r + dr, cc = c + dc; if (rr >= 0 && cc >= 0 && rr < N && cc < N) b[rr * N + cc] ^= 1; } }
-  function make() { N = level < 4 ? 4 : 5; cells = Array(N * N).fill(0); const k = Math.min(N * N - 2, 3 + level * 2); for (let j = 0; j < k; j++) press(cells, Math.floor(Math.random() * N * N)); if (cells.every((v) => !v)) press(cells, 0); start = [...cells]; moves = 0; render(); }
-  function render() { $('g').style.gridTemplateColumns = `repeat(${N}, auto)`; $('g').innerHTML = cells.map((v, i) => `<button class="l ${v ? 'on' : ''}" data-i="${i}" aria-label="light ${i + 1} ${v ? 'on' : 'off'}"></button>`).join(''); $('lvl').textContent = level; $('moves').textContent = moves; }
+  function make() { N = level < 4 ? 4 : 5; cells = Array(N * N).fill(0); const k = Math.min(N * N - 2, 3 + level * 2); for (let j = 0; j < k; j++) press(cells, Math.floor(Math.random() * N * N)); if (cells.every((v) => !v)) press(cells, 0); start = [...cells]; moves = 0; last = -1; render(); }
+  function render() { $('g').style.gridTemplateColumns = `repeat(${N}, auto)`; $('g').innerHTML = cells.map((v, i) => `<button class="l ${v ? 'on' : ''} ${i === last ? 'hit' : ''}" data-i="${i}" aria-label="light ${i + 1} ${v ? 'on' : 'off'}"></button>`).join(''); last = -1; $('lvl').textContent = level; $('moves').textContent = moves; }
   $('g').addEventListener('click', (e) => {
-    const b = e.target.closest('.l'); if (!b) return; press(cells, +b.dataset.i); moves++; render();
-    if (cells.every((v) => !v)) { score += Math.max(10, 100 - moves * 3) + level * 10; report(score); $('msg').textContent = `Level ${level} cleared in ${moves} moves! Score ${score}.`; level++; setTimeout(make, 800); }
+    const b = e.target.closest('.l'); if (!b) return; last = +b.dataset.i; press(cells, +b.dataset.i); moves++; render();
+    if (cells.every((v) => !v)) { const before = score; score += Math.max(10, 100 - moves * 3) + level * 10; report(score); $('msg').textContent = `Level ${level} cleared in ${moves} moves! Score ${score}.`; FX.flash('rgba(255,224,102,.35)'); FX.burst(...FX.at($('g')), '#ffe066', 16); FX.text('+' + (score - before), ...FX.at($('g')), '#ffe066'); level++; setTimeout(make, 800); }
   });
   $('restart').onclick = () => { cells = [...start]; moves = 0; render(); };
   make();

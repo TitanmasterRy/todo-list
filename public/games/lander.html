@@ -5,28 +5,52 @@
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Lunar lander</title>
 <style>
-  :root { --bg: #05060f; --fg: #dfe6ff; --accent: #7c9cff; --panel: rgba(255,255,255,.12); --bad: #ff6b6b; --good: #1dd1a1; }
-  html, body { margin: 0; height: 100%; background: var(--bg); color: var(--fg); font: 15px system-ui, sans-serif; overflow: hidden; touch-action: none; }
-  body { display: grid; place-items: center; }
-  canvas { display: block; }
-  .hud { position: fixed; top: 8px; left: 12px; right: 60px; display: flex; flex-wrap: wrap; gap: 2px 14px; font-weight: 700; font-variant-numeric: tabular-nums; pointer-events: none; text-shadow: 0 1px 2px var(--bg); }
-  .hud .bad { color: var(--bad); } .hud .good { color: var(--good); }
-  .fuel { display: inline-block; width: 70px; height: 8px; border-radius: 4px; background: var(--panel); vertical-align: middle; overflow: hidden; }
-  .fuel i { display: block; height: 100%; width: 100%; background: var(--accent); }
-  #pause { position: fixed; top: 6px; right: 10px; width: 38px; height: 34px; border: 0; border-radius: 8px; background: var(--panel); color: var(--fg); font-size: 16px; cursor: pointer; }
-  .center { position: fixed; inset: 0; display: grid; place-items: center; pointer-events: none; text-align: center; }
-  .center > div { background: color-mix(in srgb, var(--bg) 78%, transparent); padding: 6px 22px 18px; border-radius: 14px; }
-  .center button { pointer-events: auto; font: inherit; padding: 10px 22px; border: 0; border-radius: 10px; background: var(--accent); color: #05060f; font-weight: 800; cursor: pointer; }
-  .pad { position: fixed; bottom: 14px; left: 0; right: 0; display: flex; justify-content: space-between; padding: 0 14px; }
+  :root { --bg: #05060f; --fg: #dfe6ff; --accent: #7c9cff; --accent-2: #c77dff; --panel: rgba(255,255,255,.1); --bad: #ff6b6b; --good: #1dd1a1; --glow: color-mix(in srgb, var(--accent) 55%, transparent); --line: rgba(255,255,255,.14); --shadow: rgba(0,0,0,.5); --btn-ink: #05060f; }
+  html.light { --line: rgba(0,0,0,.1); --shadow: rgba(30,40,80,.22); --btn-ink: #fff; }
+  html, body { margin: 0; height: 100%; color: var(--fg); font: 500 15px/1.35 system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif; overflow: hidden; touch-action: none; }
+  body { display: grid; place-items: center; background: radial-gradient(120% 80% at 50% -10%, color-mix(in srgb, var(--accent) 26%, var(--bg)), var(--bg) 60%), var(--bg); }
+  canvas { display: block; border-radius: 12px; box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 45%, transparent), 0 0 34px var(--glow), 0 22px 50px var(--shadow); }
+  .hud { position: fixed; top: 8px; left: 12px; right: 60px; display: flex; flex-wrap: wrap; gap: 6px; font-weight: 800; font-variant-numeric: tabular-nums; pointer-events: none; z-index: 2; }
+  .hud > span { padding: 5px 12px; border-radius: 999px; background: linear-gradient(180deg, color-mix(in srgb, var(--panel) 100%, #fff 6%), var(--panel)); border: 1px solid var(--line); box-shadow: inset 0 1px 0 rgba(255,255,255,.14), 0 4px 14px var(--shadow); font-size: 12px; letter-spacing: .04em; text-transform: uppercase; backdrop-filter: blur(6px); }
+  .hud b, .hud > span > span:not(.fuel) { display: inline-block; font-size: 15px; font-variant-numeric: tabular-nums; color: var(--accent); margin-left: 4px; text-shadow: 0 0 10px var(--glow); text-transform: none; }
+  .hud .bad { color: var(--bad); text-shadow: 0 0 10px var(--bad); } .hud .good { color: var(--good); text-shadow: 0 0 10px var(--good); }
+  .fuel { display: inline-block; width: 70px; height: 8px; border-radius: 4px; background: rgba(0,0,0,.3); vertical-align: middle; overflow: hidden; margin-left: 6px; box-shadow: inset 0 1px 2px rgba(0,0,0,.4); }
+  .fuel i { display: block; height: 100%; width: 100%; background: linear-gradient(90deg, var(--accent-2), var(--accent)); box-shadow: 0 0 8px var(--glow); transition: width .2s; }
+  #pause { position: fixed; top: 8px; right: 10px; width: 40px; height: 34px; border: 1px solid var(--line); border-radius: 999px; background: linear-gradient(180deg, color-mix(in srgb, var(--panel) 100%, #fff 6%), var(--panel)); color: var(--fg); font-size: 16px; cursor: pointer; z-index: 2; box-shadow: 0 4px 14px var(--shadow); }
+  .center { position: fixed; inset: 0; display: grid; place-items: center; pointer-events: none; text-align: center; z-index: 3; }
+  .center > div { padding: 18px 26px; border-radius: 22px; background: linear-gradient(180deg, color-mix(in srgb, var(--panel) 100%, #fff 6%), var(--panel)); border: 1px solid var(--line); box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 35%, transparent), 0 0 34px var(--glow), 0 22px 50px var(--shadow); backdrop-filter: blur(10px); max-width: 86vw; }
+  .center h2 { margin: 0 0 6px; font-size: clamp(24px, 6vw, 34px); font-weight: 900; letter-spacing: -0.02em; background: linear-gradient(90deg, var(--accent), var(--accent-2)); -webkit-background-clip: text; background-clip: text; color: transparent; filter: drop-shadow(0 0 14px var(--glow)); }
+  .center p { margin: 0 0 14px; font-weight: 600; opacity: .85; }
+  .center button { pointer-events: auto; font: inherit; padding: 10px 22px; border: 0; border-radius: 999px; background: linear-gradient(135deg, var(--accent), var(--accent-2)); color: var(--btn-ink); font-weight: 900; letter-spacing: .02em; cursor: pointer; box-shadow: 0 8px 22px var(--glow), inset 0 1px 0 rgba(255,255,255,.4); transition: filter .12s, box-shadow .12s, transform .12s; }
+  .center button:hover { filter: brightness(1.08); box-shadow: 0 12px 28px var(--glow), inset 0 1px 0 rgba(255,255,255,.4); }
+  .center button:active { transform: scale(.96); animation: none; }
+  .pad { position: fixed; bottom: 14px; left: 0; right: 0; display: flex; justify-content: space-between; padding: 0 14px; z-index: 2; }
   .pad div { display: flex; gap: 10px; }
-  .pad button { width: 64px; height: 64px; border-radius: 50%; border: 0; background: var(--panel); color: var(--fg); font-size: 22px; touch-action: none; }
+  .pad button { width: 64px; height: 64px; border-radius: 50%; border: 1px solid var(--line); background: linear-gradient(180deg, color-mix(in srgb, var(--panel) 100%, #fff 10%), var(--panel)); color: var(--fg); font-size: 22px; touch-action: none; box-shadow: inset 0 1px 0 rgba(255,255,255,.2), 0 6px 16px var(--shadow); }
+  .pad button:active { background: var(--accent); color: var(--btn-ink); box-shadow: 0 0 18px var(--glow); }
   @media (hover: hover) { .pad { display: none; } }
+  /* juice */
+  .pop { animation: pop .38s cubic-bezier(.3,1.6,.5,1); }
+  @keyframes pop { 35% { transform: scale(1.35); } }
+  .nb { animation: nb 1.1s ease-in-out 3; }
+  @keyframes nb { 50% { color: #ffd54a; text-shadow: 0 0 14px #ffc93a, 0 0 28px #ff9f1a; } }
+  .fx { position: fixed; z-index: 9; pointer-events: none; font: 900 20px system-ui, sans-serif; color: var(--accent); text-shadow: 0 0 12px var(--glow), 0 2px 0 rgba(0,0,0,.3); transform: translate(-50%, -50%); animation: rise .8s ease-out forwards; white-space: nowrap; }
+  @keyframes rise { to { transform: translate(-50%, -160%); opacity: 0; } }
+  .spark { position: fixed; z-index: 9; pointer-events: none; width: 7px; height: 7px; border-radius: 50%; margin: -3px 0 0 -3px; box-shadow: 0 0 8px currentColor; animation: spark .6s ease-out forwards; }
+  @keyframes spark { to { transform: translate(var(--dx), var(--dy)) scale(0); opacity: 0; } }
+  body.flash::after { content: ''; position: fixed; inset: 0; z-index: 8; pointer-events: none; background: var(--flash, rgba(255,70,90,.4)); animation: flash .45s ease-out forwards; }
+  @keyframes flash { to { opacity: 0; } }
+  body.shake canvas { animation: shake .4s; }
+  @keyframes shake { 20%, 60% { transform: translateX(-6px); } 40%, 80% { transform: translateX(6px); } }
+  @media (prefers-reduced-motion: no-preference) { #go { animation: float 2.4s ease-in-out infinite; } }
+  @keyframes float { 50% { transform: translateY(-4px); } }
+  @media (prefers-reduced-motion: reduce) { .pop, .nb, .fx, .spark, body.flash::after, body.shake canvas { animation-duration: .01s; } }
 </style>
 </head>
 <body>
 <canvas id="c" width="800" height="600" role="img" aria-label="Lunar lander: land gently on a glowing pad"></canvas>
 <div class="hud" aria-live="off">
-  <span>Score <span id="score">0</span></span><span>Landers <span id="lives">3</span></span><span>Level <span id="lvl">1</span></span>
+  <span>Score <b id="score">0</b></span><span>Landers <b id="lives">3</b></span><span>Level <b id="lvl">1</b></span>
   <span>Fuel <span class="fuel"><i id="fuel"></i></span></span><span id="vx">→ 0.0</span><span id="vy">↓ 0.0</span><span id="ang">0°</span><span id="alt">Alt 0</span>
 </div>
 <button id="pause" aria-label="Pause">⏸</button>
@@ -38,9 +62,23 @@
   const q = new URLSearchParams(location.search), root = document.documentElement.style;
   if (q.get('accent')) root.setProperty('--accent', q.get('accent'));
   const light = q.get('dark') === '0';
-  if (light) { root.setProperty('--bg', '#e8edf7'); root.setProperty('--fg', '#141a2e'); root.setProperty('--panel', 'rgba(20,26,46,.12)'); root.setProperty('--bad', '#c0392b'); root.setProperty('--good', '#0b7a5a'); }
+  if (light) { root.setProperty('--bg', '#e8edf7'); root.setProperty('--fg', '#141a2e'); root.setProperty('--panel', 'rgba(20,26,46,.12)'); root.setProperty('--bad', '#c0392b'); root.setProperty('--good', '#0b7a5a'); document.documentElement.classList.add('light'); }
   const calm = matchMedia('(prefers-reduced-motion: reduce)').matches;
   const report = (score) => parent.postMessage({ type: 'hwtodo:score', score }, '*');
+  // --- visual juice (no game logic here) ---
+  const FX = (() => {
+    const calm = matchMedia('(prefers-reduced-motion: reduce)').matches; let live = 0;
+    const re = (el, cls) => { el.classList.remove(cls); void el.offsetWidth; el.classList.add(cls); };
+    const at = (el) => { const r = el.getBoundingClientRect(); return [r.left + r.width / 2, r.top + r.height / 2]; };
+    const text = (t, x, y, color) => { if (live > 40) return; live++; const d = document.createElement('div'); d.className = 'fx'; d.textContent = t; d.style.left = x + 'px'; d.style.top = y + 'px'; if (color) d.style.color = color; document.body.appendChild(d); setTimeout(() => { d.remove(); live--; }, 800); };
+    const burst = (x, y, color, k = 8) => { if (calm) return; for (let i = 0; i < k && live < 40; i++) { live++; const d = document.createElement('i'); d.className = 'spark'; const a = Math.random() * 6.283, r = 26 + Math.random() * 44; d.style.cssText = `left:${x}px;top:${y}px;color:${color};background:${color};--dx:${Math.cos(a) * r}px;--dy:${Math.sin(a) * r}px`; document.body.appendChild(d); setTimeout(() => { d.remove(); live--; }, 600); } };
+    const flash = (color) => { document.body.style.setProperty('--flash', color || ''); re(document.body, 'flash'); setTimeout(() => document.body.classList.remove('flash'), 500); };
+    const shake = () => { if (calm) return; re(document.body, 'shake'); setTimeout(() => document.body.classList.remove('shake'), 450); };
+    const watch = (id, opts = {}) => { const el = document.getElementById(id); if (!el) return; let prev = parseFloat(el.textContent) || 0; new MutationObserver(() => { const v = parseFloat(el.textContent); if (isNaN(v) || v === prev) return; const d = v - prev; prev = v; re(el, 'pop'); if (opts.best) { re(el, 'nb'); const [x, y] = at(el); text('New best!', x, y - 10, '#ffd54a'); } else if (opts.delta && d > 0) { const [x, y] = at(el); text('+' + Math.round(d), x, y - 8); } }).observe(el, { childList: true, characterData: true, subtree: true }); };
+    const cpt = (cv, cx, cy, cw, ch) => { const r = cv.getBoundingClientRect(); return [r.left + (cx / cw) * r.width, r.top + (cy / ch) * r.height]; };
+    return { calm, text, burst, flash, shake, watch, at, cpt, re };
+  })();
+  FX.watch('score', { delta: true }); FX.watch('lives'); FX.watch('lvl');
   const c = document.getElementById('c'), x = c.getContext('2d'), $ = (id) => document.getElementById(id);
   const W = 800, H = 600, STEP = 20, SAFE_VY = 1.2, SAFE_VX = 0.8, SAFE_A = 0.2; // speeds in px/tick, angle in radians (~11°)
   const COL = light ? { sky: '#e8edf7', star: '20,26,46', rock: '#b9c0d4', edge: '#4a5270' } : { sky: '#05060f', star: '255,255,255', rock: '#1d2136', edge: '#8e97bd' };
@@ -81,7 +119,7 @@
   function crash(why) {
     state = 'crashed'; lives--; ship.burn = false;
     if (!calm) bits = Array.from({ length: 40 }, () => ({ x: ship.x, y: ship.y, vx: (Math.random() - 0.5) * 5, vy: -Math.random() * 4, life: 60 + Math.random() * 40 }));
-    say(lives > 0 ? `💥 ${why}` : `💥 ${why} · Game over`); hud();
+    say(lives > 0 ? `💥 ${why}` : `💥 ${why} · Game over`); hud(); FX.flash(); FX.shake();
   }
   function tick() {
     if (state === 'flying') {
@@ -102,7 +140,7 @@
         else if (Math.abs(ship.a) > SAFE_A) crash('Too tilted');
         else {
           const soft = Math.round((SAFE_VY - ship.vy) * 40), pts = Math.round((50 + soft + ship.fuel / 10) * pad.m);
-          score += pts; ship.y = pad.y - 12; ship.vy = ship.vx = 0; ship.a = 0; ship.burn = false; state = 'landed'; say(`✅ Landed on ×${pad.m} · +${pts}`);
+          score += pts; ship.y = pad.y - 12; ship.vy = ship.vx = 0; ship.a = 0; ship.burn = false; state = 'landed'; say(`✅ Landed on ×${pad.m} · +${pts}`); FX.flash('rgba(29,209,161,.3)'); FX.burst(...FX.cpt(c, ship.x, ship.y, W, H), '#1dd1a1', 12);
         }
       }
       hud();
@@ -126,12 +164,14 @@
     x.strokeStyle = COL.edge; x.lineWidth = 2; x.beginPath(); ground.forEach((gy, i) => x[i ? 'lineTo' : 'moveTo'](i * STEP, gy)); x.stroke();
     const accent = getComputedStyle(document.documentElement).getPropertyValue('--accent').trim(), fg = getComputedStyle(document.documentElement).getPropertyValue('--fg').trim();
     x.font = '700 14px system-ui, sans-serif'; x.textAlign = 'center';
-    for (const p of pads) { x.strokeStyle = accent; x.lineWidth = 5; x.beginPath(); x.moveTo(p.x0, p.y); x.lineTo(p.x1, p.y); x.stroke(); x.fillStyle = fg; x.fillText(`×${p.m}`, (p.x0 + p.x1) / 2, p.y + 22); }
+    x.shadowColor = accent; x.shadowBlur = 14;
+    for (const p of pads) { x.strokeStyle = accent; x.lineWidth = 5; x.beginPath(); x.moveTo(p.x0, p.y); x.lineTo(p.x1, p.y); x.stroke(); }
+    x.shadowBlur = 0; x.fillStyle = fg; for (const p of pads) x.fillText(`×${p.m}`, (p.x0 + p.x1) / 2, p.y + 22);
     if (ship && state !== 'crashed' && state !== 'over') {
       x.save(); x.translate(ship.x, ship.y); x.rotate(ship.a); x.strokeStyle = fg; x.lineWidth = 2;
       x.beginPath(); x.arc(0, -5, 8, Math.PI * 0.95, Math.PI * 2.05); x.closePath(); x.stroke(); // cabin
       x.strokeRect(-10, 3, 20, 4); x.beginPath(); x.moveTo(-7, 7); x.lineTo(-11, 12); x.moveTo(7, 7); x.lineTo(11, 12); x.moveTo(-14, 12); x.lineTo(-8, 12); x.moveTo(8, 12); x.lineTo(14, 12); x.stroke();
-      if (ship.burn) { x.strokeStyle = '#ffb347'; x.beginPath(); x.moveTo(-4, 8); x.lineTo(0, 16 + (calm ? 6 : Math.random() * 10)); x.lineTo(4, 8); x.stroke(); }
+      if (ship.burn) { x.shadowColor = '#ffb347'; x.shadowBlur = 16; x.strokeStyle = '#ffb347'; x.beginPath(); x.moveTo(-4, 8); x.lineTo(0, 16 + (calm ? 6 : Math.random() * 10)); x.lineTo(4, 8); x.stroke(); x.shadowBlur = 0; }
       x.restore();
     }
     x.fillStyle = fg; bits.forEach((b) => x.fillRect(b.x - 1.5, b.y - 1.5, 3, 3));
