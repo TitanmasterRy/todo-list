@@ -1,27 +1,40 @@
 <script lang="ts">
+  import { Tween } from 'svelte/motion';
+  import { cubicOut } from 'svelte/easing';
   import { economy } from '../../lib/economy.svelte';
   import { drawRank, hiloChance, hiloMultiplier } from '../../lib/casino/quick';
   import { rankLabel, SUITS } from '../../lib/casino/cards';
-  import { playSound } from '../../lib/sounds';
   import BetControl from './BetControl.svelte';
   import PlayingCard from './PlayingCard.svelte';
+  import WinFx from './WinFx.svelte';
+  import { dur, shake } from './fx';
+  import { sfx } from './sfx';
 
   let bet = $state(10);
   let active = $state(false);
   let rank = $state(8);
   let suit = $state(0);
   let mult = $state(1);
-  let trail = $state<number[]>([]);
+  let streak = $state(0);
+  let flip = $state(0);
+  let trail = $state<{ rank: number; suit: number; ok: boolean | null }[]>([]);
   let result = $state<{ text: string; win: boolean } | null>(null);
+  let fx = $state<WinFx>();
+  let stage = $state<HTMLElement>();
+  const shownMult = new Tween(1, { easing: cubicOut });
 
   function start() {
     if (!economy.bet('hi-lo', bet)) return;
     active = true;
     mult = 1;
+    streak = 0;
+    void shownMult.set(1, { duration: 0 });
     rank = drawRank();
     suit = Math.floor(Math.random() * 4);
-    trail = [rank];
+    flip++;
+    trail = [{ rank, suit, ok: null }];
     result = null;
+    fx?.clear();
   }
   function guess(dir: 'higher' | 'lower') {
     const m = hiloMultiplier(rank, dir);
@@ -29,13 +42,21 @@
     const ok = dir === 'higher' ? next > rank : next < rank;
     rank = next;
     suit = Math.floor(Math.random() * 4);
-    trail = [...trail, next];
+    flip++;
+    trail = [...trail, { rank: next, suit, ok }];
     if (ok) {
       mult = Math.round(mult * m * 100) / 100;
-      playSound('tick');
+      streak++;
+      void shownMult.set(mult, { duration: dur(500) });
+      sfx('gem', streak);
     } else {
       active = false;
+      streak = 0;
       result = { text: `${rankLabel(next)}: wrong call. Lost ${bet}.`, win: false };
+      setTimeout(() => {
+        shake(stage, 5);
+        sfx('lose');
+      }, 380);
     }
   }
   function cashOut() {
@@ -44,38 +65,56 @@
     if (mult >= 5) economy.achieve('hilo-5');
     active = false;
     result = { text: `Cashed out ×${mult} · ${won.toLocaleString()} chips`, win: won > bet };
-    playSound('pop');
+    fx?.show(won, bet);
   }
+  // the meter fills toward ×10
+  const heat = $derived(Math.min(1, Math.log10(Math.max(1, mult))));
 </script>
 
 <div class="cz-game">
-  <div class="cz-table">
-    <div class="cz-row">
-      <div class="spot" class:live={active}>
-        <span class="halo" aria-hidden="true"></span>
-        {#key trail.length}<PlayingCard card={{ rank, suit: SUITS[suit] }} />{/key}
+  <div class="cz-table hilo">
+    <div class="stage" bind:this={stage}>
+      <div class="hint up" aria-hidden="true">▲<small>{active ? `${Math.round(hiloChance(rank, 'higher') * 100)}%` : ''}</small></div>
+      <div class="cardslot" style="--from-x: 260px; --from-y: -20px; --cw: clamp(84px, 24vw, 112px)">
+        {#key flip}
+          <PlayingCard card={{ rank, suit: SUITS[suit] }} win={!!result?.win} />
+        {/key}
       </div>
-      <div class="trail">
-        {#each trail.slice(-10) as r, i (i)}<span style="animation-delay: {i * 20}ms">{rankLabel(r)}</span>{/each}
+      <div class="hint down" aria-hidden="true">▼<small>{active ? `${Math.round(hiloChance(rank, 'lower') * 100)}%` : ''}</small></div>
+      <div class="meter" aria-hidden="true">
+        <span class="mv" class:hot={streak >= 3}>×{shownMult.current.toFixed(2)}</span>
+        <span class="tube"><span class="liquid" style="height:{(heat * 100).toFixed(1)}%"></span></span>
+        <span class="flames"
+          >{#each Array.from({ length: Math.min(streak, 6) }, (_, i) => i) as i (i)}<span class="flame" style="--i:{i}"></span>{/each}</span
+        >
+        <span class="st">{streak} streak</span>
       </div>
     </div>
-    {#if active}<div class="mult" class:hot={mult >= 3}>
-        {#key mult}<span class="bump">×{mult}</span>{/key} · cash out now for {#key mult}<span class="bump">{Math.floor(bet * mult).toLocaleString()}</span>{/key}
-      </div>{/if}
-    <div class="cz-result" aria-live="polite" class:win={result?.win} class:lose={result && !result.win}>{result?.text ?? ''}</div>
+    <div class="trail" role="group" aria-label="Cards so far">
+      {#each trail.slice(-12) as t, i (i)}
+        <span class="mini" class:ok={t.ok === true} class:bad={t.ok === false} class:red={t.suit === 1 || t.suit === 2}>{rankLabel(t.rank)}{SUITS[t.suit]}</span>
+      {/each}
+    </div>
+    {#if active}<div class="cash">Cash out now for <strong>{Math.floor(bet * mult).toLocaleString()}</strong></div>{/if}
+    <div class="cz-result center" aria-live="polite" class:win={result?.win} class:lose={result && !result.win}>
+      {result?.text ?? (active ? 'Higher or lower?' : 'Start a run')}
+    </div>
+    <WinFx bind:this={fx} />
   </div>
-  <div class="cz-actions">
+  <div class="cz-deck">
     {#if active}
-      <button class="btn primary arrow up" onclick={() => guess('higher')} disabled={rank === 14}
-        ><span class="glyph" aria-hidden="true">▲</span>Higher ×{hiloMultiplier(rank, 'higher')} <span class="p">{Math.round(hiloChance(rank, 'higher') * 100)}%</span></button
+      <button class="btn cz-alt hi" onclick={() => guess('higher')} disabled={rank === 14}
+        >Higher ×{hiloMultiplier(rank, 'higher')} <span class="p">{Math.round(hiloChance(rank, 'higher') * 100)}%</span></button
       >
-      <button class="btn primary arrow down" onclick={() => guess('lower')} disabled={rank === 2}
-        ><span class="glyph" aria-hidden="true">▼</span>Lower ×{hiloMultiplier(rank, 'lower')} <span class="p">{Math.round(hiloChance(rank, 'lower') * 100)}%</span></button
+      <button class="btn cz-alt lo" onclick={() => guess('lower')} disabled={rank === 2}
+        >Lower ×{hiloMultiplier(rank, 'lower')} <span class="p">{Math.round(hiloChance(rank, 'lower') * 100)}%</span></button
       >
-      <button class="btn cash" class:hot={mult >= 3} onclick={cashOut} disabled={mult <= 1}>Cash out</button>
+      <div class="grow"></div>
+      <button class="btn cz-go" onclick={cashOut} disabled={mult <= 1}>Cash out</button>
     {:else}
       <BetControl bind:value={bet} />
-      <button class="btn primary" onclick={start} disabled={bet > economy.wallet.chips}>Start</button>
+      <div class="grow"></div>
+      <button class="btn cz-go" onclick={start} disabled={bet > economy.wallet.chips}>Start</button>
     {/if}
   </div>
   <p class="cz-edge">
@@ -84,129 +123,178 @@
 </div>
 
 <style>
-  /* the current card sits on a glowing spot */
-  .spot {
-    position: relative;
+  .hilo {
+    justify-items: center;
+  }
+  .stage {
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    grid-template-rows: auto auto auto;
+    align-items: center;
+    justify-items: center;
+    gap: 6px 18px;
+    width: min(460px, 100%);
+  }
+  .cardslot {
+    grid-column: 2;
+    grid-row: 1 / 4;
+    min-height: calc(var(--cw) * 1.4);
     display: grid;
     place-items: center;
-    padding: 10px;
   }
-  .halo {
+  .hint {
+    grid-column: 1;
+    display: grid;
+    justify-items: center;
+    font-size: 26px;
+    line-height: 1;
+    opacity: 0.85;
+  }
+  .hint small {
+    font-size: 12px;
+    font-weight: 800;
+  }
+  .hint.up {
+    grid-row: 1;
+    color: #5cff9d;
+    text-shadow: 0 0 10px rgba(60, 255, 140, 0.6);
+  }
+  .hint.down {
+    grid-row: 3;
+    color: #ff7a8a;
+    text-shadow: 0 0 10px rgba(255, 60, 90, 0.6);
+  }
+  .meter {
+    grid-column: 3;
+    grid-row: 1 / 4;
+    display: grid;
+    justify-items: center;
+    gap: 4px;
+    position: relative;
+  }
+  .mv {
+    font-size: 22px;
+    font-weight: 900;
+    color: #ffe39a;
+    font-variant-numeric: tabular-nums;
+    text-shadow: 0 0 12px rgba(255, 200, 60, 0.6);
+  }
+  .mv.hot {
+    color: #ffb03a;
+    animation: pulse 0.8s ease-in-out infinite alternate;
+  }
+  @keyframes pulse {
+    to {
+      transform: scale(1.1);
+    }
+  }
+  .tube {
+    position: relative;
+    width: 18px;
+    height: 90px;
+    border-radius: 999px;
+    background: rgba(0, 0, 0, 0.4);
+    box-shadow: inset 0 0 0 2px rgba(255, 214, 120, 0.5);
+    overflow: hidden;
+  }
+  .liquid {
     position: absolute;
-    inset: 0;
-    border-radius: 50%;
-    background: radial-gradient(circle, rgba(255, 224, 102, 0.55), rgba(255, 224, 102, 0) 70%);
-    opacity: 0.5;
-    transition: opacity var(--dur-slow) var(--ease);
+    left: 3px;
+    right: 3px;
+    bottom: 3px;
+    max-height: calc(100% - 6px);
+    border-radius: 999px;
+    background: linear-gradient(0deg, #ffd24a, #ff7a2a, #ff3d6e);
+    box-shadow: 0 0 10px rgba(255, 140, 40, 0.8);
+    transition: height 500ms var(--spring);
   }
-  .spot.live .halo {
-    opacity: 1;
-    animation: float 2.4s ease-in-out infinite;
+  .flames {
+    display: flex;
+    gap: 1px;
+    min-height: 14px;
+  }
+  .flame {
+    width: 9px;
+    height: 13px;
+    border-radius: 50% 50% 50% 50% / 60% 60% 40% 40%;
+    background: radial-gradient(circle at 50% 70%, #fff3b0, #ffb03a 45%, #ff3d3d);
+    animation: flick 0.4s ease-in-out infinite alternate;
+    animation-delay: calc(var(--i) * 70ms);
+  }
+  @keyframes flick {
+    to {
+      transform: scaleY(1.25) translateY(-1px);
+    }
+  }
+  .st {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    opacity: 0.8;
   }
   .trail {
     display: flex;
     gap: 4px;
     flex-wrap: wrap;
-    font-weight: 700;
-    font-variant-numeric: tabular-nums;
+    justify-content: center;
+    min-height: 26px;
   }
-  .trail span {
-    background: rgba(0, 0, 0, 0.3);
-    border: 1px solid rgba(255, 255, 255, 0.15);
-    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12);
-    border-radius: 6px;
-    padding: 2px 7px;
-    animation: cz-pop 260ms var(--spring) backwards;
+  .mini {
+    font-weight: 900;
+    font-size: 12px;
+    padding: 3px 6px;
+    border-radius: 5px;
+    background: #fffdf6;
+    color: #17171d;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.35);
+    animation: slide 300ms ease-out;
   }
-  .trail span:last-child {
-    background: var(--grad-gold);
-    color: #3a2e00;
-    border-color: #fff3b0;
-    box-shadow: 0 0 10px rgba(255, 224, 102, 0.6);
+  .mini.red {
+    color: #cf1530;
   }
-  /* the multiplier readout: a glossy pill that bumps on every correct call */
-  .mult {
-    justify-self: start;
-    font-size: 16px;
-    font-weight: 800;
-    font-variant-numeric: tabular-nums;
-    color: #ffe066;
-    padding: 6px 14px;
-    border-radius: 999px;
-    background: rgba(0, 0, 0, 0.3);
-    border: 1px solid rgba(255, 224, 102, 0.45);
+  .mini.ok {
     box-shadow:
-      inset 0 1px 0 rgba(255, 255, 255, 0.15),
-      0 0 12px rgba(255, 224, 102, 0.3);
-    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
-    transition: box-shadow var(--dur-slow);
+      0 0 0 2px #5cff9d,
+      0 2px 4px rgba(0, 0, 0, 0.35);
   }
-  .mult.hot {
+  .mini.bad {
     box-shadow:
-      inset 0 1px 0 rgba(255, 255, 255, 0.15),
-      0 0 24px rgba(255, 224, 102, 0.7);
+      0 0 0 2px #ff5a6e,
+      0 2px 4px rgba(0, 0, 0, 0.35);
+  }
+  @keyframes slide {
+    from {
+      transform: translateX(20px);
+      opacity: 0;
+    }
+  }
+  .cash {
+    font-size: 15px;
+  }
+  .cash strong {
+    color: #ffe39a;
+    font-size: 18px;
+  }
+  .hi {
+    background: linear-gradient(180deg, #5cff9d, #18a957);
+    color: #04210f;
+    border: 1px solid #0d7a3c;
+  }
+  .lo {
+    background: linear-gradient(180deg, #ff8a9a, #d6123a);
+    color: #fff;
+    border: 1px solid #8a0a22;
+  }
+  .hi:focus-visible,
+  .lo:focus-visible {
+    outline: 3px solid var(--accent);
+    outline-offset: 2px;
   }
   .p {
     opacity: 0.8;
     font-size: 12px;
   }
-  /* chunky arrow buttons: green up, red down, with a lift on hover */
-  .arrow {
-    font-size: 15px;
-    padding: 12px 18px;
-    border-radius: var(--radius);
-    color: #fff;
-    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
-    box-shadow:
-      inset 0 1px 0 rgba(255, 255, 255, 0.35),
-      0 4px 0 rgba(0, 0, 0, 0.3),
-      var(--shadow-sm);
-    transition:
-      transform var(--dur) var(--spring),
-      box-shadow var(--dur),
-      filter var(--dur);
-  }
-  .arrow.up {
-    background: linear-gradient(180deg, #4ade80, #16a34a);
-  }
-  .arrow.down {
-    background: linear-gradient(180deg, #f87171, #dc2626);
-  }
-  .arrow:not(:disabled):hover {
-    transform: translateY(-3px);
-    filter: brightness(1.08);
-    box-shadow:
-      inset 0 1px 0 rgba(255, 255, 255, 0.35),
-      0 7px 0 rgba(0, 0, 0, 0.3),
-      var(--shadow);
-  }
-  .arrow:not(:disabled):active {
-    transform: translateY(2px);
-    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.35);
-  }
-  .glyph {
-    font-size: 18px;
-    margin-inline-end: 6px;
-    filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.4));
-  }
-  .cash:not(:disabled) {
-    transition:
-      transform var(--dur) var(--spring),
-      box-shadow var(--dur-slow);
-  }
-  .cash.hot:not(:disabled) {
-    background: var(--grad-gold);
-    color: #3a2e00;
-    border-color: #fff3b0;
-    animation: hl-gold 1.4s ease-in-out infinite;
-  }
-  @keyframes hl-gold {
-    0%,
-    100% {
-      box-shadow: 0 0 8px rgba(255, 224, 102, 0.45);
-    }
-    50% {
-      box-shadow: 0 0 24px rgba(255, 224, 102, 0.95);
-    }
+  .grow {
+    flex: 1;
   }
 </style>

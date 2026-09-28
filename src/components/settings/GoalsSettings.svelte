@@ -17,7 +17,7 @@
 <section class="card">
   <h2>{t('settings.goals')}</h2>
   <div class="row">
-    <label for="goal">Daily goal (tasks)</label>
+    <label for="goal">{t('goals.daily')}</label>
     <input
       id="goal"
       class="input num"
@@ -29,7 +29,7 @@
     />
   </div>
   <div class="row">
-    <label for="pw">Pomodoro focus (min)</label>
+    <label for="pw">{t('goals.work')}</label>
     <input
       id="pw"
       class="input num"
@@ -41,7 +41,7 @@
     />
   </div>
   <div class="row">
-    <label for="pb">Short break (min)</label>
+    <label for="pb">{t('goals.short')}</label>
     <input
       id="pb"
       class="input num"
@@ -53,7 +53,7 @@
     />
   </div>
   <div class="row">
-    <label for="pl">Long break (min)</label>
+    <label for="pl">{t('goals.long')}</label>
     <input
       id="pl"
       class="input num"
@@ -68,22 +68,24 @@
 
 <section class="card" aria-labelledby="breaks-h">
   <h2 id="breaks-h">{t('settings.breaks')}</h2>
-  <p class="help">Add school breaks and holidays. Days inside a break don't count against your streak, so a week off doesn't cost you a 40-day run.</p>
+  <p class="help">{t('breaks.help')}</p>
   {#if breaks.length}
     <ul class="breaks">
       {#each breaks as b (b.id)}
         <li>
-          <span>🏖️ {b.name || 'Break'} · {b.from} → {b.to}{store.currentBreak?.id === b.id ? ' (now)' : ''}</span>
-          <button type="button" class="btn ghost sm" onclick={() => store.removeBreak(b.id)} aria-label="Remove {b.name || 'break'}">Remove</button>
+          <span>🏖️ {b.name || t('breaks.break')} · {b.from} → {b.to}{store.currentBreak?.id === b.id ? ` ${t('breaks.now')}` : ''}</span>
+          <button type="button" class="btn ghost sm" onclick={() => store.removeBreak(b.id)} aria-label={t('editor.removeBlocker', { title: b.name || t('breaks.break') })}
+            >{t('editor.remove')}</button
+          >
         </li>
       {/each}
     </ul>
   {/if}
   <form class="addbreak" onsubmit={addBreak}>
-    <input class="input" bind:value={bName} placeholder="Winter break" aria-label="Break name" maxlength="40" />
-    <input class="input" type="date" bind:value={bFrom} aria-label="Break starts" required />
-    <input class="input" type="date" bind:value={bTo} aria-label="Break ends" required />
-    <button class="btn sm" type="submit" disabled={!bFrom || !bTo}>Add break</button>
+    <input class="input" bind:value={bName} placeholder={t('breaks.namePh')} aria-label={t('breaks.name')} maxlength="40" />
+    <input class="input" type="date" bind:value={bFrom} aria-label={t('breaks.starts')} required />
+    <input class="input" type="date" bind:value={bTo} aria-label={t('breaks.ends')} required />
+    <button class="btn sm" type="submit" disabled={!bFrom || !bTo}>{t('breaks.add')}</button>
   </form>
 </section>
 

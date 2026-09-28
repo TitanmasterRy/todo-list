@@ -1,5 +1,6 @@
 import type { BreakRange, Priority, Stats, Task } from './types';
 import { addDaysKey, dateKey, diffDays, dueKey, endOfDay, isDateOnly, parseDue, todayKey } from './dates';
+import { t as tr } from './i18n/index.svelte';
 
 export const CRIT_CHANCE = 0.05;
 
@@ -108,7 +109,7 @@ export function gradeXp(score: number, weight = 0): GradeXp {
   const tier: GradeXp['tier'] = score >= 95 ? 'aced' : score >= 90 ? 'great' : score >= 80 ? 'good' : score >= 70 ? 'ok' : 'done';
   const base = { aced: 40, great: 30, good: 20, ok: 10, done: 5 }[tier];
   const w = Math.max(0, Math.min(100, weight || 0));
-  const labels = { aced: 'Aced it!', great: 'Great grade', good: 'Solid grade', ok: 'Graded', done: 'Graded' };
+  const labels = { aced: tr('grade.aced'), great: tr('grade.great'), good: tr('grade.good'), ok: tr('grade.graded'), done: tr('grade.graded') };
   return { xp: Math.round(base * (1 + w / 100)), tier, label: labels[tier] };
 }
 
@@ -147,7 +148,7 @@ export function applyStudySession(prev: Stats, reviewed: number, correct: number
   stats.badges = [...stats.badges, ...newBadges];
   return {
     stats,
-    xp: { xp: gained, tier: clearedAll ? 'great' : 'ok', label: clearedAll ? 'Deck cleared' : 'Study session' },
+    xp: { xp: gained, tier: clearedAll ? 'great' : 'ok', label: clearedAll ? tr('grade.deckCleared') : tr('grade.studySession') },
     leveledUp: stats.level > prevLevel,
     newLevel: stats.level,
     newBadges,
@@ -167,23 +168,48 @@ export function isPowerHour(now: Date, day: string): boolean {
 export const STREAK_MILESTONES = [3, 7, 14, 30, 50, 100, 365];
 
 // ---------- Mystery rewards (cosmetic collection) ----------
+type CollectibleId =
+  | 'c_rocket'
+  | 'c_crown'
+  | 'c_gem'
+  | 'c_fire'
+  | 'c_unicorn'
+  | 'c_bolt'
+  | 'c_cat'
+  | 'c_owl'
+  | 'c_dragon'
+  | 'c_trophy'
+  | 'c_alien'
+  | 'c_ghost'
+  | 't_nightowl'
+  | 't_earlybird'
+  | 't_grinder'
+  | 't_ace';
+const collectible = (id: CollectibleId, emoji: string, kind: 'sticker' | 'title') => ({
+  id,
+  emoji,
+  kind,
+  get name() {
+    return tr(`collect.${id}`);
+  },
+});
 export const COLLECTIBLES: { id: string; name: string; emoji: string; kind: 'sticker' | 'title' }[] = [
-  { id: 'c_rocket', name: 'Rocket', emoji: '🚀', kind: 'sticker' },
-  { id: 'c_crown', name: 'Crown', emoji: '👑', kind: 'sticker' },
-  { id: 'c_gem', name: 'Gem', emoji: '💎', kind: 'sticker' },
-  { id: 'c_fire', name: 'Inferno', emoji: '🔥', kind: 'sticker' },
-  { id: 'c_unicorn', name: 'Unicorn', emoji: '🦄', kind: 'sticker' },
-  { id: 'c_bolt', name: 'Bolt', emoji: '⚡', kind: 'sticker' },
-  { id: 'c_cat', name: 'Study Cat', emoji: '🐱', kind: 'sticker' },
-  { id: 'c_owl', name: 'Wise Owl', emoji: '🦉', kind: 'sticker' },
-  { id: 'c_dragon', name: 'Dragon', emoji: '🐉', kind: 'sticker' },
-  { id: 'c_trophy', name: 'Trophy', emoji: '🏆', kind: 'sticker' },
-  { id: 'c_alien', name: 'Alien', emoji: '👽', kind: 'sticker' },
-  { id: 'c_ghost', name: 'Ghost', emoji: '👻', kind: 'sticker' },
-  { id: 't_nightowl', name: 'Night Owl', emoji: '🌙', kind: 'title' },
-  { id: 't_earlybird', name: 'Early Bird', emoji: '🐦', kind: 'title' },
-  { id: 't_grinder', name: 'The Grinder', emoji: '⚙️', kind: 'title' },
-  { id: 't_ace', name: 'Ace', emoji: '🅰️', kind: 'title' },
+  collectible('c_rocket', '🚀', 'sticker'),
+  collectible('c_crown', '👑', 'sticker'),
+  collectible('c_gem', '💎', 'sticker'),
+  collectible('c_fire', '🔥', 'sticker'),
+  collectible('c_unicorn', '🦄', 'sticker'),
+  collectible('c_bolt', '⚡', 'sticker'),
+  collectible('c_cat', '🐱', 'sticker'),
+  collectible('c_owl', '🦉', 'sticker'),
+  collectible('c_dragon', '🐉', 'sticker'),
+  collectible('c_trophy', '🏆', 'sticker'),
+  collectible('c_alien', '👽', 'sticker'),
+  collectible('c_ghost', '👻', 'sticker'),
+  collectible('t_nightowl', '🌙', 'title'),
+  collectible('t_earlybird', '🐦', 'title'),
+  collectible('t_grinder', '⚙️', 'title'),
+  collectible('t_ace', '🅰️', 'title'),
 ];
 /** Pick a collectible not yet owned (deterministic by seed). Returns undefined when everything is collected. */
 export function rollCollectible(owned: string[], seed: number): (typeof COLLECTIBLES)[number] | undefined {
@@ -193,37 +219,34 @@ export function rollCollectible(owned: string[], seed: number): (typeof COLLECTI
 }
 
 // ---------- Levels: titles and unlocks ----------
-export const LEVEL_TITLES = [
-  'Freshman',
-  'Note Taker',
-  'Deadline Dodger',
-  'Page Turner',
-  'Problem Solver',
-  'Study Machine',
-  'Honor Roll',
-  'Dean’s List',
-  'Scholar',
-  'Valedictorian',
-  'Legend',
-];
+// titles in the app language (level.1 … level.11)
+export const LEVEL_TITLES = ['level.1', 'level.2', 'level.3', 'level.4', 'level.5', 'level.6', 'level.7', 'level.8', 'level.9', 'level.10', 'level.11'] as const;
 
 export function levelTitle(level: number): string {
-  return LEVEL_TITLES[Math.min(LEVEL_TITLES.length - 1, Math.max(0, level - 1))];
+  return tr(LEVEL_TITLES[Math.min(LEVEL_TITLES.length - 1, Math.max(0, level - 1))]);
 }
 
 /** Accent colors unlock as you level: the first four are free, then one more every two levels. */
+type AccentName = 'violet' | 'blue' | 'green' | 'amber' | 'sky' | 'pink' | 'orange' | 'red' | 'teal' | 'purple' | 'gold';
+const accent = (color: string, id: AccentName, level: number) => ({
+  color,
+  level,
+  get name() {
+    return tr(`accent.${id}`);
+  },
+});
 export const ACCENT_UNLOCKS: { color: string; name: string; level: number }[] = [
-  { color: '#6c5ce7', name: 'Violet', level: 1 },
-  { color: '#3b82f6', name: 'Blue', level: 1 },
-  { color: '#10b981', name: 'Green', level: 1 },
-  { color: '#f59e0b', name: 'Amber', level: 1 },
-  { color: '#0ea5e9', name: 'Sky', level: 2 },
-  { color: '#ec4899', name: 'Pink', level: 4 },
-  { color: '#f97316', name: 'Orange', level: 6 },
-  { color: '#ef4444', name: 'Red', level: 8 },
-  { color: '#14b8a6', name: 'Teal', level: 10 },
-  { color: '#a855f7', name: 'Purple', level: 12 },
-  { color: '#eab308', name: 'Gold', level: 15 },
+  accent('#6c5ce7', 'violet', 1),
+  accent('#3b82f6', 'blue', 1),
+  accent('#10b981', 'green', 1),
+  accent('#f59e0b', 'amber', 1),
+  accent('#0ea5e9', 'sky', 2),
+  accent('#ec4899', 'pink', 4),
+  accent('#f97316', 'orange', 6),
+  accent('#ef4444', 'red', 8),
+  accent('#14b8a6', 'teal', 10),
+  accent('#a855f7', 'purple', 12),
+  accent('#eab308', 'gold', 15),
 ];
 
 export function accentUnlockedAt(level: number): typeof ACCENT_UNLOCKS {
@@ -333,28 +356,62 @@ export interface BadgeDef {
   description: string;
 }
 
+type BadgeId =
+  | 'first_task'
+  | 'tasks_10'
+  | 'tasks_100'
+  | 'tasks_1000'
+  | 'streak_3'
+  | 'streak_7'
+  | 'streak_30'
+  | 'streak_100'
+  | 'inbox_zero'
+  | 'ring_5'
+  | 'early_bird'
+  | 'night_owl'
+  | 'exam_slayer'
+  | 'marathon'
+  | 'aced_5'
+  | 'ahead_10'
+  | 'perfect_week'
+  | 'card_shark'
+  | 'lucky'
+  | 'synced'
+  | 'level_10';
+// name and description follow the app language
+const badge = (id: BadgeId, emoji: string): BadgeDef => ({
+  id,
+  emoji,
+  get name() {
+    return tr(`badge.${id}`);
+  },
+  get description() {
+    return tr(`badge.${id}.desc`);
+  },
+});
+
 export const BADGES: BadgeDef[] = [
-  { id: 'first_task', name: 'First Task', emoji: '🌱', description: 'Complete your first task.' },
-  { id: 'tasks_10', name: '10 Tasks', emoji: '🔟', description: 'Complete 10 tasks.' },
-  { id: 'tasks_100', name: '100 Tasks', emoji: '💯', description: 'Complete 100 tasks.' },
-  { id: 'tasks_1000', name: '1000 Tasks', emoji: '🏔️', description: 'Complete 1000 tasks.' },
-  { id: 'streak_3', name: '3-Day Streak', emoji: '🔥', description: 'Complete a task three days in a row.' },
-  { id: 'streak_7', name: '7-Day Streak', emoji: '🔥', description: 'Complete a task seven days in a row.' },
-  { id: 'streak_30', name: '30-Day Streak', emoji: '🌋', description: 'Complete a task thirty days in a row.' },
-  { id: 'streak_100', name: '100-Day Streak', emoji: '☄️', description: 'Complete a task a hundred days in a row.' },
-  { id: 'inbox_zero', name: 'Inbox Zero', emoji: '📭', description: 'Finish every open task.' },
-  { id: 'ring_5', name: 'Ring ×5', emoji: '⭕', description: 'Close the daily goal ring five days in a row.' },
-  { id: 'early_bird', name: 'Early Bird', emoji: '🐦', description: 'Complete 10 tasks before they were due.' },
-  { id: 'night_owl', name: 'Night Owl', emoji: '🦉', description: 'Complete a task between 11 pm and 4 am.' },
-  { id: 'exam_slayer', name: 'Exam Slayer', emoji: '⚔️', description: 'Complete 10 exam tasks.' },
-  { id: 'marathon', name: 'Marathon', emoji: '🏃', description: 'Finish 4 pomodoros in one day.' },
-  { id: 'aced_5', name: 'Aced It', emoji: '🅰️', description: 'Score 95% or better on 5 graded items.' },
-  { id: 'ahead_10', name: 'Ahead of the Curve', emoji: '🚀', description: 'Finish 10 tasks three or more days early.' },
-  { id: 'perfect_week', name: 'Perfect Week', emoji: '🏅', description: 'Close the daily ring seven days in a row.' },
-  { id: 'card_shark', name: 'Card Shark', emoji: '🃏', description: 'Review 100 notecards.' },
-  { id: 'lucky', name: 'Lucky', emoji: '🍀', description: 'Land 3 critical hits.' },
-  { id: 'synced', name: 'Plugged In', emoji: '🔌', description: 'Sync assignments from Schoology.' },
-  { id: 'level_10', name: 'Valedictorian', emoji: '🎓', description: 'Reach level 10.' },
+  badge('first_task', '🌱'),
+  badge('tasks_10', '🔟'),
+  badge('tasks_100', '💯'),
+  badge('tasks_1000', '🏔️'),
+  badge('streak_3', '🔥'),
+  badge('streak_7', '🔥'),
+  badge('streak_30', '🌋'),
+  badge('streak_100', '☄️'),
+  badge('inbox_zero', '📭'),
+  badge('ring_5', '⭕'),
+  badge('early_bird', '🐦'),
+  badge('night_owl', '🦉'),
+  badge('exam_slayer', '⚔️'),
+  badge('marathon', '🏃'),
+  badge('aced_5', '🅰️'),
+  badge('ahead_10', '🚀'),
+  badge('perfect_week', '🏅'),
+  badge('card_shark', '🃏'),
+  badge('lucky', '🍀'),
+  badge('synced', '🔌'),
+  badge('level_10', '🎓'),
 ];
 
 export function badgeById(id: string): BadgeDef | undefined {

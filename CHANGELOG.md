@@ -1,22 +1,29 @@
 # Changelog
 
-## Visual overhaul: eye candy everywhere, including the games
+## Roadmap pass 8: a new look, casino makeover, Orebelt factory, Crate Rush, Watch, Spanish everywhere, patch notes
 
-- **A new look for the whole app:** gradient accents with a companion hue derived from your accent color, layered shadows and glows, glass panels (tab bar, toasts, dialogs), an ambient color wash that drifts slowly behind everything, slim accent scrollbars, and pages and lists that rise in as they load.
+- **✨ A new look for the whole app:** gradient accents with a companion hue derived from your accent color, layered shadows and glows, glass panels (tab bar, toasts, dialogs), an ambient color wash that drifts slowly behind everything, slim accent scrollbars, and pages and lists that rise in as they load.
 - **Shell:** a gradient logo, a glowing active-page pill in the sidebar, a gold wallet pill that bounces when your coins change, an XP bar with a shimmer, a glass bottom tab bar on phones with a lit indicator, and a pulsing add button.
 - **Tasks:** rows carry their course color as a glowing edge and lift on hover; checking one off sweeps the course color across the row, the checkbox fills with a gradient and sends out a ring; the streak flame glows; the daily ring is a gradient with a glow when closed; quick add lights up with a gradient border when focused.
 - **Rewards:** toasts with a glowing color bar per kind and bouncing emoji; coin pops as gold pills; level-ups get rotating light rays, gradient numbers and confetti; badges arrive on a shining medal.
 - **Play:** a hero header, glossy coin/chip/voucher tiles, pill tabs, lobby tiles with a colored glow and a sheen sweep per game, and a game player with a glowing header and a countdown that pulses when time is short.
-- **Casino:** a real felt table with a wooden rail and gold trim, striped casino chips, glossy playing cards with a highlight, slot reels with a marquee that chases after a win, wins that flash gold and losses that shake; every table game got its own polish (roulette, plinko, mines, dice, wheel, scratch, keno, hi-lo, craps, baccarat, blackjack, poker variants).
 - **Play worlds and study games:** the shop, wallet, quests, star map, pet, garden, dungeon, leaderboards, boss battle, match rush, quiz race and crossword all pick up the same language: gradient progress bars, hue-glow cards, gold owned/claimed states, bouncing numbers.
 - **Arcade games:** all twenty built-in games got a modern arcade look with glowing frames, glossy HUD pills, gradient buttons, score pops, particle bursts and flashes on scoring and game over, in dark and light.
 - Everything still respects reduced motion (the app setting or the OS), high contrast, and the WCAG contrast checks; the first-load CSS budget is unchanged.
+- **🎰 Casino makeover:** every game got real tables, chips, cards and animation: felt tables with flying chips, dealt and flipped cards, spinning slot reels with near misses and big-win banners, a roulette ball that drops into its pocket, a ticking Big Six wheel, bouncing Plinko balls, 3D dice, exploding mines, a Keno globe, scratch-off foil you rub with your finger, a CRT video poker cabinet and a Hold'em table with the three bots. New lobby with illustrated tiles and synthesized sound effects.
+- **🏭 Orebelt** (Play → Factory): a factory-building idle game. Mine ore, smelt and build parts through six tiers, route belts with throughput limits, run a power grid with overclocking, deliver to the Launch Tower, and keep producing while you're away. Finished homework gives shards, research and production boosts; coins buy a few daily supply drops.
+- **📺 Watch** (Play → Watch): sign in to your Jellyfin or Emby server to browse and play with resume across devices, show Plex or any other site, play YouTube/Vimeo/Twitch links, direct video links and files from your device. Optional homework rules: finish your ring first, vouchers for watch time, a daily limit. See WATCH.md.
+- **📦 Crate Rush** (Play → Arcade): a crate-opening clicker. Click and build income, open crates on a spinning reel, collect 104 procedurally drawn items with wear and patterns, trade up, upgrade, fill the collection book and rebirth. Coins buy a few power-ups.
+- **Español** now covers Stats, Tools, Settings, Schoology and every message (Play is still English).
+- **Patch notes** open by themselves after an update and show every update this device missed; they're always in Settings → Help.
+- Guides for coding agents and local models (AGENTS.md, LOCAL_LLM.md).
 
 ## Roadmap pass 7: admin panel, new games and casino tables, group projects, coins in games
 
 - **Hidden admin panel** (Ctrl+Alt+Shift+A, `?admin`, or tap the version in Settings → Help 7 times; see ADMIN.md): passphrase-protected; economy grants and undo, a site-wide announcement banner and feature switches, one-click publishing to GitHub, a data browser and debug tools.
 - **Add your own games** (Play → Arcade → ➕ Add a game): drop an HTML or JavaScript file, a .zip or a folder, paste code, or paste a link (Scratch, CodePen, Replit and more become embeds). Games can now save progress and sell power-ups for coins.
 - **New games:** Glow Grid (a gem block puzzle), Bubble pop and Fishing in the arcade; Three Card Poker, Let It Ride and Texas Hold'em against bots in the casino; a pet, a garden and a homework dungeon in Play; coin rain on big wins.
+- **A casino that feels like one:** an illustrated lobby, felt tables with real chips that fly to the bet and back, dealt and flipped cards, spinning reels with near-miss teases, a roulette ball that drops into its pocket, a ticking Big Six flapper, bouncing Plinko balls, tumbling dice, scratch-off foil, big-win banners and new sound effects. Reduced motion keeps it all quick and still. Generated art can replace the drawn art later (public/art).
 - **Chips → coins:** cash chips back at half value, up to 100 coins a day (Play → Wallet).
 - **Seasonal events** with limited items and event quests, **gifts** for friends, and opt-in **leaderboards**.
 - **Group projects:** select tasks → 🔗 Share makes a link; whoever opens it adds their own copy.
@@ -26,7 +33,7 @@
 
 ## Roadmap pass 6: languages, sharing, practice tests, Canvas, smarter sync
 
-- **Languages:** Spanish (Settings → Language, or Auto), including Spanish dates in quick add ("leer capítulo 3 mañana a las 5 !alta"); dates and numbers follow your region; right-to-left layout support.
+- **Languages:** Spanish (Settings → Language, or Auto) across the whole app except Play, including Spanish dates in quick add ("leer capítulo 3 mañana a las 5 !alta") and Spanish auto plans for new tasks; dates and numbers follow your region; right-to-left layout support.
 - **Smarter sync:** tasks remember when each field changed, so edits to different fields on two devices both survive.
 - **Practice tests** (Tools → Practice test): take Quiz maker sets like a real test, review, turn misses into notecards, and track scores over time.
 - **Periodic table** (Tools → Compute) with electron configurations, a molar mass calculator and element notecards.

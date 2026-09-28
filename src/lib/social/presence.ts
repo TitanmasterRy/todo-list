@@ -1,10 +1,11 @@
 // Optional "who's in" for a study room, over the site's Supabase Realtime (presence only: nothing is stored).
 // Without a server there's no way to see who else opened a link, so this needs a signed-in account.
 import { account, accountConfig, getClient } from '../account.svelte';
+import { t } from '../i18n/index.svelte';
 
 /** Join the room's presence channel with a display name. Calls `onChange` with everyone's names; returns a leave function. */
 export async function joinPresence(roomId: string, name: string, onChange: (names: string[]) => void): Promise<() => void> {
-  if (!accountConfig()) throw new Error("This site has no account server, so the room can't show who's in.");
+  if (!accountConfig()) throw new Error(t('room.noServer'));
   if (!account.userId) throw new Error("Sign in (Settings → Account) to see who's in.");
   const c = await getClient();
   const ch = c.channel(`hwtodo-room-${roomId}`, { config: { presence: { key: crypto.randomUUID() } } });

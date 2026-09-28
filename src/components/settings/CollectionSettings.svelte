@@ -9,7 +9,7 @@
 {#if s.collection.length}
   <section class="card">
     <h2>{t('settings.collection')} <span class="muted">{s.collection.length}/{COLLECTIBLES.length}</span></h2>
-    <p class="help">Mystery rewards from closing your daily ring.</p>
+    <p class="help">{t('collect.help')}</p>
     <div class="collection">
       {#each COLLECTIBLES as c (c.id)}
         <span class="coll" class:on={s.collection.includes(c.id)} title={s.collection.includes(c.id) ? c.name : '???'}>{s.collection.includes(c.id) ? c.emoji : '❔'}</span>

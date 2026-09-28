@@ -2,8 +2,18 @@
 // slot, so the vault can say which keys exist without decrypting). Pure helpers; the vault lives in secrets.svelte.ts.
 import type { AiProvider, Settings } from './types';
 
-/** String settings that are credentials (or, for the Schoology feed URL, contain a private token). */
-export const SECRET_FIELDS = ['gistToken', 'aiApiKey', 'schoologyFeedUrl', 'canvasFeedUrl', 'schoologyKey', 'schoologySecret', 'spotifyRefreshToken', 'syncPassphrase'] as const;
+/** String settings that are credentials (or, for the Schoology feed URL, contain a private token; watchTokens is a JSON map of media-server sign-ins). */
+export const SECRET_FIELDS = [
+  'gistToken',
+  'aiApiKey',
+  'schoologyFeedUrl',
+  'canvasFeedUrl',
+  'schoologyKey',
+  'schoologySecret',
+  'spotifyRefreshToken',
+  'syncPassphrase',
+  'watchTokens',
+] as const;
 export type SecretField = (typeof SECRET_FIELDS)[number];
 export type SecretSlot = SecretField | `aiKeys.${AiProvider}`;
 

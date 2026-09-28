@@ -55,13 +55,16 @@ merged into `main` and live on the GitHub Pages site. The full plan, including w
 - [x] Arcade games: Breakout, Sudoku, Hangman, Lights Out, Typing defense, Solitaire, Invaders, Lunar lander, Paper-plane glider, and the originals
 - [x] Study games from your decks: Boss battle, Match rush, Crossword, Quiz race (Play → Study games)
 - [x] Star map: a star for every day you finished something (Play → Star map)
+- [x] Casino makeover: felt tables, flying chips, dealt and flipped cards, spinning reels, roulette ball, 3D dice, scratch-off foil, big-win effects and sounds on all 16 games
 - [x] Casino tables: Three Card Poker, Let It Ride, Texas Hold'em against bots; coin rain on big wins
 - [x] Chips cash back into coins at half value, up to 100 coins a day (Play → Wallet)
 - [x] Glow Grid (gem block puzzle with coin power-ups), Bubble pop, Fishing (Play → Arcade)
+- [x] Crate Rush (Play → Arcade): a crate-opening clicker with a spinning reel, 104 collectible items, trade-ups, an upgrader, a collection book, rebirths and saved progress
 - [x] Add your own games: HTML/JS files, a .zip or a folder, pasted code, or a link (Play → Arcade → ➕ Add a game)
 - [x] Games can save progress and sell power-ups for coins (you confirm each one)
 - [x] Pet, Garden and Homework dungeon (Play); focus companion under the timer (Focus)
 - [x] Seasonal events with limited items and event quests; gifts for friends; opt-in leaderboards
+- [x] Orebelt factory idle game: miners, smelters to manufacturers, belts with throughput limits, a power grid with overclocking, milestones and a Launch Tower, offline progress; homework gives overclock shards, insight and boosts, and coins buy daily-limited supply drops (Play → Factory)
 
 ## ✅ Sharing and social (no server needed)
 
@@ -101,14 +104,20 @@ merged into `main` and live on the GitHub Pages site. The full plan, including w
 - [x] Reminders through the service worker (work on Android; tapping opens the task)
 - [x] Today's count on the app icon; background morning digest on installed Chrome/Edge apps
 - [x] Works offline; one-file offline version (Settings → Data)
-- [x] "What's new" after updates
+- [x] Patch notes open after every update with everything this device missed (and in Settings → Help)
 
 ## ✅ Languages and accessibility
 
-- [x] Spanish (Settings → Language), including Spanish dates in quick add
+- [x] Spanish (Settings → Language) everywhere except Play, including Spanish dates in quick add and Spanish auto plans for new tasks
 - [x] Dates and numbers in your region's format; right-to-left layout support
 - [x] High contrast, reading fonts, text size, confetti toggle, reduced motion; contrast checked in every theme
 - [x] Visual overhaul: gradients, glows, glass panels, an ambient background and celebration animations across the app, the casino and all arcade games (respects reduced motion)
+
+## ✅ Watch
+
+- [x] Jellyfin/Emby: sign in, browse, continue watching, next up, play with resume (Play → Watch; see WATCH.md)
+- [x] Plex and any other site in a frame; YouTube, Vimeo, Twitch and more as embeds; direct video links and files
+- [x] Optional homework rules: ring first, vouchers for watch time, daily limit (Settings → Economy)
 
 ## ✅ Admin (hidden, for the site owner)
 
@@ -122,14 +131,6 @@ merged into `main` and live on the GitHub Pages site. The full plan, including w
 - [x] Lint, formatting, type checks, 700+ unit tests and ~140 browser tests (with accessibility checks) in CI
 - [x] First-load size budget (currently ~119 kB of 125 kB)
 - [x] Lighthouse check on every pull request
-
-## 🚧 Being built right now (next merge)
-
-- [ ] Spanish for the remaining screens (Stats, Tools, most Settings)
-- [ ] 🏭 Factory: an in-depth factory-building idle game with a coin shop (Play → Factory)
-- [ ] 📺 Watch: Jellyfin/Emby browsing and playback, Plex and other sites, video links and files (Play → Watch)
-- [ ] Case clicker game (original, like the CS:GO case clicker)
-- [ ] Casino visual overhaul: more eye candy on every casino game
 
 ## ⏳ Not done yet
 

@@ -3,6 +3,7 @@
   import { THEMES } from '../lib/themes';
   import { previewPack, primeAudio } from '../lib/sounds';
   import type { ThemePack } from '../lib/types';
+  import { t } from '../lib/i18n/index.svelte';
 
   function pick(id: ThemePack) {
     const t = THEMES.find((x) => x.id === id)!;
@@ -13,22 +14,24 @@
 </script>
 
 <div class="packs">
-  {#each THEMES as t (t.id)}
+  {#each THEMES as th (th.id)}
     <button
       class="pack"
-      class:on={store.settings.themePack === t.id}
-      onclick={() => pick(t.id)}
-      aria-pressed={store.settings.themePack === t.id}
-      style="--pc:{t.confetti[0]}; --pc2:{t.confetti[1]}; --pc3:{t.confetti[2]}"
+      class:on={store.settings.themePack === th.id}
+      onclick={() => pick(th.id)}
+      aria-pressed={store.settings.themePack === th.id}
+      style="--pc:{th.confetti[0]}; --pc2:{th.confetti[1]}; --pc3:{th.confetti[2]}"
     >
       <span class="swatch" aria-hidden="true"><i></i><i></i><i></i></span>
-      <span class="name">{t.emoji} {t.name}</span>
-      <span class="tag">{t.tagline}</span>
+      <span class="name">{th.emoji} {t(`packs.${th.id}`)}</span>
+      <span class="tag">{t(`packs.${th.id}.tag`)}</span>
       <span class="meta"
-        >sound: {t.sound} · {t.particles.shapes
+        >{t('packs.sound')}
+        {th.sound} · {th.particles.shapes
           .filter((s) => !['dot', 'line', 'pixel', 'star'].includes(s))
           .slice(0, 3)
-          .join(' ') || t.particles.shapes[0]} particles</span
+          .join(' ') || th.particles.shapes[0]}
+        {t('packs.particles')}</span
       >
     </button>
   {/each}

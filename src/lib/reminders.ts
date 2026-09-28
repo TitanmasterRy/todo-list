@@ -5,6 +5,7 @@ import { dueReminders } from './remind';
 import { toasts } from './toast.svelte';
 import { on } from './events';
 import { putMeta, getMeta } from './storage';
+import { t as tr } from './i18n/index.svelte';
 
 // per-task reminders already delivered (kept across reloads so a refresh doesn't repeat them)
 const SENT_KEY = 'homework-todo:reminders-sent';
@@ -31,14 +32,14 @@ function checkTaskReminders(): void {
     sentReminders.add(r.key);
     const when = r.task.dueAt ? formatDue(r.task.dueAt, new Date(), store.settings.timeFormat) : '';
     const course = store.courseById(r.task.courseId)?.name;
-    notify(`⏰ ${r.task.title}`, [when && `Due ${when}`, course].filter(Boolean).join(' · ') || 'Reminder', r.key, r.task.id);
+    notify(`⏰ ${r.task.title}`, [when && tr('rem.due', { when }), course].filter(Boolean).join(' · ') || tr('remind.reminder'), r.key, r.task.id);
     toasts.push({
-      message: `Reminder: ${r.task.title}`,
-      detail: when ? `Due ${when}` : undefined,
+      message: tr('rem.toast', { title: r.task.title }),
+      detail: when ? tr('rem.due', { when }) : undefined,
       kind: 'info',
       emoji: '⏰',
       timeout: 12000,
-      action: { label: 'Focus', onClick: () => store.go('focus', { taskId: r.task.id }) },
+      action: { label: tr('nav.focus'), onClick: () => store.go('focus', { taskId: r.task.id }) },
     });
   }
   if (due.length) saveSent();
@@ -151,7 +152,7 @@ function check(): void {
       if (due - now <= lead && due - now > -60 * 1000 && !notified.has(key)) {
         notified.add(key);
         const course = store.courseById(t.courseId)?.name;
-        notify(`Due ${formatDue(t.dueAt, new Date(), s.timeFormat)}: ${t.title}`, course ? `${course}` : 'Homework To-Do', key);
+        notify(tr('rem.dueTitle', { when: formatDue(t.dueAt, new Date(), s.timeFormat), title: t.title }), course ? `${course}` : 'Homework To-Do', key);
       }
     }
   }
@@ -173,7 +174,7 @@ function check(): void {
           .slice(0, 3)
           .map((t) => `• ${t.title}`)
           .join('\n');
-        notify(`${n} task${n === 1 ? '' : 's'} today${overdue ? `, ${overdue} overdue` : ''}`, first, digestKey);
+        notify(tr('rem.digest', { count: n }) + (overdue ? tr('rem.digestOverdue', { n: overdue }) : ''), first, digestKey);
       }
     }
   }

@@ -299,6 +299,14 @@ export interface Settings {
   parentPinHash: string; // '' = no parent lock
   casinoDailyLimitMin: number; // 0 = no daily limit
   casinoMinutesByDay: Record<string, number>;
+  // Play → Watch homework rules (all off by default; behind the parent PIN in Settings → Economy)
+  watchVoucherMin: number; // minutes of watching one voucher buys (0 = free)
+  watchRingFirst: boolean; // nothing plays until today's ring is closed
+  watchDailyLimitMin: number; // 0 = no daily limit
+  watchBreakMin: number; // study-break reminder after N minutes of watching (0 = off)
+  watchMinutesByDay: Record<string, number>;
+  watchCreditMin: number; // paid watch minutes left (voucher mode)
+  watchTokens: string; // media-server sign-ins: JSON { sourceId: accessToken } (a secret, like the other keys)
   equippedTitle?: string; // shop cosmetic ids
   equippedFrame?: string;
   equippedConfetti?: string;
@@ -395,6 +403,13 @@ export const DEFAULT_SETTINGS: Settings = {
   parentPinHash: '',
   casinoDailyLimitMin: 0,
   casinoMinutesByDay: {},
+  watchVoucherMin: 0,
+  watchRingFirst: false,
+  watchDailyLimitMin: 0,
+  watchBreakMin: 0,
+  watchMinutesByDay: {},
+  watchCreditMin: 0,
+  watchTokens: '',
   onboarded: false,
   syncPassphrase: '',
 };

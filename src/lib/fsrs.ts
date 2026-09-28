@@ -3,9 +3,24 @@
 // a target recall probability. https://github.com/open-spaced-repetition/fsrs4anki/wiki/The-Algorithm
 import { addDaysKey, diffDays } from './dates';
 import type { Card } from './types';
+import { t } from './i18n/index.svelte';
 
 export type Rating = 1 | 2 | 3 | 4; // Again, Hard, Good, Easy
-export const RATING_LABEL: Record<Rating, string> = { 1: 'Again', 2: 'Hard', 3: 'Good', 4: 'Easy' };
+// labels in the app language
+export const RATING_LABEL: Record<Rating, string> = {
+  get 1() {
+    return t('fsrs.again');
+  },
+  get 2() {
+    return t('fsrs.hard');
+  },
+  get 3() {
+    return t('fsrs.good');
+  },
+  get 4() {
+    return t('fsrs.easy');
+  },
+};
 
 const W = [0.4072, 1.1829, 3.1262, 15.4722, 7.2102, 0.5316, 1.0651, 0.0234, 1.616, 0.1544, 1.0824, 1.9813, 0.0953, 0.2975, 2.2042, 0.2407, 2.9466];
 const DECAY = -0.5;
@@ -92,8 +107,8 @@ export function preview(card: Card, today: string, retention = DEFAULT_RETENTION
 }
 
 export function formatInterval(days: number): string {
-  if (days <= 0) return 'now';
-  if (days < 30) return `${days}d`;
-  if (days < 365) return `${Math.round(days / 30)}mo`;
-  return `${Math.round((days / 365) * 10) / 10}y`;
+  if (days <= 0) return t('fsrs.now');
+  if (days < 30) return t('fsrs.d', { n: days });
+  if (days < 365) return t('fsrs.mo', { n: Math.round(days / 30) });
+  return t('fsrs.y', { n: Math.round((days / 365) * 10) / 10 });
 }

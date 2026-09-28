@@ -5,6 +5,8 @@
   import { renderMarkdown } from '../../lib/markdown';
   import { imageToDataUrl } from '../../lib/ai-providers';
   import { aiAvailable, aiSupportsVision, answerKey, makeNotecards, summarizeNotes, transcribeImages, currentProvider } from '../../lib/ai';
+  import { formatDate } from '../../lib/dates';
+  import { t } from '../../lib/i18n/index.svelte';
 
   interface Shot {
     id: number;
@@ -34,7 +36,7 @@
         const dataUrl = await imageToDataUrl(f, 1800);
         shots = [...shots, { id: ++n, dataUrl, name: f.name }];
       } catch (e) {
-        toasts.push({ message: `Could not read ${f.name}`, kind: 'warn' });
+        toasts.push({ message: t('scan.readFailed', { name: f.name }), kind: 'warn' });
       }
     }
   }
@@ -46,7 +48,7 @@
   async function runOCR() {
     if (!shots.length) return;
     busy = 'ocr';
-    progress = 'Loading OCR engine (first time ~5 MB)…';
+    progress = t('scan.loadingOcr');
     try {
       const { createWorker } = await import('tesseract.js');
       const worker = await createWorker('eng', 1, {
@@ -62,13 +64,13 @@
       await worker.terminate();
       text = parts.join('\n\n---\n\n');
       toasts.push({
-        message: 'Text extracted',
-        detail: 'On-device OCR keeps line breaks but not layout. Use AI transcription for tables, math and structure.',
+        message: t('scan.extracted'),
+        detail: t('scan.extractedDetail'),
         kind: 'success',
         emoji: '📄',
       });
     } catch (e) {
-      toasts.push({ message: 'OCR failed', detail: e instanceof Error ? e.message : String(e), kind: 'warn' });
+      toasts.push({ message: t('scan.ocrFailed'), detail: e instanceof Error ? e.message : String(e), kind: 'warn' });
     } finally {
       busy = '';
       progress = '';
@@ -78,15 +80,15 @@
   async function runAI() {
     if (!shots.length) return;
     busy = 'ai';
-    progress = `Reading ${shots.length} image${shots.length > 1 ? 's' : ''} with ${currentProvider()}…`;
+    progress = t('scan.reading', { count: shots.length, provider: currentProvider() });
     try {
       text = await transcribeImages(
         shots.map((s) => ({ dataUrl: s.dataUrl })),
         hint || (courseId ? `Course: ${store.courseById(courseId)?.name}` : undefined),
       );
-      toasts.push({ message: 'Transcribed', detail: 'Check for [unreadable] spots, then copy or make an answer key.', kind: 'success', emoji: '✨' });
+      toasts.push({ message: t('scan.transcribed'), detail: t('scan.transcribedDetail'), kind: 'success', emoji: '✨' });
     } catch (e) {
-      toasts.push({ message: 'Transcription failed', detail: e instanceof Error ? e.message : String(e), kind: 'warn', timeout: 9000 });
+      toasts.push({ message: t('scan.transFailed'), detail: e instanceof Error ? e.message : String(e), kind: 'warn', timeout: 9000 });
     } finally {
       busy = '';
       progress = '';
@@ -98,9 +100,9 @@
     busy = 'key';
     try {
       result = await answerKey(text, { showWork, courseName: store.courseById(courseId)?.name });
-      resultTitle = 'Answer key';
+      resultTitle = t('quiz.answerKey');
     } catch (e) {
-      toasts.push({ message: 'Could not make an answer key', detail: e instanceof Error ? e.message : String(e), kind: 'warn' });
+      toasts.push({ message: t('scan.keyFailed'), detail: e instanceof Error ? e.message : String(e), kind: 'warn' });
     } finally {
       busy = '';
     }
@@ -110,9 +112,9 @@
     busy = 'summary';
     try {
       result = await summarizeNotes(text);
-      resultTitle = 'Study sheet';
+      resultTitle = t('scan.sheet');
     } catch (e) {
-      toasts.push({ message: 'Could not summarize', detail: e instanceof Error ? e.message : String(e), kind: 'warn' });
+      toasts.push({ message: t('scan.sumFailed'), detail: e instanceof Error ? e.message : String(e), kind: 'warn' });
     } finally {
       busy = '';
     }
@@ -123,11 +125,11 @@
     try {
       const cards = await makeNotecards(text, 12);
       let deck = deckId ? store.decks.find((d) => d.id === deckId) : undefined;
-      if (!deck) deck = store.addDeck(`Scan ${new Date().toLocaleDateString()}`, courseId || undefined);
+      if (!deck) deck = store.addDeck(t('scan.deck', { date: formatDate(new Date()) }), courseId || undefined);
       const added = store.addCards(deck.id, cards);
-      toasts.push({ message: `${added.length} notecards added to “${deck.name}”`, kind: 'success', emoji: '🃏' });
+      toasts.push({ message: t('cards.addedTo', { count: added.length, deck: deck.name }), kind: 'success', emoji: '🃏' });
     } catch (e) {
-      toasts.push({ message: 'Could not make cards', detail: e instanceof Error ? e.message : String(e), kind: 'warn' });
+      toasts.push({ message: t('cards.genFailed'), detail: e instanceof Error ? e.message : String(e), kind: 'warn' });
     } finally {
       busy = '';
     }
@@ -135,9 +137,9 @@
   async function copy(s: string) {
     try {
       await navigator.clipboard.writeText(s);
-      toasts.push({ message: 'Copied', kind: 'success', timeout: 1500 });
+      toasts.push({ message: t('scan.copied'), kind: 'success', timeout: 1500 });
     } catch {
-      toasts.push({ message: 'Copy failed; select the text and copy manually', kind: 'warn' });
+      toasts.push({ message: t('scan.copyFailed'), kind: 'warn' });
     }
   }
   function createTask() {
@@ -145,9 +147,9 @@
       text
         .split('\n')
         .map((l) => l.replace(/^#+\s*/, '').trim())
-        .find(Boolean) ?? 'Scanned worksheet';
+        .find(Boolean) ?? t('scan.worksheet');
     store.addTask({ title: firstLine.slice(0, 120), notes: text.slice(0, 5000), courseId: courseId || undefined, source: 'scan' } as never, { describe: false });
-    toasts.push({ message: 'Task created from the scan', kind: 'success' });
+    toasts.push({ message: t('scan.taskCreated'), kind: 'success' });
   }
   function download(name: string, body: string) {
     const blob = new Blob([body], { type: 'text/markdown;charset=utf-8' });
@@ -178,15 +180,14 @@
 <svelte:window onpaste={onPaste} />
 
 <section class="card scan">
-  <h2>Scan paper → text</h2>
+  <h2>{t('scan.title')}</h2>
   <p class="help">
-    Take a photo of a worksheet, notes or a textbook page. <strong>AI transcription</strong> keeps headings, numbering, tables and math; <strong>on-device OCR</strong> is free and private
-    but plain text. Then copy it, make an answer key, a study sheet, or notecards.
+    {t('scan.help')}
   </p>
   <div class="btns">
-    <button class="btn primary" onclick={() => camInput?.click()}>📷 Take photo</button>
-    <button class="btn" onclick={() => fileInput?.click()}>Upload images</button>
-    <span class="muted">or paste a screenshot (Ctrl+V)</span>
+    <button class="btn primary" onclick={() => camInput?.click()}>📷 {t('scan.photo')}</button>
+    <button class="btn" onclick={() => fileInput?.click()}>{t('scan.upload')}</button>
+    <span class="muted">{t('scan.paste')}</span>
     <input
       type="file"
       accept="image/*"
@@ -194,7 +195,7 @@
       class="visually-hidden"
       bind:this={camInput}
       onchange={(e) => addFiles((e.target as HTMLInputElement).files)}
-      aria-label="Take photo"
+      aria-label={t('scan.photo')}
     />
     <input
       type="file"
@@ -203,50 +204,52 @@
       class="visually-hidden"
       bind:this={fileInput}
       onchange={(e) => addFiles((e.target as HTMLInputElement).files)}
-      aria-label="Upload images"
+      aria-label={t('scan.upload')}
     />
   </div>
   {#if shots.length}
     <div class="shots">
       {#each shots as s (s.id)}
-        <div class="shot"><img src={s.dataUrl} alt={s.name} /><button class="x" onclick={() => remove(s.id)} aria-label="Remove image">×</button></div>
+        <div class="shot"><img src={s.dataUrl} alt={s.name} /><button class="x" onclick={() => remove(s.id)} aria-label={t('scan.remove')}>×</button></div>
       {/each}
     </div>
     <div class="grid2">
       <label
-        >Course <select class="select" bind:value={courseId}
-          ><option value="">None</option>{#each store.activeCourses as c (c.id)}<option value={c.id}>{c.emoji ?? ''} {c.name}</option>{/each}</select
+        >{t('inbox.course')}
+        <select class="select" bind:value={courseId}
+          ><option value="">{t('common.none')}</option>{#each store.activeCourses as c (c.id)}<option value={c.id}>{c.emoji ?? ''} {c.name}</option>{/each}</select
         ></label
       >
-      <label>Hint for the AI (optional) <input class="input" bind:value={hint} placeholder="e.g. chemistry worksheet, keep the table" /></label>
+      <label>{t('scan.hint')} <input class="input" bind:value={hint} placeholder={t('scan.hintPh')} /></label>
     </div>
     <div class="btns">
       <button
         class="btn primary"
         onclick={runAI}
         disabled={!!busy || !aiAvailable() || !aiSupportsVision()}
-        title={!aiAvailable() ? 'Add an AI key in Settings' : !aiSupportsVision() ? 'Pick a vision-capable model in Settings' : ''}
-        >{busy === 'ai' ? 'Reading…' : '✨ Transcribe with AI (keeps formatting)'}</button
+        title={!aiAvailable() ? t('scan.needKey') : !aiSupportsVision() ? t('scan.needVision') : ''}>{busy === 'ai' ? t('syl.reading') : t('scan.ai')}</button
       >
-      <button class="btn" onclick={runOCR} disabled={!!busy}>{busy === 'ocr' ? 'Reading…' : '🔒 Free on-device OCR'}</button>
+      <button class="btn" onclick={runOCR} disabled={!!busy}>{busy === 'ocr' ? t('syl.reading') : t('scan.ocr')}</button>
       {#if progress}<span class="muted">{progress}</span>{/if}
     </div>
     {#if !aiAvailable()}<p class="help">
-        No AI key yet. Free options: Google Gemini or Groq keys in Settings → AI helper (both have free tiers and read photos).
+        {t('scan.noKey')}
       </p>{:else if !aiSupportsVision()}<p class="help">
-        The selected model can’t read images. In Settings → AI helper pick a model marked “vision” (e.g. Gemini Flash, Llama 4 Scout, Claude).
+        {t('scan.noVision')}
       </p>{/if}
   {/if}
 
   {#if text}
     <div class="row-head">
       <div class="modes">
-        <button class:on={view === 'edit'} onclick={() => (view = 'edit')}>Edit</button><button class:on={view === 'preview'} onclick={() => (view = 'preview')}>Preview</button>
+        <button class:on={view === 'edit'} onclick={() => (view = 'edit')}>{t('common.edit')}</button><button class:on={view === 'preview'} onclick={() => (view = 'preview')}
+          >{t('scan.preview')}</button
+        >
       </div>
       <div class="btns">
-        <button class="btn sm" onclick={() => copy(text)}>Copy text</button>
-        <button class="btn sm" onclick={() => download('scan.md', text)}>Download .md</button>
-        <button class="btn sm" onclick={createTask}>Create task</button>
+        <button class="btn sm" onclick={() => copy(text)}>{t('scan.copyText')}</button>
+        <button class="btn sm" onclick={() => download('scan.md', text)}>{t('scan.downloadMd')}</button>
+        <button class="btn sm" onclick={createTask}>{t('scan.createTask')}</button>
       </div>
     </div>
     {#if view === 'edit'}
@@ -255,13 +258,13 @@
       <div class="preview">{@html renderMarkdown(text)}</div>
     {/if}
     <div class="actions">
-      <label class="check"><input type="checkbox" bind:checked={showWork} /> show work in the answer key</label>
-      <button class="btn" onclick={makeKey} disabled={!!busy || !aiAvailable()}>{busy === 'key' ? 'Working…' : '🔑 Make answer key'}</button>
-      <button class="btn" onclick={makeSummary} disabled={!!busy || !aiAvailable()}>{busy === 'summary' ? 'Working…' : '📝 Study sheet'}</button>
-      <select class="select" bind:value={deckId} aria-label="Deck for notecards"
-        ><option value="">New deck</option>{#each store.decks as d (d.id)}<option value={d.id}>{d.name}</option>{/each}</select
+      <label class="check"><input type="checkbox" bind:checked={showWork} /> {t('scan.showWork')}</label>
+      <button class="btn" onclick={makeKey} disabled={!!busy || !aiAvailable()}>{busy === 'key' ? t('scan.working') : t('scan.makeKey')}</button>
+      <button class="btn" onclick={makeSummary} disabled={!!busy || !aiAvailable()}>{busy === 'summary' ? t('scan.working') : `📝 ${t('scan.sheet')}`}</button>
+      <select class="select" bind:value={deckId} aria-label={t('scan.deckFor')}
+        ><option value="">{t('scan.newDeck')}</option>{#each store.decks as d (d.id)}<option value={d.id}>{d.name}</option>{/each}</select
       >
-      <button class="btn" onclick={makeCards} disabled={!!busy || !aiAvailable()}>{busy === 'cards' ? 'Working…' : '🃏 Make notecards'}</button>
+      <button class="btn" onclick={makeCards} disabled={!!busy || !aiAvailable()}>{busy === 'cards' ? t('scan.working') : t('scan.makeCards')}</button>
     </div>
   {/if}
 
@@ -270,10 +273,10 @@
       <div class="row-head">
         <h3>{resultTitle}</h3>
         <div class="btns">
-          <button class="btn sm" onclick={() => copy(result)}>Copy</button><button
+          <button class="btn sm" onclick={() => copy(result)}>{t('card.copy')}</button><button
             class="btn sm"
-            onclick={() => download(`${resultTitle.toLowerCase().replace(/\s+/g, '-')}.md`, result)}>Download</button
-          ><button class="btn ghost sm" onclick={() => (result = '')}>Close</button>
+            onclick={() => download(`${resultTitle.toLowerCase().replace(/\s+/g, '-')}.md`, result)}>{t('prompt.download')}</button
+          ><button class="btn ghost sm" onclick={() => (result = '')}>{t('common.close')}</button>
         </div>
       </div>
       <div class="preview">{@html renderMarkdown(result)}</div>

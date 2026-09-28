@@ -14,6 +14,7 @@
   import { aiAvailable, makeNotecards } from '../../lib/ai';
   import { playSound } from '../../lib/sounds';
   import { renderTextWithMath } from '../../lib/math.svelte';
+  import { t } from '../../lib/i18n/index.svelte';
 
   let deckId = $state<string | null>(ui.openDeck);
   let newDeckName = $state('');
@@ -47,14 +48,14 @@
       if (side === 'front') frontImage = url;
       else backImage = url;
     } catch {
-      toasts.push({ message: 'Could not read that image', kind: 'warn' });
+      toasts.push({ message: t('cards.imageFailed'), kind: 'warn' });
     }
   }
   function addCloze() {
     if (!deck) return;
     const items = parseCloze(cloze);
     if (!items.length) {
-      toasts.push({ message: 'No blanks found', detail: 'Wrap answers in double braces: The {{c1::nucleus}} holds {{c2::DNA}}.', kind: 'warn' });
+      toasts.push({ message: t('cards.noBlanks'), detail: t('cards.noBlanksDetail'), kind: 'warn' });
       return;
     }
     const noteId = uid('note');
@@ -62,14 +63,14 @@
       deck.id,
       items.map((i) => ({ ...i, noteId })),
     );
-    toasts.push({ message: `Added ${added.length} fill-in-the-blank card${added.length === 1 ? '' : 's'}`, kind: 'success' });
+    toasts.push({ message: t('cards.addedCloze', { count: added.length }), kind: 'success' });
     cloze = '';
   }
   function exportAnki() {
     if (!deck) return;
     void import('../../lib/anki').then(({ toAnkiText }) => {
       downloadText(`${deck.name.replace(/[^\w\- ]+/g, '').trim() || 'deck'}-anki.txt`, toAnkiText(deck.name, cards), 'text/plain');
-      toasts.push({ message: 'Exported for Anki', detail: 'In Anki: File → Import, pick this file.', kind: 'success' });
+      toasts.push({ message: t('cards.exported'), detail: t('cards.exportedDetail'), kind: 'success' });
     });
   }
   async function importAnki(e: Event) {
@@ -89,16 +90,16 @@
           lastId = target.id;
         }
         if (lastId) deckId = lastId;
-        toasts.push({ message: `Imported ${total} cards${decks.length > 1 ? ` into ${decks.length} decks` : ''}`, kind: 'success', emoji: '📥' });
+        toasts.push({ message: t('cards.imported', { count: total }) + (decks.length > 1 ? t('cards.intoDecks', { n: decks.length }) : ''), kind: 'success', emoji: '📥' });
       } else {
         const items = anki.fromAnkiText(await f.text());
         const target = deck ?? store.addDeck(f.name.replace(/\.[^.]+$/, ''));
         const added = store.addCards(target.id, items);
         deckId = target.id;
-        toasts.push({ message: `Imported ${added.length} cards`, kind: added.length ? 'success' : 'warn', emoji: '📥' });
+        toasts.push({ message: t('cards.imported', { count: added.length }), kind: added.length ? 'success' : 'warn', emoji: '📥' });
       }
     } catch (err) {
-      toasts.push({ message: 'Could not import that file', detail: err instanceof Error ? err.message : String(err), kind: 'warn', timeout: 9000 });
+      toasts.push({ message: t('cards.importFailed'), detail: err instanceof Error ? err.message : String(err), kind: 'warn', timeout: 9000 });
     } finally {
       importing = false;
     }
@@ -141,8 +142,8 @@
     const items = parseCards(paste);
     const added = store.addCards(deck.id, items);
     toasts.push({
-      message: added.length ? `Added ${added.length} cards` : 'No cards found',
-      detail: added.length ? undefined : 'Use one card per line like "term :: definition" or "Q: … / A: …".',
+      message: added.length ? t('cards.added', { count: added.length }) : t('cards.none'),
+      detail: added.length ? undefined : t('cards.noneDetail'),
       kind: added.length ? 'success' : 'warn',
     });
     if (added.length) paste = '';
@@ -153,10 +154,10 @@
     try {
       const items = await makeNotecards(aiSource, 12);
       const added = store.addCards(deck.id, items);
-      toasts.push({ message: `Generated ${added.length} cards`, kind: 'success', emoji: '✨' });
+      toasts.push({ message: t('cards.generated', { count: added.length }), kind: 'success', emoji: '✨' });
       aiSource = '';
     } catch (e) {
-      toasts.push({ message: 'Could not generate cards', detail: e instanceof Error ? e.message : String(e), kind: 'warn' });
+      toasts.push({ message: t('cards.genFailed'), detail: e instanceof Error ? e.message : String(e), kind: 'warn' });
     } finally {
       aiBusy = false;
     }
@@ -196,7 +197,7 @@
   }
   function renameDeck() {
     if (!deck) return;
-    const n = prompt('Rename deck', deck.name);
+    const n = prompt(t('cards.rename'), deck.name);
     if (n?.trim()) store.updateDeck(deck.id, { name: n.trim() });
   }
   function onKey(e: KeyboardEvent) {
@@ -220,18 +221,17 @@
 
 {#if !deck}
   <section class="card">
-    <h2>Notecards</h2>
+    <h2>{t('tools.notecards')}</h2>
     <p class="help">
-      Make a deck per unit or course, add cards by typing, pasting, or generating from notes, then study with spaced repetition. Every correct answer earns XP; clearing all due
-      cards earns a bonus.
+      {t('cards.help')}
     </p>
     <form class="newdeck" onsubmit={createDeck}>
-      <input class="input" bind:value={newDeckName} placeholder="New deck, e.g. Chem unit 3 vocab" aria-label="Deck name" data-deck-name />
-      <select class="select" bind:value={newDeckCourse} aria-label="Course">
-        <option value="">No course</option>
+      <input class="input" bind:value={newDeckName} placeholder={t('cards.newDeckPh')} aria-label={t('cards.deckName')} data-deck-name />
+      <select class="select" bind:value={newDeckCourse} aria-label={t('inbox.course')}>
+        <option value="">{t('inbox.noCourse')}</option>
         {#each store.activeCourses as c (c.id)}<option value={c.id}>{c.emoji ?? ''} {c.name}</option>{/each}
       </select>
-      <button class="btn primary" type="submit" disabled={!newDeckName.trim()}>Create</button>
+      <button class="btn primary" type="submit" disabled={!newDeckName.trim()}>{t('cards.create')}</button>
     </form>
     {#if decksInfo.length}
       <ul class="decks">
@@ -246,7 +246,7 @@
             >
               <span class="dot" style="background:{store.courseById(d.deck.courseId)?.color ?? 'var(--border-strong)'}"></span>
               <span class="name">{d.deck.name}</span>
-              <span class="meta">{d.count} card{d.count === 1 ? '' : 's'}{d.due ? ` · ${d.due} due` : ''}</span>
+              <span class="meta">{t('cards.count', { count: d.count })}{d.due ? ` · ${t('cards.due', { n: d.due })}` : ''}</span>
               <span class="mastery"><span class="fill" style="width:{d.mastery * 100}%"></span></span>
             </button>
           </li>
@@ -263,24 +263,24 @@
     {#if finished}
       <div class="done" in:fly={{ y: 10, duration: 250 }}>
         <div class="big">{correct === reviewed ? '🏆' : correct / Math.max(1, reviewed) >= 0.7 ? '🎉' : '💪'}</div>
-        <h3>{correct} of {reviewed} right</h3>
+        <h3>{t('cards.right', { n: correct, total: reviewed })}</h3>
         <p class="help">
-          {correct === reviewed && !sessionAll ? 'Every due card cleared. Bonus XP!' : 'Missed cards come back today; the rest are scheduled by how well you knew them.'}
+          {correct === reviewed && !sessionAll ? t('cards.cleared') : t('cards.scheduled')}
         </p>
         <div class="btns">
-          <button class="btn primary" onclick={() => (mode = 'edit')}>Back to deck</button>
-          {#if due.length}<button class="btn" onclick={() => startStudy(false)}>Study {due.length} due again</button>{/if}
+          <button class="btn primary" onclick={() => (mode = 'edit')}>{t('cards.backToDeck')}</button>
+          {#if due.length}<button class="btn" onclick={() => startStudy(false)}>{t('cards.again', { n: due.length })}</button>{/if}
         </div>
       </div>
     {:else if current}
-      <button class="flashcard" class:flipped onclick={() => (flipped = !flipped)} aria-label={flipped ? 'Showing back' : 'Show back'}>
+      <button class="flashcard" class:flipped onclick={() => (flipped = !flipped)} aria-label={flipped ? t('cards.showingBack') : t('cards.showBack')}>
         <span class="face front"
-          ><span class="lbl">Front</span>{#if current.frontImage}<img class="cimg" src={current.frontImage} alt="" />{/if}<span class="txt"
+          ><span class="lbl">{t('cards.front')}</span>{#if current.frontImage}<img class="cimg" src={current.frontImage} alt="" />{/if}<span class="txt"
             >{@html renderTextWithMath(current.front)}</span
-          ><span class="hint">tap or press space to flip</span></span
+          ><span class="hint">{t('cards.flipHint')}</span></span
         >
         <span class="face back"
-          ><span class="lbl">Back</span>{#if current.backImage}<img class="cimg" src={current.backImage} alt="" />{/if}<span class="txt"
+          ><span class="lbl">{t('cards.back')}</span>{#if current.backImage}<img class="cimg" src={current.backImage} alt="" />{/if}<span class="txt"
             >{@html renderTextWithMath(current.back)}</span
           ></span
         >
@@ -292,72 +292,65 @@
           >
         {/each}
       </div>
-      <div class="box">{current.reps ? `Reviewed ${current.reps}× · ${current.lapses} lapse${current.lapses === 1 ? '' : 's'}` : 'New card'}</div>
+      <div class="box">{current.reps ? t('cards.reviewed', { reps: current.reps, count: current.lapses }) : t('cards.newCard')}</div>
     {/if}
   </section>
 {:else}
   <section class="card">
     <div class="head">
-      <button class="btn ghost sm" onclick={() => (deckId = null)}>← Decks</button>
-      <h2 class="grow">{deck.name} <span class="muted">{cards.length} cards</span></h2>
-      <button class="btn ghost sm" onclick={renameDeck}>Rename</button>
+      <button class="btn ghost sm" onclick={() => (deckId = null)}>← {t('cards.decks')}</button>
+      <h2 class="grow">{deck.name} <span class="muted">{t('cards.count', { count: cards.length })}</span></h2>
+      <button class="btn ghost sm" onclick={renameDeck}>{t('cards.renameBtn')}</button>
       <button
         class="btn ghost sm"
         onclick={() => {
           store.deleteDeck(deck.id);
           deckId = null;
-        }}>Delete</button
+        }}>{t('common.delete')}</button
       >
     </div>
     <div class="studybar">
-      <button class="btn primary" onclick={() => startStudy(false)} disabled={!due.length}>Study {due.length} due</button>
-      <button class="btn" onclick={() => startStudy(true)} disabled={!cards.length}>Study all</button>
-      <span class="muted">Mastery {(mastery(cards) * 100).toFixed(0)}%</span>
+      <button class="btn primary" onclick={() => startStudy(false)} disabled={!due.length}>{t('cards.studyDue', { n: due.length })}</button>
+      <button class="btn" onclick={() => startStudy(true)} disabled={!cards.length}>{t('cards.studyAll')}</button>
+      <span class="muted">{t('cards.mastery', { pct: (mastery(cards) * 100).toFixed(0) })}</span>
     </div>
     <form class="addcard" onsubmit={addOne}>
-      <input class="input" bind:value={front} placeholder="Front (term or question; $x^2$ for math)" aria-label="Front" />
-      <label class="imgpick" title="Add a picture to the front"
-        >{frontImage ? '🖼️✓' : '🖼️'}<input type="file" accept="image/*" onchange={(e) => pickImage(e, 'front')} aria-label="Front image" /></label
+      <input class="input" bind:value={front} placeholder={t('cards.frontPh')} aria-label={t('cards.front')} />
+      <label class="imgpick" title={t('cards.frontPic')}
+        >{frontImage ? '🖼️✓' : '🖼️'}<input type="file" accept="image/*" onchange={(e) => pickImage(e, 'front')} aria-label={t('cards.frontImage')} /></label
       >
-      <input class="input" bind:value={back} placeholder="Back (definition or answer)" aria-label="Back" />
-      <label class="imgpick" title="Add a picture to the back"
-        >{backImage ? '🖼️✓' : '🖼️'}<input type="file" accept="image/*" onchange={(e) => pickImage(e, 'back')} aria-label="Back image" /></label
+      <input class="input" bind:value={back} placeholder={t('cards.backPh')} aria-label={t('cards.back')} />
+      <label class="imgpick" title={t('cards.backPic')}
+        >{backImage ? '🖼️✓' : '🖼️'}<input type="file" accept="image/*" onchange={(e) => pickImage(e, 'back')} aria-label={t('cards.backImage')} /></label
       >
-      <button class="btn" type="submit" disabled={!(front.trim() || frontImage) || !(back.trim() || backImage)}>Add</button>
+      <button class="btn" type="submit" disabled={!(front.trim() || frontImage) || !(back.trim() || backImage)}>{t('common.add')}</button>
     </form>
     <details class="more">
-      <summary>Fill in the blank</summary>
-      <p class="help">Wrap each answer in double braces. Each number becomes its own card: <code>The {'{{c1::nucleus}}'} holds {'{{c2::DNA}}'}.</code></p>
+      <summary>{t('cards.cloze')}</summary>
+      <p class="help">{t('cards.clozeHelp')} <code>The {'{{c1::nucleus}}'} holds {'{{c2::DNA}}'}.</code></p>
       <textarea class="textarea" bind:value={cloze} placeholder={'The {{c1::mitochondria}} is the {{c2::powerhouse}} of the cell.'}></textarea>
-      <button class="btn sm" onclick={addCloze} disabled={!cloze.trim()}>Add blanks</button>
+      <button class="btn sm" onclick={addCloze} disabled={!cloze.trim()}>{t('cards.addBlanks')}</button>
     </details>
     <details class="more">
       <summary>Anki</summary>
       <div class="btns">
-        <button class="btn sm" onclick={() => ankiInput?.click()} disabled={importing}>{importing ? 'Importing…' : 'Import .apkg or .txt'}</button>
-        <button class="btn sm" onclick={exportAnki} disabled={!cards.length}>Export for Anki</button>
-        <input type="file" accept=".apkg,.colpkg,.txt,.tsv,.csv" bind:this={ankiInput} onchange={importAnki} class="visually-hidden" aria-label="Anki file" />
+        <button class="btn sm" onclick={() => ankiInput?.click()} disabled={importing}>{importing ? t('cards.importing') : t('cards.import')}</button>
+        <button class="btn sm" onclick={exportAnki} disabled={!cards.length}>{t('cards.export')}</button>
+        <input type="file" accept=".apkg,.colpkg,.txt,.tsv,.csv" bind:this={ankiInput} onchange={importAnki} class="visually-hidden" aria-label={t('cards.ankiFile')} />
       </div>
       <p class="help">
-        Imports shared Anki decks (.apkg), including fill-in-the-blank notes and pictures from older exports. Export makes a text file for Anki's File → Import (pictures stay
-        here).
+        {t('cards.ankiHelp')}
       </p>
     </details>
     <details class="more">
-      <summary>Paste many at once</summary>
-      <textarea class="textarea" bind:value={paste} placeholder={'mitosis :: cell division\nosmosis - diffusion of water\nQ: What is ATP?\nA: The cell’s energy currency'}
-      ></textarea>
-      <button class="btn sm" onclick={addPasted} disabled={!paste.trim()}>Add cards</button>
+      <summary>{t('cards.paste')}</summary>
+      <textarea class="textarea" bind:value={paste} placeholder={t('cards.pastePh')}></textarea>
+      <button class="btn sm" onclick={addPasted} disabled={!paste.trim()}>{t('cards.addCards')}</button>
     </details>
     <details class="more">
-      <summary>Generate from notes {aiAvailable() ? '✨' : '(needs an API key in Settings → AI helper)'}</summary>
-      <textarea
-        class="textarea"
-        bind:value={aiSource}
-        placeholder="Paste your notes, a chapter summary, or just a topic like “photosynthesis light reactions”"
-        disabled={!aiAvailable()}
-      ></textarea>
-      <button class="btn sm" onclick={generate} disabled={!aiAvailable() || !aiSource.trim() || aiBusy}>{aiBusy ? 'Generating…' : 'Generate 12 cards'}</button>
+      <summary>{t('cards.generate')} {aiAvailable() ? '✨' : t('cards.needsKey')}</summary>
+      <textarea class="textarea" bind:value={aiSource} placeholder={t('cards.genPh')} disabled={!aiAvailable()}></textarea>
+      <button class="btn sm" onclick={generate} disabled={!aiAvailable() || !aiSource.trim() || aiBusy}>{aiBusy ? t('cards.generating') : t('cards.gen12')}</button>
     </details>
     {#if cards.length}
       <ul class="cards">
@@ -365,13 +358,15 @@
           <li class="b{c.box}">
             <span class="f">{@html renderTextWithMath(c.front)}</span>
             <span class="bk">{@html renderTextWithMath(c.back)}</span>
-            <span class="boxn" title={c.reps ? `Next review ${c.due}` : 'New'}>{c.reps ? formatInterval(Math.max(0, diffDays(store.today, c.due))) : 'new'}</span>
-            <button class="btn ghost sm icon" aria-label="Delete card" onclick={() => store.deleteCard(c.id)}>×</button>
+            <span class="boxn" title={c.reps ? t('cards.next', { date: c.due }) : t('cards.newTitle')}
+              >{c.reps ? formatInterval(Math.max(0, diffDays(store.today, c.due))) : t('cards.new')}</span
+            >
+            <button class="btn ghost sm icon" aria-label={t('cards.delete')} onclick={() => store.deleteCard(c.id)}>×</button>
           </li>
         {/each}
       </ul>
     {:else}
-      <p class="help">No cards yet. Add a few above.</p>
+      <p class="help">{t('cards.empty')}</p>
     {/if}
   </section>
 {/if}

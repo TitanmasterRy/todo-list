@@ -2,21 +2,23 @@
   import { economy } from '../lib/economy.svelte';
   import { store } from '../lib/store.svelte';
   import ShopTab from '../components/play/ShopTab.svelte';
-  import CasinoTab from '../components/play/CasinoTab.svelte';
   import ArcadeTab from '../components/play/ArcadeTab.svelte';
   import WalletTab from '../components/play/WalletTab.svelte';
   import { activeSeason, daysLeft } from '../lib/seasons';
   import { site } from '../lib/site.svelte';
 
-  type Tab = 'shop' | 'casino' | 'arcade' | 'study' | 'stars' | 'pet' | 'garden' | 'dungeon' | 'boards' | 'wallet';
+  type Tab = 'shop' | 'casino' | 'arcade' | 'study' | 'stars' | 'pet' | 'garden' | 'dungeon' | 'boards' | 'factory' | 'watch' | 'wallet';
   // the newer tabs load on first open (each is its own chunk)
   const LAZY: Partial<Record<Tab, { load: () => Promise<{ default: import('svelte').Component }>; what: string }>> = {
+    casino: { load: () => import('../components/play/CasinoTab.svelte'), what: 'the casino' },
     study: { load: () => import('../components/play/StudyTab.svelte'), what: 'study games' },
     stars: { load: () => import('../components/play/StarMapTab.svelte'), what: 'the star map' },
     pet: { load: () => import('../components/play/PetTab.svelte'), what: 'your pet' },
     garden: { load: () => import('../components/play/GardenTab.svelte'), what: 'the garden' },
     dungeon: { load: () => import('../components/play/DungeonTab.svelte'), what: 'the dungeon' },
     boards: { load: () => import('../components/play/LeaderboardsTab.svelte'), what: 'leaderboards' },
+    factory: { load: () => import('../components/play/factory/FactoryGame.svelte'), what: 'the factory' },
+    watch: { load: () => import('../components/play/watch/WatchTab.svelte'), what: 'Watch' },
   };
   // a seasonal event (Halloween, winter, finals, summer) gives the page a themed look
   const event = $derived(activeSeason(store.today));
@@ -38,6 +40,8 @@
         { id: 'arcade', label: 'Arcade', icon: '🕹️' },
         { id: 'study', label: 'Study games', icon: '🧠' },
         { id: 'stars', label: 'Star map', icon: '🌌' },
+        { id: 'factory', label: 'Factory', icon: '🏭' },
+        { id: 'watch', label: 'Watch', icon: '📺' },
         { id: 'pet', label: 'Pet', icon: '🐣' },
         { id: 'garden', label: 'Garden', icon: '🌱' },
         { id: 'dungeon', label: 'Dungeon', icon: '🏰' },
@@ -104,8 +108,6 @@
 
   {#if active === 'shop'}
     <ShopTab />
-  {:else if active === 'casino'}
-    <CasinoTab />
   {:else if active === 'arcade'}
     <ArcadeTab />
   {:else if LAZY[active]}

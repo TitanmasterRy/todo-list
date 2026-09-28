@@ -1,13 +1,18 @@
 // Kanban board (To do / Doing / Done) for a course.
 import type { Task } from './types';
 import { addDaysKey, dueKey } from './dates';
+import { t } from './i18n/index.svelte';
 
 export type Column = 'todo' | 'doing' | 'done';
-export const COLUMNS: { id: Column; label: string; emoji: string }[] = [
-  { id: 'todo', label: 'To do', emoji: '📝' },
-  { id: 'doing', label: 'Doing', emoji: '🚧' },
-  { id: 'done', label: 'Done', emoji: '✅' },
-];
+// labels follow the app language
+const column = (id: Column, emoji: string) => ({
+  id,
+  emoji,
+  get label() {
+    return t(`board.${id}`);
+  },
+});
+export const COLUMNS: { id: Column; label: string; emoji: string }[] = [column('todo', '📝'), column('doing', '🚧'), column('done', '✅')];
 
 /** Where a task sits: done when completed, doing when marked (or its timer runs), else to do. */
 export function columnOf(t: Task): Column {

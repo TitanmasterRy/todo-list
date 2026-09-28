@@ -1,7 +1,8 @@
 <script lang="ts">
   // A course's grade over time: the running weighted average (line, course color) and each score (muted dots),
   // with the target as a reference line. Hover or arrow keys step through the points; the grade table is the table view.
-  import { fromKey, MONTH_SHORT } from '../lib/dates';
+  import { formatMonthDay, fromKey } from '../lib/dates';
+  import { t } from '../lib/i18n/index.svelte';
   import type { gradeTimeline } from '../lib/grades';
 
   interface Props {
@@ -24,7 +25,7 @@
   const path = $derived(points.map((p, i) => `${i ? 'L' : 'M'}${x(i).toFixed(1)},${y(p.average).toFixed(1)}`).join(' '));
   const day = (d: string) => {
     const k = fromKey(d.slice(0, 10));
-    return `${MONTH_SHORT[k.getMonth()]} ${k.getDate()}`;
+    return formatMonthDay(k, k);
   };
 
   let active = $state<number | null>(null);
@@ -52,9 +53,9 @@
 
 <figure class="trend">
   <div class="legend" aria-hidden="true">
-    <span><i class="line" style="background:{color}"></i> Course average</span>
-    <span><i class="dot"></i> Each score</span>
-    <span><i class="ref"></i> Target {target}%</span>
+    <span><i class="line" style="background:{color}"></i> {t('trend.avg')}</span>
+    <span><i class="dot"></i> {t('trend.each')}</span>
+    <span><i class="ref"></i> {t('trend.target', { target })}</span>
   </div>
   <div class="plot">
     <!-- svelte-ignore a11y_no_noninteractive_tabindex, a11y_no_noninteractive_element_interactions -->
@@ -62,7 +63,7 @@
       bind:this={svg}
       viewBox="0 0 {W} {H}"
       role="img"
-      aria-label="{label}: average {last ? `${last.average.toFixed(1)}% after ${points.length} graded items` : 'no scores yet'}. Use the arrow keys to step through scores."
+      aria-label={t('trend.aria', { label, summary: last ? t('trend.after', { avg: last.average.toFixed(1), count: points.length }) : t('grades.noScores') })}
       tabindex="0"
       onpointermove={onMove}
       onpointerleave={() => (active = null)}
@@ -92,8 +93,9 @@
     {#if a}
       {@const pos = x(active!) / W}
       <div class="tip" class:edge-l={pos < 0.3} class:edge-r={pos > 0.7} role="status" style="left:{pos * 100}%">
-        <strong>{a.average.toFixed(1)}%</strong> average after
-        <div>{a.title}: <strong>{a.score}%</strong> <span class="muted">({a.weight}% of grade · {day(a.date)})</span></div>
+        <strong>{a.average.toFixed(1)}%</strong>
+        {t('trend.avgAfter')}
+        <div>{a.title}: <strong>{a.score}%</strong> <span class="muted">({t('trend.ofGrade', { n: a.weight, date: day(a.date) })})</span></div>
       </div>
     {/if}
   </div>

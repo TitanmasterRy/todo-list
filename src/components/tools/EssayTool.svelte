@@ -1,5 +1,6 @@
 <script lang="ts">
   import { analyzeEssay, easeLabel } from '../../lib/essay';
+  import { formatNumber, t } from '../../lib/i18n/index.svelte';
 
   const KEY = 'homework-todo:essay-draft';
   let text = $state(
@@ -28,33 +29,33 @@
 </script>
 
 <section class="card">
-  <h2>Essay tools</h2>
-  <p class="help">Paste or write your draft. Counts, page estimates and readability update as you type. The draft stays in this browser only.</p>
-  <textarea class="textarea" rows="12" bind:value={text} oninput={onInput} placeholder="Paste your essay here…" aria-label="Essay text"></textarea>
+  <h2>{t('tools.essay')}</h2>
+  <p class="help">{t('essay.help')}</p>
+  <textarea class="textarea" rows="12" bind:value={text} oninput={onInput} placeholder={t('essay.placeholder')} aria-label={t('essay.text')}></textarea>
   <div class="goal">
-    <label>Word goal <input class="input num" type="number" min="0" step="50" bind:value={goal} /></label>
-    <div class="bar" role="progressbar" aria-valuemin="0" aria-valuemax={goal} aria-valuenow={s.words} aria-label="Progress to word goal">
+    <label>{t('essay.goal')} <input class="input num" type="number" min="0" step="50" bind:value={goal} /></label>
+    <div class="bar" role="progressbar" aria-valuemin="0" aria-valuemax={goal} aria-valuenow={s.words} aria-label={t('essay.progress')}>
       <div class="fill" style="width:{pct}%"></div>
     </div>
-    <span class="muted">{s.words.toLocaleString()} / {goal.toLocaleString()}</span>
+    <span class="muted">{formatNumber(s.words)} / {formatNumber(goal)}</span>
   </div>
   <div class="stats">
-    <div><b>{s.words.toLocaleString()}</b><span>words</span></div>
-    <div><b>{s.characters.toLocaleString()}</b><span>characters ({s.charactersNoSpaces.toLocaleString()} no spaces)</span></div>
-    <div><b>{s.sentences}</b><span>sentences · {s.avgSentenceWords} words avg</span></div>
-    <div><b>{s.paragraphs}</b><span>paragraphs</span></div>
-    <div><b>{s.pagesDouble}</b><span>pages double-spaced ({s.pagesSingle} single)</span></div>
-    <div><b>{s.readingMin} min</b><span>to read · {s.speakingMin} min to say aloud</span></div>
-    <div><b>{s.fleschEase}</b><span>reading ease: {easeLabel(s.fleschEase)}</span></div>
-    <div><b>{s.gradeLevel}</b><span>grade level (Flesch–Kincaid)</span></div>
+    <div><b>{formatNumber(s.words)}</b><span>{t('essay.words', { count: s.words })}</span></div>
+    <div><b>{formatNumber(s.characters)}</b><span>{t('essay.chars', { n: formatNumber(s.charactersNoSpaces) })}</span></div>
+    <div><b>{s.sentences}</b><span>{t('essay.sentences', { n: s.avgSentenceWords })}</span></div>
+    <div><b>{s.paragraphs}</b><span>{t('essay.paragraphs')}</span></div>
+    <div><b>{s.pagesDouble}</b><span>{t('essay.pages', { n: s.pagesSingle })}</span></div>
+    <div><b>{s.readingMin} min</b><span>{t('essay.read', { n: s.speakingMin })}</span></div>
+    <div><b>{s.fleschEase}</b><span>{t('essay.ease', { label: easeLabel(s.fleschEase) })}</span></div>
+    <div><b>{s.gradeLevel}</b><span>{t('essay.grade')}</span></div>
   </div>
   {#if s.words}
     <div class="flags">
-      {#if s.topWords.length}<p><strong>Most used:</strong> {s.topWords.map((w) => `${w.word} (${w.count})`).join(', ')}</p>{/if}
-      {#if s.fillers.length}<p><strong>Filler words:</strong> {s.fillers.map((w) => `${w.word} ×${w.count}`).join(', ')}. Cutting them usually makes writing stronger.</p>{/if}
+      {#if s.topWords.length}<p><strong>{t('essay.most')}</strong> {s.topWords.map((w) => `${w.word} (${w.count})`).join(', ')}</p>{/if}
+      {#if s.fillers.length}<p><strong>{t('essay.fillers')}</strong> {s.fillers.map((w) => `${w.word} ×${w.count}`).join(', ')}. {t('essay.fillersTip')}</p>{/if}
       {#if s.longSentences.length}
         <details>
-          <summary><strong>{s.longSentences.length} long sentence{s.longSentences.length > 1 ? 's' : ''}</strong> (over 30 words)</summary>
+          <summary><strong>{t('essay.long', { count: s.longSentences.length })}</strong> {t('essay.over30')}</summary>
           <ul>
             {#each s.longSentences as l, i (i)}<li>{l}</li>{/each}
           </ul>
@@ -62,7 +63,7 @@
       {/if}
       {#if s.passive.length}
         <details>
-          <summary><strong>{s.passive.length} possible passive-voice sentence{s.passive.length > 1 ? 's' : ''}</strong></summary>
+          <summary><strong>{t('essay.passive', { count: s.passive.length })}</strong></summary>
           <ul>
             {#each s.passive as l, i (i)}<li>{l}</li>{/each}
           </ul>

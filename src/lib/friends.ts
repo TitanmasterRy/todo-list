@@ -3,6 +3,7 @@
 // Version 2 (HWF2.) adds two opt-in extras for the Play leaderboards: the chip balance and a few best arcade scores.
 // A card without extras is still written as HWF1., so friends on an older version can read it.
 import { cleanText, decodeJson, paramFrom, toB64url } from './b64url';
+import { t } from './i18n/index.svelte';
 
 export interface FriendCard {
   id: string; // random per person, so a fresh code replaces the old one
@@ -159,11 +160,10 @@ export function leaderboard(me: FriendCard, friends: Friend[], weekKey: string, 
 /** "just now", "5 min ago", "3 h ago", "2 days ago". */
 export function ago(at: number, now = Math.floor(Date.now() / 1000)): string {
   const s = Math.max(0, now - at);
-  if (s < 90) return 'just now';
-  if (s < 3600) return `${Math.round(s / 60)} min ago`;
-  if (s < 36 * 3600) return `${Math.round(s / 3600)} h ago`;
-  const d = Math.round(s / 86400);
-  return `${d} day${d === 1 ? '' : 's'} ago`;
+  if (s < 90) return t('ago.now');
+  if (s < 3600) return t('ago.min', { n: Math.round(s / 60) });
+  if (s < 36 * 3600) return t('ago.h', { n: Math.round(s / 3600) });
+  return t('ago.days', { count: Math.round(s / 86400) });
 }
 
 // ---------- Play leaderboards (opt-in extras) ----------

@@ -8,7 +8,7 @@
   const s = $derived(store.settings);
   async function enableNotifications() {
     const ok = await requestNotifications();
-    toasts.push({ message: ok ? 'Notifications on' : 'Notifications blocked', kind: ok ? 'success' : 'warn' });
+    toasts.push({ message: ok ? t('notif.on') : t('notif.blocked'), kind: ok ? 'success' : 'warn' });
     if (ok) set('notifyDueSoon', true);
   }
   function setAndSync<K extends 'appBadge' | 'backgroundReminders' | 'notifyMorningDigest'>(key: K, on: boolean) {
@@ -21,10 +21,10 @@
 <section class="card">
   <h2>{t('settings.notifications')}</h2>
   {#if !notificationsSupported()}
-    <p class="help">This browser doesn’t support notifications.</p>
+    <p class="help">{t('notif.unsupported')}</p>
   {:else}
     <div class="row">
-      <label for="ndue">Remind me before timed deadlines</label>
+      <label for="ndue">{t('notif.due')}</label>
       <input
         id="ndue"
         type="checkbox"
@@ -38,7 +38,7 @@
       />
     </div>
     <div class="row">
-      <label for="nlead">Lead time (minutes)</label>
+      <label for="nlead">{t('notif.lead')}</label>
       <input
         id="nlead"
         class="input num"
@@ -50,7 +50,7 @@
       />
     </div>
     <div class="row">
-      <label for="ndig">Morning digest (what’s due today, after 7 am)</label>
+      <label for="ndig">{t('notif.digest')}</label>
       <input
         id="ndig"
         type="checkbox"
@@ -63,20 +63,20 @@
         }}
       />
     </div>
-    <p class="help">Reminders fire while the app is open, even in a background tab. Clicking one opens the task.</p>
+    <p class="help">{t('notif.help')}</p>
   {/if}
   {#if badgeSupported}
     <div class="row">
-      <label for="nbadge">Show today’s count on the app icon</label>
+      <label for="nbadge">{t('notif.badge')}</label>
       <input id="nbadge" type="checkbox" class="switch" checked={s.appBadge} onchange={(e) => setAndSync('appBadge', (e.target as HTMLInputElement).checked)} />
     </div>
   {/if}
   {#if backgroundSupported()}
     <div class="row">
-      <label for="nbg">Background digest and badge when the app is closed</label>
+      <label for="nbg">{t('notif.bg')}</label>
       <input id="nbg" type="checkbox" class="switch" checked={s.backgroundReminders} onchange={(e) => setAndSync('backgroundReminders', (e.target as HTMLInputElement).checked)} />
     </div>
-    <p class="help">For the installed app. The browser decides how often it checks (usually a few times a day), so exact-time reminders still need the app open.</p>
+    <p class="help">{t('notif.bgHelp')}</p>
   {/if}
 </section>
 

@@ -1,6 +1,7 @@
 // Work-back planning: split a big task into dated milestones, or space study sessions before an exam.
 import { addDaysKey, diffDays } from './dates';
 import type { TaskType } from './types';
+import { t as tr, type MessageKey } from './i18n/index.svelte';
 
 export interface MilestoneStep {
   title: string;
@@ -9,60 +10,54 @@ export interface MilestoneStep {
   estimateMin?: number;
 }
 
+// labels and step titles follow the app language (read when a template is loaded)
+const step = (key: MessageKey, weight: number, estimateMin: number): MilestoneStep => ({
+  get title() {
+    return tr(key);
+  },
+  weight,
+  estimateMin,
+});
 export const MILESTONE_TEMPLATES: { id: string; label: string; types: (TaskType | '')[]; steps: MilestoneStep[] }[] = [
   {
     id: 'essay',
-    label: 'Essay / paper',
+    get label() {
+      return tr('plan.tpl.essay');
+    },
     types: ['homework'],
-    steps: [
-      { title: 'Pick a topic and research', weight: 3, estimateMin: 60 },
-      { title: 'Outline', weight: 1, estimateMin: 30 },
-      { title: 'First draft', weight: 3, estimateMin: 90 },
-      { title: 'Revise and edit', weight: 2, estimateMin: 45 },
-      { title: 'Final proofread and citations', weight: 1, estimateMin: 20 },
-    ],
+    steps: [step('plan.essay.1', 3, 60), step('plan.essay.2', 1, 30), step('plan.essay.3', 3, 90), step('plan.essay.4', 2, 45), step('plan.essay.5', 1, 20)],
   },
   {
     id: 'project',
-    label: 'Project',
+    get label() {
+      return tr('plan.tpl.project');
+    },
     types: ['project', ''],
-    steps: [
-      { title: 'Plan and gather materials', weight: 1, estimateMin: 30 },
-      { title: 'Build the first half', weight: 3, estimateMin: 90 },
-      { title: 'Build the second half', weight: 3, estimateMin: 90 },
-      { title: 'Polish and check the rubric', weight: 1, estimateMin: 45 },
-    ],
+    steps: [step('plan.project.1', 1, 30), step('plan.project.2', 3, 90), step('plan.project.3', 3, 90), step('plan.project.4', 1, 45)],
   },
   {
     id: 'presentation',
-    label: 'Presentation',
+    get label() {
+      return tr('plan.tpl.presentation');
+    },
     types: [],
-    steps: [
-      { title: 'Research and key points', weight: 2, estimateMin: 45 },
-      { title: 'Make the slides', weight: 2, estimateMin: 60 },
-      { title: 'Rehearse out loud', weight: 1, estimateMin: 30 },
-    ],
+    steps: [step('plan.presentation.1', 2, 45), step('plan.presentation.2', 2, 60), step('plan.presentation.3', 1, 30)],
   },
   {
     id: 'reading',
-    label: 'Long reading',
+    get label() {
+      return tr('plan.tpl.reading');
+    },
     types: ['reading'],
-    steps: [
-      { title: 'Read the first third', weight: 1, estimateMin: 45 },
-      { title: 'Read the middle third', weight: 1, estimateMin: 45 },
-      { title: 'Read the last third and take notes', weight: 1, estimateMin: 60 },
-    ],
+    steps: [step('plan.reading.1', 1, 45), step('plan.reading.2', 1, 45), step('plan.reading.3', 1, 60)],
   },
   {
     id: 'lab',
-    label: 'Lab report',
+    get label() {
+      return tr('plan.tpl.lab');
+    },
     types: [],
-    steps: [
-      { title: 'Organize data and make graphs', weight: 1, estimateMin: 45 },
-      { title: 'Write methods and results', weight: 2, estimateMin: 60 },
-      { title: 'Write discussion and conclusion', weight: 2, estimateMin: 60 },
-      { title: 'Proofread', weight: 1, estimateMin: 20 },
-    ],
+    steps: [step('plan.lab.1', 1, 45), step('plan.lab.2', 2, 60), step('plan.lab.3', 2, 60), step('plan.lab.4', 1, 20)],
   },
 ];
 

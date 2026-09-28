@@ -11,6 +11,7 @@ import { addDaysKey, dueKey, isDateOnly, pad } from './dates';
 import { inferType } from './schoology';
 import type { ExportBundle, Task } from './types';
 import type { GmailMessage } from './google-parse';
+import { t as tr } from './i18n/index.svelte';
 export type { GmailMessage } from './google-parse';
 
 export const SCOPE_GMAIL = 'https://www.googleapis.com/auth/gmail.readonly';
@@ -126,7 +127,7 @@ export function loadGis(): Promise<void> {
     s.async = true;
     s.defer = true;
     s.onload = waitReady;
-    s.onerror = () => fail('Could not load the Google sign-in script (offline, or blocked by an extension?)');
+    s.onerror = () => fail(tr('gerr.script'));
     document.head.appendChild(s);
   });
   return gisPromise;
@@ -135,9 +136,9 @@ export function loadGis(): Promise<void> {
 function describeAuthError(r: GisTokenResponse): string {
   switch (r.error) {
     case 'access_denied':
-      return 'Google access was denied. Approve the requested permissions to continue.';
+      return tr('gerr.denied');
     case 'invalid_client':
-      return 'Google rejected the Client ID. Check it in Settings.';
+      return tr('gerr.client');
     case 'immediate_failed':
     case 'interaction_required':
       return 'Sign in again.';
@@ -296,14 +297,14 @@ async function describeHttpError(res: Response, api: string): Promise<string> {
   }
   if (res.status === 403) {
     if (/has not been used|is disabled|accessNotConfigured|SERVICE_DISABLED/i.test(`${reason} ${detail}`)) {
-      return `Enable the ${api} in your Google Cloud project (APIs & Services → Library → ${api} → Enable), then try again.`;
+      return tr('gerr.enable', { api });
     }
     if (/insufficient|ACCESS_TOKEN_SCOPE_INSUFFICIENT|forbidden/i.test(`${reason} ${detail}`)) {
-      return `Google did not grant access to the ${api}. Sign in again and allow it.`;
+      return tr('gerr.scope', { api });
     }
-    return `Enable the ${api} in your Google Cloud project (APIs & Services → Library) and make sure your account is a test user.${detail ? ` (${detail})` : ''}`;
+    return `${tr('gerr.enableTest', { api })}${detail ? ` (${detail})` : ''}`;
   }
-  if (res.status === 429) return `Google rate limit hit on the ${api}. Wait a minute and try again.`;
+  if (res.status === 429) return tr('gerr.rate', { api });
   if (res.status === 404) return `${api}: not found${detail ? ` (${detail})` : ''}`;
   return `${api} error ${res.status}${detail ? `: ${detail}` : ''}`;
 }
@@ -314,7 +315,7 @@ async function api<T>(url: string, o: ApiOpts): Promise<T> {
   try {
     res = await fetch(url, { method: o.method ?? 'GET', headers: { Authorization: `Bearer ${t}`, ...(o.headers ?? {}) }, body: o.body });
   } catch (e) {
-    throw new Error(`Could not reach the ${o.api} (offline?)`);
+    throw new Error(tr('gerr.offline', { api: o.api }));
   }
   if (!res.ok) throw new ApiError(res.status, await describeHttpError(res, o.api));
   if (o.text) return (await res.text()) as unknown as T;
@@ -646,8 +647,8 @@ export async function driveSync(opts: { pull: boolean; interactive?: boolean } =
           if (conflicts.length) {
             const names = conflicts.map((cid) => merged.tasks.find((t) => t.id === cid)?.title ?? cid).slice(0, 3);
             toasts.push({
-              message: `Sync conflict on ${conflicts.length} task${conflicts.length > 1 ? 's' : ''}`,
-              detail: `Edited on two devices in the same second; kept the newer copy. ${names.join(', ')}`,
+              message: tr('sync.conflict', { count: conflicts.length }),
+              detail: tr('sync.conflictDetail', { names: names.join(', ') }),
               kind: 'warn',
               emoji: '⚠️',
               timeout: 10000,

@@ -4,6 +4,7 @@
   import { store } from '../lib/store.svelte';
   import { toasts } from '../lib/toast.svelte';
   import { ACCEPT, formatBytes, iconFor, MAX_ATTACHMENT_BYTES } from '../lib/attachments';
+  import { t } from '../lib/i18n/index.svelte';
 
   let { taskId }: { taskId: string } = $props();
 
@@ -37,9 +38,10 @@
     busy = true;
     try {
       const r = await store.attachFiles(taskId, arr);
-      if (r.tooBig.length) toasts.push({ message: `Too big to attach: ${r.tooBig.join(', ')}`, detail: `Files can be up to ${formatBytes(MAX_ATTACHMENT_BYTES)}.`, kind: 'warn' });
+      if (r.tooBig.length)
+        toasts.push({ message: t('att.tooBig', { names: r.tooBig.join(', ') }), detail: t('att.max', { size: formatBytes(MAX_ATTACHMENT_BYTES) }), kind: 'warn' });
     } catch (e) {
-      toasts.push({ message: 'Couldn’t save the file', detail: e instanceof Error ? e.message : String(e), kind: 'warn' });
+      toasts.push({ message: t('att.saveFailed'), detail: e instanceof Error ? e.message : String(e), kind: 'warn' });
     } finally {
       busy = false;
     }
@@ -71,7 +73,7 @@
     void add(e.dataTransfer.files);
   }}
 >
-  <span class="lbl" id="ed-files-l">Files</span>
+  <span class="lbl" id="ed-files-l">{t('att.files')}</span>
   {#if list.length}
     <ul>
       {#each list as a (a.id)}
@@ -85,17 +87,17 @@
           <span class="name">
             {#if url}<a href={url} target="_blank" rel="noopener" download={a.type.startsWith('image/') || a.type === 'application/pdf' ? undefined : a.name}>{a.name}</a>
             {:else}{a.name}{/if}
-            <small>{formatBytes(a.size)}{url ? '' : ' · on another device'}</small>
+            <small>{formatBytes(a.size)}{url ? '' : ` · ${t('att.elsewhere')}`}</small>
           </span>
-          <button type="button" class="x" onclick={() => remove(a.id)} aria-label="Remove {a.name}">×</button>
+          <button type="button" class="x" onclick={() => remove(a.id)} aria-label={t('editor.removeBlocker', { title: a.name })}>×</button>
         </li>
       {/each}
     </ul>
   {/if}
   <div class="addsub">
-    <button type="button" class="btn sm" onclick={() => fileInput?.click()} disabled={busy}>📎 Attach file</button>
-    <button type="button" class="btn sm ghost" onclick={() => cameraInput?.click()} disabled={busy}>📷 Photo</button>
-    {#if busy}<span class="muted">Saving…</span>{:else}<span class="muted">or drop files here. Stored on this device only.</span>{/if}
+    <button type="button" class="btn sm" onclick={() => fileInput?.click()} disabled={busy}>📎 {t('att.attach')}</button>
+    <button type="button" class="btn sm ghost" onclick={() => cameraInput?.click()} disabled={busy}>📷 {t('att.photo')}</button>
+    {#if busy}<span class="muted">{t('att.saving')}</span>{:else}<span class="muted">{t('att.drop')}</span>{/if}
   </div>
   <input
     bind:this={fileInput}
@@ -103,7 +105,7 @@
     multiple
     accept={ACCEPT}
     hidden
-    aria-label="Attach files"
+    aria-label={t('att.attachFiles')}
     onchange={(e) => {
       void add(e.currentTarget.files);
       e.currentTarget.value = '';
@@ -115,7 +117,7 @@
     accept="image/*"
     capture="environment"
     hidden
-    aria-label="Take a photo"
+    aria-label={t('att.takePhoto')}
     onchange={(e) => {
       void add(e.currentTarget.files);
       e.currentTarget.value = '';

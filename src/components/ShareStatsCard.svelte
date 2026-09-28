@@ -5,6 +5,7 @@
   import { store } from '../lib/store.svelte';
   import { toasts } from '../lib/toast.svelte';
   import { drawStatCard, weekSummary } from '../lib/statcard';
+  import { t } from '../lib/i18n/index.svelte';
 
   let { onclose }: { onclose: () => void } = $props();
   const NAME_KEY = 'homework-todo:card-name';
@@ -44,9 +45,9 @@
     const f = await file();
     if (!f) return;
     try {
-      await navigator.share({ files: [f], title: 'My homework week' });
+      await navigator.share({ files: [f], title: t('card.title') });
     } catch (e) {
-      if ((e as Error).name !== 'AbortError') toasts.push({ message: 'Couldn’t share', detail: (e as Error).message, kind: 'warn' });
+      if ((e as Error).name !== 'AbortError') toasts.push({ message: t('card.shareFailed'), detail: (e as Error).message, kind: 'warn' });
     }
   }
   async function download() {
@@ -64,9 +65,9 @@
     if (!b) return;
     try {
       await navigator.clipboard.write([new ClipboardItem({ 'image/png': b })]);
-      toasts.push({ message: 'Image copied', kind: 'success', emoji: '📋' });
+      toasts.push({ message: t('card.copied'), kind: 'success', emoji: '📋' });
     } catch {
-      toasts.push({ message: 'This browser can’t copy images. Download it instead.', kind: 'warn' });
+      toasts.push({ message: t('card.noCopy'), kind: 'warn' });
     }
   }
 </script>
@@ -74,20 +75,18 @@
 <div class="modal-backdrop" onclick={onclose} onkeydown={(e) => e.key === 'Escape' && onclose()} role="presentation">
   <!-- svelte-ignore a11y_click_events_have_key_events -->
   <div use:focusTrap class="modal" role="dialog" aria-modal="true" aria-labelledby="sc-h" tabindex="-1" onclick={(e) => e.stopPropagation()} in:fly={{ y: 20, duration: 200 }}>
-    <h2 id="sc-h">📸 Share my week</h2>
-    <canvas bind:this={canvas} width="1080" height="1080"
-      >{summary.done} task{summary.done === 1 ? '' : 's'} done this week, {summary.streak} day streak, goal met {summary.ringDays} of 7 days, {summary.xp} XP</canvas
-    >
+    <h2 id="sc-h">{t('stats.share')}</h2>
+    <canvas bind:this={canvas} width="1080" height="1080">{t('card.alt', { count: summary.done, streak: summary.streak, ring: summary.ringDays, xp: summary.xp })}</canvas>
     <div class="opts">
-      <input class="input" bind:value={name} placeholder="Your name (optional)" aria-label="Name on the card" maxlength="24" />
-      <label class="chk"><input type="checkbox" bind:checked={showCourses} /> Show my top courses</label>
+      <input class="input" bind:value={name} placeholder={t('card.namePh')} aria-label={t('card.name')} maxlength="24" />
+      <label class="chk"><input type="checkbox" bind:checked={showCourses} /> {t('card.showCourses')}</label>
     </div>
-    <p class="muted">Only these numbers are on the image. Task titles never are.</p>
+    <p class="muted">{t('card.privacy')}</p>
     <div class="actions">
-      <button class="btn" onclick={onclose}>Close</button>
-      <button class="btn" onclick={copy}>Copy</button>
-      <button class="btn" onclick={download}>Download</button>
-      {#if canShareFiles}<button class="btn primary" onclick={share}>Share…</button>{/if}
+      <button class="btn" onclick={onclose}>{t('common.close')}</button>
+      <button class="btn" onclick={copy}>{t('card.copy')}</button>
+      <button class="btn" onclick={download}>{t('prompt.download')}</button>
+      {#if canShareFiles}<button class="btn primary" onclick={share}>{t('card.share')}</button>{/if}
     </div>
   </div>
 </div>

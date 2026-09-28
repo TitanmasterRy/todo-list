@@ -21,9 +21,9 @@
 <section class="card">
   <h2>{t('settings.help')}</h2>
   <div class="btns">
-    <button class="btn" onclick={() => (ui.shortcuts = true)}>Keyboard shortcuts <span class="kbd">?</span></button>
-    <button class="btn" onclick={() => store.updateSettings({ onboarded: false })}>Show welcome tour</button>
-    <button class="btn" onclick={() => (ui.whatsNew = true)}>✨ What’s new</button>
+    <button class="btn" onclick={() => (ui.shortcuts = true)}>{t('keys.title')} <span class="kbd">?</span></button>
+    <button class="btn" onclick={() => store.updateSettings({ onboarded: false })}>{t('help.tour')}</button>
+    <button class="btn" onclick={() => (ui.whatsNew = true)}>📜 {t('patch.title')}</button>
   </div>
   <button class="ver" onclick={tap}>{__CHANGELOG_HEAD__}</button>
 </section>

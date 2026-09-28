@@ -7,6 +7,7 @@ import { toasts } from '../toast.svelte';
 import { store } from '../store.svelte';
 import { ROOM_KEY } from './links';
 import { socialUi } from './state.svelte';
+import { t } from '../i18n/index.svelte';
 
 interface Saved {
   code: string;
@@ -116,8 +117,9 @@ class RoomRuntime {
 
   private announce(s: RoomState): void {
     if (this.chime) playSound('timerDone', true);
-    const room = this.room?.name ?? 'Study room';
-    const body = s.phase === 'work' ? `Round ${s.round}: focus.` : s.phase === 'done' ? 'The room is finished. Nice work.' : `${PHASE_LABEL[s.phase]}. Round ${s.round} done.`;
+    const room = this.room?.name ?? t('focus.studyRoom');
+    const body =
+      s.phase === 'work' ? t('room.roundFocus', { n: s.round }) : s.phase === 'done' ? t('room.finished') : t('room.roundDone', { phase: PHASE_LABEL[s.phase], n: s.round });
     if (typeof document !== 'undefined' && document.visibilityState !== 'visible') notify(`👥 ${room}: ${PHASE_LABEL[s.phase]}`, body, 'study-room');
     else toasts.push({ message: `${room}: ${PHASE_LABEL[s.phase]}`, detail: body, kind: 'info', emoji: s.phase === 'work' ? '🍅' : '☕' });
   }

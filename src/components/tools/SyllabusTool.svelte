@@ -5,7 +5,8 @@
   import { toasts } from '../../lib/toast.svelte';
   import { TASK_TYPES, type TaskType } from '../../lib/types';
   import { extractSyllabus, isPast, type Found } from '../../lib/syllabus';
-  import { DAY_SHORT, fromKey, MONTH_SHORT } from '../../lib/dates';
+  import { dayName, formatMonthDay, fromKey } from '../../lib/dates';
+  import { t } from '../../lib/i18n/index.svelte';
 
   let text = $state('');
   let courseId = $state(store.activeCourses[0]?.id ?? '');
@@ -30,25 +31,25 @@
       const { imageToDataUrl } = await import('../../lib/ai-providers');
       const images = await Promise.all(files.map(async (f) => ({ dataUrl: await imageToDataUrl(f, 1800) })));
       if (visionOk) {
-        photoBusy = 'Reading the photo…';
+        photoBusy = t('syl.readingPhoto');
         const { extractSyllabusAI } = await import('../../lib/ai');
         rows = (await extractSyllabusAI('Read the photo(s): a whiteboard, syllabus or assignment sheet.', store.today, images)).map((f) => ({ ...f, on: !isPast(f, store.today) }));
         searched = true;
         return;
       }
-      photoBusy = 'Loading on-device text recognition (first time ~5 MB)…';
+      photoBusy = t('syl.loadingOcr');
       const { createWorker } = await import('tesseract.js');
       const worker = await createWorker('eng');
       const parts: string[] = [];
       for (const img of images) {
-        photoBusy = `Reading photo ${parts.length + 1} of ${images.length}…`;
+        photoBusy = t('syl.readingN', { i: parts.length + 1, n: images.length });
         parts.push((await worker.recognize(img.dataUrl)).data.text.trim());
       }
       await worker.terminate();
       text = [text.trim(), ...parts].filter(Boolean).join('\n');
       find();
     } catch (err) {
-      toasts.push({ message: 'Couldn’t read the photo', detail: err instanceof Error ? err.message : String(err), kind: 'warn' });
+      toasts.push({ message: t('syl.photoFailed'), detail: err instanceof Error ? err.message : String(err), kind: 'warn' });
     } finally {
       photoBusy = '';
     }
@@ -65,7 +66,7 @@
       rows = (await extractSyllabusAI(text, store.today)).map((f) => ({ ...f, on: !isPast(f, store.today) }));
       searched = true;
     } catch (e) {
-      toasts.push({ message: 'AI couldn’t read that', detail: e instanceof Error ? e.message : String(e), kind: 'warn' });
+      toasts.push({ message: t('syl.aiFailed'), detail: e instanceof Error ? e.message : String(e), kind: 'warn' });
     } finally {
       aiBusy = false;
     }
@@ -79,7 +80,7 @@
   const chosen = $derived(rows.filter((r) => r.on));
   const nTasks = $derived(chosen.filter((r) => r.kind === 'task').length);
   const nBreaks = $derived(chosen.filter((r) => r.kind === 'break').length);
-  const day = (k: string) => `${DAY_SHORT[fromKey(k).getDay()]} ${MONTH_SHORT[fromKey(k).getMonth()]} ${fromKey(k).getDate()}`;
+  const day = (k: string) => `${dayName(fromKey(k).getDay())} ${formatMonthDay(fromKey(k), fromKey(k))}`;
 
   function addAll() {
     const tasks = chosen.filter((r): r is Extract<typeof r, { kind: 'task' }> => r.kind === 'task');
@@ -90,8 +91,8 @@
     if (fresh.length) store.addTasks(fresh.map((t) => ({ title: t.title, dueAt: t.dateKey, type: t.type, courseId: courseId || undefined })));
     for (const b of chosen) if (b.kind === 'break') store.addBreak(b.from, b.to, b.name);
     toasts.push({
-      message: `Added ${fresh.length} task${fresh.length === 1 ? '' : 's'}${nBreaks ? ` and ${nBreaks} break${nBreaks === 1 ? '' : 's'}` : ''}`,
-      detail: tasks.length > fresh.length ? `${tasks.length - fresh.length} were already on your list.` : undefined,
+      message: t('syl.added', { count: fresh.length }) + (nBreaks ? t('syl.andBreaks', { count: nBreaks }) : ''),
+      detail: tasks.length > fresh.length ? t('syl.already', { count: tasks.length - fresh.length }) : undefined,
       kind: 'success',
       emoji: '📋',
     });
@@ -102,67 +103,58 @@
 </script>
 
 <section class="card">
-  <h2>📋 Syllabus box</h2>
+  <h2>📋 {t('tools.syllabus')}</h2>
   <p class="help">
-    Paste a syllabus, course calendar or assignment list, or snap a photo of the board. Every line with a date becomes a task you can check before adding; breaks become Break mode
-    days.
+    {t('syl.help')}
   </p>
-  <textarea
-    class="input"
-    rows="8"
-    bind:value={text}
-    placeholder={'Sep 14 – Read chapter 4\n9/18 Quiz: Unit 1\nOct 14 Midterm exam\nNov 23–27 Thanksgiving break'}
-    aria-label="Syllabus text"
-  ></textarea>
+  <textarea class="input" rows="8" bind:value={text} placeholder={t('syl.placeholder')} aria-label={t('syl.text')}></textarea>
   <div class="row">
-    <label class="file btn sm ghost">📄 Open a .txt file<input type="file" accept=".txt,.md,.csv,text/plain" onchange={openFile} hidden /></label>
-    <label class="file btn sm ghost" title={visionOk ? 'AI reads the photo' : 'Text recognition on this device'}
-      >📷 Photo of the board<input type="file" accept="image/*" capture="environment" multiple onchange={fromPhoto} hidden aria-label="Photo of the board or a handout" /></label
+    <label class="file btn sm ghost">📄 {t('syl.openTxt')}<input type="file" accept=".txt,.md,.csv,text/plain" onchange={openFile} hidden /></label>
+    <label class="file btn sm ghost" title={visionOk ? t('syl.aiReads') : t('syl.ocr')}
+      >📷 {t('syl.photo')}<input type="file" accept="image/*" capture="environment" multiple onchange={fromPhoto} hidden aria-label={t('syl.photoLabel')} /></label
     >
-    <select class="select" bind:value={courseId} aria-label="Course for these tasks">
-      <option value="">No course</option>
+    <select class="select" bind:value={courseId} aria-label={t('syl.course')}>
+      <option value="">{t('inbox.noCourse')}</option>
       {#each store.activeCourses as c (c.id)}<option value={c.id}>{c.emoji ? c.emoji + ' ' : ''}{c.name}</option>{/each}
     </select>
-    <label class="chk"><input type="checkbox" bind:checked={dayFirst} /> Dates are day/month</label>
+    <label class="chk"><input type="checkbox" bind:checked={dayFirst} /> {t('syl.dayFirst')}</label>
     <span class="grow"></span>
-    {#if aiOk}<button class="btn sm" onclick={findWithAI} disabled={!text.trim() || aiBusy}>{aiBusy ? 'Reading…' : '✨ Use AI'}</button>{/if}
-    <button class="btn sm primary" onclick={find} disabled={!text.trim()}>Find dates</button>
+    {#if aiOk}<button class="btn sm" onclick={findWithAI} disabled={!text.trim() || aiBusy}>{aiBusy ? t('syl.reading') : t('syl.useAi')}</button>{/if}
+    <button class="btn sm primary" onclick={find} disabled={!text.trim()}>{t('syl.find')}</button>
   </div>
 
   {#if photoBusy}<p class="muted" role="status">{photoBusy}</p>{/if}
   {#if searched}
     {#if !rows.length}
-      <p class="muted">No dates found. Dates like “Sep 30”, “9/30” or “2026-09-30” work best, one item per line.</p>
+      <p class="muted">{t('syl.none')}</p>
     {:else}
       <table>
-        <thead><tr><th><span class="sr">Add</span></th><th>Date</th><th>What</th><th>Type</th></tr></thead>
+        <thead><tr><th><span class="sr">{t('common.add')}</span></th><th>{t('bulk.date')}</th><th>{t('syl.what')}</th><th>{t('inbox.type')}</th></tr></thead>
         <tbody>
           {#each rows as r, i (i)}
             <tr class:off={!r.on}>
-              <td><input type="checkbox" bind:checked={r.on} aria-label="Add {r.kind === 'task' ? r.title : r.name}" /></td>
+              <td><input type="checkbox" bind:checked={r.on} aria-label={t('syl.addOne', { title: r.kind === 'task' ? r.title : r.name })} /></td>
               {#if r.kind === 'task'}
-                <td><input class="input date" type="date" bind:value={r.dateKey} aria-label="Date for {r.title}" /></td>
-                <td><input class="input" bind:value={r.title} aria-label="Title" /></td>
+                <td><input class="input date" type="date" bind:value={r.dateKey} aria-label={t('syl.dateFor', { title: r.title })} /></td>
+                <td><input class="input" bind:value={r.title} aria-label={t('editor.title')} /></td>
                 <td>
-                  <select class="select" bind:value={r.type} aria-label="Type for {r.title}">
-                    {#each TASK_TYPES as t (t)}<option value={t as TaskType}>{t}</option>{/each}
+                  <select class="select" bind:value={r.type} aria-label={t('syl.typeFor', { title: r.title })}>
+                    {#each TASK_TYPES as ty (ty)}<option value={ty as TaskType}>{t(`type.${ty}`)}</option>{/each}
                   </select>
                 </td>
               {:else}
                 <td class="nowrap">{day(r.from)}{r.to !== r.from ? ` – ${day(r.to)}` : ''}</td>
                 <td>🏖️ {r.name}</td>
-                <td class="muted">break</td>
+                <td class="muted">{t('syl.break')}</td>
               {/if}
             </tr>
           {/each}
         </tbody>
       </table>
-      <p class="muted">Past dates start unchecked.</p>
+      <p class="muted">{t('syl.past')}</p>
       <div class="row">
         <span class="grow"></span>
-        <button class="btn primary" onclick={addAll} disabled={!chosen.length}
-          >Add {nTasks} task{nTasks === 1 ? '' : 's'}{nBreaks ? ` + ${nBreaks} break${nBreaks === 1 ? '' : 's'}` : ''}</button
-        >
+        <button class="btn primary" onclick={addAll} disabled={!chosen.length}>{t('syl.addN', { count: nTasks })}{nBreaks ? t('syl.plusBreaks', { count: nBreaks }) : ''}</button>
       </div>
     {/if}
   {/if}

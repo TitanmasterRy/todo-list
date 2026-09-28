@@ -5,6 +5,7 @@
   import { ATTENDANCE, formatHM, nextMeeting, whatsNow, type Slot } from '../lib/timetable';
   import { toasts } from '../lib/toast.svelte';
   import type { AttendanceMark } from '../lib/types';
+  import { t } from '../lib/i18n/index.svelte';
 
   const info = $derived(store.schedule?.classes.length ? whatsNow(store.schedule, store.now, store.stats.breaks) : undefined);
   const fmt = (t: string) => formatHM(t, store.settings.timeFormat);
@@ -14,7 +15,7 @@
     return c ? `${c.emoji ? c.emoji + ' ' : ''}${c.name}` : s.period.name;
   }
   function room(s: Slot): string {
-    return [s.meetings[0]?.room && `Room ${s.meetings[0].room}`, s.meetings[0]?.teacher].filter(Boolean).join(' · ');
+    return [s.meetings[0]?.room && t('now2.room', { room: s.meetings[0].room }), s.meetings[0]?.teacher].filter(Boolean).join(' · ');
   }
   // quick attendance for the class that's on now
   const curMeeting = $derived(info?.current?.meetings[0]);
@@ -27,14 +28,14 @@
     const c = store.courseById(curMeeting.courseId);
     const next = store.schedule && nextMeeting(store.schedule, curMeeting.courseId, store.today, store.stats.breaks);
     toasts.push({
-      message: `Marked absent${c ? ` from ${c.name}` : ''}`,
-      detail: 'Add a task to catch up on what you missed?',
+      message: c ? t('now2.absentFrom', { name: c.name }) : t('now2.absent'),
+      detail: t('now2.catchUpQ'),
       kind: 'info',
       emoji: '📝',
       timeout: 10000,
       action: {
-        label: 'Add catch-up task',
-        onClick: () => store.addTask({ title: `Catch up on missed ${c?.name ?? 'class'} (notes, homework)`, courseId: curMeeting.courseId, dueAt: next?.key, priority: 'high' }),
+        label: t('now2.catchUpBtn'),
+        onClick: () => store.addTask({ title: t('now2.catchUp', { name: c?.name ?? t('now2.class') }), courseId: curMeeting.courseId, dueAt: next?.key, priority: 'high' }),
       },
     });
   }
@@ -45,18 +46,18 @@
 </script>
 
 {#if info?.schoolDay && !info.done}
-  <section class="card now" aria-label="School schedule now">
-    {#if info.rotation}<span class="rot">{info.rotation} day</span>{/if}
+  <section class="card now" aria-label={t('now2.label')}>
+    {#if info.rotation}<span class="rot">{t('tt.rotDay', { day: info.rotation })}</span>{/if}
     {#if info.current}
       <div class="line">
-        <span class="k">Now</span>
+        <span class="k">{t('now2.now')}</span>
         <strong>{label(info.current)}</strong>
         {#if room(info.current)}<span class="muted">{room(info.current)}</span>{/if}
-        <span class="left">{info.minutesLeft} min left</span>
+        <span class="left">{t('now2.left', { n: info.minutesLeft ?? 0 })}</span>
       </div>
     {/if}
     {#if curMeeting}
-      <span class="marks" role="group" aria-label="Attendance for this class">
+      <span class="marks" role="group" aria-label={t('now2.att')}>
         {#each ATTENDANCE.slice(0, 3) as a (a.id)}
           <button class="chip pick" class:on={curMark === a.id} aria-pressed={curMark === a.id} onclick={() => mark(a.id)} title={a.label}>{a.emoji} {a.label}</button>
         {/each}
@@ -64,21 +65,21 @@
     {/if}
     {#if info.next}
       <div class="line">
-        <span class="k">Next</span>
+        <span class="k">{t('now2.next')}</span>
         <span>{label(info.next)}</span>
-        <span class="muted">at {fmt(info.next.period.start)}{room(info.next) ? ` · ${room(info.next)}` : ''}</span>
-        {#if !info.current}<span class="left">in {info.minutesUntilNext} min</span>{/if}
+        <span class="muted">{t('now2.at', { time: fmt(info.next.period.start) })}{room(info.next) ? ` · ${room(info.next)}` : ''}</span>
+        {#if !info.current}<span class="left">{t('now2.in', { n: info.minutesUntilNext ?? 0 })}</span>{/if}
       </div>
     {/if}
     {#if openForCourse && focusCourse}
-      <button class="link" onclick={() => store.go('courses', { courseId: focusCourse })}>{openForCourse} open task{openForCourse === 1 ? '' : 's'} for this class →</button>
+      <button class="link" onclick={() => store.go('courses', { courseId: focusCourse })}>{t('now2.open', { count: openForCourse })} →</button>
     {/if}
     <button
       class="link muted small"
       onclick={() => {
         ui.toolsTab = 'timetable';
         store.go('tools');
-      }}>Timetable</button
+      }}>{t('tools.timetable')}</button
     >
   </section>
 {/if}

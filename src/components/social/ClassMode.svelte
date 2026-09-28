@@ -7,6 +7,8 @@
   import { buildClassICS, buildClassList, classLink, classSourceUrl, serializeClassList } from '../../lib/classlist';
   import { canPublishGist, classes, importFile, publishedFor, publishGist, refresh, refreshAll, savePublished, subscribe, unsubscribe } from '../../lib/social/classSync.svelte';
   import { socialUi } from '../../lib/social/state.svelte';
+  import { formatDateTime } from '../../lib/dates';
+  import { t } from '../../lib/i18n/index.svelte';
 
   // ---------- teacher ----------
   let courseId = $state(store.activeCourses[0]?.id ?? '');
@@ -44,7 +46,7 @@
     if (!list) return;
     remember();
     downloadText(`${slug}-class-list.json`, serializeClassList(list), 'application/json');
-    toasts.push({ message: 'Class list downloaded', detail: 'Host it anywhere students can reach, or send the file.', kind: 'success', emoji: '🧑‍🏫' });
+    toasts.push({ message: t('class.downloaded'), detail: t('class.downloadedDetail'), kind: 'success', emoji: '🧑‍🏫' });
   }
   function downloadIcs() {
     if (!list) return;
@@ -57,9 +59,9 @@
     publishing = true;
     try {
       await publishGist(courseId, list);
-      toasts.push({ message: pub?.gistId ? 'Class list updated' : 'Class list published', detail: 'Send students the link below.', kind: 'success', emoji: '🧑‍🏫' });
+      toasts.push({ message: pub?.gistId ? t('class.updated') : t('class.published'), detail: t('class.sendLink'), kind: 'success', emoji: '🧑‍🏫' });
     } catch (e) {
-      toasts.push({ message: "Couldn't publish the gist", detail: e instanceof Error ? e.message : String(e), kind: 'warn', timeout: 10000 });
+      toasts.push({ message: t('class.gistFailed'), detail: e instanceof Error ? e.message : String(e), kind: 'warn', timeout: 10000 });
     } finally {
       publishing = false;
     }
@@ -67,9 +69,9 @@
   async function copy(text: string, what: string) {
     try {
       await navigator.clipboard.writeText(text);
-      toasts.push({ message: `${what} copied`, kind: 'success', emoji: '📋' });
+      toasts.push({ message: t('friends.copied', { what }), kind: 'success', emoji: '📋' });
     } catch {
-      toasts.push({ message: "Couldn't copy: select it and copy it", kind: 'warn' });
+      toasts.push({ message: t('friends.copyFailed'), kind: 'warn' });
     }
   }
 
@@ -83,7 +85,7 @@
       subUrl = '';
       socialUi.classUrl = '';
     } catch (err) {
-      toasts.push({ message: "Couldn't subscribe", detail: err instanceof Error ? err.message : String(err), kind: 'warn', timeout: 10000 });
+      toasts.push({ message: t('class.subFailed'), detail: err instanceof Error ? err.message : String(err), kind: 'warn', timeout: 10000 });
     }
   }
   async function onFile(e: Event) {
@@ -92,131 +94,129 @@
     input.value = '';
     if (!f) return;
     try {
-      if (f.size > 512 * 1024) throw new Error('The file is too big (over 512 kB).');
+      if (f.size > 512 * 1024) throw new Error(t('class.tooBig'));
       importFile(await f.text());
     } catch (err) {
-      toasts.push({ message: "Couldn't import the class list", detail: err instanceof Error ? err.message : String(err), kind: 'warn', timeout: 10000 });
+      toasts.push({ message: t('class.importFailed'), detail: err instanceof Error ? err.message : String(err), kind: 'warn', timeout: 10000 });
     }
   }
   function when(iso?: string): string {
-    return iso ? new Date(iso).toLocaleString([], { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) : 'never';
+    return iso ? formatDateTime(new Date(iso), { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) : t('google.never');
   }
 </script>
 
-<section class="card" aria-label="Subscribe to a class">
-  <h2>Subscribe to a class</h2>
+<section class="card" aria-label={t('class.subTitle')}>
+  <h2>{t('class.subTitle')}</h2>
   <p class="help">
-    Paste the link your teacher shared. The app fetches the list now, each time it opens, and when you press Refresh, and adds the assignments to that course. It's read-only:
-    nothing goes back to the teacher, and your own changes (notes, done, deleted) stay yours.
+    {t('class.subHelp')}
   </p>
   {#if socialUi.classUrl}
-    <p class="banner">🧑‍🏫 Someone shared a class list with you. Check the link, then press Subscribe.</p>
+    <p class="banner">🧑‍🏫 {t('class.shared')}</p>
   {/if}
-  <form class="row" onsubmit={doSubscribe} aria-label="Subscribe to a class list">
-    <input class="input grow" bind:value={subUrl} placeholder="https://gist.githubusercontent.com/…/homework-todo-class.json" aria-label="Class list link" />
-    <button class="btn primary" type="submit" disabled={!subUrl.trim() || classes.busy === 'new'}>{classes.busy === 'new' ? 'Subscribing…' : 'Subscribe'}</button>
+  <form class="row" onsubmit={doSubscribe} aria-label={t('class.subList')}>
+    <input class="input grow" bind:value={subUrl} placeholder="https://gist.githubusercontent.com/…/homework-todo-class.json" aria-label={t('class.link')} />
+    <button class="btn primary" type="submit" disabled={!subUrl.trim() || classes.busy === 'new'}>{classes.busy === 'new' ? t('class.subscribing') : t('class.subscribe')}</button>
   </form>
-  <label class="file">Or import a class list file <input type="file" accept=".json,application/json" onchange={onFile} aria-label="Import a class list file" /></label>
+  <label class="file">{t('class.orFile')} <input type="file" accept=".json,application/json" onchange={onFile} aria-label={t('class.fileLabel')} /></label>
 
   {#if classes.subs.length}
-    <ul class="subs" aria-label="Class subscriptions">
+    <ul class="subs" aria-label={t('class.subs')}>
       {#each classes.subs as s (s.listId)}
         <li>
           <div class="grow">
             <strong>{store.courseById(s.courseId)?.emoji ?? '🧑‍🏫'} {s.course}</strong>
             {#if s.teacher}<span class="muted">· {s.teacher}</span>{/if}
             <div class="muted">
-              {s.items} assignment{s.items === 1 ? '' : 's'} · list updated {when(s.updatedAt)} · checked {when(s.lastSync)}{s.url ? '' : ' · from a file'}{s.removed
-                ? ` · ${s.removed} no longer listed`
-                : ''}
+              {t('class.items', { count: s.items })} · {t('class.listUpdated', { when: when(s.updatedAt) })} · {t('class.checked', { when: when(s.lastSync) })}{s.url
+                ? ''
+                : ` · ${t('class.fromFile')}`}{s.removed ? ` · ${t('class.removed', { n: s.removed })}` : ''}
             </div>
             {#if s.lastError}<div class="err">{s.lastError}</div>{/if}
           </div>
           <div class="row">
-            {#if s.url}<button class="btn sm" onclick={() => refresh(s.listId)} disabled={!!classes.busy}>{classes.busy === s.listId ? 'Refreshing…' : 'Refresh'}</button>{/if}
-            <button class="btn ghost sm" onclick={() => store.go('courses', { courseId: s.courseId ?? null })}>Open course</button>
+            {#if s.url}<button class="btn sm" onclick={() => refresh(s.listId)} disabled={!!classes.busy}
+                >{classes.busy === s.listId ? t('class.refreshing') : t('class.refresh')}</button
+              >{/if}
+            <button class="btn ghost sm" onclick={() => store.go('courses', { courseId: s.courseId ?? null })}>{t('class.openCourse')}</button>
             {#if unsubbing === s.listId}
               <button
                 class="btn sm"
                 onclick={() => {
                   unsubscribe(s.listId);
                   unsubbing = null;
-                }}>Keep tasks</button
+                }}>{t('class.keep')}</button
               >
               <button
                 class="btn sm danger"
                 onclick={() => {
                   unsubscribe(s.listId, true);
                   unsubbing = null;
-                }}>Remove open tasks</button
+                }}>{t('class.removeOpen')}</button
               >
             {:else}
-              <button class="btn ghost sm" onclick={() => (unsubbing = s.listId)}>Unsubscribe</button>
+              <button class="btn ghost sm" onclick={() => (unsubbing = s.listId)}>{t('class.unsubscribe')}</button>
             {/if}
           </div>
         </li>
       {/each}
     </ul>
-    {#if classes.subs.filter((s) => s.url).length > 1}<button class="btn sm" onclick={() => refreshAll()} disabled={!!classes.busy}>Refresh all</button>{/if}
+    {#if classes.subs.filter((s) => s.url).length > 1}<button class="btn sm" onclick={() => refreshAll()} disabled={!!classes.busy}>{t('class.refreshAll')}</button>{/if}
   {/if}
 </section>
 
-<section class="card" aria-label="Publish a class list">
-  <h2>Publish a class list <span class="muted">for teachers</span></h2>
+<section class="card" aria-label={t('class.pubTitle')}>
+  <h2>{t('class.pubTitle')} <span class="muted">{t('class.forTeachers')}</span></h2>
   <p class="help">
-    Pick a course and share its assignments with students. Only each assignment's title, due date, type, notes (if you tick it) and link are published: never grades, completion,
-    time spent or anything else from this app.
+    {t('class.pubHelp')}
   </p>
   {#if !store.activeCourses.length}
-    <p class="muted">Add a course with some assignments first.</p>
+    <p class="muted">{t('class.addCourse')}</p>
   {:else}
     <div class="grid2">
       <label
-        >Course
-        <select class="select" bind:value={courseId} aria-label="Course to publish">
+        >{t('inbox.course')}
+        <select class="select" bind:value={courseId} aria-label={t('class.coursePub')}>
           {#each store.activeCourses as c (c.id)}<option value={c.id}>{c.emoji ?? ''} {c.name}</option>{/each}
         </select>
       </label>
-      <label>Teacher name (optional) <input class="input" bind:value={teacher} maxlength="60" placeholder="Ms. Rivera" /></label>
-      <label class="check"><input type="checkbox" bind:checked={includeNotes} /> Include notes</label>
-      <label class="check"><input type="checkbox" bind:checked={upcomingOnly} /> Only today and later</label>
+      <label>{t('class.teacher')} <input class="input" bind:value={teacher} maxlength="60" placeholder={t('class.teacherPh')} /></label>
+      <label class="check"><input type="checkbox" bind:checked={includeNotes} /> {t('class.notes')}</label>
+      <label class="check"><input type="checkbox" bind:checked={upcomingOnly} /> {t('class.upcoming')}</label>
     </div>
-    <p class="muted">{list?.items.length ?? 0} assignment{list?.items.length === 1 ? '' : 's'} will be published.</p>
+    <p class="muted">{t('class.willPublish', { count: list?.items.length ?? 0 })}</p>
     <div class="row">
-      <button class="btn primary" onclick={downloadJson} disabled={!list?.items.length}>Download class list (.json)</button>
-      <button class="btn" onclick={downloadIcs} disabled={!list?.items.length}>Download calendar (.ics)</button>
+      <button class="btn primary" onclick={downloadJson} disabled={!list?.items.length}>{t('class.dlJson')}</button>
+      <button class="btn" onclick={downloadIcs} disabled={!list?.items.length}>{t('class.dlIcs')}</button>
       {#if canPublishGist()}
         <button class="btn" onclick={toGist} disabled={!list?.items.length || publishing}
-          >{publishing ? 'Publishing…' : pub?.gistId ? 'Update public gist' : 'Publish as public gist'}</button
+          >{publishing ? t('class.publishing') : pub?.gistId ? t('class.updateGist') : t('class.publishGist')}</button
         >
       {/if}
     </div>
     {#if !canPublishGist()}
       <p class="muted">
-        Add a GitHub token in Settings → Sync (Gist) to publish a link you can update with one click. Or host the downloaded file anywhere and paste its link below.
+        {t('class.noToken')}
       </p>
     {/if}
     {#if pub?.rawUrl}
       <div class="links">
         <p class="muted">
-          Published {when(pub.publishedAt)}. Anyone with these links can read the list (a public gist). Press Update after changing assignments; students get it the next time their
-          app opens.
+          {t('class.publishedAt', { when: when(pub.publishedAt) })}
         </p>
-        <label>Link for students <input class="input" readonly value={classLink(pub.rawUrl, location.href)} aria-label="Link for students" /></label>
-        <button class="btn sm" onclick={() => copy(classLink(pub.rawUrl!, location.href), 'Student link')}>Copy student link</button>
-        <label>Calendar feed (.ics) <input class="input" readonly value={pub.icsUrl} aria-label="Calendar feed link" /></label>
-        <button class="btn sm" onclick={() => copy(pub.icsUrl ?? '', 'Calendar link')}>Copy calendar link</button>
-        {#if pub.htmlUrl}<a class="muted" href={pub.htmlUrl} target="_blank" rel="noopener noreferrer">Open the gist on GitHub</a>{/if}
+        <label>{t('class.studentLink')} <input class="input" readonly value={classLink(pub.rawUrl, location.href)} aria-label={t('class.studentLink')} /></label>
+        <button class="btn sm" onclick={() => copy(classLink(pub.rawUrl!, location.href), t('class.studentLinkWhat'))}>{t('class.copyStudent')}</button>
+        <label>{t('class.feed')} <input class="input" readonly value={pub.icsUrl} aria-label={t('class.feedLabel')} /></label>
+        <button class="btn sm" onclick={() => copy(pub.icsUrl ?? '', t('class.calLinkWhat'))}>{t('class.copyCal')}</button>
+        {#if pub.htmlUrl}<a class="muted" href={pub.htmlUrl} target="_blank" rel="noopener noreferrer">{t('class.openGist')}</a>{/if}
       </div>
     {/if}
     <details class="hosted">
-      <summary>Hosting the file yourself?</summary>
+      <summary>{t('class.selfHost')}</summary>
       <p class="muted">
-        Put the .json file on any https site that allows cross-site reads (GitHub, a school site with CORS), then paste its address to get a student link. The .ics file works as a
-        calendar subscription in Google, Apple and Outlook calendars.
+        {t('class.selfHostHelp')}
       </p>
-      <input class="input" bind:value={hostedUrl} placeholder="https://…/class-list.json" aria-label="Hosted class list address" />
-      {#if hostedLink}<input class="input" readonly value={hostedLink} aria-label="Student link for the hosted file" />{/if}
+      <input class="input" bind:value={hostedUrl} placeholder="https://…/class-list.json" aria-label={t('class.hostedAddr')} />
+      {#if hostedLink}<input class="input" readonly value={hostedLink} aria-label={t('class.hostedLink')} />{/if}
     </details>
   {/if}
 </section>

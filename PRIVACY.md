@@ -11,6 +11,7 @@ Homework To-Do is local-first. It is a static site with no server of its own, no
 | Account session (only if you sign in) | localStorage (`homework-todo:auth`), managed by the Supabase client |
 | Tool drafts, arcade scores, reminder bookkeeping, UI choices | localStorage (`homework-todo:*`) |
 | Study room you're in, friends list and your friend-card name, class lists you follow or publish | localStorage (`homework-todo:study-room`, `:friends`, `:friend-profile`, `:class-subs`, `:class-published`); not part of the synced data |
+| Play → Watch sources, saved video positions, playback speed | localStorage (`homework-todo:watch`); not part of the synced data. Media-server sign-in tokens are stored like the other keys (`watchTokens`, encrypted with **Lock my keys**); your server password is never stored. |
 | Google and Spotify access tokens | memory only (gone when the tab closes); the Spotify refresh token is stored like the other keys |
 | The app itself (for offline use) | the service worker cache |
 
@@ -34,6 +35,9 @@ Attachments never leave the device: only their names sync. **Settings → Data �
 | Citation lookup | `api.crossref.org` (DOI), `openlibrary.org` (ISBN) | The DOI or ISBN you look up. |
 | Python in the Code tool, on-device OCR | `cdn.jsdelivr.net` | Downloads of the Pyodide and Tesseract engines and data on first use. Your code and photos stay on the device. |
 | Java / C++ in the Code tool | `onecompiler.com` | Only a link that opens in a new tab; nothing is sent automatically. |
+| Watch: Jellyfin / Emby | only the server you add | Your username and password once, to sign in (then its token), requests for your libraries and items, and what you play and where you stopped (so resume works on every device). The app identifies itself as "Homework To-Do" with a random device id. |
+| Watch: embedded players, server web apps, video links | the site of each link you add (e.g. `www.youtube-nocookie.com`, `player.vimeo.com`, `player.twitch.tv`, `app.plex.tv`) | Loaded in sandboxed frames that can't read your data; those sites may set their own cookies. No referrer is sent, except the site's address to YouTube, Vimeo, Twitch and Dailymotion, whose players require it. |
+| Watch: HLS streams | `cdn.jsdelivr.net` | A one-time download of hls.js, only when a browser without built-in HLS plays a stream. |
 | Arcade | this site; embed-link games load from their own sites | Games run in sandboxed frames that can't read your data. |
 | Study room link | nobody (you send the link yourself) | The link holds the room's name, start time and timer lengths, in the part after `#`, which browsers don't send to the web host. |
 | Study room "Show who's in" (only with an account) | the site's Supabase project (Realtime) | The name you type, to the others in the same room while you're in it. Nothing is stored. |

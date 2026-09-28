@@ -2,28 +2,49 @@
   import { economy } from '../../lib/economy.svelte';
   import { LIR_PAYTABLE, lirDeal, lirDecide, lirReturned, rideFirst, rideSecond, type LirRound } from '../../lib/casino/letitride';
   import { describeHand, evalHand } from '../../lib/casino/poker';
-  import { playSound } from '../../lib/sounds';
   import BetControl from './BetControl.svelte';
+  import BotAvatar from './BotAvatar.svelte';
+  import ChipStack from './ChipStack.svelte';
   import PlayingCard from './PlayingCard.svelte';
+  import WinFx from './WinFx.svelte';
+  import { chipsIn, chipsOut, wait } from './fx';
 
   let unit = $state(10);
   let r = $state<LirRound | null>(null);
   let hint = $state(false);
+  let busy = $state(false);
+  let n = $state(0);
+  let fx = $state<WinFx>();
+  let spotEls = $state<HTMLElement[]>([]);
 
-  function deal() {
-    if (!economy.bet('let it ride', unit * 3)) return;
+  async function deal() {
+    if (busy || !economy.bet('let it ride', unit * 3)) return;
+    spotEls.forEach((el, i) => setTimeout(() => chipsIn(el, unit), i * 90));
+    fx?.clear();
     hint = false;
+    n++;
     r = lirDeal(unit);
+    busy = true;
+    await wait(3 * 200 + 520);
+    busy = false;
   }
-  function decide(ride: boolean) {
-    if (!r || r.step === 'done') return;
+  async function decide(ride: boolean) {
+    if (!r || r.step === 'done' || busy) return;
+    const step = r.step;
     // a pulled bet goes straight back to you
-    if (!ride) economy.payout('let it ride', r.unit);
+    if (!ride) {
+      economy.payout('let it ride', r.unit);
+      chipsOut(spotEls[step - 1], r.unit);
+    }
     r = lirDecide(r, ride);
     hint = false;
+    busy = true;
+    await wait(520);
+    busy = false;
     if (r.step === 'done') {
       economy.payout('let it ride', r.payout);
-      if (r.payout > 0) playSound('pop');
+      fx?.show(r.payout + lirReturned(r), r.unit * 3);
+      if (r.payout > 0) spotEls.forEach((el, i) => r!.riding[i] && setTimeout(() => chipsOut(el, r!.payout / Math.max(1, riding)), i * 120));
     }
   }
 
@@ -32,55 +53,67 @@
   const riding = $derived(r ? r.riding.filter(Boolean).length : 0);
   const net = $derived(r?.step === 'done' ? r.payout + lirReturned(r) - r.unit * 3 : 0);
   const label = $derived(r?.step === 'done' ? describeHand(r.value ?? evalHand([...r.player, ...r.community])) : '');
+  const settled = $derived(r?.step === 'done' && !busy);
 </script>
 
 <div class="cz-game">
-  <div class="cz-table">
-    <div class="zone">
-      <div class="cz-label">Community cards</div>
-      <div class="cz-hand">
-        {#if r}{#each r.community as c, i (i)}<span class="deal" style="animation-delay: {i * 60}ms"><PlayingCard card={c} hidden={i >= shown} /></span>{/each}{:else}<span
-            class="deal"><PlayingCard hidden /></span
-          ><span class="deal" style="animation-delay: 60ms"><PlayingCard hidden /></span>{/if}
+  <div class="cz-table lir">
+    <div class="top">
+      <div class="cz-dealer">
+        <BotAvatar who="lou" size={48} label="Lou, the dealer" />
+        <span class="who"><strong>Lou</strong><span>Dealer</span></span>
       </div>
+      <span class="cz-shoe" aria-hidden="true"></span>
     </div>
-    <div class="zone me" class:won={r?.step === 'done' && net > 0}>
-      <div class="cz-label">
-        You {#if r}<span class="pill">{r.step === 'done' ? label : 'three cards'}</span>{/if}
+    <div class="cz-label center">Community cards</div>
+    {#key n}
+      <div class="cz-hand center" style="--from-x: 90px; --from-y: -80px">
+        {#if r}{#each r.community as c, i (i)}<PlayingCard card={c} hidden={i >= shown} delay={600 + i * 200} flipDelay={150} />{/each}{:else}<PlayingCard
+            hidden
+            deal={false}
+          /><PlayingCard hidden deal={false} />{/if}
       </div>
-      <div class="cz-hand">
-        {#if r}{#each r.player as c, i (i)}<span class="deal" style="animation-delay: {i * 60}ms"><PlayingCard card={c} /></span>{/each}{/if}
-      </div>
-    </div>
-    <div class="spots" aria-label="Your three bets">
+    {/key}
+    <div class="bets" aria-label="Your three bets" role="group">
       {#each [0, 1, 2] as i (i)}
-        <span class="spot" class:filled={r && r.riding[i]} class:pulled={r && !r.riding[i]}>{i === 2 ? '$' : i + 1}<small>{r ? (r.riding[i] ? r.unit : 'back') : unit}</small></span
-        >
+        <div class="cz-spot" class:pulled={r && !r.riding[i]} class:win={settled && r!.payout > 0 && r!.riding[i]} bind:this={spotEls[i]}>
+          <span class="mark" aria-hidden="true">{i === 2 ? '$' : i + 1}</span>
+          {#if !r || r.riding[i]}<span class="stack"><ChipStack amount={r ? r.unit : unit} size={26} tag={false} /></span>{/if}
+          <span class="cz-spot-label">{i === 2 ? '$' : `Bet ${i + 1}`} · {r ? (r.riding[i] ? `${r.unit} riding` : 'back') : `${unit}`}</span>
+        </div>
       {/each}
     </div>
-    <div class="cz-result" aria-live="polite" class:win={r?.step === 'done' && net > 0} class:lose={r?.step === 'done' && net < 0}>
+    <div class="cz-label center">
+      You {#if r}<span class="cz-badge">{settled ? label : 'three cards'}</span>{/if}
+    </div>
+    {#key n}
+      <div class="cz-hand center" style="--from-x: 130px; --from-y: -240px">
+        {#if r}{#each r.player as c, i (i)}<PlayingCard card={c} delay={i * 200} />{/each}{/if}
+      </div>
+    {/key}
+    <div class="cz-result center" aria-live="polite" class:win={settled && net > 0} class:lose={settled && net < 0}>
       {#if r && r.step !== 'done'}
         {r.step === 1 ? 'Let bet 1 ride, or pull it back?' : 'Let bet 2 ride, or pull it back?'}
         {#if hint}<span class="tip">Basic strategy: {advice ? 'let it ride' : 'pull it back'}.</span>{/if}
-      {:else if r?.step === 'done'}
+      {:else if settled && r}
         {r.payout ? `${LIR_PAYTABLE.find((p) => p.hand === r!.hand)?.label} on ${riding} bet${riding === 1 ? '' : 's'}` : 'No win'} · {net >= 0 ? '+' : ''}{net.toLocaleString()}
       {/if}
     </div>
+    <WinFx bind:this={fx} />
   </div>
-  <div class="cz-actions">
+  <div class="cz-deck">
     {#if r && r.step !== 'done'}
-      <button class="btn primary" onclick={() => decide(true)}>Let it ride</button>
-      <button class="btn" onclick={() => decide(false)}>Pull back {r.unit}</button>
+      <button class="btn cz-go" onclick={() => decide(true)} disabled={busy}>Let it ride</button>
+      <button class="btn cz-alt" onclick={() => decide(false)} disabled={busy}>Pull back {r.unit}</button>
       <button class="btn ghost sm" onclick={() => (hint = true)} disabled={hint}>Hint</button>
     {:else}
-      <BetControl bind:value={unit} label="Each bet" />
-      <button class="btn primary" onclick={deal} disabled={unit * 3 > economy.wallet.chips}>Deal ({(unit * 3).toLocaleString()})</button>
+      <BetControl bind:value={unit} label="Each bet" disabled={busy} />
+      <div class="grow"></div>
+      <button class="btn cz-go" onclick={deal} disabled={busy || unit * 3 > economy.wallet.chips}>Deal ({(unit * 3).toLocaleString()})</button>
     {/if}
   </div>
   <div class="cz-paytable">
-    {#each LIR_PAYTABLE as p (p.hand)}<span class:hit={r?.step === 'done' && r.hand === p.hand}>{p.label}</span><span class:hit={r?.step === 'done' && r.hand === p.hand}
-        >{p.pays}:1</span
-      >{/each}
+    {#each LIR_PAYTABLE as p (p.hand)}<span class:hit={settled && r?.hand === p.hand}>{p.label}</span><span class:hit={settled && r?.hand === p.hand}>{p.pays}:1</span>{/each}
   </div>
   <p class="cz-edge">
     You place three equal bets and get three cards; two community cards finish the hand. Pull back bet 1 after your cards, bet 2 after the first community card. The $ bet always
@@ -89,116 +122,53 @@
 </div>
 
 <style>
-  .zone {
-    padding: 8px 10px;
-    border-radius: var(--radius);
-    background: rgba(0, 0, 0, 0.18);
-    border: 1px solid rgba(255, 255, 255, 0.12);
-    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
-    transition: box-shadow var(--dur-slow);
-  }
-  .zone.me {
-    border-top: 3px solid #ffe066;
-  }
-  .zone.won {
-    box-shadow:
-      inset 0 1px 0 rgba(255, 255, 255, 0.08),
-      0 0 0 2px #ffe066,
-      0 0 22px rgba(255, 224, 102, 0.6);
-  }
-  .cz-label {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    flex-wrap: wrap;
-  }
-  /* hand names in glossy pills */
-  .pill {
-    font-size: 12px;
-    font-weight: 900;
-    letter-spacing: 0;
-    text-transform: none;
-    padding: 2px 10px;
-    border-radius: 999px;
-    background: rgba(0, 0, 0, 0.35);
-    border: 1px solid rgba(255, 255, 255, 0.25);
-    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.2);
-    animation: bump 420ms var(--spring);
-  }
-  .won .pill {
-    background: var(--grad-gold);
-    color: #3a2e00;
-    text-shadow: none;
-    border-color: #fff3b0;
-  }
-  .deal {
-    display: inline-block;
-    animation: cz-pop 260ms var(--spring) backwards;
-  }
-  /* bet spots: dashed gold rings that fill once a bet is down */
-  .spots {
-    display: flex;
+  .lir {
     gap: 10px;
-    flex-wrap: wrap;
   }
-  .spot {
-    min-width: 56px;
-    height: 56px;
-    padding: 0 8px;
-    border-radius: 50%;
-    border: 2px dashed rgba(255, 224, 102, 0.75);
-    display: grid;
-    place-content: center;
-    text-align: center;
-    line-height: 1.1;
-    font-size: 10px;
-    font-weight: 800;
-    text-transform: uppercase;
-    letter-spacing: 0.06em;
-    font-variant-numeric: tabular-nums;
-    color: #ffe066;
-    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
-    transition:
-      background var(--dur-slow),
-      box-shadow var(--dur-slow),
-      color var(--dur-slow),
-      opacity var(--dur-slow),
-      transform var(--dur) var(--spring);
+  .top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
   }
-  .spot small {
-    font-size: 13px;
+  .center {
+    justify-content: center;
+  }
+  .bets {
+    display: flex;
+    justify-content: center;
+    gap: 48px;
+    padding: 4px 0 20px;
+  }
+  .bets .cz-spot {
+    width: 66px;
+    height: 66px;
+    transition: opacity 300ms;
+  }
+  .mark {
+    font-family: Georgia, serif;
+    font-size: 26px;
     font-weight: 900;
-    letter-spacing: 0;
-    min-height: 13px;
+    color: rgba(255, 236, 170, 0.5);
   }
-  .spot.filled {
-    background: var(--grad-gold);
-    color: #3a2e00;
-    text-shadow: none;
-    border-style: solid;
-    border-color: #fff3b0;
-    box-shadow:
-      inset 0 1px 0 rgba(255, 255, 255, 0.7),
-      0 0 16px rgba(255, 224, 102, 0.6);
-    transform: scale(1.06);
+  .stack {
+    position: absolute;
+    bottom: 10px;
   }
-  .spot.pulled {
-    opacity: 0.45;
-    border-style: dotted;
+  .bets :global(.cz-spot-label) {
+    letter-spacing: 0.06em;
+    font-size: 10px;
   }
-  .spots .spot:first-child {
-    font-size: 15px;
-  }
-  .spots .spot:nth-child(2) {
-    font-size: 15px;
-  }
-  .spots .spot:last-child {
-    font-size: 17px;
+  .cz-spot.pulled {
+    opacity: 0.5;
+    border-style: dashed;
   }
   .tip {
     display: block;
     font-weight: 500;
     font-size: 13px;
     opacity: 0.9;
+  }
+  .grow {
+    flex: 1;
   }
 </style>

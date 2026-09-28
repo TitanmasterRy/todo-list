@@ -3,7 +3,8 @@
   // classes (course + period + room) and one-off days (no school, early release, forced A/B day).
   import { store } from '../../lib/store.svelte';
   import { uid } from '../../lib/id';
-  import { addDaysKey, DAY_NAMES, DAY_SHORT, fromKey, MONTH_SHORT, startOfWeekKey } from '../../lib/dates';
+  import { addDaysKey, dayName, formatMonthDay, fromKey, startOfWeekKey } from '../../lib/dates';
+  import { t } from '../../lib/i18n/index.svelte';
   import { ATTENDANCE, attendanceSummary, bellProblems, daySlots, defaultBell, emptySchedule, formatHM, recentMeetings, rotationDay } from '../../lib/timetable';
   import type { BellSchedule, ClassMeeting, DayOverride, SchoolSchedule } from '../../lib/types';
 
@@ -28,7 +29,7 @@
   const weekStart = $derived(addDaysKey(startOfWeekKey(store.today, store.settings.weekStart), weekOffset * 7));
   const weekDays = $derived(Array.from({ length: 7 }, (_, i) => addDaysKey(weekStart, i)).filter((k) => draft.schoolDays.includes(fromKey(k).getDay())));
   const fmt = (t: string) => formatHM(t, store.settings.timeFormat);
-  const md = (k: string) => `${MONTH_SHORT[fromKey(k).getMonth()]} ${fromKey(k).getDate()}`;
+  const md = (k: string) => formatMonthDay(fromKey(k), fromKey(k));
   const course = (id: string) => store.courseById(id);
 
   // ---------- attendance (always read from / written to the store, not the draft) ----------
@@ -38,12 +39,12 @@
   const recentDays = $derived([...new Set(recent.map((r) => r.key))]);
 
   // ---------- setup helpers ----------
-  const ROTATIONS: { label: string; days: string[] }[] = [
-    { label: 'No rotation (same every day)', days: [] },
-    { label: 'A / B days', days: ['A', 'B'] },
-    { label: 'Day 1–4', days: ['1', '2', '3', '4'] },
-    { label: 'Day 1–6', days: ['1', '2', '3', '4', '5', '6'] },
-  ];
+  const ROTATIONS: { label: string; days: string[] }[] = $derived([
+    { label: t('tt.noRotation'), days: [] },
+    { label: t('tt.ab'), days: ['A', 'B'] },
+    { label: t('tt.day14'), days: ['1', '2', '3', '4'] },
+    { label: t('tt.day16'), days: ['1', '2', '3', '4', '5', '6'] },
+  ]);
   const rotationPreset = $derived(ROTATIONS.findIndex((r) => r.days.join() === draft.rotation.join()));
   function setRotation(i: number) {
     draft.rotation = [...ROTATIONS[i].days];
@@ -51,7 +52,7 @@
     if (!draft.rotation.length) for (const m of draft.classes) m.rotationDays = undefined;
   }
   function addBell() {
-    const b: BellSchedule = { id: uid('bell'), name: 'Early release', periods: draft.bells[0].periods.map((p) => ({ ...p, id: uid('per') })) };
+    const b: BellSchedule = { id: uid('bell'), name: t('tt.earlyRelease'), periods: draft.bells[0].periods.map((p) => ({ ...p, id: uid('per') })) };
     draft.bells = [...draft.bells, b];
   }
   function removeBell(id: string) {
@@ -65,10 +66,10 @@
     const [h, m] = start.split(':').map(Number);
     const endMin = h * 60 + m + 50;
     const end = `${String(Math.floor(endMin / 60) % 24).padStart(2, '0')}:${String(endMin % 60).padStart(2, '0')}`;
-    b.periods.push({ id: uid('per'), name: `Period ${b.periods.filter((p) => /^period/i.test(p.name)).length + 1}`, start, end });
+    b.periods.push({ id: uid('per'), name: t('tt.period', { n: b.periods.filter((p) => /^(period|hora)/i.test(p.name)).length + 1 }), start, end });
   }
   function addClass() {
-    const firstClassPeriod = draft.bells[0]?.periods.find((p) => !draft.classes.some((m) => m.periodId === p.id) && !/lunch|break|homeroom/i.test(p.name));
+    const firstClassPeriod = draft.bells[0]?.periods.find((p) => !draft.classes.some((m) => m.periodId === p.id) && !/lunch|break|homeroom|almuerzo|recreo|tutoría/i.test(p.name));
     const c: ClassMeeting = { id: uid('cls'), courseId: store.activeCourses[0]?.id ?? '', periodId: firstClassPeriod?.id ?? draft.bells[0]?.periods[0]?.id ?? '' };
     draft.classes = [...draft.classes, c];
   }
@@ -92,7 +93,11 @@
       .sort(([a], [b]) => (a < b ? -1 : 1)),
   );
   function describeOverride(o: DayOverride): string {
-    return [o.noSchool && 'No school', o.bellId && `${draft.bells.find((b) => b.id === o.bellId)?.name ?? 'Other'} bell`, o.rotation && `${o.rotation} day`]
+    return [
+      o.noSchool && t('tt.noSchool'),
+      o.bellId && t('tt.bell', { name: draft.bells.find((b) => b.id === o.bellId)?.name ?? t('tt.other') }),
+      o.rotation && t('tt.rotDay', { day: o.rotation }),
+    ]
       .filter(Boolean)
       .join(' · ');
   }
@@ -100,35 +105,38 @@
 
 <section class="card">
   <div class="head">
-    <h2>🏫 Timetable</h2>
-    <div class="seg" role="radiogroup" aria-label="Timetable mode">
-      <button role="radio" aria-checked={mode === 'week'} class:on={mode === 'week'} onclick={() => (mode = 'week')}>Week</button>
-      <button role="radio" aria-checked={mode === 'attendance'} class:on={mode === 'attendance'} onclick={() => (mode = 'attendance')}>Attendance</button>
-      <button role="radio" aria-checked={mode === 'setup'} class:on={mode === 'setup'} onclick={() => (mode = 'setup')}>Setup</button>
+    <h2>🏫 {t('tools.timetable')}</h2>
+    <div class="seg" role="radiogroup" aria-label={t('tt.mode')}>
+      <button role="radio" aria-checked={mode === 'week'} class:on={mode === 'week'} onclick={() => (mode = 'week')}>{t('tt.week')}</button>
+      <button role="radio" aria-checked={mode === 'attendance'} class:on={mode === 'attendance'} onclick={() => (mode = 'attendance')}>{t('tt.attendance')}</button>
+      <button role="radio" aria-checked={mode === 'setup'} class:on={mode === 'setup'} onclick={() => (mode = 'setup')}>{t('tt.setup')}</button>
     </div>
   </div>
 
   {#if mode === 'week'}
     <div class="weeknav">
-      <button class="btn sm ghost" onclick={() => weekOffset--} aria-label="Previous week">←</button>
-      <strong>Week of {md(weekStart)}</strong>
-      <button class="btn sm ghost" onclick={() => weekOffset++} aria-label="Next week">→</button>
-      {#if weekOffset}<button class="btn sm ghost" onclick={() => (weekOffset = 0)}>This week</button>{/if}
+      <button class="btn sm ghost" onclick={() => weekOffset--} aria-label={t('tt.prevWeek')}>←</button>
+      <strong>{t('tt.weekOf', { date: md(weekStart) })}</strong>
+      <button class="btn sm ghost" onclick={() => weekOffset++} aria-label={t('tt.nextWeek')}>→</button>
+      {#if weekOffset}<button class="btn sm ghost" onclick={() => (weekOffset = 0)}>{t('tt.thisWeek')}</button>{/if}
     </div>
     {#if !draft.classes.length}
-      <p class="muted">No classes yet. Open <button class="link" onclick={() => (mode = 'setup')}>Setup</button> to add your periods and classes.</p>
+      <p class="muted">
+        {t('tt.noClasses')} <button class="link" onclick={() => (mode = 'setup')}>{t('tt.setup')}</button>
+        {t('tt.noClasses2')}
+      </p>
     {/if}
     <div class="week" style="--cols:{weekDays.length || 1}">
       {#each weekDays as k (k)}
         {@const slots = daySlots(draft, k, breaks)}
         {@const rot = rotationDay(draft, k, breaks)}
-        <div class="day" class:today={k === store.today} aria-label="{DAY_NAMES[fromKey(k).getDay()]} {md(k)}">
+        <div class="day" class:today={k === store.today} aria-label="{dayName(fromKey(k).getDay(), 'long')} {md(k)}">
           <h3>
-            {DAY_SHORT[fromKey(k).getDay()]} <small>{md(k)}</small>
+            {dayName(fromKey(k).getDay())} <small>{md(k)}</small>
             {#if rot}<span class="rot">{rot}</span>{/if}
           </h3>
           {#if !slots.length}
-            <p class="off">No school</p>
+            <p class="off">{t('tt.noSchool')}</p>
           {:else}
             <ul>
               {#each slots as s (s.period.id)}
@@ -137,11 +145,11 @@
                     {@const c = course(m.courseId)}
                     <li class="cls" style="--c:{c?.color ?? 'var(--accent)'}">
                       <span class="t">{fmt(s.period.start)}</span>
-                      <span class="n">{c ? `${c.emoji ? c.emoji + ' ' : ''}${c.name}` : 'Class'}</span>
+                      <span class="n">{c ? `${c.emoji ? c.emoji + ' ' : ''}${c.name}` : t('tt.class')}</span>
                       {#if m.room}<span class="r">{m.room}</span>{/if}
                     </li>
                   {/each}
-                {:else if /lunch|break/i.test(s.period.name)}
+                {:else if /lunch|break|almuerzo|recreo/i.test(s.period.name)}
                   <li class="free"><span class="t">{fmt(s.period.start)}</span><span class="n">{s.period.name}</span></li>
                 {/if}
               {/each}
@@ -152,15 +160,18 @@
     </div>
   {:else if mode === 'attendance'}
     {#if !recent.length}
-      <p class="muted">Add classes in Setup, and the last two weeks of classes show up here to mark.</p>
+      <p class="muted">{t('tt.attEmpty')}</p>
     {:else}
       {#if summary.length}
         <table class="att-sum">
-          <thead><tr><th>Class</th><th>Present</th><th>Late</th><th>Absent</th><th>Excused</th><th>Attendance</th></tr></thead>
+          <thead
+            ><tr><th>{t('tt.class')}</th><th>{t('att.present')}</th><th>{t('att.late')}</th><th>{t('att.absent')}</th><th>{t('att.excused')}</th><th>{t('tt.attendance')}</th></tr
+            ></thead
+          >
           <tbody>
             {#each summary as r (r.courseId)}
               <tr>
-                <td>{course(r.courseId)?.name ?? 'Class'}</td>
+                <td>{course(r.courseId)?.name ?? t('tt.class')}</td>
                 <td>{r.present}</td>
                 <td>{r.late}</td>
                 <td>{r.absent}</td>
@@ -172,13 +183,13 @@
         </table>
       {/if}
       {#each recentDays as k (k)}
-        <h3 class="sh">{DAY_NAMES[fromKey(k).getDay()]} {md(k)}{k === store.today ? ' · today' : ''}</h3>
+        <h3 class="sh">{dayName(fromKey(k).getDay(), 'long')} {md(k)}{k === store.today ? ` · ${t('task.planned')}` : ''}</h3>
         <ul class="att">
           {#each recent.filter((r) => r.key === k) as r (r.meeting.id)}
             {@const cur = live?.attendance?.[k]?.[r.meeting.id]}
             <li>
-              <span class="n">{course(r.meeting.courseId)?.name ?? 'Class'} <span class="muted">{fmt(r.slot.period.start)}</span></span>
-              <span class="marks" role="group" aria-label="Attendance for {course(r.meeting.courseId)?.name ?? 'class'} on {md(k)}">
+              <span class="n">{course(r.meeting.courseId)?.name ?? t('tt.class')} <span class="muted">{fmt(r.slot.period.start)}</span></span>
+              <span class="marks" role="group" aria-label={t('tt.attFor', { name: course(r.meeting.courseId)?.name ?? t('tt.class'), date: md(k) })}>
                 {#each ATTENDANCE as a (a.id)}
                   <button
                     class="chip pick {a.id}"
@@ -194,65 +205,65 @@
       {/each}
     {/if}
   {:else}
-    <h3 class="sh">School days</h3>
-    <div class="chips" role="group" aria-label="School days">
+    <h3 class="sh">{t('tt.schoolDays')}</h3>
+    <div class="chips" role="group" aria-label={t('tt.schoolDays')}>
       {#each [1, 2, 3, 4, 5, 6, 0] as d (d)}
         <button
           class="chip pick"
           class:on={draft.schoolDays.includes(d)}
           aria-pressed={draft.schoolDays.includes(d)}
-          onclick={() => (draft.schoolDays = toggle(draft.schoolDays, d) ?? [])}>{DAY_SHORT[d]}</button
+          onclick={() => (draft.schoolDays = toggle(draft.schoolDays, d) ?? [])}>{dayName(d)}</button
         >
       {/each}
     </div>
 
-    <h3 class="sh">Rotation</h3>
+    <h3 class="sh">{t('tt.rotation')}</h3>
     <div class="row">
-      <select class="select" value={rotationPreset < 0 ? '' : String(rotationPreset)} onchange={(e) => setRotation(Number(e.currentTarget.value))} aria-label="Rotation">
+      <select class="select" value={rotationPreset < 0 ? '' : String(rotationPreset)} onchange={(e) => setRotation(Number(e.currentTarget.value))} aria-label={t('tt.rotation')}>
         {#each ROTATIONS as r, i (r.label)}<option value={String(i)}>{r.label}</option>{/each}
       </select>
       {#if draft.rotation.length}
-        <label>Day {draft.rotation[0]} was on <input class="input" type="date" bind:value={draft.rotationStart} aria-label="Rotation start date" /></label>
-        {#if rotationDay(draft, store.today, breaks)}<span class="muted">Today is {rotationDay(draft, store.today, breaks)} day.</span>{/if}
+        <label>{t('tt.dayWasOn', { day: draft.rotation[0] })} <input class="input" type="date" bind:value={draft.rotationStart} aria-label={t('tt.rotStart')} /></label>
+        {#if rotationDay(draft, store.today, breaks)}<span class="muted">{t('tt.todayIs', { day: rotationDay(draft, store.today, breaks) ?? '' })}</span>{/if}
       {/if}
     </div>
-    <p class="muted">The rotation counts school days only, so weekends, breaks and days marked "no school" are skipped.</p>
+    <p class="muted">{t('tt.rotHelp')}</p>
 
-    <h3 class="sh">Bell schedules</h3>
+    <h3 class="sh">{t('tt.bells')}</h3>
     {#each draft.bells as b, bi (b.id)}
       {@const problems = bellProblems(b)}
       <div class="bell">
         <div class="row">
-          <input class="input name" bind:value={b.name} aria-label="Bell schedule name" />
-          {#if bi === 0}<span class="muted">Regular (default)</span>{:else}<button class="btn sm ghost" onclick={() => removeBell(b.id)}>Remove</button>{/if}
+          <input class="input name" bind:value={b.name} aria-label={t('tt.bellName')} />
+          {#if bi === 0}<span class="muted">{t('tt.regularDefault')}</span>{:else}<button class="btn sm ghost" onclick={() => removeBell(b.id)}>{t('editor.remove')}</button>{/if}
         </div>
         <table>
-          <thead><tr><th>Period</th><th>Start</th><th>End</th><th><span class="sr">Remove</span></th></tr></thead>
+          <thead><tr><th>{t('tt.periodCol')}</th><th>{t('tt.start')}</th><th>{t('tt.end')}</th><th><span class="sr">{t('editor.remove')}</span></th></tr></thead>
           <tbody>
             {#each b.periods as p, pi (p.id)}
               <tr>
-                <td><input class="input" bind:value={p.name} aria-label="Period name" /></td>
-                <td><input class="input" type="time" bind:value={p.start} aria-label="{p.name} start" /></td>
-                <td><input class="input" type="time" bind:value={p.end} aria-label="{p.name} end" /></td>
-                <td><button class="x" onclick={() => b.periods.splice(pi, 1)} aria-label="Remove {p.name}">×</button></td>
+                <td><input class="input" bind:value={p.name} aria-label={t('tt.periodName')} /></td>
+                <td><input class="input" type="time" bind:value={p.start} aria-label={t('tt.startOf', { name: p.name })} /></td>
+                <td><input class="input" type="time" bind:value={p.end} aria-label={t('tt.endOf', { name: p.name })} /></td>
+                <td><button class="x" onclick={() => b.periods.splice(pi, 1)} aria-label={t('editor.removeBlocker', { title: p.name })}>×</button></td>
               </tr>
             {/each}
           </tbody>
         </table>
         {#if problems.length}<p class="warn" role="status">⚠ {problems.join(' ')}</p>{/if}
-        <button class="btn sm ghost" onclick={() => addPeriod(b)}>+ Period</button>
+        <button class="btn sm ghost" onclick={() => addPeriod(b)}>+ {t('tt.periodCol')}</button>
       </div>
     {/each}
     <div class="row">
-      <button class="btn sm" onclick={addBell}>+ Another bell schedule</button>
-      {#if !draft.bells.length}<button class="btn sm" onclick={() => (draft.bells = [defaultBell()])}>Add a regular schedule</button>{/if}
+      <button class="btn sm" onclick={addBell}>{t('tt.addBell')}</button>
+      {#if !draft.bells.length}<button class="btn sm" onclick={() => (draft.bells = [defaultBell()])}>{t('tt.addRegular')}</button>{/if}
     </div>
     {#if draft.bells.length > 1}
       <div class="row wrap">
-        <span class="muted">Every week:</span>
+        <span class="muted">{t('tt.everyWeek')}</span>
         {#each [...draft.schoolDays].sort((a, b) => ((a + 6) % 7) - ((b + 6) % 7)) as d (d)}
           <label class="wd"
-            >{DAY_SHORT[d]}
+            >{dayName(d)}
             <select
               class="select"
               value={draft.weekdayBells?.[d] ?? ''}
@@ -263,7 +274,7 @@
                 else delete wb[d];
                 draft.weekdayBells = wb;
               }}
-              aria-label="{DAY_NAMES[d]} bell schedule"
+              aria-label={t('tt.bellFor', { day: dayName(d, 'long') })}
             >
               <option value="">{draft.bells[0].name}</option>
               {#each draft.bells.slice(1) as b (b.id)}<option value={b.id}>{b.name}</option>{/each}
@@ -273,19 +284,19 @@
       </div>
     {/if}
 
-    <h3 class="sh">Classes</h3>
-    {#if !store.activeCourses.length}<p class="muted">Add courses first (Courses → New course), then put them in periods here.</p>{/if}
+    <h3 class="sh">{t('tt.classes')}</h3>
+    {#if !store.activeCourses.length}<p class="muted">{t('tt.coursesFirst')}</p>{/if}
     <ul class="classes">
       {#each draft.classes as m, i (m.id)}
         <li>
-          <select class="select" bind:value={m.courseId} aria-label="Course">
+          <select class="select" bind:value={m.courseId} aria-label={t('inbox.course')}>
             {#each store.activeCourses as c (c.id)}<option value={c.id}>{c.emoji ? c.emoji + ' ' : ''}{c.name}</option>{/each}
           </select>
-          <select class="select" bind:value={m.periodId} aria-label="Period">
+          <select class="select" bind:value={m.periodId} aria-label={t('tt.periodCol')}>
             {#each draft.bells[0]?.periods ?? [] as p (p.id)}<option value={p.id}>{p.name} · {fmt(p.start)}</option>{/each}
           </select>
           {#if draft.rotation.length}
-            <span class="chips" role="group" aria-label="Rotation days">
+            <span class="chips" role="group" aria-label={t('tt.rotDays')}>
               {#each draft.rotation as r (r)}
                 <button
                   class="chip pick"
@@ -296,30 +307,30 @@
               {/each}
             </span>
           {/if}
-          <input class="input room" bind:value={m.room} placeholder="Room" aria-label="Room" />
-          <input class="input room" bind:value={m.teacher} placeholder="Teacher" aria-label="Teacher" />
-          <button class="x" onclick={() => (draft.classes = draft.classes.filter((_, k) => k !== i))} aria-label="Remove class">×</button>
+          <input class="input room" bind:value={m.room} placeholder={t('tt.room')} aria-label={t('tt.room')} />
+          <input class="input room" bind:value={m.teacher} placeholder={t('ps.teacher')} aria-label={t('ps.teacher')} />
+          <button class="x" onclick={() => (draft.classes = draft.classes.filter((_, k) => k !== i))} aria-label={t('tt.removeClass')}>×</button>
         </li>
       {/each}
     </ul>
-    <button class="btn sm" onclick={addClass} disabled={!store.activeCourses.length || !draft.bells.length}>+ Class</button>
-    {#if draft.rotation.length}<p class="muted">Leave all rotation days off for a class that meets every day.</p>{/if}
+    <button class="btn sm" onclick={addClass} disabled={!store.activeCourses.length || !draft.bells.length}>+ {t('tt.class')}</button>
+    {#if draft.rotation.length}<p class="muted">{t('tt.everyDayHint')}</p>{/if}
 
-    <h3 class="sh">Special days</h3>
+    <h3 class="sh">{t('tt.special')}</h3>
     <form class="row wrap" onsubmit={addOverride}>
-      <input class="input" type="date" bind:value={ovDate} aria-label="Special day date" required />
-      <select class="select" bind:value={ovKind} aria-label="What happens that day">
-        <option value="noSchool">No school</option>
-        {#each draft.bells as b (b.id)}<option value="bell:{b.id}">{b.name} bell</option>{/each}
-        {#each draft.rotation as r (r)}<option value="rot:{r}">Make it {r} day</option>{/each}
+      <input class="input" type="date" bind:value={ovDate} aria-label={t('tt.specialDate')} required />
+      <select class="select" bind:value={ovKind} aria-label={t('tt.whatHappens')}>
+        <option value="noSchool">{t('tt.noSchool')}</option>
+        {#each draft.bells as b (b.id)}<option value="bell:{b.id}">{t('tt.bell', { name: b.name })}</option>{/each}
+        {#each draft.rotation as r (r)}<option value="rot:{r}">{t('tt.makeIt', { day: r })}</option>{/each}
       </select>
-      <button class="btn sm" type="submit" disabled={!ovDate}>Add</button>
+      <button class="btn sm" type="submit" disabled={!ovDate}>{t('common.add')}</button>
     </form>
     {#if overrideList.length}
       <ul class="ovs">
         {#each overrideList as [k, o] (k)}
           <li>
-            <span>{DAY_SHORT[fromKey(k).getDay()]} {md(k)}: {describeOverride(o)}</span>
+            <span>{dayName(fromKey(k).getDay())} {md(k)}: {describeOverride(o)}</span>
             <button
               class="x"
               onclick={() => {
@@ -327,13 +338,13 @@
                 delete next[k];
                 draft.overrides = next;
               }}
-              aria-label="Remove {md(k)}">×</button
+              aria-label={t('editor.removeBlocker', { title: md(k) })}>×</button
             >
           </li>
         {/each}
       </ul>
     {/if}
-    <p class="muted">School breaks from Settings → Break mode count as days off automatically.</p>
+    <p class="muted">{t('tt.breaksHint')}</p>
   {/if}
 </section>
 

@@ -5,6 +5,7 @@
   import { forgetSecret, hasSecret, secret } from '../../lib/secrets.svelte';
   import { set } from './settings';
   import { t } from '../../lib/i18n/index.svelte';
+  import { formatDateTime } from '../../lib/dates';
   const s = $derived(store.settings);
   let schoologyUrl = $state(secret('schoologyFeedUrl'));
   let schoologyProxy = $state(store.settings.schoologyProxy);
@@ -13,8 +14,8 @@
 <section class="card">
   <h2>{t('settings.schoology')} <span class="chip optional">{t('settings.optional')}</span></h2>
   <p class="help">
-    Mode: <strong>{s.schoologyMode === 'api' ? 'API sign-in (assignments + grades)' : 'calendar feed (assignments)'}</strong>, syncing every {s.schoologyIntervalMin} min. Full setup
-    (API key sign-in, proxy, manual import) lives in the <button class="link" onclick={() => store.go('schoology')}>Schoology view</button>.
+    {t('sgys.mode')} <strong>{s.schoologyMode === 'api' ? t('sgys.api') : t('sgys.ics')}</strong>, {t('sgys.every', { n: s.schoologyIntervalMin })}
+    {t('sgys.full')} <button class="link" onclick={() => store.go('schoology')}>{t('sgys.view')}</button>.
   </p>
   <form
     class="btns"
@@ -24,20 +25,20 @@
       if (schoologyUrl.trim()) void syncSchoology();
     }}
   >
-    <input class="input" bind:value={schoologyUrl} placeholder="https://app.schoology.com/calendar/feed/ical/…/schoology.ics" aria-label="Schoology feed URL" />
-    <input class="input" bind:value={schoologyProxy} placeholder="CORS proxy prefix (optional)" aria-label="CORS proxy" />
-    <button class="btn primary" type="submit">Save</button>
+    <input class="input" bind:value={schoologyUrl} placeholder="https://app.schoology.com/calendar/feed/ical/…/schoology.ics" aria-label={t('sgys.feedUrl')} />
+    <input class="input" bind:value={schoologyProxy} placeholder={t('sgys.proxyPh')} aria-label={t('sgys.proxy')} />
+    <button class="btn primary" type="submit">{t('common.save')}</button>
   </form>
   {#if hasSecret('schoologyFeedUrl')}
     <div class="row">
-      <span>Status</span><span class="status {schoology.status}"
-        >{schoology.status === 'error' ? `Error: ${schoology.lastError}` : schoology.status}{#if s.lastSchoologySync}<span class="muted">
-            · last {new Date(s.lastSchoologySync).toLocaleString()}</span
+      <span>{t('gist.status')}</span><span class="status {schoology.status}"
+        >{schoology.status === 'error' ? t('sync.error', { error: schoology.lastError ?? '' }) : t(`sgys.status.${schoology.status}`)}{#if s.lastSchoologySync}<span class="muted">
+            · {t('gist.last', { when: formatDateTime(new Date(s.lastSchoologySync)) })}</span
           >{/if}</span
       >
     </div>
     <div class="row">
-      <label for="sauto">Create courses for new class names</label>
+      <label for="sauto">{t('sgys.auto')}</label>
       <input
         id="sauto"
         type="checkbox"
@@ -47,17 +48,15 @@
       />
     </div>
     <div class="btns">
-      <button class="btn" onclick={() => void syncSchoology()}>Sync now</button>
+      <button class="btn" onclick={() => void syncSchoology()}>{t('sync.now')}</button>
       <button
         class="btn danger"
         onclick={() => {
           forgetSecret('schoologyFeedUrl');
           schoologyUrl = '';
-        }}>Disconnect</button
+        }}>{t('sync.disconnect')}</button
       >
-      {#if s.schoologyIgnored.length}<button class="btn ghost sm" onclick={() => set('schoologyIgnored', [])}
-          >Forget {s.schoologyIgnored.length} deleted assignment{s.schoologyIgnored.length > 1 ? 's' : ''}</button
-        >{/if}
+      {#if s.schoologyIgnored.length}<button class="btn ghost sm" onclick={() => set('schoologyIgnored', [])}>{t('sgys.forget', { count: s.schoologyIgnored.length })}</button>{/if}
     </div>
   {/if}
 </section>

@@ -2,6 +2,7 @@
   import { citationHTML, citationText, formatCitation, lookup, sortKey, splitName, type CitationStyle, type Source, type SourceType } from '../../lib/citations';
   import { toasts } from '../../lib/toast.svelte';
   import { uid } from '../../lib/id';
+  import { t } from '../../lib/i18n/index.svelte';
 
   const KEY = 'homework-todo:citations';
   type Saved = Source & { id: string };
@@ -37,9 +38,9 @@
       const s = await lookup(query);
       draft = { ...blank(s.type), ...s };
       authorsText = s.authors.map((a) => [a.given, a.family].filter(Boolean).join(' ')).join('; ');
-      toasts.push({ message: s.title ? `Found “${s.title.slice(0, 60)}”` : 'Filled in what we could', detail: 'Check the details, then add it.', kind: 'success' });
+      toasts.push({ message: s.title ? t('cite.found', { title: s.title.slice(0, 60) }) : t('cite.partial'), detail: t('cite.check'), kind: 'success' });
     } catch (e) {
-      toasts.push({ message: 'Lookup failed', detail: e instanceof Error ? e.message : String(e), kind: 'warn' });
+      toasts.push({ message: t('cite.failed'), detail: e instanceof Error ? e.message : String(e), kind: 'warn' });
     } finally {
       busy = false;
     }
@@ -53,7 +54,7 @@
       .map(splitName),
   });
   function add() {
-    if (!current.title.trim()) return toasts.push({ message: 'Add a title first', kind: 'warn' });
+    if (!current.title.trim()) return toasts.push({ message: t('cite.needTitle'), kind: 'warn' });
     list = [...list, { ...$state.snapshot(current), id: uid('cite') } as Saved];
     persist();
     draft = blank(draft.type);
@@ -65,7 +66,7 @@
     persist();
   }
   const sorted = $derived([...list].sort((a, b) => sortKey(a).localeCompare(sortKey(b))));
-  const heading = $derived(style === 'mla' ? 'Works Cited' : style === 'apa' ? 'References' : 'Bibliography');
+  const heading = $derived(style === 'mla' ? t('cite.worksCited') : style === 'apa' ? t('cite.references') : t('cite.bibliography'));
   async function copyAll() {
     const html = `<p><b>${heading}</b></p>` + sorted.map((s) => `<p style="padding-left:0.5in;text-indent:-0.5in">${citationHTML(formatCitation(s, style))}</p>`).join('');
     const text = `${heading}\n\n` + sorted.map((s) => citationText(formatCitation(s, style))).join('\n\n');
@@ -74,13 +75,13 @@
     } catch {
       await navigator.clipboard.writeText(text);
     }
-    toasts.push({ message: `Copied ${heading}`, detail: 'Paste into Google Docs or Word: italics are kept.', kind: 'success' });
+    toasts.push({ message: t('cite.copied', { heading }), detail: t('cite.copiedDetail'), kind: 'success' });
   }
 </script>
 
 <section class="card">
-  <h2>Citation generator</h2>
-  <div class="cz-seg" role="radiogroup" aria-label="Style">
+  <h2>{t('cite.title')}</h2>
+  <div class="cz-seg" role="radiogroup" aria-label={t('cite.style')}>
     {#each [['mla', 'MLA 9'], ['apa', 'APA 7'], ['chicago', 'Chicago']] as [id, label] (id)}
       <button role="radio" aria-checked={style === id} class:on={style === id} onclick={() => (style = id as CitationStyle)}>{label}</button>
     {/each}
@@ -92,48 +93,53 @@
       void find();
     }}
   >
-    <input class="input" bind:value={query} placeholder="Paste a DOI, ISBN or web address" aria-label="DOI, ISBN or URL" />
-    <button class="btn" type="submit" disabled={busy}>{busy ? 'Looking up…' : 'Look up'}</button>
+    <input class="input" bind:value={query} placeholder={t('cite.findPh')} aria-label={t('cite.find')} />
+    <button class="btn" type="submit" disabled={busy}>{busy ? t('cite.looking') : t('cite.lookup')}</button>
   </form>
 
   <div class="form">
-    <select class="select" bind:value={draft.type} aria-label="Source type">
-      <option value="website">Web page</option>
-      <option value="article">Journal article</option>
-      <option value="book">Book</option>
+    <select class="select" bind:value={draft.type} aria-label={t('cite.type')}>
+      <option value="website">{t('cite.website')}</option>
+      <option value="article">{t('cite.article')}</option>
+      <option value="book">{t('cite.book')}</option>
     </select>
-    <input class="input wide" bind:value={authorsText} placeholder="Authors: First Last; First Last" aria-label="Authors" />
-    <input class="input wide" bind:value={draft.title} placeholder="Title" aria-label="Title" />
-    {#if draft.type !== 'book'}<input class="input" bind:value={draft.container} placeholder={draft.type === 'article' ? 'Journal' : 'Website name'} aria-label="Container" />{/if}
-    <input class="input" bind:value={draft.publisher} placeholder="Publisher" aria-label="Publisher" />
-    {#if draft.type === 'book'}<input class="input" bind:value={draft.place} placeholder="City (Chicago)" aria-label="City" />{/if}
-    <input class="input sm" bind:value={draft.year} placeholder="Year" aria-label="Year" />
+    <input class="input wide" bind:value={authorsText} placeholder={t('cite.authorsPh')} aria-label={t('cite.authors')} />
+    <input class="input wide" bind:value={draft.title} placeholder={t('editor.title')} aria-label={t('editor.title')} />
+    {#if draft.type !== 'book'}<input
+        class="input"
+        bind:value={draft.container}
+        placeholder={draft.type === 'article' ? t('cite.journal') : t('cite.siteName')}
+        aria-label={t('cite.container')}
+      />{/if}
+    <input class="input" bind:value={draft.publisher} placeholder={t('cite.publisher')} aria-label={t('cite.publisher')} />
+    {#if draft.type === 'book'}<input class="input" bind:value={draft.place} placeholder={t('cite.cityPh')} aria-label={t('cite.city')} />{/if}
+    <input class="input sm" bind:value={draft.year} placeholder={t('cite.year')} aria-label={t('cite.year')} />
     {#if draft.type === 'article'}
-      <input class="input sm" bind:value={draft.volume} placeholder="Vol." aria-label="Volume" />
-      <input class="input sm" bind:value={draft.issue} placeholder="No." aria-label="Issue" />
-      <input class="input sm" bind:value={draft.pages} placeholder="Pages" aria-label="Pages" />
+      <input class="input sm" bind:value={draft.volume} placeholder={t('cite.vol')} aria-label={t('cite.volume')} />
+      <input class="input sm" bind:value={draft.issue} placeholder={t('cite.no')} aria-label={t('cite.issue')} />
+      <input class="input sm" bind:value={draft.pages} placeholder={t('read.modePages')} aria-label={t('read.modePages')} />
     {/if}
-    <input class="input wide" bind:value={draft.url} placeholder="URL (or DOI below)" aria-label="URL" />
+    <input class="input wide" bind:value={draft.url} placeholder={t('cite.urlPh')} aria-label="URL" />
     <input class="input" bind:value={draft.doi} placeholder="DOI" aria-label="DOI" />
-    {#if draft.type === 'website'}<label class="acc">Accessed <input class="input" type="date" bind:value={draft.accessed} /></label>{/if}
+    {#if draft.type === 'website'}<label class="acc">{t('cite.accessed')} <input class="input" type="date" bind:value={draft.accessed} /></label>{/if}
   </div>
   {#if current.title}
     <p class="preview">{@html citationHTML(formatCitation(current, style))}</p>
   {/if}
-  <div class="btns"><button class="btn primary" onclick={add}>Add to list</button></div>
+  <div class="btns"><button class="btn primary" onclick={add}>{t('cite.add')}</button></div>
 
   {#if sorted.length}
     <h3>{heading} <span class="muted">({sorted.length})</span></h3>
     <ol class="cites">
       {#each sorted as s (s.id)}
         <li>
-          <span class="c">{@html citationHTML(formatCitation(s, style))}</span><button class="btn ghost sm" onclick={() => remove(s.id)} aria-label="Remove citation">✕</button>
+          <span class="c">{@html citationHTML(formatCitation(s, style))}</span><button class="btn ghost sm" onclick={() => remove(s.id)} aria-label={t('cite.remove')}>✕</button>
         </li>
       {/each}
     </ol>
-    <div class="btns"><button class="btn" onclick={() => void copyAll()}>Copy {heading}</button></div>
+    <div class="btns"><button class="btn" onclick={() => void copyAll()}>{t('cite.copy', { heading })}</button></div>
   {/if}
-  <p class="help">Lookups use Crossref (DOIs) and Open Library (ISBNs). Always double-check against your teacher's style guide.</p>
+  <p class="help">{t('cite.help')}</p>
 </section>
 
 <style>

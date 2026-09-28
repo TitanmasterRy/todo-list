@@ -26,15 +26,11 @@
     />
   </div>
   <p class="help">
-    Level <span class="num">{store.stats.level}</span>: <strong class="grad-text">{levelTitle(store.stats.level)}</strong>. New accent colors unlock as you level up. Critical hits
-    (5% chance, double XP), tiered early bonuses (up to ×1.5 for 3+ days early), grade XP for scores you enter, and notecard study XP all count.
+    {t('stats.level', { level: store.stats.level })}: <strong class="grad-text">{levelTitle(store.stats.level)}</strong>. {t('gam.help')}
   </p>
   <p class="help">
-    Streak freezes: you earn one per 7-day streak (max {MAX_FREEZES} banked). A missed day uses one automatically instead of breaking your streak. You have
-    <strong class="num"
-      >{#key store.stats.streak.freezes}<span class="bump">{store.stats.streak.freezes}</span>{/key}</strong
-    >
-    banked. Current streak {store.streak}, best {store.stats.streak.best}.
+    {t('gam.freezes', { max: MAX_FREEZES })}
+    {t('gam.banked', { count: store.stats.streak.freezes, current: store.streak, best: store.stats.streak.best })}
   </p>
 </section>
 

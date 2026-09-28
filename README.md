@@ -128,7 +128,7 @@ Settings → AI helper. Pick a provider and paste its key (stored only in your b
 
 ## Languages
 
-**Settings → Language:** Auto (follows the browser), English or Español. The switch is instant, sets `<html lang dir>`, and dates, times and numbers follow your region through `Intl` ("mañana 17:00", "5 oct", "hace 3 días"). In Spanish, quick add understands Spanish too: `Leer capítulo 3 mañana a las 5 #historia !alta`, `el viernes`, `pasado mañana`, `la próxima semana`, `en 3 días`, `15 de octubre`, `cada lunes y miércoles`. The app shell and the everyday screens are translated; Tools, Play, Stats and some Settings sections are still English. A **right-to-left layout** switch in the same section previews RTL until an RTL language is added.
+**Settings → Language:** Auto (follows the browser), English or Español. The switch is instant, sets `<html lang dir>`, and dates, times and numbers follow your region through `Intl` ("mañana 17:00", "5 oct", "hace 3 días"). In Spanish, quick add understands Spanish too: `Leer capítulo 3 mañana a las 5 #historia !alta`, `el viernes`, `pasado mañana`, `la próxima semana`, `en 3 días`, `15 de octubre`, `cada lunes y miércoles`. Everything except Play is translated (the Study help reference sheets are English content), and new tasks get their auto plan in Spanish. A **right-to-left layout** switch in the same section previews RTL until an RTL language is added.
 
 Adding a language:
 
@@ -162,10 +162,23 @@ The **Play** view (`9`) turns schoolwork into a currency. Everything here is pla
 - **Casino 🎰:** Slots (symbols follow your theme pack), Blackjack, Roulette, Video poker, Baccarat, Craps, Hi-Lo, Plinko, Keno, Mines, Dice, Big Six and Scratch cards. Chips are bought with coins and can be cashed back at half value (up to 100 coins a day, Play → Wallet). Each game shows its odds, and a homework-break reminder pops up after 20 minutes (configurable). Closing your daily ring also gives 100 free chips.
 - **Arcade 🕹️:** spend vouchers on games. Sixteen are built in: Minesweeper, 2048, Memory match, Snake, Leaf catcher, Asteroids, Word search, Breakout, Sudoku, Hangman, Lights Out, Typing defense, Solitaire, Invaders, Lunar lander and Paper-plane glider (the word games use words from your notecards). **Site admins add more** by putting an HTML file in `public/games/` or an embed link in `public/games/games.json` (see [`public/games/README.md`](public/games/README.md)), or try and publish them from the hidden [admin panel](ADMIN.md). Games run in a sandbox that can't see your data, and can report high scores.
 - **Study games 🧠:** free games built on your notecard decks. **Boss battle** asks each card as four-choice multiple choice (right answers hit the boss, wrong ones cost hearts, three boss phases); **Match rush** has you match terms to definitions against the clock and keeps your best time per deck; **Crossword** builds a printable crossword from a deck's short answers (check/reveal letters, best time per deck); **Quiz race** runs ten quick multiple-choice questions from a deck or a Quiz maker set against the ghost of your best run. They don't change when cards are due.
+- **Watch 📺:** your own shows inside the app. See [Watch](#watch-your-own-media-server-and-video-links) below.
 - **Star map 🌌:** every day you finished a task lights a star in a year or semester sky, and days in a row join into constellations (with a text summary and a month table).
 - **Daily quests:** three small goals a day (finish 3 tasks, clear an overdue task, do a Pomodoro…) with coins to claim and a bonus for all three. The shop also has a **deal of the day** at 30% off, and the casino has **achievements** that pay chips.
 - **Parent lock:** Settings → Economy → set a PIN to lock the casino switch, reminders and an optional **daily casino time limit**. It lives in this browser: a speed bump, not a security system.
 - The wallet is a ledger of entries, so it syncs through your account, Gist or Drive without double-counting.
+
+## Watch: your own media server and video links
+
+**Play → 📺 Watch** plays video from your own server and from links you add. Full guide: [WATCH.md](WATCH.md).
+
+- **Jellyfin / Emby:** add the server's https address and sign in; browse Continue watching, Next up, libraries, search, shows → seasons → episodes, and play in the built-in player (direct play when the browser can, otherwise the server's HLS conversion via hls.js). Progress is reported back, so resume works on every device. Subtitles in text formats appear under CC. The server's own web app is one click away.
+- **Plex or any other server / site:** its web app in a frame (e.g. `https://app.plex.tv/desktop`), with *Open in a new tab* for sites that refuse framing.
+- **Video links:** YouTube (privacy-enhanced `youtube-nocookie.com` player), Vimeo, Twitch, Dailymotion, Archive.org and Google Drive share links become embedded players.
+- **Video files:** `.mp4`, `.webm`, `.m3u8` links, or a file on this device (not uploaded). Speed, picture-in-picture, full screen, keys (Space, ← →, F, M), and the position is remembered.
+- **Homework rules (optional, off by default, Settings → Economy, behind the parent PIN):** watch time costs vouchers (1 voucher = N minutes), finish today's ring first, a daily limit, and a study-break reminder.
+- **Setup notes:** because the site is https, the browser blocks `http://192.168.x.x:8096` (mixed content): give the server https (Tailscale Serve/Funnel, Cloudflare Tunnel, or a reverse proxy with a certificate) or run the app yourself on your network over http. The site's security policy only lets the page connect to servers it was built with, so add your server's origin to **`VITE_MEDIA_SERVERS`** (a GitHub Actions variable for Pages); the Watch tab tells you the exact origin, with a copy button.
+- Netflix, Hulu, Disney+ and other DRM streaming services don't allow embedding and won't work.
 
 ## Themes
 
@@ -250,6 +263,7 @@ src/lib/i18n/    translations: en.ts (source of truth), es.ts, and t() / setLoca
 src/components/  task item, checkbox, quick add, editor, sortable list, toasts, feedback layer, palette, dialogs (social/: study room, friends, class mode)
 src/views/       Today, Upcoming, Courses, Inbox, Focus, Stats, Tools, Schoology, Play, Settings
 src/lib/casino/  casino game rules (slots, blackjack, roulette, poker, baccarat, craps, quick games)
+src/lib/watch/   Play → Watch: link → embed converter, Jellyfin/Emby client, saved sources, watch-time rules (components in src/components/play/watch/)
 public/games/    built-in arcade games + games.json manifest (add your own here)
 public/sounds/   sounds are synthesized with WebAudio; drop files here to swap in samples
 ```

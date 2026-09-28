@@ -1,5 +1,6 @@
 // Citations: MLA 9, APA 7 and Chicago (bibliography) for books, journal articles and web pages.
 // DOI lookup uses Crossref and ISBN lookup uses Open Library; both allow browser requests.
+import { t as tr } from './i18n/index.svelte';
 
 export type SourceType = 'book' | 'article' | 'website';
 export type CitationStyle = 'mla' | 'apa' | 'chicago';
@@ -251,7 +252,7 @@ export async function lookup(input: string): Promise<Source> {
   const doi = extractDOI(input);
   if (doi) {
     const res = await fetch(`https://api.crossref.org/works/${encodeURIComponent(doi)}`);
-    if (!res.ok) throw new Error(res.status === 404 ? 'No record for that DOI.' : `Crossref error ${res.status}`);
+    if (!res.ok) throw new Error(res.status === 404 ? tr('cite.noDoi') : `Crossref error ${res.status}`);
     const json = (await res.json()) as { message: CrossrefWork };
     return fromCrossref(json.message);
   }
@@ -261,7 +262,7 @@ export async function lookup(input: string): Promise<Source> {
     if (!res.ok) throw new Error(`Open Library error ${res.status}`);
     const json = (await res.json()) as Record<string, OpenLibraryBook>;
     const b = json[`ISBN:${isbn}`];
-    if (!b) throw new Error('No book found for that ISBN.');
+    if (!b) throw new Error(tr('cite.noIsbn'));
     return fromOpenLibrary(b);
   }
   if (/^https?:\/\//i.test(input.trim())) {

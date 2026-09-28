@@ -11,17 +11,17 @@
   let ecoUnlocked = $state(false);
   const ecoLocked = $derived(!!s.parentPinHash && !ecoUnlocked);
   async function setParentPin() {
-    if (!validPin(pinInput)) return toasts.push({ message: 'Use 4–8 digits for the PIN', kind: 'warn' });
+    if (!validPin(pinInput)) return toasts.push({ message: t('eco.pinDigits'), kind: 'warn' });
     set('parentPinHash', await hashPin(pinInput));
     pinInput = '';
     ecoUnlocked = false;
-    toasts.push({ message: 'Parent lock on', detail: 'Economy settings now need the PIN.', kind: 'success', emoji: '🔒' });
+    toasts.push({ message: t('eco.lockOn'), detail: t('eco.lockOnDetail'), kind: 'success', emoji: '🔒' });
   }
   async function unlockParent() {
     if (await checkPin(pinInput, s.parentPinHash)) {
       ecoUnlocked = true;
       pinInput = '';
-    } else toasts.push({ message: 'Wrong PIN', kind: 'warn' });
+    } else toasts.push({ message: t('eco.wrongPin'), kind: 'warn' });
   }
 </script>
 
@@ -32,17 +32,17 @@
   </h2>
   <fieldset class="plain" disabled={ecoLocked}>
     <div class="row">
-      <label for="eco">Coins, shop and Play view</label>
+      <label for="eco">{t('eco.enable')}</label>
       <input id="eco" type="checkbox" class="switch" checked={s.economyEnabled} onchange={(e) => set('economyEnabled', (e.target as HTMLInputElement).checked)} />
     </div>
     {#if s.economyEnabled}
       <div class="row">
-        <label for="cas">Casino (play chips only)</label>
+        <label for="cas">{t('eco.casino')}</label>
         <input id="cas" type="checkbox" class="switch" checked={s.casinoEnabled} onchange={(e) => set('casinoEnabled', (e.target as HTMLInputElement).checked)} />
       </div>
       {#if s.casinoEnabled}
         <div class="row">
-          <label for="brk">Homework-break reminder after (minutes of casino play, 0 = off)</label>
+          <label for="brk">{t('eco.breakReminder')}</label>
           <input
             id="brk"
             class="input num"
@@ -54,7 +54,7 @@
           />
         </div>
         <div class="row">
-          <label for="lim">Casino time limit per day (minutes, 0 = none)</label>
+          <label for="lim">{t('eco.limit')}</label>
           <input
             id="lim"
             class="input num"
@@ -67,15 +67,57 @@
           />
         </div>
       {/if}
+      <h3 class="sub">Watch (Play → Watch)</h3>
+      <div class="row">
+        <label for="wring">Finish today's ring before watching</label>
+        <input id="wring" type="checkbox" class="switch" checked={s.watchRingFirst} onchange={(e) => set('watchRingFirst', (e.target as HTMLInputElement).checked)} />
+      </div>
+      <div class="row">
+        <label for="wvouch">Watch time costs vouchers: minutes per voucher (0 = free)</label>
+        <input
+          id="wvouch"
+          class="input num"
+          type="number"
+          min="0"
+          max="240"
+          step="5"
+          value={s.watchVoucherMin}
+          onchange={(e) => set('watchVoucherMin', Math.max(0, Math.min(240, Math.round(Number((e.target as HTMLInputElement).value) || 0))))}
+        />
+      </div>
+      <div class="row">
+        <label for="wlim">Watch time limit per day (minutes, 0 = none)</label>
+        <input
+          id="wlim"
+          class="input num"
+          type="number"
+          min="0"
+          max="720"
+          step="5"
+          value={s.watchDailyLimitMin}
+          onchange={(e) => set('watchDailyLimitMin', Math.max(0, Math.min(720, Math.round(Number((e.target as HTMLInputElement).value) || 0))))}
+        />
+      </div>
+      <div class="row">
+        <label for="wbrk">Study-break reminder after (minutes of watching, 0 = off)</label>
+        <input
+          id="wbrk"
+          class="input num"
+          type="number"
+          min="0"
+          max="240"
+          value={s.watchBreakMin}
+          onchange={(e) => set('watchBreakMin', Math.max(0, Math.min(240, Math.round(Number((e.target as HTMLInputElement).value) || 0))))}
+        />
+      </div>
     {/if}
   </fieldset>
   {#if s.economyEnabled}
     <p class="help">
-      Coins come only from schoolwork (tasks, the daily ring, streaks, grades, notecards, Pomodoros). There's no real money anywhere: nothing can be bought with cash. Chips can be
-      cashed back into coins at half value, a little a day (Play → Wallet).
+      {t('eco.help')}
     </p>
   {/if}
-  <h3 class="sub">Parent lock</h3>
+  <h3 class="sub">{t('eco.parentLock')}</h3>
   {#if !s.parentPinHash}
     <form
       class="btns"
@@ -84,12 +126,11 @@
         void setParentPin();
       }}
     >
-      <input class="input" type="password" inputmode="numeric" autocomplete="new-password" bind:value={pinInput} placeholder="Choose a 4–8 digit PIN" aria-label="New parent PIN" />
-      <button class="btn" type="submit">Set PIN</button>
+      <input class="input" type="password" inputmode="numeric" autocomplete="new-password" bind:value={pinInput} placeholder={t('eco.pinPh')} aria-label={t('eco.newPin')} />
+      <button class="btn" type="submit">{t('eco.setPin')}</button>
     </form>
     <p class="help">
-      A PIN keeps these economy settings (casino on/off, time limit, reminders) from being changed without it. It's stored only in this browser as a hash: a speed bump, not a
-      security system.
+      {t('eco.pinHelp')}
     </p>
   {:else if ecoLocked}
     <form
@@ -99,18 +140,18 @@
         void unlockParent();
       }}
     >
-      <input class="input" type="password" inputmode="numeric" autocomplete="off" bind:value={pinInput} placeholder="Parent PIN" aria-label="Parent PIN" />
-      <button class="btn" type="submit">Unlock</button>
+      <input class="input" type="password" inputmode="numeric" autocomplete="off" bind:value={pinInput} placeholder={t('eco.pin')} aria-label={t('eco.pin')} />
+      <button class="btn" type="submit">{t('eco.unlock')}</button>
     </form>
   {:else}
     <div class="btns">
-      <button class="btn" onclick={() => (ecoUnlocked = false)}>Lock again</button>
+      <button class="btn" onclick={() => (ecoUnlocked = false)}>{t('eco.lockAgain')}</button>
       <button
         class="btn ghost"
         onclick={() => {
           set('parentPinHash', '');
           ecoUnlocked = false;
-        }}>Remove PIN</button
+        }}>{t('eco.removePin')}</button
       >
     </div>
   {/if}

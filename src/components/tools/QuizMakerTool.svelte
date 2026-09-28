@@ -25,6 +25,11 @@
     type QuestionType,
     type Difficulty,
   } from '../../lib/quizmaker';
+  import { t } from '../../lib/i18n/index.svelte';
+
+  // subjects stay in English in the data (the AI prompt uses them); they show in the app language
+  const subjectNames = $derived(t('quiz.subjects').split('|'));
+  const subjectName = (s: string) => subjectNames[SUBJECTS.indexOf(s)] ?? s;
 
   let sets = $state<QuizSet[]>(loadQuizSets());
   let currentId = $state<string | null>(null);
@@ -59,7 +64,7 @@
   function createSet(questions: Question[] = []): QuizSet {
     const s: QuizSet = {
       id: uid('set'),
-      title: title.trim() || `${subject}${topic ? ': ' + topic : ''}`,
+      title: title.trim() || `${subjectName(subject)}${topic ? ': ' + topic : ''}`,
       subject,
       topic: topic.trim() || undefined,
       difficulty,
@@ -81,7 +86,7 @@
         id: `q_${Date.now().toString(36)}_${i}`,
         type: g.type,
         prompt: g.prompt,
-        options: g.type === 'tf' ? ['True', 'False'] : g.type === 'mc' ? (g.options ?? []).slice(0, 4) : [],
+        options: g.type === 'tf' ? [t('quiz.true'), t('quiz.false')] : g.type === 'mc' ? (g.options ?? []).slice(0, 4) : [],
         correct: g.type === 'mc' || g.type === 'tf' ? (g.correct ?? [0]).filter((c) => c >= 0 && c < 4) : [],
         answer: g.answer,
         explanation: g.explanation,
@@ -89,9 +94,9 @@
       const s = current && !current.questions.length ? current : createSet();
       s.questions = [...s.questions, ...qs];
       touch();
-      toasts.push({ message: `Generated ${qs.length} questions`, kind: 'success', emoji: '✨' });
+      toasts.push({ message: t('quiz.generated', { count: qs.length }), kind: 'success', emoji: '✨' });
     } catch (e) {
-      toasts.push({ message: 'Generation failed', detail: e instanceof Error ? e.message : String(e), kind: 'warn', timeout: 9000 });
+      toasts.push({ message: t('quiz.genFailed'), detail: e instanceof Error ? e.message : String(e), kind: 'warn', timeout: 9000 });
     } finally {
       busy = false;
     }
@@ -101,12 +106,12 @@
   }
   function importPaste() {
     const qs = parseQuizText(pasteText);
-    if (!qs.length) return toasts.push({ message: 'No questions found', detail: 'Use "1. Question" then "A) option" lines, mark the right one with *', kind: 'warn' });
+    if (!qs.length) return toasts.push({ message: t('quiz.none'), detail: t('quiz.noneDetail'), kind: 'warn' });
     const s = current ?? createSet();
     s.questions = [...s.questions, ...qs];
     touch();
     pasteText = '';
-    toasts.push({ message: `Imported ${qs.length} questions`, kind: 'success' });
+    toasts.push({ message: t('quiz.imported', { count: qs.length }), kind: 'success' });
   }
   function importDeck() {
     const cards = store.cards.filter((c) => c.deckId === deckId);
@@ -114,7 +119,7 @@
     const s = current ?? createSet();
     s.questions = [...s.questions, ...fromCards(cards.map((c) => ({ front: c.front, back: c.back })))];
     touch();
-    toasts.push({ message: `Made ${cards.length} questions from the deck`, kind: 'success' });
+    toasts.push({ message: t('quiz.fromDeck', { count: cards.length }), kind: 'success' });
   }
 
   // ---- editor ----
@@ -128,12 +133,12 @@
     current.questions = current.questions.filter((q) => q.id !== id);
     touch();
   }
-  function setType(q: Question, t: QuestionType) {
-    q.type = t;
-    if (t === 'tf') {
-      q.options = ['True', 'False'];
+  function setType(q: Question, type: QuestionType) {
+    q.type = type;
+    if (type === 'tf') {
+      q.options = [t('quiz.true'), t('quiz.false')];
       q.correct = [0];
-    } else if (t === 'mc') {
+    } else if (type === 'mc') {
       q.options = q.options.length >= 2 ? q.options : ['', '', '', ''];
       q.correct = q.correct.length ? q.correct : [0];
     } else {
@@ -166,9 +171,9 @@
   async function copy(text: string, what: string) {
     try {
       await navigator.clipboard.writeText(text);
-      toasts.push({ message: `${what} copied`, kind: 'success', timeout: 2000 });
+      toasts.push({ message: t('friends.copied', { what }), kind: 'success', timeout: 2000 });
     } catch {
-      toasts.push({ message: 'Copy failed', kind: 'warn' });
+      toasts.push({ message: t('quiz.copyFailed'), kind: 'warn' });
     }
   }
   const slug = $derived(
@@ -181,85 +186,84 @@
     if (!current) return;
     const deck = store.addDeck(current.title, undefined);
     const added = store.addCards(deck.id, toCards(current.questions));
-    toasts.push({ message: `${added.length} notecards added to “${deck.name}”`, kind: 'success', emoji: '🃏' });
+    toasts.push({ message: t('cards.addedTo', { count: added.length, deck: deck.name }), kind: 'success', emoji: '🃏' });
   }
 </script>
 
 {#if !current}
   <section class="card">
-    <h2>Quiz maker</h2>
+    <h2>{t('tools.quiz')}</h2>
     <p class="help">
-      Build a question set by hand, from a prompt, from your notes, or from a notecard deck. Then export it to <strong>Quizlet</strong>, <strong>Blooket</strong>,
-      <strong>Gimkit</strong>, <strong>Kahoot</strong>, a printable worksheet with answer key, or a <strong>QTI package for Schoology tests and quizzes</strong> (teachers).
+      {t('quiz.help')}
     </p>
     <div class="grid">
-      <label>Title <input class="input" bind:value={title} placeholder="Unit 3 review" /></label>
+      <label>{t('editor.title')} <input class="input" bind:value={title} placeholder={t('quiz.titlePh')} /></label>
       <label
-        >Subject <select class="select" bind:value={subject}
-          >{#each SUBJECTS as s}<option value={s}>{s}</option>{/each}</select
+        >{t('quiz.subject')}
+        <select class="select" bind:value={subject}
+          >{#each SUBJECTS as s}<option value={s}>{subjectName(s)}</option>{/each}</select
         ></label
       >
-      <label>Topic <input class="input" bind:value={topic} placeholder="Photosynthesis, quadratic equations…" /></label>
-      <label>Level <input class="input" bind:value={gradeLevel} placeholder="9th grade, AP, college…" /></label>
-      <label>Questions <input class="input" type="number" min="1" max="50" bind:value={count} /></label>
+      <label>{t('quiz.topic')} <input class="input" bind:value={topic} placeholder={t('quiz.topicPh')} /></label>
+      <label>{t('quiz.level')} <input class="input" bind:value={gradeLevel} placeholder={t('quiz.levelPh')} /></label>
+      <label>{t('quiz.questions')} <input class="input" type="number" min="1" max="50" bind:value={count} /></label>
       <label
-        >Difficulty <select class="select" bind:value={difficulty}
-          ><option value="easy">Easy</option><option value="medium">Medium</option><option value="hard">Hard</option><option value="mixed">Mixed</option></select
+        >{t('quiz.difficulty')}
+        <select class="select" bind:value={difficulty}
+          ><option value="easy">{t('quiz.diff.easy')}</option><option value="medium">{t('quiz.diff.medium')}</option><option value="hard">{t('quiz.diff.hard')}</option><option
+            value="mixed">{t('quiz.diff.mixed')}</option
+          ></select
         ></label
       >
     </div>
     <div class="types">
-      <span class="lbl">Types:</span>
-      {#each [['mc', 'Multiple choice'], ['tf', 'True / false'], ['short', 'Short answer'], ['fill', 'Fill in the blank']] as [t, l]}
-        <button class="chip" class:on={types.includes(t as QuestionType)} onclick={() => toggleType(t as QuestionType)}>{l}</button>
+      <span class="lbl">{t('quiz.types')}</span>
+      {#each [['mc', t('quiz.mc')], ['tf', t('quiz.tf')], ['short', t('quiz.short')], ['fill', t('quiz.fill')]] as [ty, l] (ty)}
+        <button class="chip" class:on={types.includes(ty as QuestionType)} onclick={() => toggleType(ty as QuestionType)}>{l}</button>
       {/each}
-      <span class="lbl">For:</span>
-      <button class="chip" class:on={audience === 'student'} onclick={() => (audience = 'student')}>Studying</button>
-      <button class="chip" class:on={audience === 'teacher'} onclick={() => (audience = 'teacher')}>Teacher quiz/test</button>
+      <span class="lbl">{t('quiz.for')}</span>
+      <button class="chip" class:on={audience === 'student'} onclick={() => (audience = 'student')}>{t('quiz.studying')}</button>
+      <button class="chip" class:on={audience === 'teacher'} onclick={() => (audience = 'teacher')}>{t('quiz.teacher')}</button>
     </div>
     <details class="more">
-      <summary>Base it on my notes or a passage (optional)</summary><textarea
-        class="textarea"
-        bind:value={source}
-        placeholder="Paste notes, a chapter summary, or a transcription from Scan paper…"
-      ></textarea>
+      <summary>{t('quiz.base')}</summary><textarea class="textarea" bind:value={source} placeholder={t('quiz.basePh')}></textarea>
     </details>
     <div class="btns">
-      <button class="btn primary" onclick={generate} disabled={busy || !aiAvailable()} title={aiAvailable() ? '' : 'Add an AI key in Settings (free options available)'}
-        >{busy ? 'Generating…' : '✨ Generate with AI'}</button
+      <button class="btn primary" onclick={generate} disabled={busy || !aiAvailable()} title={aiAvailable() ? '' : t('quiz.needKey')}
+        >{busy ? t('cards.generating') : t('quiz.genAi')}</button
       >
-      <button class="btn" onclick={startManual}>✍️ Make it by hand</button>
+      <button class="btn" onclick={startManual}>{t('quiz.byHand')}</button>
     </div>
-    {#if !aiAvailable()}<p class="help">AI generation needs a key in Settings → AI helper. Gemini and Groq have free tiers.</p>{/if}
+    {#if !aiAvailable()}<p class="help">{t('quiz.aiHelp')}</p>{/if}
     <details class="more">
-      <summary>Import questions from text</summary>
-      <textarea class="textarea" bind:value={pasteText} placeholder={'1. Capital of France?\nA) Berlin\nB) Paris*\nC) Rome\n\nQ: 2 + 2\nA: 4'}></textarea>
-      <button class="btn sm" onclick={importPaste} disabled={!pasteText.trim()}>Import</button>
+      <summary>{t('quiz.importText')}</summary>
+      <textarea class="textarea" bind:value={pasteText} placeholder={t('quiz.importPh')}></textarea>
+      <button class="btn sm" onclick={importPaste} disabled={!pasteText.trim()}>{t('quiz.import')}</button>
     </details>
     {#if store.decks.length}
       <details class="more">
-        <summary>Turn a notecard deck into a quiz</summary>
+        <summary>{t('quiz.deckToQuiz')}</summary>
         <div class="btns">
           <select class="select" bind:value={deckId}
-            ><option value="">Pick a deck</option>{#each store.decks as d (d.id)}<option value={d.id}>{d.name}</option>{/each}</select
-          ><button class="btn sm" onclick={importDeck} disabled={!deckId}>Make quiz</button>
+            ><option value="">{t('quiz.pickDeck')}</option>{#each store.decks as d (d.id)}<option value={d.id}>{d.name}</option>{/each}</select
+          ><button class="btn sm" onclick={importDeck} disabled={!deckId}>{t('quiz.make')}</button>
         </div>
       </details>
     {/if}
     {#if sets.length}
-      <h3>Saved sets</h3>
+      <h3>{t('quiz.saved')}</h3>
       <ul class="sets">
         {#each sets as s (s.id)}
           <li>
             <button class="set" onclick={() => (currentId = s.id)}
-              ><strong>{s.title}</strong><span class="muted">{s.subject} · {s.questions.length} q · {s.difficulty}</span></button
+              ><strong>{s.title}</strong><span class="muted">{subjectName(s.subject)} · {s.questions.length} q · {t(`quiz.diff.${s.difficulty}`)}</span></button
             ><button
               class="btn ghost sm"
               onclick={() => {
                 ui.practiceSet = s.id;
                 ui.toolsTab = 'practice';
-              }}>▶ Practice</button
-            ><button class="btn ghost sm" onclick={() => deleteSet(s.id)}>Delete</button>
+              }}>▶ {t('quiz.practice')}</button
+            ><button class="btn ghost sm" onclick={() => deleteSet(s.id)}>{t('common.delete')}</button>
           </li>
         {/each}
       </ul>
@@ -268,82 +272,72 @@
 {:else}
   <section class="card">
     <div class="head">
-      <button class="btn ghost sm" onclick={() => (currentId = null)}>← Sets</button>
-      <input class="input title" bind:value={current.title} onchange={touch} aria-label="Set title" />
-      <span class="muted">{complete}/{current.questions.length} complete</span>
+      <button class="btn ghost sm" onclick={() => (currentId = null)}>← {t('quiz.sets')}</button>
+      <input class="input title" bind:value={current.title} onchange={touch} aria-label={t('quiz.setTitle')} />
+      <span class="muted">{t('quiz.complete', { n: complete, total: current.questions.length })}</span>
     </div>
     <div class="exports">
-      <span class="lbl">Export:</span>
-      <button class="btn sm" onclick={() => copy(toQuizlet(current!.questions), 'Quizlet text')} title="Quizlet → Create set → Import → paste; separators: Tab / New line"
-        >Quizlet (copy)</button
-      >
-      <button class="btn sm" onclick={() => download(`${slug}-blooket.csv`, toBlooket(current!.questions), 'text/csv')} title="Blooket → My sets → Create → Import from spreadsheet"
-        >Blooket .csv</button
-      >
-      <button class="btn sm" onclick={() => download(`${slug}-gimkit.csv`, toGimkit(current!.questions), 'text/csv')} title="Gimkit → New kit → Import from spreadsheet"
-        >Gimkit .csv</button
-      >
-      <button
-        class="btn sm"
-        onclick={() => download(`${slug}-kahoot.csv`, toKahoot(current!.questions), 'text/csv')}
-        title="Kahoot → Create → Import spreadsheet (open the CSV in Excel/Sheets and save as .xlsx if required)">Kahoot .csv</button
-      >
-      <button class="btn sm" onclick={() => download(`${slug}-worksheet.md`, toWorksheet(current!), 'text/markdown')}>Worksheet + key</button>
-      <button class="btn sm" onclick={exportCards}>Notecards</button>
-      <button
-        class="btn sm primary"
-        onclick={() => download(`${slug}-qti.zip`, toQTIZip(current!), 'application/zip')}
-        title="Schoology → course → Add Materials → Test/Quiz → Add Question → Import → QTI (also works in Canvas, Moodle, Blackboard)">Schoology QTI .zip</button
-      >
+      <span class="lbl">{t('quiz.export')}</span>
+      <button class="btn sm" onclick={() => copy(toQuizlet(current!.questions), t('quiz.quizletText'))} title={t('quiz.quizletHow')}>{t('quiz.quizlet')}</button>
+      <button class="btn sm" onclick={() => download(`${slug}-blooket.csv`, toBlooket(current!.questions), 'text/csv')} title={t('quiz.blooketHow')}>Blooket .csv</button>
+      <button class="btn sm" onclick={() => download(`${slug}-gimkit.csv`, toGimkit(current!.questions), 'text/csv')} title={t('quiz.gimkitHow')}>Gimkit .csv</button>
+      <button class="btn sm" onclick={() => download(`${slug}-kahoot.csv`, toKahoot(current!.questions), 'text/csv')} title={t('quiz.kahootHow')}>Kahoot .csv</button>
+      <button class="btn sm" onclick={() => download(`${slug}-worksheet.md`, toWorksheet(current!), 'text/markdown')}>{t('quiz.worksheet')}</button>
+      <button class="btn sm" onclick={exportCards}>{t('tools.notecards')}</button>
+      <button class="btn sm primary" onclick={() => download(`${slug}-qti.zip`, toQTIZip(current!), 'application/zip')} title={t('quiz.qtiHow')}>Schoology QTI .zip</button>
     </div>
     <p class="help">
-      Teachers: in Schoology open the Test/Quiz → <strong>Add Question → Import → QTI</strong> and upload the zip; questions land in the test with points and feedback. The same file
-      imports into Canvas, Moodle and Blackboard.
+      {t('quiz.teachers')}
     </p>
     <ol class="qs">
       {#each current.questions as q, i (q.id)}
         <li class="q" class:incomplete={!isComplete(q)}>
           <div class="qhead">
             <span class="num">{i + 1}</span>
-            <select class="select sm" value={q.type} onchange={(e) => setType(q, (e.target as HTMLSelectElement).value as QuestionType)} aria-label="Question type">
-              <option value="mc">Multiple choice</option><option value="tf">True/false</option><option value="short">Short answer</option><option value="fill">Fill in blank</option
+            <select class="select sm" value={q.type} onchange={(e) => setType(q, (e.target as HTMLSelectElement).value as QuestionType)} aria-label={t('quiz.qType')}>
+              <option value="mc">{t('quiz.mc')}</option><option value="tf">{t('quiz.tf')}</option><option value="short">{t('quiz.short')}</option><option value="fill"
+                >{t('quiz.fill')}</option
               >
             </select>
             <span class="grow"></span>
-            <button class="btn ghost sm icon" onclick={() => move(i, -1)} aria-label="Move up">↑</button>
-            <button class="btn ghost sm icon" onclick={() => move(i, 1)} aria-label="Move down">↓</button>
-            <button class="btn ghost sm icon" onclick={() => removeQ(q.id)} aria-label="Delete question">×</button>
+            <button class="btn ghost sm icon" onclick={() => move(i, -1)} aria-label={t('quiz.up')}>↑</button>
+            <button class="btn ghost sm icon" onclick={() => move(i, 1)} aria-label={t('quiz.down')}>↓</button>
+            <button class="btn ghost sm icon" onclick={() => removeQ(q.id)} aria-label={t('quiz.deleteQ')}>×</button>
           </div>
-          <textarea class="textarea prompt" bind:value={q.prompt} onchange={touch} placeholder={q.type === 'fill' ? 'The powerhouse of the cell is the ____.' : 'Question'} rows="2"
-          ></textarea>
+          <textarea class="textarea prompt" bind:value={q.prompt} onchange={touch} placeholder={q.type === 'fill' ? t('quiz.fillPh') : t('quiz.question')} rows="2"></textarea>
           {#if q.type === 'mc' || q.type === 'tf'}
             <div class="opts">
               {#each q.options as _, j (j)}
                 <label class="opt" class:right={q.correct.includes(j)}>
-                  <input type={q.type === 'tf' ? 'radio' : 'checkbox'} checked={q.correct.includes(j)} onchange={() => toggleCorrect(q, j, q.type === 'mc')} aria-label="Correct" />
+                  <input
+                    type={q.type === 'tf' ? 'radio' : 'checkbox'}
+                    checked={q.correct.includes(j)}
+                    onchange={() => toggleCorrect(q, j, q.type === 'mc')}
+                    aria-label={t('quiz.correct')}
+                  />
                   <span class="letter">{String.fromCharCode(65 + j)}</span>
                   {#if q.type === 'tf'}<span>{q.options[j]}</span>{:else}<input
                       class="input"
                       bind:value={q.options[j]}
                       onchange={touch}
-                      placeholder="Option {String.fromCharCode(65 + j)}"
+                      placeholder={t('quiz.option', { letter: String.fromCharCode(65 + j) })}
                     />{/if}
                 </label>
               {/each}
             </div>
           {:else}
-            <input class="input" bind:value={q.answer} onchange={touch} placeholder="Correct answer" />
+            <input class="input" bind:value={q.answer} onchange={touch} placeholder={t('quiz.answer')} />
           {/if}
-          <input class="input expl" bind:value={q.explanation} onchange={touch} placeholder="Explanation (optional, shown in answer key / feedback)" />
+          <input class="input expl" bind:value={q.explanation} onchange={touch} placeholder={t('quiz.explanation')} />
         </li>
       {/each}
     </ol>
     <div class="btns">
-      <button class="btn" onclick={() => addQ('mc')}>+ Multiple choice</button>
-      <button class="btn" onclick={() => addQ('tf')}>+ True/false</button>
-      <button class="btn" onclick={() => addQ('short')}>+ Short answer</button>
-      <button class="btn" onclick={() => addQ('fill')}>+ Fill in blank</button>
-      {#if aiAvailable()}<button class="btn ghost" onclick={generate} disabled={busy}>{busy ? 'Generating…' : '✨ Add more with AI'}</button>{/if}
+      <button class="btn" onclick={() => addQ('mc')}>+ {t('quiz.mc')}</button>
+      <button class="btn" onclick={() => addQ('tf')}>+ {t('quiz.tf')}</button>
+      <button class="btn" onclick={() => addQ('short')}>+ {t('quiz.short')}</button>
+      <button class="btn" onclick={() => addQ('fill')}>+ {t('quiz.fill')}</button>
+      {#if aiAvailable()}<button class="btn ghost" onclick={generate} disabled={busy}>{busy ? t('cards.generating') : t('quiz.moreAi')}</button>{/if}
     </div>
   </section>
 {/if}

@@ -2,26 +2,27 @@
   // Settings → AI helper → usage this month (estimated tokens per provider) and an optional monthly request cap.
   import { store } from '../../lib/store.svelte';
   import { loadUsage, monthKey, monthTotal, type Usage } from '../../lib/aiusage';
+  import { formatNumber, t } from '../../lib/i18n/index.svelte';
 
   let usage = $state<Usage>(loadUsage());
   const month = monthKey();
   const rows = $derived(Object.entries(usage[month] ?? {}).sort((a, b) => b[1].requests - a[1].requests));
   const total = $derived(monthTotal(usage));
   const cap = $derived(store.settings.aiMonthlyCap ?? 0);
-  const fmt = (n: number) => (n >= 10_000 ? `${Math.round(n / 1000)}k` : n.toLocaleString());
+  const fmt = (n: number) => (n >= 10_000 ? `${Math.round(n / 1000)}k` : formatNumber(n));
 </script>
 
 <div class="usage" aria-labelledby="ai-usage-h">
-  <h3 id="ai-usage-h">This month <button class="link" onclick={() => (usage = loadUsage())}>refresh</button></h3>
+  <h3 id="ai-usage-h">{t('aiu.month')} <button class="link" onclick={() => (usage = loadUsage())}>{t('aiu.refresh')}</button></h3>
   {#if rows.length}
     <table>
-      <thead><tr><th>Provider</th><th>Requests</th><th>≈ tokens in</th><th>≈ tokens out</th></tr></thead>
+      <thead><tr><th>{t('aiu.provider')}</th><th>{t('aiu.requests')}</th><th>{t('aiu.in')}</th><th>{t('aiu.out')}</th></tr></thead>
       <tbody>
         {#each rows as [p, r] (p)}<tr><td>{p}</td><td>{r.requests}</td><td>{fmt(r.tokensIn)}</td><td>{fmt(r.tokensOut)}</td></tr>{/each}
       </tbody>
     </table>
   {:else}
-    <p class="muted">No AI requests yet this month.</p>
+    <p class="muted">{t('aiu.none')}</p>
   {/if}
   {#if cap}
     <div
@@ -31,14 +32,14 @@
       aria-valuemin="0"
       aria-valuemax={cap}
       aria-valuenow={Math.min(cap, total.requests)}
-      aria-label="Requests used this month"
+      aria-label={t('aiu.used')}
     >
       <span style="width:{Math.min(100, (total.requests / cap) * 100)}%"></span>
     </div>
-    <p class="muted">{total.requests} of {cap} requests used</p>
+    <p class="muted">{t('aiu.of', { n: total.requests, cap })}</p>
   {/if}
   <label class="row"
-    >Monthly limit (requests, 0 = none)
+    >{t('aiu.limit')}
     <input
       class="input num"
       type="number"
@@ -46,10 +47,10 @@
       step="10"
       value={cap}
       onchange={(e) => store.updateSettings({ aiMonthlyCap: Math.max(0, Math.floor(Number(e.currentTarget.value) || 0)) })}
-      aria-label="Monthly AI request limit"
+      aria-label={t('aiu.limitLabel')}
     /></label
   >
-  <p class="muted">Token counts are estimates (about 4 characters per token). Your provider's dashboard has the exact numbers and cost.</p>
+  <p class="muted">{t('aiu.help')}</p>
 </div>
 
 <style>

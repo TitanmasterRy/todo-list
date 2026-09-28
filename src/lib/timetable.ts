@@ -1,6 +1,7 @@
 // School timetable: bell schedules, A/B (or 1–4) rotation days, class meetings, and "what's on now".
 // Pure functions over a SchoolSchedule; breaks (Settings → Break mode) and "no school" overrides skip days.
-import { addDaysKey, dateKey, fromKey } from './dates';
+import { addDaysKey, dateKey, formatClock, fromKey } from './dates';
+import { locale, t as tr } from './i18n/index.svelte';
 import { uid } from './id';
 import type { AttendanceMark, BellPeriod, BellSchedule, BreakRange, ClassMeeting, SchoolSchedule } from './types';
 
@@ -18,16 +19,16 @@ export function emptySchedule(): SchoolSchedule {
 /** A typical 7-period day to start from. */
 export function defaultBell(): BellSchedule {
   const times: [string, string, string][] = [
-    ['Period 1', '08:00', '08:50'],
-    ['Period 2', '08:55', '09:45'],
-    ['Period 3', '09:50', '10:40'],
-    ['Period 4', '10:45', '11:35'],
-    ['Lunch', '11:35', '12:10'],
-    ['Period 5', '12:15', '13:05'],
-    ['Period 6', '13:10', '14:00'],
-    ['Period 7', '14:05', '14:55'],
+    [tr('tt.period', { n: 1 }), '08:00', '08:50'],
+    [tr('tt.period', { n: 2 }), '08:55', '09:45'],
+    [tr('tt.period', { n: 3 }), '09:50', '10:40'],
+    [tr('tt.period', { n: 4 }), '10:45', '11:35'],
+    [tr('tt.lunch'), '11:35', '12:10'],
+    [tr('tt.period', { n: 5 }), '12:15', '13:05'],
+    [tr('tt.period', { n: 6 }), '13:10', '14:00'],
+    [tr('tt.period', { n: 7 }), '14:05', '14:55'],
   ];
-  return { id: uid('bell'), name: 'Regular', periods: times.map(([name, start, end]) => ({ id: uid('per'), name, start, end })) };
+  return { id: uid('bell'), name: tr('tt.regular'), periods: times.map(([name, start, end]) => ({ id: uid('per'), name, start, end })) };
 }
 
 function inBreak(key: string, breaks: BreakRange[] | undefined): boolean {
@@ -158,6 +159,7 @@ export function nextMeeting(s: SchoolSchedule, courseId: string, fromKey: string
 export function formatHM(t: string, format: '12h' | '24h' = '12h'): string {
   if (format === '24h') return t;
   const [h, m] = t.split(':').map(Number);
+  if (locale() !== 'en') return formatClock(new Date(2026, 0, 1, h, m), { hour: 'numeric', minute: '2-digit', hour12: true });
   return `${((h + 11) % 12) + 1}:${String(m).padStart(2, '0')} ${h < 12 ? 'am' : 'pm'}`;
 }
 
@@ -166,20 +168,22 @@ export function bellProblems(b: BellSchedule): string[] {
   const out: string[] = [];
   const sorted = [...b.periods].sort((x, y) => (x.start < y.start ? -1 : 1));
   for (const p of sorted) {
-    if (!/^\d\d:\d\d$/.test(p.start) || !/^\d\d:\d\d$/.test(p.end)) out.push(`${p.name || 'A period'} needs a start and end time.`);
-    else if (p.end <= p.start) out.push(`${p.name || 'A period'} ends before it starts.`);
+    if (!/^\d\d:\d\d$/.test(p.start) || !/^\d\d:\d\d$/.test(p.end)) out.push(tr('tt.needsTimes', { name: p.name || tr('tt.aPeriod') }));
+    else if (p.end <= p.start) out.push(tr('tt.endsBefore', { name: p.name || tr('tt.aPeriod') }));
   }
-  for (let i = 1; i < sorted.length; i++) if (sorted[i].start < sorted[i - 1].end) out.push(`${sorted[i - 1].name} and ${sorted[i].name} overlap.`);
+  for (let i = 1; i < sorted.length; i++) if (sorted[i].start < sorted[i - 1].end) out.push(tr('tt.overlap', { a: sorted[i - 1].name, b: sorted[i].name }));
   return out;
 }
 
 // ---------- attendance ----------
-export const ATTENDANCE: { id: AttendanceMark; label: string; emoji: string }[] = [
-  { id: 'present', label: 'Present', emoji: '✓' },
-  { id: 'late', label: 'Late', emoji: '⏰' },
-  { id: 'absent', label: 'Absent', emoji: '✗' },
-  { id: 'excused', label: 'Excused', emoji: '📝' },
-];
+const mark = (id: AttendanceMark, emoji: string) => ({
+  id,
+  emoji,
+  get label() {
+    return tr(`att.${id}`);
+  },
+});
+export const ATTENDANCE: { id: AttendanceMark; label: string; emoji: string }[] = [mark('present', '✓'), mark('late', '⏰'), mark('absent', '✗'), mark('excused', '📝')];
 
 export interface AttendanceSummary {
   courseId: string;

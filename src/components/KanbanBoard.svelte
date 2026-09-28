@@ -4,6 +4,7 @@
   import { boardColumns, COLUMNS, neighbor, type Column } from '../lib/board';
   import { formatDue, formatMinutes, isOverdue, isDueToday } from '../lib/dates';
   import type { Task } from '../lib/types';
+  import { t } from '../lib/i18n/index.svelte';
 
   let { tasks }: { tasks: Task[] } = $props();
 
@@ -36,39 +37,47 @@
     >
       <h2 id="col-{c.id}">{c.emoji} {c.label} <span class="count">{cols[c.id].length}</span></h2>
       <ul role="list">
-        {#each cols[c.id] as t (t.id)}
-          {@const late = !t.completedAt && isOverdue(t.dueAt, store.now) && !isDueToday(t.dueAt, store.now)}
+        {#each cols[c.id] as task (task.id)}
+          {@const late = !task.completedAt && isOverdue(task.dueAt, store.now) && !isDueToday(task.dueAt, store.now)}
           <li
             class="card"
-            class:dragging={dragId === t.id}
+            class:dragging={dragId === task.id}
             draggable="true"
             ondragstart={(e) => {
-              dragId = t.id;
-              e.dataTransfer?.setData('text/x-task-id', t.id);
+              dragId = task.id;
+              e.dataTransfer?.setData('text/x-task-id', task.id);
               if (e.dataTransfer) e.dataTransfer.effectAllowed = 'move';
             }}
             ondragend={() => ((dragId = null), (over = null))}
           >
-            <button class="title" onclick={() => (store.editingTaskId = t.id)}>{t.title}</button>
+            <button class="title" onclick={() => (store.editingTaskId = task.id)}>{task.title}</button>
             <div class="meta">
-              {#if t.dueAt}<span class:late>{late ? '⚠ ' : ''}{formatDue(t.dueAt, store.now, store.settings.timeFormat)}</span>{/if}
-              {#if t.estimateMin}<span>⏱ {formatMinutes(t.estimateMin)}</span>{/if}
-              {#if t.subtasks.length}<span>☑ {t.subtasks.filter((s) => s.done).length}/{t.subtasks.length}</span>{/if}
+              {#if task.dueAt}<span class:late>{late ? '⚠ ' : ''}{formatDue(task.dueAt, store.now, store.settings.timeFormat)}</span>{/if}
+              {#if task.estimateMin}<span>⏱ {formatMinutes(task.estimateMin)}</span>{/if}
+              {#if task.subtasks.length}<span>☑ {task.subtasks.filter((s) => s.done).length}/{task.subtasks.length}</span>{/if}
               <span class="grow"></span>
               {#if neighbor(c.id, -1)}
                 {@const to = neighbor(c.id, -1)!}
-                <button class="mv" onclick={() => store.moveToColumn(t.id, to)} aria-label="Move {t.title} to {COLUMNS.find((x) => x.id === to)?.label}">←</button>
+                <button
+                  class="mv"
+                  onclick={() => store.moveToColumn(task.id, to)}
+                  aria-label={t('board.move', { title: task.title, column: COLUMNS.find((x) => x.id === to)?.label ?? '' })}>←</button
+                >
               {/if}
               {#if neighbor(c.id, 1)}
                 {@const to = neighbor(c.id, 1)!}
-                <button class="mv" onclick={() => store.moveToColumn(t.id, to)} aria-label="Move {t.title} to {COLUMNS.find((x) => x.id === to)?.label}">→</button>
+                <button
+                  class="mv"
+                  onclick={() => store.moveToColumn(task.id, to)}
+                  aria-label={t('board.move', { title: task.title, column: COLUMNS.find((x) => x.id === to)?.label ?? '' })}>→</button
+                >
               {/if}
             </div>
           </li>
         {/each}
       </ul>
       {#if !cols[c.id].length}<p class="empty-col">
-          {c.id === 'doing' ? 'Drag something here when you start it.' : c.id === 'done' ? 'Finished work shows here for two weeks.' : 'Nothing to do.'}
+          {c.id === 'doing' ? t('board.emptyDoing') : c.id === 'done' ? t('board.emptyDone') : t('board.emptyTodo')}
         </p>{/if}
     </section>
   {/each}

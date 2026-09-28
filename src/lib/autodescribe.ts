@@ -1,4 +1,5 @@
 import type { TaskType } from './types';
+import { locale, t as tr, type MessageKey } from './i18n/index.svelte';
 
 export interface AutoDescription {
   type: TaskType;
@@ -27,13 +28,89 @@ const SUBJECT_KEYWORDS: [Subject, string[]][] = [
   ['art', ['art', 'music', 'band', 'choir', 'orchestra', 'drawing', 'painting', 'theater', 'theatre', 'drama']],
 ];
 
-const SUBJECT_TIPS: Partial<Record<Subject, string>> = {
-  math: 'Show every step; check by plugging back in.',
-  science: 'Track units through each step.',
-  english: 'State your claim in one sentence first.',
-  history: 'Note dates and causes → effects.',
-  language: 'Say the vocabulary out loud.',
-  cs: 'Run the smallest piece first.',
+// Spanish course names (accents folded), checked first when the app is in Spanish
+const SUBJECT_KEYWORDS_ES: [Subject, string[]][] = [
+  ['cs', ['informatica', 'programacion', 'computacion', 'tecnologia']],
+  ['math', ['matematicas', 'mates', 'mate', 'calculo', 'geometria', 'estadistica', 'trigonometria', 'algebra']],
+  ['science', ['quimica', 'biologia', 'fisica', 'ciencias', 'anatomia', 'astronomia', 'geologia']],
+  ['english', ['lengua', 'literatura', 'castellano', 'redaccion']],
+  ['history', ['historia', 'geografia', 'economia', 'sociales', 'civica', 'filosofia']],
+  ['language', ['ingles', 'frances', 'aleman', 'latin', 'italiano', 'chino', 'japones', 'portugues', 'coreano', 'arabe']],
+  ['art', ['arte', 'musica', 'dibujo', 'plastica', 'teatro', 'danza']],
+];
+
+// Spanish titles: fold accents and map common Spanish words to the English ones the parsers below understand
+const ES_TO_EN: [RegExp, string][] = [
+  [/\bdel? (\d+) al (\d+)\b/g, '$1 to $2'],
+  [/(\d) a la (\d)/g, '$1 to $2'],
+  [/(\d) a (\d)/g, '$1 to $2'],
+  [/(\d) y (\d)/g, '$1 and $2'],
+  [/\binformes? de laboratorio\b/g, 'lab report'],
+  [/\bpracticas? de laboratorio\b/g, 'lab'],
+  [/\blaboratorios?\b/g, 'lab'],
+  [/\bhojas? de ejercicios\b/g, 'worksheet'],
+  [/\bfichas?\b/g, 'worksheet'],
+  [/\blibros? de texto\b/g, 'textbook'],
+  [/\bexamen(es)?\b/g, 'exam'],
+  [/\bparcial(es)?\b/g, 'midterm'],
+  [/\b(pruebas?|controles|control|cuestionarios?)\b/g, 'quiz'],
+  [/\b(ensayos?|redaccion|redacciones)\b/g, 'essay'],
+  [/\btrabajos?\b/g, 'paper'],
+  [/\binformes?\b/g, 'report'],
+  [/\bborradores?\b/g, 'draft'],
+  [/\b(escribir|redactar)\b/g, 'write'],
+  [/\b(presentacion|presentaciones|exposicion|exposiciones)\b/g, 'presentation'],
+  [/\bdiapositivas\b/g, 'slides'],
+  [/\bproyectos?\b/g, 'project'],
+  [/\bdiscursos?\b/g, 'speech'],
+  [/\b(cartel|carteles|mural|murales)\b/g, 'poster'],
+  [/\besquemas?\b/g, 'outline'],
+  [/\bleer\b/g, 'read'],
+  [/\blecturas?\b/g, 'reading'],
+  [/\bcapitulos\b/g, 'chapters'],
+  [/\bcapitulo\b/g, 'chapter'],
+  [/\bcaps?\b\.?/g, 'ch.'],
+  [/\bpaginas\b/g, 'pages'],
+  [/\bpagina\b/g, 'page'],
+  [/\bpags\b\.?/g, 'pp.'],
+  [/\bpag\b\.?/g, 'p.'],
+  [/\barticulos?\b/g, 'article'],
+  [/\blibros?\b/g, 'book'],
+  [/\bnovelas?\b/g, 'novel'],
+  [/\bproblemas\b/g, 'problems'],
+  [/\bproblema\b/g, 'problem'],
+  [/\bejercicios\b/g, 'exercises'],
+  [/\bejercicio\b/g, 'exercise'],
+  [/\bpreguntas\b/g, 'questions'],
+  [/\bpregunta\b/g, 'question'],
+  [/\b(tareas?|deberes)\b/g, 'homework'],
+  [/\bpracticar\b/g, 'practice'],
+  [/\bestudiar\b/g, 'study'],
+  [/\b(repasar|repaso)\b/g, 'review'],
+  [/\btarjetas\b/g, 'flashcards'],
+  [/\bmemorizar\b/g, 'memorize'],
+];
+const fold = (s: string) =>
+  s
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '');
+/** The text the parsers read: unchanged in English; in Spanish, folded and mapped to the English keywords. */
+function forParsing(s: string): string {
+  if (locale() !== 'es') return s;
+  let out = fold(s);
+  for (const [re, en] of ES_TO_EN) out = out.replace(re, en);
+  return out;
+}
+
+// steps, plans and tips are in the app language (en.ts / es.ts, auto.*)
+const SUBJECT_TIPS: Partial<Record<Subject, MessageKey>> = {
+  math: 'auto.tip.math',
+  science: 'auto.tip.science',
+  english: 'auto.tip.english',
+  history: 'auto.tip.history',
+  language: 'auto.tip.language',
+  cs: 'auto.tip.cs',
 };
 
 const BASE_ESTIMATE: Record<TaskType, number> = {
@@ -87,6 +164,10 @@ export function inferSubject(courseName?: string, title?: string): AutoDescripti
   const sources = [courseName ?? '', title ?? ''];
   for (const src of sources) {
     if (!src.trim()) continue;
+    if (locale() === 'es') {
+      const folded = fold(src).split(/[^a-z0-9]+/);
+      for (const [subject, keys] of SUBJECT_KEYWORDS_ES) if (keys.some((k) => folded.includes(k))) return subject;
+    }
     const tokens = words(src);
     const text = normalize(src);
     for (const [subject, keys] of SUBJECT_KEYWORDS) {
@@ -122,12 +203,12 @@ function parsePages(title: string): PageInfo | undefined {
   if (m) {
     const from = parseInt(m[1], 10);
     const to = parseInt(m[2], 10);
-    if (to >= from) return { from, to, count: to - from + 1, label: `pp. ${from}–${to}` };
+    if (to >= from) return { from, to, count: to - from + 1, label: tr('auto.pp', { from, to }) };
   }
   const single = t.match(/\b(?:pp?\.?|pages?)\s*(\d{1,4})\b/);
   if (single) {
     const p = parseInt(single[1], 10);
-    return { from: p, to: p, count: 1, label: `p. ${p}` };
+    return { from: p, to: p, count: 1, label: tr('auto.p', { p }) };
   }
   return undefined;
 }
@@ -139,9 +220,9 @@ interface ChapterInfo {
 function parseChapter(title: string): ChapterInfo | undefined {
   const t = normalize(title);
   const range = t.match(/\b(?:ch(?:apters?)?\.?)\s*(\d{1,3})\s*(?:-|to|through|&|and)\s*(\d{1,3})\b/);
-  if (range) return { label: `chapters ${range[1]}–${range[2]}` };
+  if (range) return { label: tr('auto.chapters', { a: range[1], b: range[2] }) };
   const single = t.match(/\b(?:ch(?:apter)?\.?)\s*(\d{1,3})\b/);
-  if (single) return { label: `chapter ${single[1]}` };
+  if (single) return { label: tr('auto.chapter', { n: single[1] }) };
   return undefined;
 }
 
@@ -157,19 +238,19 @@ function parseProblems(title: string): ProblemInfo | undefined {
   if (range) {
     const from = parseInt(range[1], 10);
     const to = parseInt(range[2], 10);
-    if (to >= from) return { count: to - from + 1, label: `problems ${from}–${to}` };
+    if (to >= from) return { count: to - from + 1, label: tr('auto.problems', { from, to }) };
   }
   const hashRange = t.match(/#\s*(\d{1,3})\s*-\s*(\d{1,3})\b/);
   if (hashRange) {
     const from = parseInt(hashRange[1], 10);
     const to = parseInt(hashRange[2], 10);
-    if (to >= from) return { count: to - from + 1, label: `problems ${from}–${to}` };
+    if (to >= from) return { count: to - from + 1, label: tr('auto.problems', { from, to }) };
   }
   const bareRange = t.match(/\b(\d{1,3})\s*-\s*(\d{1,3})\b/);
   if (bareRange && !/\b(?:pp?\.?|pages?|ch(?:apter)?s?\.?)\s*\d/.test(t)) {
     const from = parseInt(bareRange[1], 10);
     const to = parseInt(bareRange[2], 10);
-    if (to >= from && to - from < 200) return { count: to - from + 1, label: `problems ${from}–${to}` };
+    if (to >= from && to - from < 200) return { count: to - from + 1, label: tr('auto.problems', { from, to }) };
   }
   const list = t.match(/\b(?:problems?|questions?|exercises?)\s*#?\s*((?:\d{1,3}\s*,\s*)+\d{1,3})\b/);
   if (list) {
@@ -177,12 +258,12 @@ function parseProblems(title: string): ProblemInfo | undefined {
       .split(',')
       .map((s) => s.trim())
       .filter(Boolean);
-    return { count: nums.length, label: `problems ${nums.join(', ')}` };
+    return { count: nums.length, label: tr('auto.problemList', { list: nums.join(', ') }) };
   }
   const countFirst = t.match(/\b(\d{1,3})\s+(?:problems?|questions?|exercises?)\b/);
   if (countFirst) {
     const n = parseInt(countFirst[1], 10);
-    return { count: n, label: `${n} problems` };
+    return { count: n, label: tr('auto.nProblems', { n }) };
   }
   return undefined;
 }
@@ -257,7 +338,7 @@ function kindForGivenType(type: TaskType, detected: Kind): Kind {
 
 function courseLabel(courseName?: string): string {
   const n = courseName?.trim();
-  return n ? ` for ${n}` : '';
+  return n ? tr('auto.for', { name: n }) : '';
 }
 
 function cleanTitle(title: string): string {
@@ -266,13 +347,14 @@ function cleanTitle(title: string): string {
 }
 
 export function autoDescribe(title: string, ctx: AutoDescribeContext = {}): AutoDescription {
-  const detected = detectKind(title);
+  const parsed = forParsing(title);
+  const detected = detectKind(parsed);
   const type: TaskType = ctx.type ?? kindToType(detected);
   const kind: Kind = ctx.type ? kindForGivenType(ctx.type, detected) : detected;
   const subject = inferSubject(ctx.courseName, title);
-  const pages = parsePages(title);
-  const chapter = parseChapter(title);
-  const problems = parseProblems(title);
+  const pages = parsePages(parsed);
+  const chapter = parseChapter(parsed);
+  const problems = parseProblems(parsed);
   const cn = courseLabel(ctx.courseName);
   const t = cleanTitle(title);
 
@@ -286,90 +368,80 @@ export function autoDescribe(title: string, ctx: AutoDescribeContext = {}): Auto
   switch (kind) {
     case 'reading': {
       const target = pages ? pages.label : chapter ? chapter.label : t;
-      what = `Reading${cn}: ${target}.`;
-      plan = 'skim headings → read and annotate → 5-bullet summary.';
-      tip = 'Read actively: turn each heading into a question, then answer it.';
-      subtasks = [`Skim headings ${target === t ? 'first' : target}`, 'Read and annotate', 'Write 5 bullet summary'];
+      what = tr('auto.line', { label: tr('auto.l.reading'), cn, title: target });
+      plan = tr('auto.read.plan');
+      tip = tr('auto.read.tip');
+      subtasks = [target === t ? tr('auto.read.skimFirst') : tr('auto.read.skim', { target }), tr('auto.read.2'), tr('auto.read.3')];
       tags.push('reading');
       if (pages) estimate = clamp(pages.count * 3, 15, 300);
       break;
     }
     case 'quiz':
     case 'exam': {
-      const label = kind === 'quiz' ? 'Quiz prep' : 'Exam prep';
-      what = `${label}${cn}: ${t}.`;
-      plan = 'gather materials → notecards → self-test → review mistakes.';
-      tip = 'Spaced practice beats cramming — split this across a few days.';
-      subtasks = [
-        'Gather notes, homework and past quizzes',
-        'Make a notecard set of key terms and formulas',
-        kind === 'quiz' ? 'Self-test with practice questions' : 'Do practice problems under timed conditions',
-        'Review mistakes and re-test the weak spots',
-        'Sleep well the night before',
-      ];
+      const label = kind === 'quiz' ? tr('auto.l.quiz') : tr('auto.l.exam');
+      what = tr('auto.line', { label, cn, title: t });
+      plan = tr('auto.exam.plan');
+      tip = tr('auto.exam.tip');
+      subtasks = [tr('auto.exam.1'), tr('auto.exam.2'), kind === 'quiz' ? tr('auto.exam.3quiz') : tr('auto.exam.3exam'), tr('auto.exam.4'), tr('auto.exam.5')];
       tags.push('study');
       break;
     }
     case 'project': {
-      const text = normalize(title);
-      const isSlides = hasWord(words(title), 'presentation', 'slides', 'poster', 'speech');
+      const text = normalize(parsed);
+      const isSlides = hasWord(words(parsed), 'presentation', 'slides', 'poster', 'speech');
       const isLabReport = hasPhrase(text, 'lab report', 'lab write-up', 'lab writeup');
-      what = `${isLabReport ? 'Lab report' : isSlides ? 'Presentation' : 'Writing'}${cn}: ${t}.`;
-      plan = isSlides ? 'outline key points → build slides → rehearse → polish.' : 'outline and thesis → draft → revise → proofread and cite.';
-      tip = isLabReport
-        ? 'Write the results and analysis first; cite sources as you go.'
-        : isSlides
-          ? 'One idea per slide; rehearse out loud at least twice.'
-          : 'Write the thesis first, then cite as you go.';
+      what = tr('auto.line', { label: isLabReport ? tr('auto.l.labReport') : isSlides ? tr('auto.l.presentation') : tr('auto.l.writing'), cn, title: t });
+      plan = isSlides ? tr('auto.slides.plan') : tr('auto.writing.plan');
+      tip = isLabReport ? tr('auto.labReport.tip') : isSlides ? tr('auto.slides.tip') : tr('auto.writing.tip');
       subtasks = isSlides
-        ? ['Outline the key points', 'Build the slides', 'Rehearse out loud', 'Polish visuals and timing']
+        ? [tr('auto.slides.1'), tr('auto.slides.2'), tr('auto.slides.3'), tr('auto.slides.4')]
         : isLabReport
-          ? ['Organize data and figures', 'Draft results and analysis', 'Write intro, method and conclusion', 'Proofread and cite sources']
-          : ['Write a one-sentence thesis and outline', 'Draft the full piece', 'Revise for structure and clarity', 'Proofread and add citations'];
+          ? [tr('auto.labReport.1'), tr('auto.labReport.2'), tr('auto.labReport.3'), tr('auto.labReport.4')]
+          : [tr('auto.writing.1'), tr('auto.writing.2'), tr('auto.writing.3'), tr('auto.writing.4')];
       tags.push('writing');
       break;
     }
     case 'lab': {
-      what = `Lab${cn}: ${t}.`;
-      plan = 'pre-read procedure → run the lab → record data → clean up.';
-      tip = 'Record data as you go; label every measurement with units.';
-      subtasks = ['Pre-read the procedure and safety notes', 'Run the lab and record data', 'Check data for gaps or outliers', 'Clean up and file notes'];
+      what = tr('auto.line', { label: tr('auto.l.lab'), cn, title: t });
+      plan = tr('auto.lab.plan');
+      tip = tr('auto.lab.tip');
+      subtasks = [tr('auto.lab.1'), tr('auto.lab.2'), tr('auto.lab.3'), tr('auto.lab.4')];
       tags.push('lab');
       break;
     }
     case 'homework': {
       const target = problems ? problems.label : t;
-      what = `Homework${cn}: ${target}.`;
-      plan = 'do the problems → check answers → mark ones to ask about.';
-      tip = 'Try each problem before looking at examples; note where you got stuck.';
-      subtasks = [`Do ${problems ? problems.label : 'the problems'}`, 'Check answers', 'Mark the ones to ask about'];
+      what = tr('auto.line', { label: tr('auto.l.homework'), cn, title: target });
+      plan = tr('auto.hw.plan');
+      tip = tr('auto.hw.tip');
+      subtasks = [tr('auto.hw.do', { what: problems ? problems.label : tr('auto.hw.theProblems') }), tr('auto.hw.2'), tr('auto.hw.3')];
       if (problems) estimate = clamp(problems.count * 4, 15, 300);
       break;
     }
     case 'study': {
-      what = `Study session${cn}: ${t}.`;
-      plan = 'pick the topics → active recall → fix the gaps.';
-      tip = 'Quiz yourself from memory before rereading notes.';
-      subtasks = ['List the topics to cover', 'Self-test from memory', 'Review what you missed'];
+      what = tr('auto.line', { label: tr('auto.l.study'), cn, title: t });
+      plan = tr('auto.study.plan');
+      tip = tr('auto.study.tip');
+      subtasks = [tr('auto.study.1'), tr('auto.study.2'), tr('auto.study.3')];
       tags.push('study');
       break;
     }
     default: {
-      what = `Task${cn}: ${t}.`;
-      plan = 'clarify what done looks like → do it → double-check.';
-      tip = 'Break it into one concrete next step you can start now.';
-      subtasks = ['Clarify what finished looks like', 'Do the work', 'Double-check and submit'];
+      what = tr('auto.line', { label: tr('auto.l.task'), cn, title: t });
+      plan = tr('auto.other.plan');
+      tip = tr('auto.other.tip');
+      subtasks = [tr('auto.other.1'), tr('auto.other.2'), tr('auto.other.3')];
       break;
     }
   }
 
   if (subject && SUBJECT_TIPS[subject]) {
-    tip = SUBJECT_TIPS[subject] as string;
+    tip = tr(SUBJECT_TIPS[subject] as MessageKey);
   }
 
   if (ctx.estimateMin !== undefined && ctx.estimateMin > 0) estimate = Math.round(ctx.estimateMin);
 
-  const notes = [`${what}`, `**Plan:** ${plan}`, `**Tip:** ${tip}`].join('\n').slice(0, 400);
+  const notes = [`${what}`, tr('auto.plan', { plan }), tr('auto.tip', { tip })].join('\n').slice(0, 400);
 
   return {
     type,

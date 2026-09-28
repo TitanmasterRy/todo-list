@@ -5,6 +5,7 @@
   import * as sp from '../lib/spotify.svelte';
   import { spotify, toEmbedUrl, type SpotifyPlaylist } from '../lib/spotify.svelte';
   import { hasSecret } from '../lib/secrets.svelte';
+  import { t } from '../lib/i18n/index.svelte';
 
   let query = $state('');
   let results = $state<SpotifyPlaylist[]>([]);
@@ -64,7 +65,7 @@
     e?.preventDefault();
     const parsed = toEmbedUrl(linkDraft);
     if (!parsed) {
-      linkError = 'Paste a Spotify, Apple Music, YouTube or SoundCloud share link.';
+      linkError = t('music.badLink');
       return;
     }
     linkError = '';
@@ -74,12 +75,12 @@
   const fmt = (ms: number) => `${Math.floor(ms / 60000)}:${String(Math.floor((ms % 60000) / 1000)).padStart(2, '0')}`;
 </script>
 
-<section class="card music" aria-label="Music">
+<section class="card music" aria-label={t('focus.music')}>
   <div class="head">
-    <h2>🎧 Music</h2>
+    <h2>🎧 {t('focus.music')}</h2>
     {#if connected}
-      <span class="who">{spotify.user?.name ?? 'Spotify'}{spotify.premium ? '' : ' · Free'}</span>
-      <button class="btn ghost sm" onclick={() => sp.logout()}>Disconnect</button>
+      <span class="who">{spotify.user?.name ?? 'Spotify'}{spotify.premium ? '' : ` · ${t('music.free')}`}</span>
+      <button class="btn ghost sm" onclick={() => sp.logout()}>{t('sync.disconnect')}</button>
     {/if}
   </div>
 
@@ -87,22 +88,22 @@
     {#if !connected}
       <div class="connect">
         <button class="btn primary" onclick={connect} disabled={spotify.status === 'connecting'}>
-          {spotify.status === 'connecting' ? 'Connecting…' : 'Connect Spotify'}
+          {spotify.status === 'connecting' ? t('gist.connecting') : t('music.connect')}
         </button>
-        <p class="hint">Create a free app at developer.spotify.com/dashboard, add this page's URL as a Redirect URI, paste the Client ID in Settings.</p>
+        <p class="hint">{t('music.setup')}</p>
         {#if spotify.error}<p class="err" role="alert">{spotify.error}</p>{/if}
       </div>
     {:else}
       {#if !spotify.premium}
-        <p class="hint notice">Playback control needs Spotify Premium; the embedded player below still works.</p>
+        <p class="hint notice">{t('music.premium')}</p>
       {/if}
       <div class="now">
         {#if track?.image}<img class="art" src={track.image} alt="" />{:else}<div class="art blank">♪</div>{/if}
         <div class="meta">
-          <div class="title" title={track?.name}>{track?.name ?? 'Nothing playing'}</div>
-          <div class="sub">{track?.artists ?? (spotify.playback?.device ? `on ${spotify.playback.device.name}` : 'Open Spotify on a device, then pick it below.')}</div>
+          <div class="title" title={track?.name}>{track?.name ?? t('music.nothing')}</div>
+          <div class="sub">{track?.artists ?? (spotify.playback?.device ? t('music.on', { device: spotify.playback.device.name }) : t('music.openSpotify'))}</div>
           {#if track}
-            <div class="bar" role="progressbar" aria-valuenow={Math.round(progress)} aria-valuemin={0} aria-valuemax={100} aria-label="Track progress">
+            <div class="bar" role="progressbar" aria-valuenow={Math.round(progress)} aria-valuemin={0} aria-valuemax={100} aria-label={t('music.progress')}>
               <div class="fill" style:width="{progress}%"></div>
             </div>
             <div class="times"><span>{fmt(track.progressMs)}</span><span>{fmt(track.durationMs)}</span></div>
@@ -110,41 +111,50 @@
         </div>
       </div>
       <div class="controls">
-        <button class="btn icon" aria-label="Previous track" onclick={() => guard(sp.previous)}>⏮</button>
-        <button class="btn icon primary" aria-label={spotify.playback?.isPlaying ? 'Pause' : 'Play'} onclick={toggle}>{spotify.playback?.isPlaying ? '⏸' : '▶'}</button>
-        <button class="btn icon" aria-label="Next track" onclick={() => guard(sp.next)}>⏭</button>
+        <button class="btn icon" aria-label={t('music.prev')} onclick={() => guard(sp.previous)}>⏮</button>
+        <button class="btn icon primary" aria-label={spotify.playback?.isPlaying ? t('focus.pause') : t('music.play')} onclick={toggle}
+          >{spotify.playback?.isPlaying ? '⏸' : '▶'}</button
+        >
+        <button class="btn icon" aria-label={t('music.next')} onclick={() => guard(sp.next)}>⏭</button>
         <label class="vol"
-          ><span aria-hidden="true">🔊</span><input type="range" min="0" max="100" value={spotify.playback?.device?.volume ?? 50} onchange={volume} aria-label="Volume" /></label
+          ><span aria-hidden="true">🔊</span><input
+            type="range"
+            min="0"
+            max="100"
+            value={spotify.playback?.device?.volume ?? 50}
+            onchange={volume}
+            aria-label={t('music.volume')}
+          /></label
         >
       </div>
       <div class="devices">
-        <select class="select" aria-label="Playback device" value={activeDevice} onchange={pickDevice}>
-          <option value="" disabled>{spotify.devices.length ? 'Pick a device' : 'No devices — open Spotify somewhere'}</option>
+        <select class="select" aria-label={t('music.device')} value={activeDevice} onchange={pickDevice}>
+          <option value="" disabled>{spotify.devices.length ? t('music.pickDevice') : t('music.noDevices')}</option>
           {#each spotify.devices as d (d.id)}<option value={d.id}>{d.name} · {d.type}</option>{/each}
         </select>
-        <button class="btn icon" aria-label="Refresh devices" onclick={() => refreshDevices()}>↻</button>
+        <button class="btn icon" aria-label={t('music.refresh')} onclick={() => refreshDevices()}>↻</button>
       </div>
       <form class="search" onsubmit={search}>
-        <input class="input" bind:value={query} placeholder="Focus playlists: lo-fi, study beats, piano…" aria-label="Search playlists" />
-        <button class="btn sm" type="submit" disabled={searching}>{searching ? '…' : 'Search'}</button>
+        <input class="input" bind:value={query} placeholder={t('music.searchPh')} aria-label={t('music.search')} />
+        <button class="btn sm" type="submit" disabled={searching}>{searching ? '…' : t('inbox.searchLabel')}</button>
       </form>
       {#if results.length}
         <ul class="list">
           {#each results as p (p.id)}<li>
               {#if p.image}<img src={p.image} alt="" />{/if}<span class="n">{p.name}<small>{p.owner}</small></span><button class="btn sm" onclick={() => playPlaylist(p.uri)}
-                >Play</button
+                >{t('music.play')}</button
               >
             </li>{/each}
         </ul>
       {/if}
-      <button class="btn ghost sm" onclick={toggleMine} aria-expanded={showMine}>{showMine ? 'Hide' : 'My playlists'}</button>
+      <button class="btn ghost sm" onclick={toggleMine} aria-expanded={showMine}>{showMine ? t('common.hide') : t('music.mine')}</button>
       {#if showMine}
         <ul class="list">
           {#each mine as p (p.id)}<li>
               {#if p.image}<img src={p.image} alt="" />{/if}<span class="n">{p.name}<small>{p.owner}</small></span><button class="btn sm" onclick={() => playPlaylist(p.uri)}
-                >Play</button
+                >{t('music.play')}</button
               >
-            </li>{:else}<li class="hint">No playlists yet.</li>{/each}
+            </li>{:else}<li class="hint">{t('music.noPlaylists')}</li>{/each}
         </ul>
       {/if}
     {/if}
@@ -153,18 +163,18 @@
 
   <div class="embed">
     {#if embed}
-      <iframe title="Embedded music player" src={embed.src} height={embedHeight} allow="autoplay; encrypted-media; clipboard-write" loading="lazy"></iframe>
+      <iframe title={t('music.embedTitle')} src={embed.src} height={embedHeight} allow="autoplay; encrypted-media; clipboard-write" loading="lazy"></iframe>
       <div class="embed-foot">
-        <span class="hint">Plays in this tab, free.{clientId ? ' Spotify Connect controls whatever device is playing.' : ''}</span>
-        <button class="btn ghost sm" onclick={() => store.updateSettings({ musicEmbedUrl: '' })}>Clear</button>
+        <span class="hint">{t('music.playsHere')}{clientId ? ` ${t('music.connectControls')}` : ''}</span>
+        <button class="btn ghost sm" onclick={() => store.updateSettings({ musicEmbedUrl: '' })}>{t('inbox.clear')}</button>
       </div>
     {:else}
       <form onsubmit={saveLink} class="search">
-        <input class="input" bind:value={linkDraft} placeholder="Paste a Spotify / Apple Music / YouTube / SoundCloud link" aria-label="Music link" />
-        <button class="btn sm" type="submit">Embed</button>
+        <input class="input" bind:value={linkDraft} placeholder={t('music.linkPh')} aria-label={t('music.link')} />
+        <button class="btn sm" type="submit">{t('music.embed')}</button>
       </form>
       {#if linkError}<p class="err" role="alert">{linkError}</p>{/if}
-      <p class="hint">The embed plays in this tab and is free.{clientId ? ' Spotify Connect above controls whatever device is playing.' : ''}</p>
+      <p class="hint">{t('music.embedHelp')}{clientId ? ` ${t('music.connectAbove')}` : ''}</p>
     {/if}
   </div>
 </section>

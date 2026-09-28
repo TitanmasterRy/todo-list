@@ -80,8 +80,8 @@
   <h3>Resets for testing</h3>
   <div class="row">
     <button class="btn sm" onclick={() => ((ui.admin = false), store.updateSettings({ onboarded: false }))}>Show the welcome tour</button>
-    <button class="btn sm" onclick={() => ((ui.admin = false), (ui.whatsNew = true))}>Show What's new</button>
-    <button class="btn sm" onclick={() => store.updateSettings({ lastSeenChangelog: undefined })}>Forget which changelog was seen</button>
+    <button class="btn sm" onclick={() => ((ui.admin = false), (ui.whatsNew = true))}>Show patch notes</button>
+    <button class="btn sm" onclick={() => store.updateSettings({ lastSeenChangelog: '(testing)' })}>Open patch notes on next load</button>
     <button class="btn sm" onclick={() => reset(USAGE_KEY, 'AI usage meter')}>Reset the AI usage meter</button>
     <button class="btn sm" onclick={() => reset('homework-todo:arcade-scores', 'Arcade high scores')}>Reset arcade high scores</button>
     <button class="btn sm" onclick={() => reset('homework-todo:reminders-sent', 'Sent reminders')}>Forget sent reminders</button>

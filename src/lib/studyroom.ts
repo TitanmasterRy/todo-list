@@ -1,6 +1,7 @@
 // Shared study-room timer with no server: the link carries the room (start time, lengths, name) and every
 // device works out the same phase and time left from its own clock. Pure, so it's unit-tested.
 import { cleanText, decodeJson, paramFrom, randomId, toB64url } from './b64url';
+import { t } from './i18n/index.svelte';
 
 export interface StudyRoom {
   id: string; // random; names the optional realtime channel
@@ -124,4 +125,21 @@ export function formatLeft(ms: number): string {
   return h ? `${h}:${mm}:${ss}` : `${mm}:${ss}`;
 }
 
-export const PHASE_LABEL: Record<RoomPhase, string> = { waiting: 'Starting soon', work: 'Focus', break: 'Short break', long: 'Long break', done: 'Finished' };
+// labels in the app language
+export const PHASE_LABEL: Record<RoomPhase, string> = {
+  get waiting() {
+    return t('room.waiting');
+  },
+  get work() {
+    return t('nav.focus');
+  },
+  get break() {
+    return t('room.break');
+  },
+  get long() {
+    return t('room.long');
+  },
+  get done() {
+    return t('room.done');
+  },
+};

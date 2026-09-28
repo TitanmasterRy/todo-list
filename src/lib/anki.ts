@@ -2,6 +2,7 @@
 // .apkg files are a zip with a SQLite collection; sql.js (WebAssembly) and the unzip/zstd helpers load only
 // when an .apkg is opened.
 import { parseCloze } from './flashcards';
+import { t as tr } from './i18n/index.svelte';
 
 const stripBom = (s: string) => (s.charCodeAt(0) === 0xfeff ? s.slice(1) : s);
 
@@ -89,7 +90,7 @@ export async function importApkg(data: Uint8Array, sql?: SqlJs): Promise<Importe
     const { decompress } = await import('fzstd');
     db = decompress(files['collection.anki21b']);
   } else db = files['collection.anki21'] ?? files['collection.anki2'];
-  if (!db) throw new Error('This file has no Anki collection in it.');
+  if (!db) throw new Error(tr('anki.none'));
 
   // media map: legacy JSON {"0": "image.png"}; newer files use a compressed protobuf we don't read (images skipped)
   let media: Record<string, string> = {};

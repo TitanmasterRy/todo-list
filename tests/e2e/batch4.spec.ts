@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs';
 import { expect, test, type Page } from '@playwright/test';
 import { addTask, openApp } from './helpers';
 
@@ -104,22 +105,37 @@ test('break mode pauses the streak and shows on Today', async ({ page }) => {
   await expect(page.getByRole('status').filter({ hasText: 'Fall break' })).toContainText('streak is paused');
 });
 
-test("what's new shows once after an update, and from Settings → Help", async ({ page }) => {
-  await openApp(page, { lastSeenChangelog: 'An older version' });
-  await page.getByRole('button', { name: 'What’s new' }).click();
-  const dlg = page.getByRole('dialog', { name: /What’s new/ });
+test('patch notes open by themselves after an update, with everything this device missed', async ({ page }) => {
+  // this device last saw pass 5, so passes 6 and 7 (at least) are new
+  const changelog = readFileSync(new URL('../../CHANGELOG.md', import.meta.url), 'utf8');
+  const heads = [...changelog.matchAll(/^## (.+)$/gm)].map((m) => m[1]);
+  await openApp(page, { lastSeenChangelog: heads[2] });
+  const dlg = page.getByRole('dialog', { name: /Patch notes/ });
   await expect(dlg).toBeVisible();
-  await expect(dlg.locator('li').first()).toBeVisible();
-  await dlg.getByRole('button', { name: 'Nice' }).click();
+  await expect(dlg).toContainText('2 updates since your last visit');
+  await expect(dlg.locator('.note.new')).toHaveCount(2);
+  await expect(dlg.locator('.note.new').first()).toHaveAttribute('open', '');
+  await expect(dlg.locator('.note').nth(2)).not.toHaveAttribute('open', '');
+  await dlg.getByRole('button', { name: /older update/ }).click();
+  await expect(dlg.locator('.note')).toHaveCount(heads.length);
+  await dlg.getByRole('button', { name: 'Got it' }).click();
+  // once seen, it stays closed
   await page.reload();
-  await page.waitForTimeout(2500);
-  await expect(page.getByText('Updated: see what’s new')).toHaveCount(0);
-  await page
-    .getByRole('button', { name: /Settings/ })
-    .first()
-    .click();
-  await page.getByRole('button', { name: '✨ What’s new' }).click();
-  await expect(page.getByRole('dialog', { name: /What’s new/ })).toBeVisible();
+  await expect(page.locator('.shell')).toBeVisible();
+  await page.waitForTimeout(1200);
+  await expect(dlg).toHaveCount(0);
+  // and it's always in Settings → Help
+  await page.goto('./?view=settings');
+  await page.getByRole('button', { name: '📜 Patch notes' }).click();
+  await expect(dlg).toBeVisible();
+  await expect(dlg.locator('.note.new')).toHaveCount(0);
+  await expect(dlg.locator('.note').first()).toHaveAttribute('open', '');
+});
+
+test('a fresh install does not open patch notes', async ({ page }) => {
+  await openApp(page);
+  await page.waitForTimeout(1200);
+  await expect(page.getByRole('dialog', { name: /Patch notes/ })).toHaveCount(0);
 });
 
 test('course board: move a task through To do → Doing → Done', async ({ page }) => {

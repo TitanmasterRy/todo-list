@@ -37,6 +37,7 @@ Every host except GitHub Pages serves the site from the domain root, which is th
 | `VITE_ARCADE_MANIFEST` | URL of a `games.json` to load arcade games from instead of the bundled `games/games.json`. Lets you change games without redeploying. The URL must allow CORS. |
 | `VITE_ADMIN_HASH` | Optional. The hidden admin panel's passphrase hash (`pbkdf2$…`, made in the panel → Security). Without it, each device sets its own admin passphrase. See [ADMIN.md](ADMIN.md). |
 | `VITE_CSP_CONNECT` | Extra origins the page may connect to, space or comma separated (e.g. `https://relay.myschool.org https://llm.example.com`). Needed only for a Schoology relay that isn't on `*.workers.dev` or a custom AI endpoint on another host. See [Content-Security-Policy](#content-security-policy). |
+| `VITE_MEDIA_SERVERS` | Your own Jellyfin / Emby / video servers for Play → Watch, space or comma separated origins (e.g. `https://jellyfin.example.com https://*.my-tailnet.ts.net`). Added to the policy's `connect-src` so the app can sign in, browse, report progress and stream HLS. Not needed for embedded links or a server's web app in a frame. See [WATCH.md](WATCH.md). |
 | `VITE_CSP` | `off` leaves the Content-Security-Policy out of the build (not recommended). |
 
 ## Accounts (email + password sync)
@@ -69,7 +70,10 @@ Study rooms, friend codes and class lists work with no server at all. With accou
 
 ## Content-Security-Policy
 
-`npm run build` puts a `<meta http-equiv="Content-Security-Policy">` into `dist/index.html` (a small plugin in `vite.config.ts`; the host list is `src/lib/csp.ts`). It forbids inline scripts and plugins and only allows connections to the services the app uses: the AI providers, `*.supabase.co` (and `wss://*.supabase.co` for Realtime), GitHub (`gist.githubusercontent.com` also serves published class lists), Google, `*.schoology.com` and `*.workers.dev` relays, Spotify, Crossref/Open Library and `cdn.jsdelivr.net` (Python and OCR engines). `VITE_SUPABASE_URL` and `VITE_ARCADE_MANIFEST` origins are added automatically; anything else goes in `VITE_CSP_CONNECT`. If a request is blocked, the app's error message names the origin to add.
+`npm run build` puts a `<meta http-equiv="Content-Security-Policy">` into `dist/index.html` (a small plugin in `vite.config.ts`; the host list is `src/lib/csp.ts`). It forbids inline scripts and plugins and only allows connections to the services the app uses: the AI providers, `*.supabase.co` (and `wss://*.supabase.co` for Realtime), GitHub (`gist.githubusercontent.com` also serves published class lists), Google, `*.schoology.com` and `*.workers.dev` relays, Spotify, Crossref/Open Library and `cdn.jsdelivr.net` (Python and OCR engines). `VITE_SUPABASE_URL` and `VITE_ARCADE_MANIFEST` origins are added automatically; media servers for Play → Watch go in `VITE_MEDIA_SERVERS`; anything else goes in `VITE_CSP_CONNECT`. If a request is blocked, the app's error message names the origin to add.
+
+- `media-src` allows `https:` (and `blob:` for hls.js and local files), so `<video>` can play from any https server; `frame-src` allows any `https:` page (embedded players, a server's web app). `connect-src` deliberately does not allow arbitrary hosts, because it limits where the page could ever send data: that's why Jellyfin/Emby servers (their API and HLS segments are fetches) must be listed in `VITE_MEDIA_SERVERS`. The Watch tab checks this before signing in and shows the exact origin to add.
+- http:// servers can't be used from an https site at all (mixed content), whatever the policy says. See [WATCH.md](WATCH.md#why-https-is-needed-mixed-content).
 
 - The dev server (`npm run dev`) has no policy, since Vite's hot reload needs inline scripts and `ws:`.
 - The offline single-file build (`dist/lite/index.html`) has none either: all of its code is inline.
@@ -106,6 +110,7 @@ Blocked requests get `403`, rate-limited ones `429` with `Retry-After: 60`; the 
 ### GitHub Pages
 1. Repository **Settings → Pages → Source: GitHub Actions** (once).
 2. Push to `main`. The workflow tests, builds and publishes to `https://<owner>.github.io/<repo>/`.
+3. Optional build variables (`VITE_SUPABASE_URL`, `VITE_MEDIA_SERVERS`, `VITE_CSP_CONNECT`, …): repository **Settings → Secrets and variables → Actions → Variables → New repository variable**, then re-run the workflow. `.github/workflows/deploy.yml` passes them to the build.
 
 ### Vercel
 1. Click the button, or **Add New → Project** and import the repo. The framework is detected as Vite; `vercel.json` sets the build and output.
@@ -143,7 +148,7 @@ docker run -p 8080:8080 homework-todo   # http://localhost:8080
 ```
 - **Fly.io:** `fly launch --copy-config --no-deploy`, then `fly deploy`.
 - **Railway / Koyeb:** create a service from the repo; the Dockerfile is detected. Expose port 8080.
-- Build args: `--build-arg VITE_BASE=/sub/ --build-arg VITE_ARCADE_MANIFEST=https://…/games.json`.
+- Build args: `--build-arg VITE_BASE=/sub/ --build-arg VITE_ARCADE_MANIFEST=https://…/games.json --build-arg VITE_MEDIA_SERVERS=https://jellyfin.example.com`.
 
 ## After deploying
 

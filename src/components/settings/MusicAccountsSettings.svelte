@@ -14,13 +14,13 @@
       id="spid"
       class="input"
       value={s.spotifyClientId}
-      placeholder="from developer.spotify.com/dashboard"
+      placeholder={t('music.spotifyPh')}
       onchange={(e) => set('spotifyClientId', (e.target as HTMLInputElement).value.trim())}
     />
   </div>
   <p class="help">
-    Create a free app at developer.spotify.com/dashboard, add <code>{typeof location !== 'undefined' ? location.origin + location.pathname : ''}</code> as a Redirect URI, paste the Client
-    ID, then connect from Focus → Music. Playback control (devices, play/pause) needs Spotify Premium; the embedded player works for everyone.
+    {t('music.help1')} <code>{typeof location !== 'undefined' ? location.origin + location.pathname : ''}</code>
+    {t('music.help2')}
   </p>
   <div class="row">
     <label for="gcid">Google Client ID</label>
@@ -32,7 +32,7 @@
       onchange={(e) => set('googleClientId', (e.target as HTMLInputElement).value.trim())}
     />
   </div>
-  <p class="help">Enables Gmail scanning, Google Classroom import, Google Calendar push and Drive sync (sign in on any device to sync). Setup is in Tools → Google.</p>
+  <p class="help">{t('music.google')}</p>
 </section>
 
 <style>
