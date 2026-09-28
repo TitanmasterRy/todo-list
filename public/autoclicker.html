@@ -1,0 +1,665 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Frame + Auto Clicker</title>
+<style>
+  :root { --bg:#f4f4f4; --panel:#fff; --line:#dadce0; --text:#202124; --muted:#5f6368; --accent:#1a73e8; --ok:#188038; --bad:#c5221f; }
+  * { box-sizing: border-box; }
+  html, body { margin:0; height:100%; }
+  body { font-family: Arial, sans-serif; background: var(--bg); color: var(--text); display:flex; flex-direction:column; }
+  header { background: var(--panel); border-bottom:1px solid var(--line); padding:10px 16px; display:flex; flex-wrap:wrap; gap:10px; align-items:center; }
+  header h1 { font-size:16px; margin:0 12px 0 0; white-space:nowrap; }
+  form { display:flex; flex:1; flex-wrap:wrap; gap:8px; min-width:260px; }
+  input[type=text], input[type=number], textarea, select { padding:8px 10px; font-size:15px; border:1px solid #ccc; border-radius:4px; font-family:inherit; }
+  input[type=text] { flex:1; min-width:160px; }
+  input[type=number] { width:80px; }
+  button, .filebtn { background:#f8f9fa; border:1px solid #f8f9fa; border-radius:4px; color:#3c4043; cursor:pointer; font-size:14px; height:36px; padding:0 14px; white-space:nowrap; display:inline-flex; align-items:center; }
+  button:hover, .filebtn:hover { border-color: var(--line); box-shadow: rgba(0,0,0,.1) 0 1px 1px; color: var(--text); }
+  button.primary { background: var(--accent); border-color: var(--accent); color:#fff; }
+  button.stop { background: var(--bad); border-color: var(--bad); color:#fff; }
+  .filebtn input { display:none; }
+  .panel { background: var(--panel); border-bottom:1px solid var(--line); padding:8px 16px; display:flex; flex-wrap:wrap; gap:8px 14px; align-items:center; font-size:14px; }
+  .panel label { display:flex; align-items:center; gap:6px; }
+  .status { color: var(--muted); }
+  .status b { color: var(--text); }
+  .warn { color: var(--bad); }
+  .good { color: var(--ok); }
+  main { flex:1; display:flex; flex-direction:column; min-height:0; }
+  iframe { border:none; width:100%; flex:1; background:#fff; }
+  #testpad { display:none; padding:16px; align-items:center; gap:14px; background:#fffbe6; border-bottom:1px solid #f2d675; font-size:14px; }
+  #testpad.show { display:flex; }
+  #testbtn { background:#fbbc04; border-color:#fbbc04; color:#000; font-weight:bold; }
+  #crosshair { position:fixed; width:22px; height:22px; margin:-11px 0 0 -11px; border:2px solid var(--bad); border-radius:50%; pointer-events:none; display:none; z-index:9999; box-shadow:0 0 0 1px #fff; }
+  #crosshair::after { content:""; position:absolute; left:8px; top:8px; width:2px; height:2px; background:var(--bad); }
+  body.picking, body.picking iframe { cursor: crosshair; }
+  body.dragover iframe { outline: 3px dashed var(--accent); outline-offset:-3px; }
+  noscript .nojs { background:#fce8e6; color:#3c4043; padding:12px 16px; font-size:14px; line-height:1.5; border-bottom:1px solid #f5c2c0; }
+  noscript ol { margin:6px 0 0 20px; padding:0; }
+  details { font-size:13px; color: var(--muted); }
+  details summary { cursor:pointer; }
+  details textarea { width:100%; min-height:60px; font-family:monospace; font-size:12px; margin-top:6px; }
+  /* settings */
+  #settings { display:none; background:#fff; border-bottom:1px solid var(--line); padding:10px 16px; font-size:14px; }
+  #settings.show { display:block; }
+  #settings .grid { display:grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap:8px 20px; align-items:center; }
+  #settings label { display:flex; align-items:center; gap:8px; justify-content:space-between; }
+  #settings label input[type=text], #settings label input[type=number], #settings label select { width:150px; }
+  #settings .wide { grid-column: 1 / -1; display:block; }
+  #settings .wide textarea { width:100%; min-height:56px; font-family:monospace; font-size:12px; margin-top:4px; }
+  #settings .row { display:flex; gap:8px; margin-top:10px; align-items:center; }
+  #settings .hint { color: var(--muted); font-size:12px; }
+  /* console */
+  #console { display:none; flex-direction:column; height:240px; background:#1e1e1e; color:#ddd; font:12px/1.5 Menlo, Consolas, monospace; border-top:2px solid #444; }
+  #console.show { display:flex; }
+  #console .bar { display:flex; gap:8px; align-items:center; padding:4px 8px; background:#2b2b2b; border-bottom:1px solid #444; font-family:Arial, sans-serif; }
+  #console .bar button { height:24px; padding:0 8px; font-size:12px; background:#3a3a3a; border-color:#3a3a3a; color:#ddd; }
+  #console .bar select { padding:2px 4px; font-size:12px; background:#3a3a3a; color:#ddd; border-color:#555; }
+  #console .bar .grow { flex:1; }
+  #log { flex:1; overflow:auto; padding:4px 8px; white-space:pre-wrap; word-break:break-word; }
+  #log div { border-bottom:1px solid #2a2a2a; padding:1px 0; }
+  #log .warn { color:#f5c542; } #log .error { color:#ff7b72; } #log .info { color:#79c0ff; } #log .in { color:#9aa; } #log .out { color:#a5d6ff; }
+  #log .src { color:#777; margin-right:6px; }
+  #cmdrow { display:flex; align-items:center; border-top:1px solid #444; }
+  #cmdrow span { padding:0 6px; color:#79c0ff; }
+  #cmd { flex:1; background:#1e1e1e; color:#eee; border:none; padding:6px; font:inherit; outline:none; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Frame + Auto Clicker</h1>
+  <!-- Without JavaScript this form still works: it searches DuckDuckGo inside the frame,
+       and you can click through to the site from the results. With JavaScript, the page
+       loads the typed URL directly. -->
+  <form id="urlForm" action="https://duckduckgo.com/" method="get" target="viewer">
+    <input type="text" id="urlInput" name="q" placeholder="https://example.com" value="https://noahstutoring.academy/" autocomplete="off">
+    <button type="submit" class="primary">Open in Frame</button>
+    <button type="button" id="proxyBtn" title="Fetch the page through a relay and show it as part of this page. Works on sites that refuse framing, and the clicker can click inside it.">Via proxy</button>
+    <button type="button" id="newTabBtn" title="Opens a blank tab that frames the URL (needs JavaScript)">Open in new tab</button>
+    <button type="button" id="directBtn" title="Opens the URL as a normal tab, for sites that refuse to be framed">Open directly</button>
+    <label class="filebtn" title="Load an .html file from this Chromebook into the frame. The clicker can click inside it.">
+      Load HTML file <input type="file" id="htmlFile" accept=".html,.htm,text/html">
+    </label>
+  </form>
+</header>
+
+<noscript>
+  <style>#controls, #proxyBtn, #newTabBtn, #directBtn, .filebtn, #settings { display:none; }</style>
+  <div class="nojs">
+    <b>JavaScript is off, so this page cannot click for you.</b> No web page can: only scripts can create clicks,
+    and browsers never let one page click inside another site's frame anyway.
+    The one thing on a Chromebook that clicks without JavaScript or an extension is the built-in dwell click:
+    <ol>
+      <li>Open <b>Settings</b> → <b>Accessibility</b> → <b>Cursor and touchpad</b> (older versions: Manage accessibility features → Mouse and touchpad).</li>
+      <li>Turn on <b>Automatically click when the cursor stops</b>.</li>
+      <li>Set the delay to the shortest option (0.6 s) and turn on <b>Revert to left click after action</b>.</li>
+      <li>Park the cursor on the target. It clicks each time the cursor stops, so a tiny wiggle triggers another click.</li>
+    </ol>
+    If a school admin has locked that setting, the only remaining option is hardware, such as a mouse with a macro button.
+    The search box above still works without JavaScript: results open inside the frame and you can click through to the site.
+  </div>
+</noscript>
+
+<div class="panel" id="controls">
+  <label>Clicks/sec <input type="number" id="cps" min="1" max="100" value="10"></label>
+  <label>Hotkey <input type="text" id="hotkey" value="F8" size="4" readonly title="Click here, then press the key you want"></label>
+  <button id="pickBtn">Pick target</button>
+  <button id="startBtn" class="primary">Start (F8)</button>
+  <button id="testBtn">Test area</button>
+  <button id="consoleBtn" title="Toggle the console (F12 or Ctrl+`)">Console</button>
+  <button id="settingsBtn">Settings</button>
+  <span class="status" id="status">Target: <b>none</b> · Clicks: <b id="count">0</b></span>
+  <details><summary>How it works / limits / relay list</summary>
+    Runs a timer that fires real mouse events at the chosen spot. The browser does not allow those events to reach
+    a site loaded from another domain inside the frame, so the clicker can only hit things on this page (like the
+    test button), an HTML file you loaded with "Load HTML file", or a page opened with "Via proxy". Those run as part
+    of this page. That is a browser security rule, not a bug. For anything else use the ChromeOS dwell click:
+    Settings → Accessibility → Cursor and touchpad → Automatically click when the cursor stops.<br>
+    "Refused to connect" inside the frame means that site forbids being framed. "Via proxy" downloads the page
+    through one of the relays below (a public service that adds the permission this page needs to read it), rewrites
+    it so its images and scripts still load from the real site, and puts it in the frame as part of this page.
+    Nested game frames are pulled through the same way. Relays are third-party services: they may be slow, rate
+    limited, offline, or blocked by a filter. Pages that need you to be logged in, or that talk to their own server
+    from script, usually will not work through it. The relay list lives in <b>Settings</b>.<br>
+    <b>Drag and drop</b> an .html file onto the frame to load it. Press <b>F12</b> or Ctrl+` for the console.
+  </details>
+</div>
+
+<div id="settings">
+  <div class="grid">
+    <label>Default clicks per second <input type="number" id="s_cps" min="1" max="100"></label>
+    <label>Hotkey <input type="text" id="s_hotkey" readonly title="Click here, then press the key you want"></label>
+    <label>Click type <select id="s_type"><option value="click">Left click</option><option value="dblclick">Double click</option><option value="right">Right click</option></select></label>
+    <label>Hold each click for (ms) <input type="number" id="s_hold" min="0" max="1000"></label>
+    <label>Stop after this many clicks (0 = never) <input type="number" id="s_limit" min="0"></label>
+    <label>Show target marker <input type="checkbox" id="s_marker"></label>
+    <label>Start page (loaded in the URL box) <input type="text" id="s_home"></label>
+    <label>Console height (px) <input type="number" id="s_conh" min="120" max="800"></label>
+    <label class="wide">Proxy / relay URLs, one per line. <code>{url}</code> is replaced by the page address; a plain URL gets the address appended.
+      <textarea id="relays"></textarea>
+      <span class="hint">Use your own relay here if the public ones are slow or blocked, for example a CORS relay you run somewhere: <code>https://my-relay.example/?url={url}</code></span>
+    </label>
+  </div>
+  <div class="row">
+    <button id="saveSettings" class="primary">Save</button>
+    <button id="resetSettings">Reset to defaults</button>
+    <button id="closeSettings">Close</button>
+    <span class="hint" id="settingsMsg">Settings are saved in this browser only.</span>
+  </div>
+</div>
+
+<div id="testpad">
+  <button id="testbtn">Click me</button>
+  <span>Test button hits: <b id="testcount">0</b></span>
+  <span class="status">Use "Pick target" and choose this button to verify the clicker is working.</span>
+</div>
+
+<div id="crosshair"></div>
+
+<main>
+  <iframe id="viewer" name="viewer" src="about:blank" title="Framed site"></iframe>
+</main>
+
+<div id="console">
+  <div class="bar">
+    <b>Console</b>
+    <label>Run in <select id="runIn"><option value="frame">frame</option><option value="page">this page</option></select></label>
+    <span class="grow"></span>
+    <button id="clearLog">Clear</button>
+    <button id="closeConsole">Close</button>
+  </div>
+  <div id="log"></div>
+  <div id="cmdrow"><span>&gt;</span><input id="cmd" placeholder="JavaScript… Enter to run, ↑/↓ for history" autocomplete="off" spellcheck="false"></div>
+</div>
+
+<script>
+(function () {
+  var $ = function (id) { return document.getElementById(id); };
+  var form = $('urlForm'), urlInput = $('urlInput'), viewer = $('viewer');
+  var cpsInput = $('cps'), hotkeyInput = $('hotkey'), startBtn = $('startBtn'), pickBtn = $('pickBtn');
+  var status = $('status'), countEl = $('count'), crosshair = $('crosshair');
+  var testpad = $('testpad'), testbtn = $('testbtn'), testcount = $('testcount');
+  var consoleEl = $('console'), logEl = $('log'), cmd = $('cmd');
+
+  var timer = null, count = 0, target = null, picking = false, hotkey = 'F8', proxyMode = false;
+
+  // ----- settings -----
+  var DEFAULTS = {
+    cps: 10, hotkey: 'F8', type: 'click', hold: 0, limit: 0, marker: true, conh: 240,
+    home: 'https://noahstutoring.academy/',
+    relays: 'https://corsproxy.io/?url={url}\nhttps://api.allorigins.win/raw?url={url}\nhttps://api.codetabs.com/v1/proxy?quest={url}'
+  };
+  var settings = {};
+  function loadSettings() {
+    var saved = {};
+    try { saved = JSON.parse(localStorage.getItem('autoclicker-settings') || '{}') || {}; } catch (e) {}
+    Object.keys(DEFAULTS).forEach(function (k) { settings[k] = (k in saved) ? saved[k] : DEFAULTS[k]; });
+  }
+  function saveSettings() {
+    try { localStorage.setItem('autoclicker-settings', JSON.stringify(settings)); return true; } catch (e) { return false; }
+  }
+  function settingsToForm() {
+    $('s_cps').value = settings.cps; $('s_hotkey').value = settings.hotkey; $('s_type').value = settings.type;
+    $('s_hold').value = settings.hold; $('s_limit').value = settings.limit; $('s_marker').checked = !!settings.marker;
+    $('s_home').value = settings.home; $('s_conh').value = settings.conh; $('relays').value = settings.relays;
+  }
+  function formToSettings() {
+    settings.cps = Math.min(100, Math.max(1, parseInt($('s_cps').value, 10) || DEFAULTS.cps));
+    settings.hotkey = $('s_hotkey').value || 'F8';
+    settings.type = $('s_type').value;
+    settings.hold = Math.max(0, parseInt($('s_hold').value, 10) || 0);
+    settings.limit = Math.max(0, parseInt($('s_limit').value, 10) || 0);
+    settings.marker = $('s_marker').checked;
+    settings.home = $('s_home').value.trim();
+    settings.conh = Math.min(800, Math.max(120, parseInt($('s_conh').value, 10) || DEFAULTS.conh));
+    settings.relays = $('relays').value;
+  }
+  function applySettings(initial) {
+    cpsInput.value = settings.cps;
+    hotkey = settings.hotkey; hotkeyInput.value = hotkey;
+    startBtn.textContent = (timer ? 'Stop (' : 'Start (') + hotkey + ')';
+    crosshair.style.visibility = settings.marker ? 'visible' : 'hidden';
+    consoleEl.style.height = settings.conh + 'px';
+    if (initial && settings.home) urlInput.value = settings.home;
+    if (timer) { stop(); start(); }
+  }
+
+  function esc(s) { return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;'); }
+
+  function normalizeUrl(u) {
+    u = u.trim();
+    if (!u) return '';
+    if (!/^https?:\/\//i.test(u)) u = 'https://' + u;
+    return u;
+  }
+
+  function setStatus(html) {
+    status.innerHTML = html + ' · Clicks: <b id="count">' + count + '</b>';
+    countEl = $('count');
+  }
+
+  // ----- loading things into the frame -----
+  form.addEventListener('submit', function (e) {
+    e.preventDefault();
+    var url = normalizeUrl(urlInput.value);
+    if (url) { proxyMode = false; viewer.removeAttribute('srcdoc'); viewer.src = url; }
+  });
+
+  $('newTabBtn').addEventListener('click', function () {
+    var url = normalizeUrl(urlInput.value);
+    if (!url) return;
+    var win = window.open('', '_blank');
+    if (!win) { alert('Popup blocked. Allow popups for this page or use "Open in Frame".'); return; }
+    var f = win.document.createElement('iframe');
+    f.style.cssText = 'border:none;width:100%;height:100vh;margin:0;';
+    f.src = url;
+    win.document.body.style.margin = '0';
+    win.document.body.appendChild(f);
+  });
+
+  $('directBtn').addEventListener('click', function () {
+    var url = normalizeUrl(urlInput.value);
+    if (url) window.open(url, '_blank');
+  });
+
+  // Buffers console output that runs before this page can hook the frame, so the console shows it.
+  var EARLY = "<script>(function(){var b=window.__acEarly=[];['log','info','warn','error','debug'].forEach(function(m){var o=console[m];console[m]=function(){if(window.__acEarly)window.__acEarly.push([m,[].slice.call(arguments)]);return o.apply(console,arguments)}})})()<\/script>";
+  function withEarly(html) {
+    return /<head[^>]*>/i.test(html) ? html.replace(/<head[^>]*>/i, function (m) { return m + EARLY; }) : EARLY + html;
+  }
+
+  function showDoc(html) {
+    viewer.removeAttribute('src');
+    viewer.srcdoc = withEarly(html);
+  }
+
+  // Local HTML file: srcdoc keeps it on this page's origin, so the clicker can reach into it.
+  function loadHtmlFile(file) {
+    if (!file) return;
+    var r = new FileReader();
+    r.onload = function () {
+      proxyMode = false;
+      showDoc(r.result);
+      setStatus('Loaded <b>' + esc(file.name) + '</b> into the frame. Pick a target inside it.');
+    };
+    r.readAsText(file);
+  }
+  $('htmlFile').addEventListener('change', function (e) { loadHtmlFile(e.target.files[0]); });
+  ['dragenter', 'dragover'].forEach(function (t) {
+    document.addEventListener(t, function (e) { e.preventDefault(); document.body.classList.add('dragover'); });
+  });
+  ['dragleave', 'drop'].forEach(function (t) {
+    document.addEventListener(t, function (e) { e.preventDefault(); if (t === 'dragleave' && e.relatedTarget) return; document.body.classList.remove('dragover'); });
+  });
+  document.addEventListener('drop', function (e) {
+    var f = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
+    if (f) loadHtmlFile(f);
+  });
+
+  // ----- proxy mode -----
+  function relayList() {
+    return settings.relays.split('\n').map(function (s) { return s.trim(); }).filter(function (s) { return /^https?:\/\//i.test(s); })
+      .map(function (s) { return s.indexOf('{url}') >= 0 ? s : s + '{url}'; });
+  }
+
+  function fetchVia(url) {
+    var relays = relayList(), i = 0, errors = [];
+    if (!relays.length) return Promise.reject(new Error('No relays listed'));
+    function next() {
+      if (i >= relays.length) return Promise.reject(new Error('All relays failed: ' + errors.join('; ')));
+      var relay = relays[i++];
+      var target = relay.replace('{url}', encodeURIComponent(url));
+      return fetch(target, { credentials: 'omit' }).then(function (res) {
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        return res.text();
+      }).catch(function (err) {
+        errors.push(relay.split('/')[2] + ': ' + err.message);
+        return next();
+      });
+    }
+    return next();
+  }
+
+  // Downloads a page through a relay and rewrites it so it can live inside this page:
+  // a <base> so relative links still point at the real site, no CSP meta tags, no sandbox
+  // on nested frames, and nested frames pulled through the relay the same way (2 levels).
+  function proxyDoc(url, depth) {
+    return fetchVia(url).then(function (html) {
+      var doc = new DOMParser().parseFromString(html, 'text/html');
+      Array.prototype.forEach.call(doc.querySelectorAll('meta[http-equiv]'), function (m) {
+        if (/content-security-policy/i.test(m.getAttribute('http-equiv') || '')) m.remove();
+      });
+      Array.prototype.forEach.call(doc.querySelectorAll('base'), function (b) { b.remove(); });
+      var base = doc.createElement('base'); base.href = url;
+      doc.head.insertBefore(base, doc.head.firstChild);
+      var jobs = [];
+      if (depth < 2) {
+        Array.prototype.slice.call(doc.querySelectorAll('iframe[src]'), 0, 6).forEach(function (f) {
+          var abs;
+          try { abs = new URL(f.getAttribute('src'), url).href; } catch (e) { return; }
+          if (!/^https?:/.test(abs)) return;
+          f.removeAttribute('sandbox');
+          jobs.push(proxyDoc(abs, depth + 1).then(function (inner) {
+            f.setAttribute('srcdoc', withEarly(inner)); f.removeAttribute('src');
+          }, function () { /* leave the original src; it may still frame fine */ }));
+        });
+      }
+      return Promise.all(jobs).then(function () {
+        return '<!DOCTYPE html>' + doc.documentElement.outerHTML;
+      });
+    });
+  }
+
+  function proxyLoad(url) {
+    setStatus('Fetching <b>' + esc(url) + '</b> through a relay…');
+    proxyDoc(url, 0).then(function (html) {
+      proxyMode = true;
+      urlInput.value = url;
+      showDoc(html);
+      setStatus('Showing <b>' + esc(url) + '</b> via proxy <span class="good">(clickable)</span>');
+    }, function (err) {
+      setStatus('<span class="warn">Proxy failed: ' + esc(err.message) + '</span>');
+      clog('error', 'proxy', [err.message]);
+    });
+  }
+  $('proxyBtn').addEventListener('click', function () {
+    var url = normalizeUrl(urlInput.value);
+    if (url) proxyLoad(url);
+  });
+
+  // ----- same-origin frame hooks (loaded files and proxied pages) -----
+  function frameOffset(win) {
+    var x = 0, y = 0;
+    while (win && win !== window && win.frameElement) {
+      var r = win.frameElement.getBoundingClientRect();
+      x += r.left; y += r.top; win = win.parent;
+    }
+    return { x: x, y: y };
+  }
+
+  function hookWindow(win, label) {
+    var doc;
+    try { doc = win.document; } catch (err) { return; }
+    if (!doc || win.__acHooked) return;
+    win.__acHooked = true;
+    doc.addEventListener('click', function (e) {
+      if (picking) {
+        e.preventDefault(); e.stopPropagation();
+        picking = false;
+        document.body.classList.remove('picking');
+        var off = frameOffset(win);
+        setTarget(e.clientX + off.x, e.clientY + off.y);
+        return;
+      }
+      if (proxyMode) {
+        var a = e.target && e.target.closest ? e.target.closest('a[href]') : null;
+        if (a && /^https?:/.test(a.href) && !e.defaultPrevented) { e.preventDefault(); proxyLoad(a.href); }
+      }
+    }, true);
+    doc.addEventListener('keydown', onKey);
+    hookConsole(win, label);
+    Array.prototype.forEach.call(doc.querySelectorAll('iframe'), function (f, i) {
+      var sub = label + '>' + i;
+      f.addEventListener('load', function () { hookWindow(f.contentWindow, sub); });
+      try { if (f.contentDocument && f.contentDocument.readyState !== 'loading') hookWindow(f.contentWindow, sub); } catch (err) {}
+    });
+  }
+  viewer.addEventListener('load', function () { hookWindow(viewer.contentWindow, 'frame'); });
+
+  // Innermost document + element at a page coordinate, drilling into same-origin frames.
+  function hit(x, y) {
+    var doc = document, el = doc.elementFromPoint(x, y);
+    while (el && el.tagName === 'IFRAME') {
+      var inner;
+      try { inner = el.contentDocument; } catch (err) { inner = null; }
+      if (!inner) break;
+      var rect = el.getBoundingClientRect();
+      x -= rect.left; y -= rect.top;
+      doc = inner; el = inner.elementFromPoint(x, y);
+    }
+    return { doc: doc, el: el, x: x, y: y, foreign: !!(el && el.tagName === 'IFRAME') };
+  }
+
+  // ----- target picking -----
+  pickBtn.addEventListener('click', function () {
+    picking = true;
+    document.body.classList.add('picking');
+    setStatus('Click anywhere on the page to set the target (Esc to cancel).');
+  });
+
+  document.addEventListener('click', function (e) {
+    if (!picking) return;
+    if (e.target === pickBtn) return;
+    e.preventDefault(); e.stopPropagation();
+    picking = false;
+    document.body.classList.remove('picking');
+    setTarget(e.clientX, e.clientY);
+  }, true);
+
+  function setTarget(x, y) {
+    target = { x: x, y: y };
+    crosshair.style.left = x + 'px';
+    crosshair.style.top = y + 'px';
+    crosshair.style.display = 'block';
+    var h = hit(x, y), el = h.el;
+    var name = el ? describe(el) : 'nothing';
+    setStatus('Target: <b>' + name + '</b> at ' + Math.round(x) + ',' + Math.round(y) +
+      (h.foreign ? ' <span class="warn">(frame from another site: clicks will not reach inside it)</span>' :
+       h.doc !== document ? ' <span class="good">(inside frame)</span>' : ''));
+  }
+
+  function describe(el) {
+    var s = el.tagName.toLowerCase();
+    if (el.id) s += '#' + el.id;
+    var t = (el.textContent || '').trim();
+    if (t && el.tagName !== 'IFRAME') s += ' "' + t.slice(0, 20) + '"';
+    return esc(s);
+  }
+
+  // ----- clicking -----
+  function fireClick() {
+    if (!target) return;
+    var h = hit(target.x, target.y), el = h.el;
+    if (!el || el === crosshair) return;
+    var win = h.doc.defaultView || window;
+    var right = settings.type === 'right';
+    var opts = { bubbles: true, cancelable: true, view: win, clientX: h.x, clientY: h.y, button: right ? 2 : 0, buttons: right ? 2 : 1 };
+    el.dispatchEvent(new MouseEvent('mousedown', opts));
+    function up() {
+      el.dispatchEvent(new MouseEvent('mouseup', opts));
+      if (right) el.dispatchEvent(new MouseEvent('contextmenu', opts));
+      else {
+        el.dispatchEvent(new MouseEvent('click', opts));
+        if (settings.type === 'dblclick') {
+          el.dispatchEvent(new MouseEvent('mousedown', opts)); el.dispatchEvent(new MouseEvent('mouseup', opts));
+          el.dispatchEvent(new MouseEvent('click', opts)); el.dispatchEvent(new MouseEvent('dblclick', opts));
+        }
+      }
+    }
+    if (settings.hold > 0) setTimeout(up, settings.hold); else up();
+    count++;
+    countEl.textContent = count;
+    if (settings.limit && count % settings.limit === 0) { stop(); setStatus('Stopped after ' + settings.limit + ' clicks.'); }
+  }
+
+  function start() {
+    if (timer) return;
+    if (!target) { setStatus('<span class="warn">Pick a target first.</span>'); return; }
+    var cps = Math.min(100, Math.max(1, parseInt(cpsInput.value, 10) || 10));
+    timer = setInterval(fireClick, 1000 / cps);
+    startBtn.textContent = 'Stop (' + hotkey + ')';
+    startBtn.classList.remove('primary'); startBtn.classList.add('stop');
+  }
+
+  function stop() {
+    if (!timer) return;
+    clearInterval(timer); timer = null;
+    startBtn.textContent = 'Start (' + hotkey + ')';
+    startBtn.classList.remove('stop'); startBtn.classList.add('primary');
+  }
+
+  function toggle() { if (timer) stop(); else start(); }
+
+  startBtn.addEventListener('click', toggle);
+  cpsInput.addEventListener('change', function () { settings.cps = Math.min(100, Math.max(1, parseInt(cpsInput.value, 10) || 10)); saveSettings(); if (timer) { stop(); start(); } });
+
+  // ----- keys -----
+  hotkeyInput.addEventListener('keydown', function (e) {
+    e.preventDefault();
+    if (e.key === 'Escape') { hotkeyInput.blur(); return; }
+    hotkey = e.key.length === 1 ? e.key.toUpperCase() : e.key;
+    hotkeyInput.value = hotkey; settings.hotkey = hotkey; saveSettings();
+    startBtn.textContent = (timer ? 'Stop (' : 'Start (') + hotkey + ')';
+    hotkeyInput.blur();
+  });
+
+  function onKey(e) {
+    if (e.key === 'Escape' && picking) {
+      picking = false; document.body.classList.remove('picking'); setStatus('Pick cancelled.'); return;
+    }
+    if (e.key === 'F12' || (e.ctrlKey && e.key === '`')) { e.preventDefault(); toggleConsole(); return; }
+    var active = e.target && e.target.ownerDocument ? e.target.ownerDocument.activeElement : document.activeElement;
+    if (active === hotkeyInput) return;
+    var k = e.key.length === 1 ? e.key.toUpperCase() : e.key;
+    if (k === hotkey && !(active && /^(INPUT|TEXTAREA)$/.test(active.tagName))) {
+      e.preventDefault(); toggle();
+    }
+  }
+  document.addEventListener('keydown', onKey);
+
+  window.addEventListener('blur', function () {
+    if (timer && !proxyMode && !viewer.srcdoc) setStatus('<span class="warn">Frame has focus: hotkey will not work until you click outside it.</span> Running');
+  });
+
+  // ----- test area -----
+  $('testBtn').addEventListener('click', function () { testpad.classList.toggle('show'); });
+  testbtn.addEventListener('click', function () { testcount.textContent = ++testbtn._n || (testbtn._n = 1); });
+
+  window.addEventListener('resize', function () { if (target) setTarget(Math.min(target.x, innerWidth - 1), Math.min(target.y, innerHeight - 1)); });
+
+  // ----- console -----
+  function fmt(v, depth) {
+    depth = depth || 0;
+    try {
+      if (v === undefined) return 'undefined';
+      if (v === null) return 'null';
+      if (typeof v === 'string') return depth ? JSON.stringify(v) : v;
+      if (typeof v === 'function') return String(v).slice(0, 200);
+      if (v instanceof Error || (v && v.stack && v.message)) return v.stack || (v.name + ': ' + v.message);
+      if (v && v.nodeType === 1) return v.outerHTML.slice(0, 300);
+      if (v && v.nodeType) return String(v.nodeName);
+      if (typeof v !== 'object') return String(v);
+      if (depth > 2) return Array.isArray(v) ? '[…]' : '{…}';
+      if (Array.isArray(v)) return '[' + v.slice(0, 50).map(function (x) { return fmt(x, depth + 1); }).join(', ') + (v.length > 50 ? ', …' : '') + ']';
+      if (v.window === v) return '[Window]';
+      var keys = Object.keys(v).slice(0, 30);
+      return (v.constructor && v.constructor.name && v.constructor.name !== 'Object' ? v.constructor.name + ' ' : '') +
+        '{' + keys.map(function (k) { return k + ': ' + fmt(v[k], depth + 1); }).join(', ') + (Object.keys(v).length > 30 ? ', …' : '') + '}';
+    } catch (e) { return String(v); }
+  }
+
+  function clog(level, src, args) {
+    var line = document.createElement('div');
+    line.className = level;
+    var s = document.createElement('span'); s.className = 'src'; s.textContent = '[' + src + ']';
+    line.appendChild(s);
+    line.appendChild(document.createTextNode(args.map(function (a) { return fmt(a); }).join(' ')));
+    logEl.appendChild(line);
+    while (logEl.childElementCount > 500) logEl.removeChild(logEl.firstChild);
+    logEl.scrollTop = logEl.scrollHeight;
+  }
+
+  function hookConsole(win, label) {
+    var c;
+    try { c = win.console; } catch (err) { return; }
+    if (!c || c.__acHooked) return;
+    c.__acHooked = true;
+    ['log', 'info', 'warn', 'error', 'debug'].forEach(function (m) {
+      var orig = c[m];
+      c[m] = function () {
+        clog(m === 'log' || m === 'debug' ? 'log' : m, label, Array.prototype.slice.call(arguments));
+        try { return orig.apply(c, arguments); } catch (e) {}
+      };
+    });
+    var early = win.__acEarly;
+    if (early) { win.__acEarly = null; early.forEach(function (r) { clog(r[0] === 'log' || r[0] === 'debug' ? 'log' : r[0], label, r[1]); }); }
+    win.addEventListener('error', function (e) {
+      clog('error', label, [(e.message || 'Error') + (e.filename ? ' (' + e.filename.split('/').pop() + ':' + e.lineno + ')' : '')]);
+    });
+    win.addEventListener('unhandledrejection', function (e) { clog('error', label, ['Unhandled promise rejection:', e.reason]); });
+  }
+  hookConsole(window, 'page');
+
+  function toggleConsole(force) {
+    var show = force === undefined ? !consoleEl.classList.contains('show') : force;
+    consoleEl.classList.toggle('show', show);
+    if (show) cmd.focus();
+  }
+  $('consoleBtn').addEventListener('click', function () { toggleConsole(); });
+  $('closeConsole').addEventListener('click', function () { toggleConsole(false); });
+  $('clearLog').addEventListener('click', function () { logEl.innerHTML = ''; });
+
+  var history = [], hIdx = 0;
+  function run(code) {
+    clog('in', $('runIn').value, ['> ' + code]);
+    var win = window;
+    if ($('runIn').value === 'frame') {
+      try { win = viewer.contentWindow; if (!win.document) throw 0; }
+      catch (e) { clog('error', 'frame', ['Cannot run inside this frame: it is from another site. Use "Via proxy" or a loaded file, or switch to "this page".']); return; }
+    }
+    try {
+      var result = (0, win.eval)(code);
+      if (result && typeof result.then === 'function') {
+        result.then(function (v) { clog('out', 'await', [v]); }, function (err) { clog('error', 'await', [err]); });
+        clog('out', $('runIn').value, ['Promise (pending)']);
+      } else clog('out', $('runIn').value, [result]);
+    } catch (err) { clog('error', $('runIn').value, [err]); }
+  }
+  cmd.addEventListener('keydown', function (e) {
+    e.stopPropagation();
+    if (e.key === 'Enter') {
+      var code = cmd.value.trim();
+      if (!code) return;
+      history.push(code); hIdx = history.length; cmd.value = '';
+      run(code);
+    } else if (e.key === 'ArrowUp') {
+      if (hIdx > 0) { hIdx--; cmd.value = history[hIdx]; e.preventDefault(); }
+    } else if (e.key === 'ArrowDown') {
+      if (hIdx < history.length - 1) { hIdx++; cmd.value = history[hIdx]; } else { hIdx = history.length; cmd.value = ''; }
+      e.preventDefault();
+    } else if (e.key === 'Escape') { toggleConsole(false); }
+    else if (e.key === 'F12') { e.preventDefault(); toggleConsole(false); }
+  });
+
+  // ----- settings UI -----
+  var settingsEl = $('settings');
+  $('settingsBtn').addEventListener('click', function () { settingsToForm(); settingsEl.classList.toggle('show'); });
+  $('closeSettings').addEventListener('click', function () { settingsEl.classList.remove('show'); });
+  $('saveSettings').addEventListener('click', function () {
+    formToSettings(); applySettings(false);
+    $('settingsMsg').textContent = saveSettings() ? 'Saved.' : 'Applied, but this browser would not store it.';
+  });
+  $('resetSettings').addEventListener('click', function () {
+    Object.keys(DEFAULTS).forEach(function (k) { settings[k] = DEFAULTS[k]; });
+    settingsToForm(); applySettings(false); saveSettings();
+    $('settingsMsg').textContent = 'Defaults restored.';
+  });
+  $('s_hotkey').addEventListener('keydown', function (e) {
+    e.preventDefault(); e.stopPropagation();
+    if (e.key === 'Escape') { this.blur(); return; }
+    this.value = e.key.length === 1 ? e.key.toUpperCase() : e.key;
+    this.blur();
+  });
+  ['s_home', 's_hold', 's_limit', 's_cps', 's_conh', 'relays'].forEach(function (id) {
+    $(id).addEventListener('keydown', function (e) { e.stopPropagation(); });
+  });
+
+  loadSettings();
+  applySettings(true);
+})();
+</script>
+
+</body>
+</html>
