@@ -128,8 +128,13 @@ async function axeCasino(page: Page) {
   }
 }
 
-test('the casino lobby and tables have no serious accessibility violations', async ({ page }) => axeCasino(page));
+// 17 full-page axe scans (the lobby and every table) take close to a minute on their own
+test.describe('accessibility', () => {
+  test.describe.configure({ timeout: 180_000 });
+  test('the casino lobby and tables have no serious accessibility violations', async ({ page }) => axeCasino(page));
+});
 test.describe('dark mode', () => {
+  test.describe.configure({ timeout: 180_000 });
   test.use({ colorScheme: 'dark' });
   test('the casino (dark) has no serious accessibility violations', async ({ page }) => axeCasino(page));
 });
