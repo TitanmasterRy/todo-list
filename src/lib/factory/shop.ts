@@ -1,5 +1,6 @@
 // Orebelt coin shop: spend the coins earned from homework on a few factory advantages. Each offer has a daily limit
 // so coins speed things up without replacing play. Purchases are logged in the app's ledger as 'factory:<id>'.
+import { finishPhase } from './actions';
 import { PHASES, type Inv, type ItemId } from './data';
 import { give, type FactoryState } from './state';
 import type { LedgerLike } from './market';
@@ -37,6 +38,8 @@ export const CRATES: Inv[] = [
   { steelBeam: 40, steelPipe: 60, motor: 6, concreteBeam: 10 },
   { plastic: 120, rubber: 120, motor: 15, heavyChassis: 3 },
   { circuitBoard: 30, computer: 5, controlUnit: 5, heavyChassis: 5 },
+  { aluminiumSheet: 80, heatSink: 10, supercomputer: 3, concreteBeam: 20 },
+  { fusedFrame: 4, heatSink: 25, encasedCell: 30, radioUnit: 1 },
 ];
 export function crateFor(tier: number): Inv {
   return CRATES[Math.max(0, Math.min(CRATES.length - 1, tier))];
@@ -88,9 +91,7 @@ export function applyOffer(s: FactoryState, id: OfferId): string {
       if (!p) return '';
       for (const [k, n] of Object.entries(p.cost) as [ItemId, number][]) s.delivered[k] = Math.min(n, (s.delivered[k] ?? 0) + Math.ceil(n * CARGO_SHARE));
       if ((Object.entries(p.cost) as [ItemId, number][]).every(([k, n]) => (s.delivered[k] ?? 0) >= n)) {
-        s.phase++;
-        s.delivered = {};
-        s.shards += p.shards;
+        finishPhase(s);
         return `Cargo lift finished ${p.name}!`;
       }
       return `Cargo lift delivered 20% of ${p.name}`;

@@ -8,6 +8,8 @@ const MAX_PENDING = 50;
 export interface Pending {
   tasks: number;
   study: number;
+  /** Good days: the daily ring closed or a streak milestone reached. */
+  days: number;
   /** Tasks already rewarded (so re-completing one doesn't pay twice). */
   ids: string[];
 }
@@ -17,9 +19,10 @@ type Store = Pick<Storage, 'getItem' | 'setItem'>;
 export function readPending(storage: Pick<Storage, 'getItem'> | undefined): Pending {
   try {
     const p = JSON.parse(storage?.getItem(PENDING_KEY) || '{}') as Partial<Pending>;
-    return { tasks: Math.max(0, Number(p.tasks) || 0), study: Math.max(0, Number(p.study) || 0), ids: Array.isArray(p.ids) ? p.ids.filter((x) => typeof x === 'string') : [] };
+    const n = (v: unknown) => Math.max(0, Number(v) || 0);
+    return { tasks: n(p.tasks), study: n(p.study), days: n(p.days), ids: Array.isArray(p.ids) ? p.ids.filter((x) => typeof x === 'string') : [] };
   } catch {
-    return { tasks: 0, study: 0, ids: [] };
+    return { tasks: 0, study: 0, days: 0, ids: [] };
   }
 }
 
@@ -45,11 +48,17 @@ export function bankStudy(storage: Store | undefined): void {
   write(storage, p);
 }
 
-/** Take the banked rewards (the counts reset; the rewarded task ids are kept). */
-export function takePending(storage: Store | undefined): { tasks: number; study: number } {
+export function bankDay(storage: Store | undefined): void {
   const p = readPending(storage);
-  if (p.tasks || p.study) write(storage, { ...p, tasks: 0, study: 0 });
-  return { tasks: p.tasks, study: p.study };
+  p.days = Math.min(MAX_PENDING, p.days + 1);
+  write(storage, p);
+}
+
+/** Take the banked rewards (the counts reset; the rewarded task ids are kept). */
+export function takePending(storage: Store | undefined): { tasks: number; study: number; days: number } {
+  const p = readPending(storage);
+  if (p.tasks || p.study || p.days) write(storage, { ...p, tasks: 0, study: 0, days: 0 });
+  return { tasks: p.tasks, study: p.study, days: p.days };
 }
 
 let started = false;
@@ -66,4 +75,6 @@ export function startFactoryBridge(): void {
   on('completed', ({ task }) => bankTask(ls(), task.id));
   on('studied', () => bankStudy(ls()));
   on('pomodoroDone', () => bankStudy(ls()));
+  on('ringClosed', () => bankDay(ls()));
+  on('streakMilestone', () => bankDay(ls()));
 }

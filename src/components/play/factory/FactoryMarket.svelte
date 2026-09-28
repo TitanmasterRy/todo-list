@@ -142,6 +142,16 @@
     padding: 12px;
     margin-bottom: 10px;
   }
+  .head h3::before {
+    content: '';
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    border-radius: 2px;
+    background: var(--f-orange);
+    margin-right: 8px;
+    vertical-align: 1px;
+  }
   .head {
     display: flex;
     justify-content: space-between;
@@ -163,10 +173,14 @@
     margin: 4px 0;
   }
   .wallet {
-    background: var(--f-panel2);
+    background: linear-gradient(180deg, #2b323a, var(--f-panel2));
+    border: 1px solid var(--f-line);
     border-radius: 999px;
     padding: 3px 10px;
     font-size: 13px;
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.08),
+      0 1px 2px rgba(0, 0, 0, 0.35);
   }
   .grid {
     display: grid;
@@ -175,13 +189,17 @@
     margin-top: 8px;
   }
   .offer {
-    background: var(--f-panel2);
+    background: linear-gradient(180deg, #2a3138, var(--f-panel2));
     border: 1px solid var(--f-line);
     border-radius: 8px;
     padding: 10px;
     display: grid;
     gap: 4px;
     align-content: start;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  }
+  .offer:has(.btn:not(:disabled)) {
+    border-color: #4a545f;
   }
   .offer header {
     display: flex;
@@ -229,6 +247,9 @@
     align-items: center;
     gap: 8px;
     flex-wrap: wrap;
+    padding: 6px 8px;
+    border-radius: 8px;
+    background: var(--f-panel2);
   }
   .nm {
     flex: 1;

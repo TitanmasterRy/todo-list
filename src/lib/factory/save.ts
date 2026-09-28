@@ -1,6 +1,8 @@
 // Orebelt saves: localStorage JSON with a version number. migrate() upgrades older saves step by step and
 // sanitizes anything broken or tampered with, so a bad save can never crash the game.
-import { BUILDING, CAMP, ITEM, MAP_H, MAP_W, MAX_CLOCK, MILESTONE, MIN_CLOCK, PHASES, RECIPE, RESEARCH, shardsFor, type Inv, type ItemId } from './data';
+import { BELTS, BUILDING, CAMP, ITEM, MAP_H, MAP_W, MAX_CLOCK, MILESTONE, MIN_CLOCK, PHASES, RECIPE, RESEARCH, SECTOR, shardsFor, type Inv, type ItemId } from './data';
+import { EVENT } from './events';
+import { PERK } from './prestige';
 import { FACTORY_VERSION, newGame, type Belt, type Building, type Dir, type FactoryState } from './state';
 
 export const SAVE_KEY = 'homework-todo:factory';
@@ -17,6 +19,20 @@ export const MIGRATIONS: Record<number, (s: Raw) => Raw> = {
     delivered: {},
     rushLeft: 0,
     extraOffline: 0,
+  }),
+  // v3 added sectors, contracts, achievements, prestige, events and lifetime stats; v2's tower had 6 phases
+  2: (s) => ({
+    ...s,
+    v: 3,
+    sectors: ['home'],
+    contracts: { day: '', done: [], progress: {} },
+    ach: [],
+    stars: 0,
+    runs: 0,
+    perks: [],
+    event: null,
+    madeTotal: Object.values(inv(s.made)).reduce((a, n) => a + n, 0),
+    lifetime: { launches: num(s.phase, 0) >= 6 ? 1 : 0, contracts: 0, relaunches: 0 },
   }),
 };
 
@@ -56,6 +72,7 @@ function sanitize(s: Raw, now: number): FactoryState {
     const type = b.type as Building['type'];
     if (type === 'camp' && buildings.some((o) => o.type === 'camp')) continue;
     const recipe = typeof b.recipe === 'string' && RECIPE[b.recipe]?.building === type ? b.recipe : undefined;
+    const item = BUILDING[type].kind === 'loader' && typeof b.item === 'string' && b.item in ITEM ? (b.item as ItemId) : undefined;
     let clock = num(b.clock, 1, MIN_CLOCK, MAX_CLOCK);
     const shards = Math.floor(num(b.shards, 0, 0, 3));
     if (shardsFor(clock) > shards) clock = Math.min(clock, 1 + shards * 0.5);
@@ -71,6 +88,7 @@ function sanitize(s: Raw, now: number): FactoryState {
       clock,
       shards,
       off: b.off === true || undefined,
+      item,
       inBuf: inv(b.inBuf),
       outBuf: inv(b.outBuf),
     });
@@ -92,10 +110,23 @@ function sanitize(s: Raw, now: number): FactoryState {
     const to = Math.floor(num(b.to, 0));
     if (id < 1 || from === to || !ids.has(from) || !ids.has(to) || ids.has(id) || belts.some((o) => o.id === id || (o.from === from && o.to === to))) continue;
     maxId = Math.max(maxId, id);
-    belts.push({ id, from, to, tier: Math.floor(num(b.tier, 1, 1, 5)) });
+    const filter = typeof b.filter === 'string' && b.filter in ITEM ? (b.filter as ItemId) : undefined;
+    belts.push({ id, from, to, tier: Math.floor(num(b.tier, 1, 1, BELTS.length)), ...(filter ? { filter } : {}) });
   }
-  const strings = (v: unknown, valid: (x: string) => boolean) => (Array.isArray(v) ? [...new Set(v.filter((x): x is string => typeof x === 'string' && valid(x)))] : []);
+  const strings = (v: unknown, valid: (x: string) => boolean = () => true) =>
+    Array.isArray(v) ? [...new Set(v.filter((x): x is string => typeof x === 'string' && valid(x)))] : [];
   const rewards = (s.rewards ?? {}) as Raw;
+  const contracts = (s.contracts && typeof s.contracts === 'object' ? s.contracts : {}) as Raw;
+  const progress: Record<string, number> = {};
+  if (contracts.progress && typeof contracts.progress === 'object')
+    for (const [k, n] of Object.entries(contracts.progress as Raw)) if (typeof n === 'number' && Number.isFinite(n) && n > 0) progress[k] = n;
+  const lifetime = (s.lifetime && typeof s.lifetime === 'object' ? s.lifetime : {}) as Raw;
+  const ev = (s.event && typeof s.event === 'object' ? s.event : {}) as Raw;
+  const beltId = ev.beltId === undefined ? undefined : Math.floor(num(ev.beltId, -1));
+  const event =
+    typeof ev.id === 'string' && ev.id in EVENT && num(ev.left, 0) > 0 && (beltId === undefined || belts.some((b) => b.id === beltId))
+      ? { id: ev.id, left: num(ev.left, 0, 0, EVENT[ev.id].seconds), ...(beltId === undefined ? {} : { beltId }) }
+      : null;
   return {
     v: FACTORY_VERSION,
     lastSeen: num(s.lastSeen, now, 0, now),
@@ -116,6 +147,19 @@ function sanitize(s: Raw, now: number): FactoryState {
     made: inv(s.made),
     credit: num(s.credit, 0, 0, 1),
     rewards: { tasks: Math.floor(num(rewards.tasks, 0, 0)), study: Math.floor(num(rewards.study, 0, 0)) },
+    sectors: ['home', ...strings(s.sectors, (x) => x in SECTOR && x !== 'home')],
+    contracts: { day: typeof contracts.day === 'string' ? contracts.day : '', done: strings(contracts.done), progress },
+    ach: strings(s.ach),
+    stars: Math.floor(num(s.stars, 0, 0)),
+    runs: Math.floor(num(s.runs, 0, 0)),
+    perks: strings(s.perks, (x) => x in PERK),
+    event,
+    madeTotal: num(s.madeTotal, 0, 0),
+    lifetime: {
+      launches: Math.floor(num(lifetime.launches, 0, 0)),
+      contracts: Math.floor(num(lifetime.contracts, 0, 0)),
+      relaunches: Math.floor(num(lifetime.relaunches, 0, 0)),
+    },
   };
 }
 

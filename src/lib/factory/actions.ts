@@ -1,8 +1,9 @@
-// Orebelt player actions: build, dismantle, belts, recipes, clock speed, milestones, research, hand work and
-// homework rewards. Each one checks the rules, mutates the state and returns { ok } or { ok: false, error }.
+// Orebelt player actions: build, dismantle, belts, recipes, clock speed, milestones, sectors, research, hand work
+// and homework rewards. Each one checks the rules, mutates the state and returns { ok } or { ok: false, error }.
 import {
   BELTS,
   BUILDING,
+  ITEM,
   MAP_H,
   MAP_W,
   MAX_BELT_LEN,
@@ -14,15 +15,18 @@ import {
   RESEARCH,
   RESOURCE_ITEM,
   REWARD,
+  SECTOR,
   nodeAt,
+  sectorAt,
   shardsFor,
   type BuildingId,
   type Inv,
   type ItemId,
 } from './data';
-import { buildingAt, byId, give, has, scaleCost, take, unlocked, type Belt, type Building, type Dir, type FactoryState } from './state';
+import { MAX_TASK_SHARDS, PERK } from './prestige';
+import { buildingAt, byId, give, has, scaleCost, take, unlocked, type Belt, type Building, type Dir, type FactoryState, type Result } from './state';
 
-export type Result = { ok: true } | { ok: false; error: string };
+export type { Result } from './state';
 const ok: Result = { ok: true };
 const fail = (error: string): Result => ({ ok: false, error });
 
@@ -38,6 +42,7 @@ export function canPlace(s: FactoryState, type: BuildingId, x: number, y: number
   const def = BUILDING[type];
   if (!def || type === 'camp') return fail('Unknown building');
   if (x < 0 || y < 0 || x >= MAP_W || y >= MAP_H) return fail('Off the map');
+  if (!surveyed(s, x, y)) return fail('Survey that sector first');
   const u = unlocked(s);
   if (!u.buildings.has(type)) return fail(`${def.name} isn't unlocked yet`);
   if (buildingAt(s, x, y)) return fail('That tile is taken');
@@ -49,6 +54,12 @@ export function canPlace(s: FactoryState, type: BuildingId, x: number, y: number
   } else if (node) return fail('Resource nodes are for miners and pumps');
   if (!free && !has(s.inv, def.cost)) return fail('Not enough parts');
   return ok;
+}
+
+/** Is this tile in a sector you've surveyed? */
+export function surveyed(s: Pick<FactoryState, 'sectors'>, x: number, y: number): boolean {
+  const sec = sectorAt(x, y);
+  return !!sec && s.sectors.includes(sec.id);
 }
 
 export function place(s: FactoryState, type: BuildingId, x: number, y: number, rot: Dir = 0): Result & { id?: number } {
@@ -80,9 +91,11 @@ export function rotate(s: FactoryState, id: number): Result {
   return ok;
 }
 
+const SINK = new Set(['camp', 'depot', 'storage']);
+
 export function toggle(s: FactoryState, id: number): Result {
   const b = byId(s, id);
-  if (!b || b.type === 'camp' || b.type === 'depot') return fail('Nothing to switch');
+  if (!b || SINK.has(BUILDING[b.type].kind)) return fail('Nothing to switch');
   b.off = !b.off;
   return ok;
 }
@@ -172,6 +185,16 @@ export function upgradeBelt(s: FactoryState, beltId: number, tier: number): Resu
   return ok;
 }
 
+/** Let only one item (or anything, with undefined) travel on a belt. */
+export function setBeltFilter(s: FactoryState, beltId: number, item: ItemId | undefined): Result {
+  const belt = s.belts.find((b) => b.id === beltId);
+  if (!belt) return fail('No such belt');
+  if (item !== undefined && !(item in ITEM)) return fail('Unknown item');
+  if (item === undefined) delete belt.filter;
+  else belt.filter = item;
+  return ok;
+}
+
 // ---------- machines ----------
 export function setRecipe(s: FactoryState, id: number, recipeId: string | undefined): Result {
   const b = byId(s, id);
@@ -192,6 +215,20 @@ export function setRecipe(s: FactoryState, id: number, recipeId: string | undefi
   return ok;
 }
 
+/** Pick what a Loader pulls from your stock; whatever it was holding goes back. */
+export function setLoaderItem(s: FactoryState, id: number, item: ItemId | undefined): Result {
+  const b = byId(s, id);
+  if (!b || BUILDING[b.type].kind !== 'loader') return fail("That isn't a loader");
+  if (item !== undefined && !(item in ITEM)) return fail('Unknown item');
+  if (b.item === item) return ok;
+  give(s.inv, b.outBuf);
+  b.outBuf = {};
+  if (item === undefined) delete b.item;
+  else b.item = item;
+  b.act = 1;
+  return ok;
+}
+
 /** Highest clock this building can reach with its own shards plus the free ones. */
 export function maxClock(s: FactoryState, b: Building): number {
   return Math.min(MAX_CLOCK, 1 + 0.5 * (b.shards + s.shards));
@@ -200,7 +237,7 @@ export function maxClock(s: FactoryState, b: Building): number {
 /** Set the clock (0.01–2.5); slots or frees shards as needed. Returns the clock actually set. */
 export function setClock(s: FactoryState, id: number, clock: number): number {
   const b = byId(s, id);
-  if (!b || b.type === 'camp' || b.type === 'depot') return 1;
+  if (!b || SINK.has(BUILDING[b.type].kind)) return 1;
   const c = Math.round(Math.max(MIN_CLOCK, Math.min(maxClock(s, b), clock)) * 100) / 100;
   const need = shardsFor(c);
   s.shards += b.shards - need;
@@ -251,12 +288,46 @@ export function deliverPhase(s: FactoryState, limit?: Inv): { ok: boolean; sent:
     sent[k] = n;
   }
   const completed = Object.values(phaseRemaining(s)).every((n) => (n ?? 0) <= 0);
-  if (completed) {
-    s.phase++;
-    s.delivered = {};
-    s.shards += p.shards;
-  }
+  if (completed) finishPhase(s);
   return { ok: Object.keys(sent).length > 0 || completed, sent, completed };
+}
+
+/** The current phase is done: next tier, its shards, and a launch counted when the tower is finished. */
+export function finishPhase(s: FactoryState): void {
+  const p = PHASES[s.phase];
+  if (!p) return;
+  s.phase++;
+  s.delivered = {};
+  s.shards += p.shards;
+  if (s.phase >= PHASES.length) s.lifetime.launches++;
+}
+
+export function canSurvey(s: FactoryState, id: string): Result {
+  const sec = SECTOR[id];
+  if (!sec) return fail('Unknown sector');
+  if (s.sectors.includes(id)) return fail('Already surveyed');
+  if (sec.tier > s.phase) return fail(`Reach tier ${sec.tier} first`);
+  if (s.insight < sec.insight) return fail(`Needs ${sec.insight} insight (finish homework to earn it)`);
+  if (!has(s.inv, sec.cost)) return fail('Not enough parts');
+  return ok;
+}
+
+/** Open a sector for building: costs parts and insight. */
+export function surveySector(s: FactoryState, id: string): Result {
+  const check = canSurvey(s, id);
+  if (!check.ok) return check;
+  const sec = SECTOR[id];
+  take(s.inv, sec.cost);
+  s.insight -= sec.insight;
+  s.sectors.push(id);
+  return ok;
+}
+
+/** Get a jammed belt moving again. */
+export function clearJam(s: FactoryState): Result {
+  if (!s.event || s.event.beltId === undefined) return fail('No belt is jammed');
+  s.event = null;
+  return ok;
 }
 
 export function canResearch(s: FactoryState, id: string): Result {
@@ -283,6 +354,7 @@ export function doResearch(s: FactoryState, id: string): Result {
 export function handMine(s: FactoryState, x: number, y: number): Result {
   const node = nodeAt(x, y);
   if (!node) return fail('No resource here');
+  if (!surveyed(s, x, y)) return fail('Survey that sector first');
   if (!unlocked(s).resources.has(node.res)) return fail("You can't process that resource yet");
   const it = RESOURCE_ITEM[node.res];
   s.inv[it] = (s.inv[it] ?? 0) + 1;
@@ -301,14 +373,20 @@ export function benchCraft(s: FactoryState, recipeId: string): Result {
 }
 
 // ---------- homework ----------
-/** Apply rewards for tasks completed and study sessions (notecards, pomodoros) since the last visit. */
-export function applyRewards(s: FactoryState, tasks: number, study: number): { shards: number; insight: number; boost: number } {
+/** Shards one finished task earns, with the Scholar perk counted. */
+export function taskShards(s: Pick<FactoryState, 'perks'>): number {
+  return Math.min(MAX_TASK_SHARDS, REWARD.task.shards + s.perks.reduce((n, id) => n + (PERK[id]?.effect.taskShards ?? 0), 0));
+}
+
+/** Apply rewards for tasks completed, study sessions (notecards, pomodoros) and good days (ring closed, streak) since the last visit. */
+export function applyRewards(s: FactoryState, tasks: number, study: number, days = 0): { shards: number; insight: number; boost: number } {
   tasks = Math.max(0, Math.floor(tasks));
   study = Math.max(0, Math.floor(study));
-  const shards = tasks * REWARD.task.shards + study * REWARD.study.shards;
-  const insight = tasks * REWARD.task.insight + study * REWARD.study.insight;
+  days = Math.max(0, Math.floor(days));
+  const shards = tasks * taskShards(s) + study * REWARD.study.shards + days * REWARD.day.shards;
+  const insight = tasks * REWARD.task.insight + study * REWARD.study.insight + days * REWARD.day.insight;
   const before = s.boostLeft;
-  s.boostLeft = Math.min(REWARD.boostCap, s.boostLeft + tasks * REWARD.task.boost + study * REWARD.study.boost);
+  s.boostLeft = Math.min(REWARD.boostCap, s.boostLeft + tasks * REWARD.task.boost + study * REWARD.study.boost + days * REWARD.day.boost);
   s.shards += shards;
   s.insight += insight;
   s.rewards.tasks += tasks;

@@ -1,15 +1,24 @@
 <script lang="ts">
-  // Orebelt progression: the Launch Tower (deliver parts to reach the next tier), milestones and research.
+  // Orebelt progression: the Launch Tower (deliver parts to reach the next tier, with a launch show when a phase
+  // completes), milestones and research.
   import { BELTS, BUILDING, MILESTONES, PHASES, RECIPE, RESEARCH, RESOURCE_NAME, type Inv, type ItemId, type Milestone } from '../../../lib/factory/data';
   import { canMilestone, canResearch, completeMilestone, deliverPhase, doResearch } from '../../../lib/factory/actions';
   import { toasts } from '../../../lib/toast.svelte';
+  import Burst from './Burst.svelte';
   import FactoryIcon from './FactoryIcon.svelte';
-  import { fmt, itemName, type FactoryCtl } from './controller.svelte';
+  import { fmt, itemName, motionOk, type FactoryCtl } from './controller.svelte';
 
   interface Props {
     ctl: FactoryCtl;
   }
   let { ctl }: Props = $props();
+
+  /** The launch show: set when a phase completes, cleared when it has played out. */
+  let show = $state<{ n: number; name: string; final: boolean; tier: number } | null>(null);
+  let showTimer: ReturnType<typeof setTimeout> | undefined;
+  let towerBurst = $state(0);
+  let msBurst = $state<{ id: string; n: number }>({ id: '', n: 0 });
+  const STARS = Array.from({ length: 18 }, (_, i) => ({ x: (i * 37) % 100, y: (i * 53) % 70, d: (i % 5) * 0.4, s: 1 + (i % 3) }));
 
   const v = $derived.by(() => {
     void ctl.rev;
@@ -42,23 +51,31 @@
   }
 
   function deliver() {
-    const name = v.phase?.name;
-    let done = false;
+    const name = v.phase?.name ?? '';
+    const before = ctl.game.phase;
     ctl.run((s) => {
       const r = deliverPhase(s);
-      done = r.completed;
       return r.ok ? { ok: true } : { ok: false, error: 'Nothing to deliver yet: stock the parts below at the Base Camp' };
     }, 'Parts delivered');
-    if (done)
-      toasts.push({
-        message: `${name} complete!`,
-        detail: ctl.game.phase >= PHASES.length ? 'The launch is a success. Your factory keeps running.' : `Tier ${ctl.game.phase} unlocked`,
-        kind: 'levelup',
-        emoji: '🚀',
-      });
+    const after = ctl.game.phase;
+    if (after <= before) return;
+    const final = after >= PHASES.length;
+    toasts.push({
+      message: `${name} complete!`,
+      detail: final ? 'The launch is a success. Your factory keeps running.' : `Tier ${after} unlocked`,
+      kind: 'levelup',
+      emoji: '🚀',
+    });
+    towerBurst++;
+    show = { n: (show?.n ?? 0) + 1, name, final, tier: after };
+    clearTimeout(showTimer);
+    showTimer = setTimeout(() => (show = null), motionOk() ? (final ? 9000 : 5200) : 3500);
   }
   function milestone(m: Milestone) {
-    if (ctl.run((s) => completeMilestone(s, m.id))) toasts.push({ message: `Milestone: ${m.name}`, detail: unlockText(m).join(' · '), kind: 'success', emoji: '🏗️' });
+    if (ctl.run((s) => completeMilestone(s, m.id))) {
+      toasts.push({ message: `Milestone: ${m.name}`, detail: unlockText(m).join(' · '), kind: 'success', emoji: '🏗️' });
+      msBurst = { id: m.id, n: msBurst.n + 1 };
+    }
   }
 </script>
 
@@ -76,6 +93,29 @@
 {/snippet}
 
 <section class="tower card" aria-labelledby="ob-tower">
+  {#if show}
+    {#key show.n}
+      <div class="launch" class:final={show.final} class:anim={motionOk()} role="status">
+        <div class="sky" aria-hidden="true">
+          {#each STARS as st, i (i)}<i style="left: {st.x}%; top: {st.y}%; --d: {st.d}s; --s: {st.s}px"></i>{/each}
+        </div>
+        <svg class="rocket" viewBox="0 0 40 60" aria-hidden="true">
+          <path d="M20 2c7 8 9 18 8 30H12C11 20 13 10 20 2z" fill="#e8ebef" stroke="#1b1f24" stroke-width="1.5" />
+          <path d="M12 26l-7 10h7zM28 26l7 10h-7z" fill="#e0701a" stroke="#1b1f24" />
+          <circle cx="20" cy="18" r="3.5" fill="#14a3b1" stroke="#1b1f24" />
+          <path class="flame" d="M14 33h12c0 8-3 16-6 24-3-8-6-16-6-24z" fill="#f2b632" />
+          <path class="flame" d="M17 33h6c0 5-1.5 10-3 15-1.5-5-3-10-3-15z" fill="#fff1c2" />
+        </svg>
+        <div class="banner">
+          <span class="eyebrow">{show.final ? 'Liftoff' : `Phase ${show.tier} complete`}</span>
+          <strong>{show.name}</strong>
+          <span class="sub">{show.final ? 'The Launch Tower flies. Your factory keeps running.' : `Tier ${show.tier} is open`}</span>
+          <button class="btn small-btn" onclick={() => (show = null)}>Continue</button>
+        </div>
+      </div>
+    {/key}
+  {/if}
+  <Burst trigger={towerBurst} kind="deliver" x={60} y={60} size={70} />
   <svg class="art" viewBox="0 0 120 160" aria-hidden="true">
     <rect x="0" y="146" width="120" height="14" fill="#2a2f36" />
     {#each Array.from({ length: 10 }) as _, i}<path d="M{i * 13} 160l8-14h5l-8 14z" fill="#f2b632" />{/each}
@@ -130,6 +170,7 @@
     <div class="grid">
       {#each t.items as { m, done, check } (m.id)}
         <article class="ms card" class:done data-milestone={m.id}>
+          {#if msBurst.id === m.id}<Burst trigger={msBurst.n} kind="milestone" size={60} />{/if}
           <header>
             <strong>{m.name}</strong>
             {#if done}<span class="ok">✓ Done</span>{/if}
@@ -185,10 +226,152 @@
     padding: 12px;
   }
   .tower {
+    position: relative;
     display: grid;
     grid-template-columns: 110px 1fr;
     gap: 14px;
     align-items: start;
+    overflow: hidden;
+  }
+  .ms {
+    position: relative;
+  }
+  /* the launch show sits over the whole tower card for a few seconds */
+  .launch {
+    position: absolute;
+    inset: 0;
+    z-index: 3;
+    display: grid;
+    place-items: center;
+    background: radial-gradient(ellipse at 50% 100%, #2b1a0e, #0b0f16 60%);
+    border-radius: 10px;
+  }
+  .launch.anim {
+    animation: ob-fade 0.5s ease-out both;
+  }
+  .launch.anim.final {
+    animation-duration: 0.8s;
+  }
+  .sky {
+    position: absolute;
+    inset: 0;
+    overflow: hidden;
+  }
+  .sky i {
+    position: absolute;
+    width: var(--s);
+    height: var(--s);
+    border-radius: 50%;
+    background: #fff;
+    opacity: 0.6;
+  }
+  .anim .sky i {
+    animation: ob-twinkle 1.6s ease-in-out infinite;
+    animation-delay: var(--d);
+  }
+  .rocket {
+    position: absolute;
+    left: calc(50% - 24px);
+    bottom: -70px;
+    width: 48px;
+    height: 72px;
+  }
+  .anim .rocket {
+    animation: ob-rise 3.6s cubic-bezier(0.35, 0, 0.6, 1) 0.4s forwards;
+  }
+  .anim.final .rocket {
+    animation-duration: 6s;
+    width: 64px;
+    height: 96px;
+    left: calc(50% - 32px);
+  }
+  .anim .flame {
+    transform-origin: 20px 33px;
+    animation: ob-flame 0.12s ease-in-out infinite alternate;
+  }
+  .banner {
+    position: relative;
+    display: grid;
+    justify-items: center;
+    gap: 2px;
+    padding: 10px 18px;
+    border: 2px solid var(--f-yellow);
+    border-radius: 10px;
+    background: rgba(15, 18, 21, 0.85);
+    text-align: center;
+    box-shadow: 0 0 24px rgba(242, 182, 50, 0.35);
+  }
+  .anim .banner {
+    animation: ob-banner 0.7s cubic-bezier(0.2, 0.9, 0.3, 1.3) 0.3s both;
+  }
+  .final .banner {
+    border-color: var(--f-teal);
+    box-shadow: 0 0 34px rgba(20, 163, 177, 0.5);
+  }
+  .eyebrow {
+    font-size: 11px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--f-yellow);
+  }
+  .final .eyebrow {
+    color: #8fe7ef;
+  }
+  .banner strong {
+    font-size: 20px;
+  }
+  .final .banner strong {
+    font-size: 26px;
+  }
+  .sub {
+    font-size: 12px;
+    color: var(--f-muted);
+  }
+  @keyframes ob-fade {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+  @keyframes ob-rise {
+    0% {
+      transform: translateY(0) scale(0.9);
+    }
+    15% {
+      transform: translateY(-10px) scale(1);
+    }
+    100% {
+      transform: translateY(-140vh) scale(0.6);
+    }
+  }
+  @keyframes ob-flame {
+    from {
+      transform: scaleY(0.7);
+    }
+    to {
+      transform: scaleY(1.15);
+    }
+  }
+  @keyframes ob-twinkle {
+    0%,
+    100% {
+      opacity: 0.25;
+    }
+    50% {
+      opacity: 1;
+    }
+  }
+  @keyframes ob-banner {
+    from {
+      transform: translateY(24px) scale(0.6);
+      opacity: 0;
+    }
+    to {
+      transform: none;
+      opacity: 1;
+    }
   }
   @media (max-width: 480px) {
     .tower {
@@ -326,6 +509,13 @@
   }
   .btn:disabled {
     opacity: 0.5;
+  }
+  .small-btn {
+    margin-top: 6px;
+    min-height: 32px;
+    padding: 5px 12px;
+    font-size: 12px;
+    justify-self: center;
   }
   .btn.primary {
     background: var(--f-orange);

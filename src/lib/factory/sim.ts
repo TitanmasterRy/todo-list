@@ -1,11 +1,22 @@
 // Orebelt simulation: one fixed tick moves the whole factory forward (power, production, belts), and
 // catchUp() fast-forwards the time you were away. tick() mutates the state it's given and reports what happened.
-import { BELTS, BUILDING, CAMP_POWER, nodeAt, OFFLINE_CAP, PURITY, RECIPE, RESOURCE_ITEM, REWARD, powerAt, type Inv, type ItemId } from './data';
+import { BELTS, BUILDING, CAMP_POWER, nodeAt, PURITY, RECIPE, RESOURCE_ITEM, REWARD, STORAGE_CAP, powerAt, type Inv, type ItemId } from './data';
+import { beltMult, eventMult, rollEvent, tickEvent } from './events';
+import { offlineCap, perkMiners, perkSpeed } from './prestige';
 import { accepts, inCap, outCap, type Building, type FactoryState } from './state';
 
 export const TICK = 1; // seconds
 
 export type Status = 'ok' | 'starved' | 'blocked' | 'power' | 'off' | 'idle' | 'nofuel';
+export const STATUS_LABEL: Record<Status, string> = {
+  ok: 'Running',
+  starved: 'Starved',
+  blocked: 'Blocked',
+  power: 'Low power',
+  off: 'Paused',
+  idle: 'Idle',
+  nofuel: 'No fuel',
+};
 
 export interface BuildingReport {
   st: Status;
@@ -38,6 +49,15 @@ export function boostMult(s: Pick<FactoryState, 'boostLeft' | 'rushLeft'>): numb
 }
 export const RUSH_MULT = 1.5;
 
+/** Speed multiplier for machines: boosts, rush orders and perks. */
+export function speedMult(s: Pick<FactoryState, 'boostLeft' | 'rushLeft' | 'perks'>): number {
+  return boostMult(s) * perkSpeed(s);
+}
+/** Rate multiplier for miners: the machine multiplier plus drill perks and the weather. */
+export function minerMult(s: Pick<FactoryState, 'boostLeft' | 'rushLeft' | 'perks' | 'event'>): number {
+  return speedMult(s) * perkMiners(s) * eventMult(s).miners;
+}
+
 /** Items per minute a miner makes at its clock (before power and boosts). */
 export function minerRate(b: Building): number {
   const def = BUILDING[b.type];
@@ -51,6 +71,7 @@ export function fullPower(b: Building): number {
   const def = BUILDING[b.type];
   if (b.off || def.power <= 0) return 0;
   if (def.kind === 'producer' && !b.recipe) return 0;
+  if (def.kind === 'loader' && !b.item) return 0;
   return powerAt(def.power, b.clock);
 }
 
@@ -58,9 +79,13 @@ const add = (inv: Inv, k: ItemId, n: number) => {
   if (n > 0) inv[k] = (inv[k] ?? 0) + n;
 };
 
-export function tick(s: FactoryState, dt = TICK): TickReport {
+/** One step of the simulation. `live` is false while catching up an absence: no new events start then. */
+export function tick(s: FactoryState, dt = TICK, live = true): TickReport {
   const rep: TickReport = { dt, power: { capacity: CAMP_POWER, demand: 0, factor: 1, max: 0 }, buildings: {}, belts: {}, made: {}, used: {}, stocked: {}, boost: boostMult(s) };
-  const boost = rep.boost;
+  const speed = speedMult(s);
+  const mining = minerMult(s);
+  const genMult = eventMult(s).generators;
+  const from = s.simTime;
 
   // 1. power: demand from last tick's activity (idle machines still draw 10%), capacity from fuelled generators
   const genFrac = new Map<number, number>();
@@ -71,7 +96,7 @@ export function tick(s: FactoryState, dt = TICK): TickReport {
       const need = (def.gen!.burn * b.clock * dt) / 60;
       const frac = need > 0 ? Math.min(1, (b.inBuf[def.gen!.fuel] ?? 0) / need) : 0;
       genFrac.set(b.id, frac);
-      rep.power.capacity += def.gen!.mw * b.clock * frac;
+      rep.power.capacity += def.gen!.mw * b.clock * frac * genMult;
     } else {
       const full = fullPower(b);
       rep.power.max += full;
@@ -96,7 +121,20 @@ export function tick(s: FactoryState, dt = TICK): TickReport {
       const burn = ((def.gen!.burn * b.clock * dt) / 60) * frac * load;
       b.inBuf[fuel] = Math.max(0, (b.inBuf[fuel] ?? 0) - burn);
       add(rep.used, fuel, burn);
-      rep.buildings[b.id] = { st: frac < 0.999 ? 'nofuel' : 'ok', eff: frac, mw: def.gen!.mw * b.clock * frac * load };
+      rep.buildings[b.id] = { st: frac < 0.999 ? 'nofuel' : 'ok', eff: frac, mw: def.gen!.mw * b.clock * frac * genMult * load };
+      continue;
+    }
+    if (def.kind === 'storage') {
+      // everything that arrived moves to the output side; eff shows how full the fullest item is
+      let fill = 0;
+      for (const [k, n] of Object.entries(b.inBuf) as [ItemId, number][]) {
+        const room = Math.max(0, STORAGE_CAP - (b.outBuf[k] ?? 0));
+        const n2 = Math.min(n, room);
+        b.outBuf[k] = (b.outBuf[k] ?? 0) + n2;
+        b.inBuf[k] = n - n2;
+        fill = Math.max(fill, (b.outBuf[k] + b.inBuf[k]) / STORAGE_CAP);
+      }
+      rep.buildings[b.id] = { st: 'ok', eff: Math.min(1, fill), mw: 0 };
       continue;
     }
     if (b.off) {
@@ -112,13 +150,32 @@ export function tick(s: FactoryState, dt = TICK): TickReport {
         continue;
       }
       const it = RESOURCE_ITEM[node.res];
-      const pot = (minerRate(b) * boost * dt) / 60;
+      const pot = (minerRate(b) * mining * dt) / 60;
       const space = Math.max(0, outCap(b, it) - (b.outBuf[it] ?? 0));
       const done = Math.min(pot * factor, space);
       b.outBuf[it] = (b.outBuf[it] ?? 0) + done;
       add(rep.made, it, done);
       b.act = pot > 0 ? Math.min(1, space / pot) : 0;
       rep.buildings[b.id] = { st: statusOf(pot, pot * factor, Infinity, space, done), eff: pot > 0 ? done / pot : 0, mw };
+      continue;
+    }
+    if (def.kind === 'loader') {
+      // pulls its item out of your stock onto the belts
+      const it = b.item;
+      if (!it) {
+        rep.buildings[b.id] = { st: 'idle', eff: 0, mw: 0 };
+        b.act = 0;
+        continue;
+      }
+      const pot = (def.rate! * b.clock * speed * dt) / 60;
+      const have = s.inv[it] ?? 0;
+      const space = Math.max(0, outCap(b, it) - (b.outBuf[it] ?? 0));
+      const done = Math.max(0, Math.min(pot * factor, have, space));
+      s.inv[it] = have - done;
+      b.outBuf[it] = (b.outBuf[it] ?? 0) + done;
+      add(rep.used, it, done);
+      b.act = pot > 0 ? Math.min(1, have / pot, space / pot) : 0;
+      rep.buildings[b.id] = { st: statusOf(pot, pot * factor, have, space, done), eff: pot > 0 ? done / pot : 0, mw };
       continue;
     }
     // producer
@@ -128,7 +185,7 @@ export function tick(s: FactoryState, dt = TICK): TickReport {
       b.act = 0;
       continue;
     }
-    const pot = (dt * b.clock * boost) / rec.time;
+    const pot = (dt * b.clock * speed) / rec.time;
     let limIn = Infinity;
     for (const [k, n] of Object.entries(rec.in) as [ItemId, number][]) limIn = Math.min(limIn, (b.inBuf[k] ?? 0) / n);
     let limOut = Infinity;
@@ -150,10 +207,15 @@ export function tick(s: FactoryState, dt = TICK): TickReport {
   moveBelts(s, dt, rep);
 
   // 4. bookkeeping
-  for (const [k, n] of Object.entries(rep.made) as [ItemId, number][]) s.made[k] = (s.made[k] ?? 0) + n;
+  for (const [k, n] of Object.entries(rep.made) as [ItemId, number][]) {
+    s.made[k] = (s.made[k] ?? 0) + n;
+    s.madeTotal += n;
+  }
   s.simTime += dt;
   s.boostLeft = Math.max(0, s.boostLeft - dt);
   s.rushLeft = Math.max(0, s.rushLeft - dt);
+  tickEvent(s, dt);
+  if (live) rollEvent(s, from);
   return rep;
 }
 
@@ -175,7 +237,7 @@ function moveBelts(s: FactoryState, dt: number, rep: TickReport): void {
     if (list) list.push(belt);
     else bySource.set(belt.from, [belt]);
   }
-  const left = new Map(s.belts.map((b) => [b.id, (beltRate(b.tier) * dt) / 60]));
+  const left = new Map(s.belts.map((b) => [b.id, (beltRate(b.tier) * beltMult(s, b.id) * dt) / 60]));
   const moved = new Map<number, Map<ItemId, number>>();
   for (const [srcId, belts] of bySource) {
     const src = byId.get(srcId);
@@ -184,7 +246,7 @@ function moveBelts(s: FactoryState, dt: number, rep: TickReport): void {
       if (have <= EPS) continue;
       const reqs = belts.map((belt) => {
         const dst = byId.get(belt.to);
-        if (!dst || !accepts(dst, item)) return 0;
+        if (!dst || !accepts(dst, item) || (belt.filter && belt.filter !== item)) return 0;
         const space = Math.max(0, inCap(dst, item) - (dst.inBuf[item] ?? 0));
         return Math.max(0, Math.min(left.get(belt.id)!, space));
       });
@@ -237,30 +299,32 @@ export const MEASURE_TICKS = 300;
  * stretched past their end. Capped at 8 hours (plus any bought extra).
  */
 export function catchUp(s: FactoryState, seconds: number, warmUp = CATCHUP_TICKS): AwaySummary {
-  const cap = OFFLINE_CAP + s.extraOffline;
-  const total = Math.max(0, Math.min(Math.floor(seconds), cap));
-  if (seconds > OFFLINE_CAP) s.extraOffline = 0; // the bought extra covers one long absence
+  const base = offlineCap(s);
+  const total = Math.max(0, Math.min(Math.floor(seconds), base + s.extraOffline));
+  if (seconds > base) s.extraOffline = 0; // the bought extra covers one long absence
   const before = { ...s.inv };
   let simulated = Math.min(total, warmUp);
-  for (let i = 0; i < simulated; i++) tick(s, TICK);
+  for (let i = 0; i < simulated; i++) tick(s, TICK, false);
   let rest = total - simulated;
   while (rest > 0) {
     const window = Math.min(rest, MEASURE_TICKS);
     const mark = { ...s.inv };
-    for (let i = 0; i < window; i++) tick(s, TICK);
+    for (let i = 0; i < window; i++) tick(s, TICK, false);
     simulated += window;
     rest -= window;
     if (rest <= 0) break;
-    // extrapolate until the next boost runs out (or to the end)
-    const change = Math.min(s.boostLeft > 0 ? s.boostLeft : Infinity, s.rushLeft > 0 ? s.rushLeft : Infinity);
+    // extrapolate until the next boost or event runs out (or to the end)
+    const change = Math.min(s.boostLeft > 0 ? s.boostLeft : Infinity, s.rushLeft > 0 ? s.rushLeft : Infinity, s.event ? s.event.left : Infinity);
     const span = Math.min(rest, change);
     for (const k of Object.keys(s.inv) as ItemId[]) {
+      // loaders drain stock, so rates can be negative: never below empty
       const rate = ((s.inv[k] ?? 0) - (mark[k] ?? 0)) / window;
-      if (rate > 0) s.inv[k] = (s.inv[k] ?? 0) + rate * span;
+      if (rate !== 0) s.inv[k] = Math.max(0, (s.inv[k] ?? 0) + rate * span);
     }
     s.simTime += span;
     s.boostLeft = Math.max(0, s.boostLeft - span);
     s.rushLeft = Math.max(0, s.rushLeft - span);
+    tickEvent(s, span);
     rest -= span;
   }
   const gained: Inv = {};

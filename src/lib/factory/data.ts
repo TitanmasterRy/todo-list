@@ -43,7 +43,17 @@ export type ItemId =
   | 'blackPowder'
   | 'oscillator'
   | 'supercomputer'
-  | 'heavyMotor';
+  | 'heavyMotor'
+  | 'bauxite'
+  | 'alumina'
+  | 'aluminiumIngot'
+  | 'aluminiumSheet'
+  | 'heatSink'
+  | 'fusedFrame'
+  | 'radioUnit'
+  | 'uranium'
+  | 'encasedCell'
+  | 'uraniumRod';
 
 export type Shape =
   | 'ore'
@@ -126,11 +136,21 @@ export const ITEMS: ItemDef[] = [
   item('oscillator', 'Crystal oscillator', 5, 'crystal', '#b15fd6', 2),
   item('supercomputer', 'Supercomputer', 5, 'box', '#14a3b1', 10),
   item('heavyMotor', 'Heavy motor', 5, 'motor', '#c24d1a', 8),
+  item('bauxite', 'Bauxite', 6, 'ore', '#c4623a', 0.01),
+  item('alumina', 'Alumina', 6, 'powder', '#f3f0e6', 0.02),
+  item('aluminiumIngot', 'Aluminium ingot', 6, 'ingot', '#d9dde3', 0.03),
+  item('aluminiumSheet', 'Aluminium sheet', 6, 'plate', '#e6eaf0', 0.05),
+  item('heatSink', 'Heat sink', 6, 'block', '#9fb3c8', 0.5),
+  item('fusedFrame', 'Fused frame', 6, 'frame', '#5b6b7c', 12),
+  item('uranium', 'Uranium', 7, 'ore', '#7bc043', 0.02),
+  item('encasedCell', 'Encased uranium cell', 7, 'canister', '#9ad64b', 0.5),
+  item('uraniumRod', 'Uranium fuel rod', 7, 'rod', '#c8f06a', 20),
+  item('radioUnit', 'Radio unit', 7, 'chip', '#e3b341', 15),
 ];
 export const ITEM: Record<ItemId, ItemDef> = Object.fromEntries(ITEMS.map((i) => [i.id, i])) as Record<ItemId, ItemDef>;
 
 // ---------- resources on the map ----------
-export type Resource = 'iron' | 'copper' | 'limestone' | 'coal' | 'oil' | 'quartz' | 'sulfur' | 'gold' | 'grove';
+export type Resource = 'iron' | 'copper' | 'limestone' | 'coal' | 'oil' | 'quartz' | 'sulfur' | 'gold' | 'grove' | 'bauxite' | 'uranium';
 export type Purity = 'impure' | 'normal' | 'pure';
 export const PURITY: Record<Purity, number> = { impure: 0.5, normal: 1, pure: 2 };
 export const RESOURCE_ITEM: Record<Resource, ItemId> = {
@@ -143,6 +163,8 @@ export const RESOURCE_ITEM: Record<Resource, ItemId> = {
   sulfur: 'sulfur',
   gold: 'goldOre',
   grove: 'biomass',
+  bauxite: 'bauxite',
+  uranium: 'uranium',
 };
 export const RESOURCE_NAME: Record<Resource, string> = {
   iron: 'Iron deposit',
@@ -154,6 +176,8 @@ export const RESOURCE_NAME: Record<Resource, string> = {
   sulfur: 'Sulfur vent',
   gold: 'Gold vein',
   grove: 'Grove',
+  bauxite: 'Bauxite deposit',
+  uranium: 'Uranium deposit',
 };
 
 export interface ResourceNode {
@@ -163,9 +187,34 @@ export interface ResourceNode {
   purity: Purity;
 }
 
-export const MAP_W = 20;
-export const MAP_H = 12;
+export const MAP_W = 32;
+export const MAP_H = 18;
 export const CAMP = { x: 2, y: 5 };
+
+/** A rectangle of the map that has to be surveyed (parts + insight) before you can build in it. */
+export interface Sector {
+  id: string;
+  name: string;
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+  cost: Inv;
+  insight: number;
+  /** Launch Tower tier needed before it can be surveyed. */
+  tier: number;
+}
+/** The home sector is the original 20×12 map; the others open up more nodes (and the only bauxite and uranium). */
+export const SECTORS: Sector[] = [
+  { id: 'home', name: 'Home Basin', x: 0, y: 0, w: 20, h: 12, cost: {}, insight: 0, tier: 0 },
+  { id: 'east', name: 'East Ridge', x: 20, y: 0, w: 12, h: 12, cost: { ironPlate: 100, concrete: 50 }, insight: 1, tier: 1 },
+  { id: 'south', name: 'South Flats', x: 0, y: 12, w: 20, h: 6, cost: { steelBeam: 100, concrete: 200 }, insight: 2, tier: 2 },
+  { id: 'southeast', name: 'Far Marsh', x: 20, y: 12, w: 12, h: 6, cost: { motor: 30, concreteBeam: 50 }, insight: 3, tier: 3 },
+];
+export const SECTOR: Record<string, Sector> = Object.fromEntries(SECTORS.map((s) => [s.id, s]));
+export function sectorAt(x: number, y: number): Sector | undefined {
+  return SECTORS.find((s) => x >= s.x && x < s.x + s.w && y >= s.y && y < s.y + s.h);
+}
 
 /** The resource nodes of the (fixed, hand-made) map. The starting area on the left is iron, copper, limestone and groves. */
 export const NODES: ResourceNode[] = [
@@ -194,6 +243,33 @@ export const NODES: ResourceNode[] = [
   { x: 18, y: 4, res: 'iron', purity: 'pure' },
   { x: 15, y: 10, res: 'limestone', purity: 'normal' },
   { x: 9, y: 0, res: 'copper', purity: 'normal' },
+  // east ridge
+  { x: 22, y: 2, res: 'iron', purity: 'pure' },
+  { x: 25, y: 5, res: 'copper', purity: 'pure' },
+  { x: 28, y: 1, res: 'oil', purity: 'pure' },
+  { x: 30, y: 4, res: 'quartz', purity: 'normal' },
+  { x: 23, y: 9, res: 'coal', purity: 'pure' },
+  { x: 27, y: 8, res: 'bauxite', purity: 'normal' },
+  { x: 30, y: 10, res: 'sulfur', purity: 'pure' },
+  { x: 21, y: 6, res: 'limestone', purity: 'pure' },
+  { x: 29, y: 7, res: 'gold', purity: 'normal' },
+  // south flats
+  { x: 2, y: 14, res: 'iron', purity: 'pure' },
+  { x: 6, y: 16, res: 'coal', purity: 'normal' },
+  { x: 9, y: 13, res: 'oil', purity: 'normal' },
+  { x: 12, y: 16, res: 'bauxite', purity: 'pure' },
+  { x: 15, y: 13, res: 'gold', purity: 'pure' },
+  { x: 18, y: 16, res: 'quartz', purity: 'pure' },
+  { x: 4, y: 12, res: 'grove', purity: 'pure' },
+  { x: 16, y: 15, res: 'sulfur', purity: 'normal' },
+  // far marsh
+  { x: 22, y: 13, res: 'uranium', purity: 'normal' },
+  { x: 27, y: 16, res: 'uranium', purity: 'pure' },
+  { x: 30, y: 13, res: 'bauxite', purity: 'pure' },
+  { x: 24, y: 16, res: 'sulfur', purity: 'pure' },
+  { x: 29, y: 15, res: 'oil', purity: 'pure' },
+  { x: 20, y: 17, res: 'copper', purity: 'pure' },
+  { x: 25, y: 12, res: 'gold', purity: 'pure' },
 ];
 export function nodeAt(x: number, y: number): ResourceNode | undefined {
   return NODES.find((n) => n.x === x && n.y === y);
@@ -215,8 +291,12 @@ export type BuildingId =
   | 'biomassBurner'
   | 'coalGenerator'
   | 'fuelGenerator'
-  | 'depot';
-export type BuildingKind = 'camp' | 'miner' | 'producer' | 'generator' | 'depot';
+  | 'depot'
+  | 'storage'
+  | 'loader'
+  | 'blender'
+  | 'nuclearPlant';
+export type BuildingKind = 'camp' | 'miner' | 'producer' | 'generator' | 'depot' | 'storage' | 'loader';
 
 export interface BuildingDef {
   id: BuildingId;
@@ -226,7 +306,7 @@ export interface BuildingDef {
   /** Power use at 100% clock, in MW. */
   power: number;
   cost: Inv;
-  /** Miners: items per minute on a normal node at 100%. */
+  /** Miners: items per minute on a normal node at 100%. Loaders: items per minute pulled from stock. */
   rate?: number;
   /** Miners: which resources they can sit on. */
   mines?: Resource[];
@@ -270,7 +350,7 @@ export const BUILDINGS: BuildingDef[] = [
     desc: 'Heavy drill. 120/min on a normal node.',
     power: 30,
     rate: 120,
-    mines: ['iron', 'copper', 'limestone', 'coal', 'quartz', 'sulfur', 'gold', 'grove'],
+    mines: ['iron', 'copper', 'limestone', 'coal', 'quartz', 'sulfur', 'gold', 'grove', 'bauxite', 'uranium'],
     cost: { computer: 4, heavyChassis: 4, steelPipe: 40 },
     ins: 0,
     outs: 3,
@@ -344,11 +424,55 @@ export const BUILDINGS: BuildingDef[] = [
     ins: 2,
     outs: 0,
   },
+  {
+    id: 'blender',
+    name: 'Blender',
+    kind: 'producer',
+    desc: 'Mixes up to 3 inputs: fused frames and uranium cells.',
+    power: 75,
+    cost: { supercomputer: 5, heavyMotor: 5, concreteBeam: 20, plastic: 100 },
+    ins: 4,
+    outs: 3,
+  },
+  {
+    id: 'nuclearPlant',
+    name: 'Nuclear Plant',
+    kind: 'generator',
+    desc: 'Burns uranium fuel rods: 600 MW for 1 rod/min.',
+    power: 0,
+    gen: { fuel: 'uraniumRod', mw: 600, burn: 1 },
+    cost: { fusedFrame: 20, heatSink: 50, supercomputer: 10, concreteBeam: 100 },
+    ins: 2,
+    outs: 0,
+  },
   { id: 'depot', name: 'Depot', kind: 'depot', desc: 'A drop-off point: anything belted in goes to your stock.', power: 0, cost: { ironPlate: 10, ironRod: 4 }, ins: 6, outs: 0 },
+  {
+    id: 'storage',
+    name: 'Storage',
+    kind: 'storage',
+    desc: 'Buffers up to 500 of each item and passes them on: soaks up bursts.',
+    power: 0,
+    cost: { ironPlate: 20, screw: 20 },
+    ins: 3,
+    outs: 3,
+  },
+  {
+    id: 'loader',
+    name: 'Loader',
+    kind: 'loader',
+    desc: 'Pulls one item from your stock onto belts, 60/min.',
+    power: 4,
+    rate: 60,
+    cost: { ironPlate: 15, wire: 20 },
+    ins: 0,
+    outs: 3,
+  },
 ];
 export const BUILDING: Record<BuildingId, BuildingDef> = Object.fromEntries(BUILDINGS.map((b) => [b.id, b])) as Record<BuildingId, BuildingDef>;
 
 export const CAMP_POWER = 20;
+/** Most of one item a Storage holds (input and output buffers together). */
+export const STORAGE_CAP = 500;
 
 // ---------- recipes ----------
 export interface Recipe {
@@ -404,6 +528,16 @@ export const RECIPES: Recipe[] = [
   r('oscillator', 'Crystal oscillator', 'manufacturer', 60, { crystal: 18, cable: 14, reinforcedPlate: 3 }, { oscillator: 1 }),
   r('supercomputer', 'Supercomputer', 'manufacturer', 32, { computer: 2, controlUnit: 2, oscillator: 2, plastic: 28 }, { supercomputer: 1 }),
   r('heavyMotor', 'Heavy motor', 'manufacturer', 32, { motor: 4, rubber: 12, heavyChassis: 1, controlUnit: 2 }, { heavyMotor: 1 }),
+  r('radioUnit', 'Radio unit', 'manufacturer', 24, { heatSink: 4, computer: 2, crystal: 10, fineWire: 20 }, { radioUnit: 1 }),
+  r('uraniumRod', 'Uranium fuel rod', 'manufacturer', 30, { encasedCell: 25, fusedFrame: 3, heatSink: 5 }, { uraniumRod: 1 }),
+  // aluminium (foundry, constructor, assembler)
+  r('alumina', 'Alumina', 'foundry', 6, { bauxite: 6, limestone: 2 }, { alumina: 4 }),
+  r('aluminiumIngot', 'Aluminium ingot', 'foundry', 4, { alumina: 3, coal: 1 }, { aluminiumIngot: 2 }),
+  r('aluminiumSheet', 'Aluminium sheet', 'constructor', 6, { aluminiumIngot: 3 }, { aluminiumSheet: 2 }),
+  r('heatSink', 'Heat sink', 'assembler', 8, { aluminiumSheet: 5, copperSheet: 3 }, { heatSink: 1 }),
+  // blender
+  r('fusedFrame', 'Fused frame', 'blender', 20, { heavyChassis: 1, aluminiumIngot: 30, rubber: 10 }, { fusedFrame: 1 }),
+  r('encasedCell', 'Encased uranium cell', 'blender', 12, { uranium: 10, concrete: 3, sulfur: 8 }, { encasedCell: 5 }),
   // alternates (unlocked through research)
   r('castScrew', 'Cast screw', 'constructor', 24, { ironIngot: 5 }, { screw: 20 }, true),
   r('ironAlloy', 'Iron alloy ingot', 'foundry', 6, { ironOre: 2, copperOre: 2 }, { ironIngot: 5 }, true),
@@ -415,6 +549,9 @@ export const RECIPES: Recipe[] = [
   r('siliconCircuit', 'Silicon circuit board', 'assembler', 24, { copperSheet: 11, silica: 11 }, { circuitBoard: 5 }, true),
   r('rubberCable', 'Rubber cable', 'assembler', 20, { wire: 9, rubber: 6 }, { cable: 20 }, true),
   r('steelScrew', 'Steel screw', 'constructor', 12, { steelBeam: 1 }, { screw: 52 }, true),
+  r('wetAlumina', 'Wet alumina', 'refinery', 6, { bauxite: 6, crudeOil: 2 }, { alumina: 8 }, true),
+  r('alcladSheet', 'Alclad sheet', 'assembler', 6, { aluminiumIngot: 3, copperIngot: 1 }, { aluminiumSheet: 3 }, true),
+  r('infusedCell', 'Infused uranium cell', 'blender', 12, { uranium: 5, sulfur: 5, silica: 5, quartz: 5 }, { encasedCell: 4 }, true),
 ];
 export const RECIPE: Record<string, Recipe> = Object.fromEntries(RECIPES.map((x) => [x.id, x]));
 
@@ -437,6 +574,7 @@ export const BELTS: BeltTier[] = [
   { tier: 3, name: 'Belt Mk3', rate: 270, cost: { steelBeam: 1 } },
   { tier: 4, name: 'Belt Mk4', rate: 480, cost: { steelBeam: 1, rubber: 2 } },
   { tier: 5, name: 'Belt Mk5', rate: 780, cost: { concreteBeam: 1, plastic: 2 } },
+  { tier: 6, name: 'Belt Mk6', rate: 1200, cost: { aluminiumSheet: 1, plastic: 2 } },
 ];
 export const MAX_BELT_LEN = 24;
 
@@ -504,6 +642,14 @@ export const MILESTONES: Milestone[] = [
     desc: 'The Assembler joins two parts into one.',
     cost: { ironPlate: 150, screw: 200, concrete: 60 },
     unlock: { buildings: ['assembler'], recipes: ['reinforcedPlate', 'rotor'] },
+  },
+  {
+    id: 'logistics',
+    name: 'Logistics',
+    tier: 1,
+    desc: 'Storage buffers a belt; the Loader puts stock back onto belts.',
+    cost: { ironPlate: 40, screw: 40, wire: 20 },
+    unlock: { buildings: ['storage', 'loader'] },
   },
   { id: 'belts2', name: 'Faster Belts', tier: 1, desc: 'Belt Mk2 carries 120/min.', cost: { reinforcedPlate: 15, screw: 300 }, unlock: { belt: 2, shards: 1 } },
   {
@@ -602,6 +748,39 @@ export const MILESTONES: Milestone[] = [
   { id: 'super', name: 'Supercomputing', tier: 5, desc: 'Supercomputers.', cost: { computer: 100, oscillator: 20 }, unlock: { recipes: ['supercomputer'] } },
   { id: 'heavyMotors', name: 'Heavy Motors', tier: 5, desc: 'Heavy motors.', cost: { motor: 300, controlUnit: 100 }, unlock: { recipes: ['heavyMotor'] } },
   { id: 'belts5', name: 'Belt Mk5', tier: 5, desc: 'Belt Mk5 carries 780/min.', cost: { concreteBeam: 500, plastic: 1000 }, unlock: { belt: 5, shards: 2 } },
+  {
+    id: 'aluminium',
+    name: 'Aluminium',
+    tier: 6,
+    desc: 'Bauxite deposits, the Blender, alumina, aluminium ingots and sheets.',
+    cost: { supercomputer: 10, heavyMotor: 10, concreteBeam: 200 },
+    unlock: { resources: ['bauxite'], buildings: ['blender'], recipes: ['alumina', 'aluminiumIngot', 'aluminiumSheet'] },
+  },
+  {
+    id: 'heatSinks',
+    name: 'Heat Sinks',
+    tier: 6,
+    desc: 'Heat sinks and fused frames.',
+    cost: { aluminiumSheet: 200, heavyMotor: 20 },
+    unlock: { recipes: ['heatSink', 'fusedFrame'] },
+  },
+  { id: 'belts6', name: 'Belt Mk6', tier: 6, desc: 'Belt Mk6 carries 1200/min.', cost: { aluminiumSheet: 300, plastic: 1500 }, unlock: { belt: 6, shards: 2 } },
+  {
+    id: 'nuclear',
+    name: 'Nuclear Power',
+    tier: 7,
+    desc: 'Uranium deposits, encased cells, fuel rods and the 600 MW Nuclear Plant.',
+    cost: { fusedFrame: 20, heatSink: 100, supercomputer: 20 },
+    unlock: { resources: ['uranium'], buildings: ['nuclearPlant'], recipes: ['encasedCell', 'uraniumRod'], shards: 2 },
+  },
+  {
+    id: 'radio',
+    name: 'Deep Space Radio',
+    tier: 7,
+    desc: 'Radio units for the probe.',
+    cost: { heatSink: 100, oscillator: 50, fusedFrame: 10 },
+    unlock: { recipes: ['radioUnit'] },
+  },
 ];
 export const MILESTONE: Record<string, Milestone> = Object.fromEntries(MILESTONES.map((m) => [m.id, m]));
 
@@ -618,6 +797,8 @@ export const PHASES: Phase[] = [
   { name: 'Uplink Spire', cost: { heavyChassis: 20, motor: 200, plastic: 500 }, shards: 2 },
   { name: 'Launch Gantry', cost: { computer: 100, controlUnit: 100, blackPowder: 500 }, shards: 2 },
   { name: 'Launch!', cost: { supercomputer: 50, heavyMotor: 50, oscillator: 100 }, shards: 3 },
+  { name: 'Orbital Station', cost: { heatSink: 100, aluminiumSheet: 500, supercomputer: 25 }, shards: 3 },
+  { name: 'Deep Space Probe', cost: { radioUnit: 25, fusedFrame: 40, uraniumRod: 10 }, shards: 4 },
 ];
 export const MAX_TIER = PHASES.length - 1;
 
@@ -640,6 +821,9 @@ export const RESEARCH: Research[] = [
   { id: 'r-fineConcrete', recipe: 'fineConcrete', tier: 4, cost: { silica: 100 }, insight: 3, note: 'Silica-bound concrete, ten at a time.' },
   { id: 'r-siliconCircuit', recipe: 'siliconCircuit', tier: 4, cost: { circuitBoard: 20, silica: 100 }, insight: 3, note: 'Circuit boards without plastic.' },
   { id: 'r-fusedWire', recipe: 'fusedWire', tier: 4, cost: { goldIngot: 50 }, insight: 3, note: 'A little gold makes 30 wire.' },
+  { id: 'r-wetAlumina', recipe: 'wetAlumina', tier: 6, cost: { alumina: 100 }, insight: 4, note: 'Alumina from the refinery: twice as much per bauxite.' },
+  { id: 'r-alcladSheet', recipe: 'alcladSheet', tier: 6, cost: { aluminiumSheet: 100, copperSheet: 50 }, insight: 4, note: 'A copper backing: 3 sheets per cycle.' },
+  { id: 'r-infusedCell', recipe: 'infusedCell', tier: 7, cost: { encasedCell: 50, silica: 200 }, insight: 5, note: 'Uranium cells with half the uranium.' },
 ];
 
 // ---------- homework tie-in ----------
@@ -648,6 +832,8 @@ export const REWARD = {
   task: { shards: 1, insight: 1, boost: 10 * 60 },
   /** Per notecard session or pomodoro. */
   study: { shards: 0, insight: 1, boost: 5 * 60 },
+  /** Per daily ring closed or streak milestone. */
+  day: { shards: 1, insight: 2, boost: 15 * 60 },
   /** Production boost multiplier and the most boost that can be banked. */
   boostMult: 1.25,
   boostCap: 2 * 60 * 60,

@@ -6,6 +6,7 @@ import {
   beltPath,
   benchCraft,
   canPlace,
+  clearJam,
   completeMilestone,
   connect,
   deliverPhase,
@@ -17,11 +18,16 @@ import {
   place,
   removeBelt,
   rotate,
+  setBeltFilter,
   setClock,
+  setLoaderItem,
   setRecipe,
+  surveySector,
+  surveyed,
   upgradeBelt,
 } from './actions';
-import { BUILDING, PHASES, REWARD, START_INV } from './data';
+import { BUILDING, PHASES, REWARD, SECTOR, START_INV } from './data';
+import { startEvent } from './events';
 import { newGame, unlocked, type FactoryState } from './state';
 
 const fresh = (): FactoryState => newGame(0);
@@ -37,6 +43,29 @@ describe('building', () => {
     expect(canPlace(s, 'smelter', 99, 0).ok).toBe(false);
     expect(canPlace(s, 'assembler', 5, 5)).toMatchObject({ ok: false, error: expect.stringContaining('unlocked') });
     expect(canPlace(s, 'pump', 16, 3).ok).toBe(false);
+  });
+
+  it('only builds in surveyed sectors', () => {
+    const s = fresh();
+    s.inv = { ironPlate: 1000, ironRod: 1000, concrete: 1000 };
+    expect(surveyed(s, 5, 5)).toBe(true);
+    expect(surveyed(s, 24, 5)).toBe(false);
+    expect(canPlace(s, 'smelter', 24, 5)).toMatchObject({ ok: false, error: 'Survey that sector first' });
+    expect(handMine(s, 22, 2)).toMatchObject({ ok: false, error: 'Survey that sector first' }); // pure iron on the east ridge
+    expect(surveySector(s, 'east')).toMatchObject({ ok: false, error: expect.stringContaining('tier 1') });
+    s.phase = 1;
+    expect(surveySector(s, 'east')).toMatchObject({ ok: false, error: expect.stringContaining('insight') });
+    s.insight = 1;
+    expect(surveySector(s, 'east').ok).toBe(true);
+    expect(s.insight).toBe(0);
+    expect(s.inv.ironPlate).toBe(1000 - SECTOR.east.cost.ironPlate!);
+    expect(s.sectors).toEqual(['home', 'east']);
+    expect(surveySector(s, 'east')).toMatchObject({ ok: false, error: 'Already surveyed' });
+    expect(surveySector(s, 'nowhere').ok).toBe(false);
+    expect(canPlace(s, 'smelter', 24, 5).ok).toBe(true);
+    expect(handMine(s, 22, 2).ok).toBe(true);
+    s.insight = 5;
+    expect(surveySector(s, 'south')).toMatchObject({ ok: false, error: expect.stringContaining('tier 2') });
   });
 
   it('charges the cost, and dismantling refunds it with the belts and buffers', () => {
@@ -107,6 +136,31 @@ describe('belts', () => {
     expect(removeBelt(s, belt).ok).toBe(true);
     expect(s.inv.screw).toBe(500);
   });
+
+  it('filters carry one item, or anything again', () => {
+    const s = fresh();
+    const m = place(s, 'miner1', 4, 3).id!;
+    const belt = connect(s, m, 1).id!;
+    expect(setBeltFilter(s, belt, 'ironOre').ok).toBe(true);
+    expect(s.belts[0].filter).toBe('ironOre');
+    expect(setBeltFilter(s, belt, 'plutonium' as never)).toMatchObject({ ok: false, error: 'Unknown item' });
+    expect(setBeltFilter(s, belt, undefined).ok).toBe(true);
+    expect('filter' in s.belts[0]).toBe(false);
+    expect(setBeltFilter(s, 999, 'ironOre').ok).toBe(false);
+  });
+
+  it('clears a jam', () => {
+    const s = fresh();
+    expect(clearJam(s)).toMatchObject({ ok: false });
+    const m = place(s, 'miner1', 4, 3).id!;
+    connect(s, m, 1);
+    startEvent(s, 'jam');
+    expect(s.event?.beltId).toBe(s.belts[0].id);
+    expect(clearJam(s).ok).toBe(true);
+    expect(s.event).toBeNull();
+    startEvent(s, 'dust');
+    expect(clearJam(s).ok).toBe(false); // not a jam
+  });
 });
 
 describe('machines', () => {
@@ -119,6 +173,24 @@ describe('machines', () => {
     s.buildings.find((b) => b.id === sm)!.outBuf.ironIngot = 4;
     setRecipe(s, sm, undefined);
     expect(s.inv.ironIngot).toBe(4);
+  });
+
+  it('a loader takes only real items and hands back what it held', () => {
+    const s = fresh();
+    s.milestones.push('logistics');
+    s.inv = { ironPlate: 100, wire: 100, ironRod: 100 };
+    const ld = place(s, 'loader', 5, 5).id!;
+    const sm = place(s, 'smelter', 6, 5).id!;
+    expect(setLoaderItem(s, sm, 'ironOre')).toMatchObject({ ok: false, error: "That isn't a loader" });
+    expect(setLoaderItem(s, ld, 'mithril' as never)).toMatchObject({ ok: false, error: 'Unknown item' });
+    expect(setLoaderItem(s, ld, 'ironOre').ok).toBe(true);
+    const b = s.buildings.find((x) => x.id === ld)!;
+    expect(b.item).toBe('ironOre');
+    b.outBuf.ironOre = 7;
+    expect(setLoaderItem(s, ld, undefined).ok).toBe(true);
+    expect(b.item).toBeUndefined();
+    expect(s.inv.ironOre).toBe(7);
+    expect(setClock(s, ld, 2)).toBe(1);
   });
 
   it('overclocking uses shards and gives them back', () => {
@@ -201,6 +273,25 @@ describe('progress', () => {
     applyRewards(s, 40, 0);
     expect(s.boostLeft).toBe(REWARD.boostCap);
     expect(s.rewards).toEqual({ tasks: 42, study: 1 });
+  });
+
+  it('good days reward too, and the Scholar perk doubles task shards (never more)', () => {
+    const s = fresh();
+    expect(applyRewards(s, 0, 0, 2)).toEqual({ shards: 2 * REWARD.day.shards, insight: 2 * REWARD.day.insight, boost: 2 * REWARD.day.boost });
+    expect(applyRewards(s, 1, 1)).toEqual({ shards: 1, insight: 2, boost: REWARD.task.boost + REWARD.study.boost });
+    s.perks.push('scholar', 'scholar');
+    expect(applyRewards(s, 3, 0).shards).toBe(6);
+    expect(s.rewards).toEqual({ tasks: 4, study: 1 });
+  });
+
+  it('counts a launch when the last phase is delivered', () => {
+    const s = fresh();
+    s.phase = PHASES.length - 1;
+    s.inv = { ...PHASES.at(-1)!.cost };
+    expect(deliverPhase(s).completed).toBe(true);
+    expect(s.phase).toBe(PHASES.length);
+    expect(s.lifetime.launches).toBe(1);
+    expect(deliverPhase(s).ok).toBe(false);
   });
 
   it('every building but the camp has a cost', () => {

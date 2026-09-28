@@ -1,14 +1,15 @@
 import { describe, expect, it } from 'vitest';
-import { connect, place, setClock, setRecipe } from './actions';
-import { OFFLINE_CAP } from './data';
+import { connect, place, setBeltFilter, setClock, setLoaderItem, setRecipe } from './actions';
+import { OFFLINE_CAP, STORAGE_CAP } from './data';
 import { newGame, type FactoryState } from './state';
-import { beltRate, catchUp, fullPower, tick, type TickReport } from './sim';
+import { beltRate, catchUp, fullPower, minerMult, speedMult, STATUS_LABEL, tick, type Status, type TickReport } from './sim';
 
 const CAMP_ID = 1;
 
 function rich(): FactoryState {
   const s = newGame(0);
-  s.inv = { ironPlate: 5000, ironRod: 5000, screw: 5000, reinforcedPlate: 500, steelBeam: 500 };
+  s.inv = { ironPlate: 5000, ironRod: 5000, screw: 5000, wire: 500, reinforcedPlate: 500, steelBeam: 500 };
+  s.milestones.push('logistics');
   return s;
 }
 function build(s: FactoryState, type: Parameters<typeof place>[1], x: number, y: number, rot: 0 | 1 | 2 | 3 = 0): number {
@@ -155,6 +156,30 @@ describe('factory tick', () => {
     expect(tick(s).boost).toBe(1);
   });
 
+  it('counts everything made this run and labels every status', () => {
+    const s = rich();
+    build(s, 'miner1', 4, 3);
+    run(s, 60);
+    expect(s.madeTotal).toBeCloseTo(30, 0);
+    expect(s.madeTotal).toBeCloseTo(s.made.ironOre!);
+    for (const st of ['ok', 'starved', 'blocked', 'power', 'off', 'idle', 'nofuel'] as Status[]) expect(STATUS_LABEL[st]).toBeTruthy();
+    expect(STATUS_LABEL.ok).toBe('Running');
+  });
+
+  it('perks speed machines and miners up on top of boosts', () => {
+    const s = rich();
+    expect(speedMult(s)).toBe(1);
+    s.perks.push('swift', 'deepDrills');
+    expect(speedMult(s)).toBeCloseTo(1.1);
+    expect(minerMult(s)).toBeCloseTo(1.1 * 1.2);
+    s.boostLeft = 100;
+    expect(minerMult(s)).toBeCloseTo(1.25 * 1.1 * 1.2);
+    const miner = build(s, 'miner1', 4, 3);
+    link(s, miner, CAMP_ID);
+    tick(s);
+    expect(s.made.ironOre).toBeCloseTo((30 / 60) * 1.25 * 1.1 * 1.2);
+  });
+
   it('paused and recipe-less machines do nothing and draw nothing', () => {
     const s = rich();
     const smelter = build(s, 'smelter', 5, 3);
@@ -164,6 +189,79 @@ describe('factory tick', () => {
     expect(rep.buildings[smelter].st).toBe('idle');
     expect(rep.buildings[miner].st).toBe('off');
     expect(rep.power.demand).toBe(0);
+  });
+});
+
+describe('logistics', () => {
+  it('a loader feeds a smelter from stock', () => {
+    const s = rich();
+    s.inv.ironOre = 300;
+    const loader = build(s, 'loader', 5, 5);
+    const smelter = build(s, 'smelter', 6, 5);
+    setRecipe(s, smelter, 'ironIngot');
+    link(s, loader, smelter);
+    link(s, smelter, CAMP_ID);
+    let rep = tick(s);
+    expect(rep.buildings[loader].st).toBe('idle');
+    setLoaderItem(s, loader, 'ironOre');
+    rep = run(s, 120);
+    expect(rep.buildings[loader].st).toBe('blocked'); // the smelter only takes 30/min
+    expect(rep.buildings[smelter].st).toBe('ok');
+    expect(rep.used.ironOre).toBeGreaterThan(0);
+    expect(s.inv.ironIngot).toBeGreaterThan(50);
+    expect(s.inv.ironOre).toBeLessThan(200);
+    rep = run(s, 600);
+    expect(s.inv.ironOre).toBe(0);
+    expect(rep.buildings[loader].st).toBe('starved');
+    expect(s.inv.ironIngot).toBeCloseTo(300, 0);
+  });
+
+  it('a filtered belt carries only its item', () => {
+    const s = rich();
+    s.inv.ironOre = 100;
+    s.inv.copperOre = 100;
+    const a = build(s, 'loader', 5, 5);
+    const b = build(s, 'loader', 5, 7);
+    setLoaderItem(s, a, 'ironOre');
+    setLoaderItem(s, b, 'copperOre');
+    const store = build(s, 'storage', 7, 6);
+    link(s, a, store);
+    link(s, b, store);
+    const d1 = build(s, 'depot', 9, 5);
+    const d2 = build(s, 'depot', 9, 7);
+    setBeltFilter(s, link(s, store, d1), 'ironOre');
+    setBeltFilter(s, link(s, store, d2), 'copperOre');
+    run(s, 30);
+    const st = s.buildings.find((x) => x.id === store)!;
+    expect(st.outBuf.ironOre ?? 0).toBeLessThan(2);
+    expect(st.outBuf.copperOre ?? 0).toBeLessThan(2);
+    expect(s.inv.ironOre).toBeGreaterThan(95); // pulled out and dropped back in through the iron belt (a few in transit)
+    expect(s.inv.copperOre).toBeGreaterThan(95);
+    // block the copper: the filter keeps it off the iron belt
+    setBeltFilter(s, s.belts[3].id, 'ironPlate');
+    run(s, 60);
+    expect(st.outBuf.copperOre).toBeGreaterThan(30);
+    expect(st.outBuf.ironOre ?? 0).toBeLessThan(2);
+  });
+
+  it('storage buffers a burst and lets it out at belt speed', () => {
+    const s = rich();
+    s.shards = 3;
+    s.milestones.push('belts2', 'belts3');
+    const miner = build(s, 'miner1', 10, 10); // pure iron
+    setClock(s, miner, 2); // 120/min
+    const store = build(s, 'storage', 11, 10);
+    link(s, miner, store, 3); // 270/min in
+    link(s, store, CAMP_ID, 1); // 60/min out
+    let rep = run(s, 60);
+    expect(rep.buildings[miner].st).toBe('ok');
+    const st = s.buildings.find((x) => x.id === store)!;
+    expect(st.outBuf.ironOre).toBeGreaterThan(50);
+    expect(rep.buildings[store].eff).toBeCloseTo(st.outBuf.ironOre! / STORAGE_CAP, 1);
+    expect(s.inv.ironOre).toBeGreaterThan(55); // a belt's worth out, one tick behind
+    rep = run(s, 600);
+    expect(st.outBuf.ironOre! + (st.inBuf.ironOre ?? 0)).toBeLessThanOrEqual(STORAGE_CAP + 1e-6);
+    expect(rep.buildings[miner].st).toBe('blocked');
   });
 });
 
@@ -211,5 +309,18 @@ describe('offline progress', () => {
     const expected = 30 * 180 + 30 * 0.25 * 25;
     expect(away.gained.ironOre!).toBeGreaterThan(expected - 25);
     expect(away.gained.ironOre!).toBeLessThan(expected + 25);
+  });
+
+  it('Night Owl adds two hours, and loaders never extrapolate below empty stock', () => {
+    const s = line();
+    s.perks.push('nightOwl');
+    expect(catchUp(s, 3 * 24 * 3600).seconds).toBe(OFFLINE_CAP + 2 * 3600);
+    const t = rich();
+    t.inv.ironOre = 1000;
+    const loader = build(t, 'loader', 5, 5);
+    setLoaderItem(t, loader, 'ironOre');
+    link(t, loader, CAMP_ID);
+    catchUp(t, 3 * 3600);
+    expect(t.inv.ironOre).toBeGreaterThanOrEqual(0);
   });
 });

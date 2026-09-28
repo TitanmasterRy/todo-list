@@ -1,5 +1,5 @@
 // Orebelt game state: the saved shape, a fresh game, and what's unlocked. Pure functions only.
-import { BUILDING, CAMP, MILESTONE, RECIPE, RESEARCH, START_INV, START_UNLOCKS, type BuildingId, type Inv, type ItemId, type Resource } from './data';
+import { BUILDING, CAMP, MILESTONE, RECIPE, RESEARCH, START_INV, START_UNLOCKS, STORAGE_CAP, type BuildingId, type Inv, type ItemId, type Resource } from './data';
 
 /** Output side: 0 = east, 1 = south, 2 = west, 3 = north. Inputs come in on the opposite side. */
 export type Dir = 0 | 1 | 2 | 3;
@@ -17,6 +17,8 @@ export interface Building {
   shards: number;
   /** Paused by the player. */
   off?: boolean;
+  /** Loaders: the item pulled from stock. */
+  item?: ItemId;
   inBuf: Inv;
   outBuf: Inv;
   /** Share of last tick's potential that inputs/outputs allowed (drives power draw). Not important to save. */
@@ -28,6 +30,15 @@ export interface Belt {
   from: number;
   to: number;
   tier: number;
+  /** Only this item may travel on the belt. */
+  filter?: ItemId;
+}
+
+/** A live random event (see events.ts); a belt jam names the belt it stopped. */
+export interface ActiveEvent {
+  id: string;
+  left: number;
+  beltId?: number;
 }
 
 export interface FactoryState {
@@ -61,9 +72,26 @@ export interface FactoryState {
   credit: number;
   /** Homework rewards applied so far. */
   rewards: { tasks: number; study: number };
+  /** Surveyed sector ids ('home' always). */
+  sectors: string[];
+  /** Today's supply contracts (see contracts.ts). */
+  contracts: { day: string; done: string[]; progress: Record<string, number> };
+  /** Achievement ids earned (see achievements.ts). */
+  ach: string[];
+  /** Prestige: stars to spend on perks, relaunches so far and perks bought. */
+  stars: number;
+  runs: number;
+  perks: string[];
+  event: ActiveEvent | null;
+  /** Items made this run (resets at relaunch; `made` is for all time). */
+  madeTotal: number;
+  lifetime: { launches: number; contracts: number; relaunches: number };
 }
 
-export const FACTORY_VERSION = 2;
+export const FACTORY_VERSION = 3;
+
+/** What every player action returns. */
+export type Result = { ok: true } | { ok: false; error: string };
 
 export function newGame(now: number): FactoryState {
   return {
@@ -86,6 +114,15 @@ export function newGame(now: number): FactoryState {
     made: {},
     credit: 0,
     rewards: { tasks: 0, study: 0 },
+    sectors: ['home'],
+    contracts: { day: '', done: [], progress: {} },
+    ach: [],
+    stars: 0,
+    runs: 0,
+    perks: [],
+    event: null,
+    madeTotal: 0,
+    lifetime: { launches: 0, contracts: 0, relaunches: 0 },
   };
 }
 
@@ -147,7 +184,7 @@ export function byId(s: FactoryState, id: number): Building | undefined {
 /** Does this building take this item in on a belt? */
 export function accepts(b: Building, item: ItemId): boolean {
   const def = BUILDING[b.type];
-  if (def.kind === 'camp' || def.kind === 'depot') return true;
+  if (def.kind === 'camp' || def.kind === 'depot' || def.kind === 'storage') return true;
   if (def.kind === 'generator') return def.gen!.fuel === item;
   if (def.kind === 'producer') {
     const r = b.recipe ? RECIPE[b.recipe] : undefined;
@@ -160,6 +197,8 @@ export function accepts(b: Building, item: ItemId): boolean {
 export function inCap(b: Building, item: ItemId): number {
   const def = BUILDING[b.type];
   if (def.kind === 'generator') return 50;
+  // what's already waiting in the output counts against the storage cap
+  if (def.kind === 'storage') return Math.max(0, STORAGE_CAP - (b.outBuf[item] ?? 0));
   if (def.kind === 'producer' && b.recipe) {
     const need = RECIPE[b.recipe]?.in[item] ?? 0;
     return Math.max(need * 2, 10);
@@ -169,7 +208,8 @@ export function inCap(b: Building, item: ItemId): number {
 /** Max items of one kind a building holds in its output buffer. */
 export function outCap(b: Building, item: ItemId): number {
   const def = BUILDING[b.type];
-  if (def.kind === 'miner') return 40;
+  if (def.kind === 'miner' || def.kind === 'loader') return 40;
+  if (def.kind === 'storage') return STORAGE_CAP;
   if (def.kind === 'producer' && b.recipe) return Math.max((RECIPE[b.recipe]?.out[item] ?? 0) * 2, 20);
   return 0;
 }

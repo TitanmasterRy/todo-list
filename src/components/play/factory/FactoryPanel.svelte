@@ -1,6 +1,7 @@
 <script lang="ts">
-  // Orebelt detail panel for the selected tile: recipe picker, clock speed, rates in/out, efficiency, belts.
-  import { BELTS, BUILDING, nodeAt, PURITY, RECIPES, RESOURCE_ITEM, RESOURCE_NAME, shardsFor, type ItemId } from '../../../lib/factory/data';
+  // Orebelt detail panel for the selected tile: recipe picker with a rate card and belt ratio hints, clock speed,
+  // rates in/out, belts and actions. With nothing selected on a young factory it shows the "First shift" checklist.
+  import { BELTS, BUILDING, nodeAt, perMin, PURITY, RECIPES, RESOURCE_ITEM, RESOURCE_NAME, shardsFor, type BuildingId, type ItemId } from '../../../lib/factory/data';
   import { beltCost, beltLength, dismantle, handMine, maxClock, removeBelt, rotate, setClock, setRecipe, toggle, upgradeBelt } from '../../../lib/factory/actions';
   import { unlocked } from '../../../lib/factory/state';
   import { beltRate, boostMult, fullPower, minerRate, type Status } from '../../../lib/factory/sim';
@@ -9,10 +10,9 @@
 
   interface Props {
     ctl: FactoryCtl;
-    sel: { x: number; y: number } | null;
     onbelt: (id: number) => void;
   }
-  let { ctl, sel, onbelt }: Props = $props();
+  let { ctl, onbelt }: Props = $props();
 
   const STATUS: Record<Status, string> = {
     ok: 'Running',
@@ -28,6 +28,7 @@
 
   const v = $derived.by(() => {
     void ctl.rev;
+    const sel = ctl.sel;
     if (!sel) return null;
     const s = ctl.game;
     const b = s.buildings.find((x) => x.x === sel.x && x.y === sel.y);
@@ -73,6 +74,20 @@
           nextCost: next <= BELTS.length ? beltCost(next, len) : {},
         };
       });
+    // the recipe card: what this machine wants per minute at its clock, against what its belts actually bring
+    const speed = b.clock * boost;
+    const card = recipe
+      ? {
+          ins: (Object.entries(recipe.in) as [ItemId, number][]).map(([k, n]) => {
+            const need = perMin(recipe, n) * speed;
+            const bring = belts.filter((x) => !x.out && x.item === k).reduce((a, x) => a + x.rate, 0);
+            const feeders = belts.filter((x) => !x.out).length;
+            return { item: k, need, bring, feeders };
+          }),
+          outs: (Object.entries(recipe.out) as [ItemId, number][]).map(([k, n]) => ({ item: k, rate: perMin(recipe, n) * speed })),
+          cycles: (60 / recipe.time) * speed,
+        }
+      : null;
     return {
       b,
       def,
@@ -83,6 +98,7 @@
       mw: rep?.mw ?? 0,
       fullMw: fullPower(b),
       recipe,
+      card,
       recipes: RECIPES.filter((r) => r.building === b.type && u.recipes.has(r.id)),
       rows,
       belts,
@@ -94,11 +110,50 @@
       outsOut: belts.filter((x) => x.out).length,
       outsMax: def.outs,
       stockIn: belts.filter((x) => !x.out).reduce((a, x) => a + x.rate, 0),
+      copyable: def.kind !== 'camp' && def.kind !== 'depot' && s.buildings.filter((x) => x.type === b.type).length > 1,
     };
   });
 
+  /** The first-shift checklist, read straight off the state so it's right after a reload too. */
+  const shift = $derived.by(() => {
+    void ctl.rev;
+    const s = ctl.game;
+    const miners = s.buildings.filter((b) => BUILDING[b.type].kind === 'miner' && nodeAt(b.x, b.y)?.res === 'iron');
+    const camp = s.buildings.find((b) => b.type === 'camp');
+    // does any belt chain lead from an iron miner to the camp (straight, or through machines)?
+    const reach = new Set(miners.map((m) => m.id));
+    for (let grew = true; grew;) {
+      grew = false;
+      for (const bl of s.belts)
+        if (reach.has(bl.from) && !reach.has(bl.to)) {
+          reach.add(bl.to);
+          grew = true;
+        }
+    }
+    const build = (type: BuildingId) => () => {
+      ctl.tool = 'build';
+      ctl.buildType = type;
+      ctl.say(`Green tiles can take a ${BUILDING[type].name}`, false);
+    };
+    const steps = [
+      { id: 'miner', text: 'Place a Miner Mk1 on the iron deposit', done: miners.length > 0, show: build('miner1') },
+      {
+        id: 'belt',
+        text: 'Belt the ore to the Base Camp (straight, or through a smelter)',
+        done: !!camp && reach.has(camp.id),
+        show: () => {
+          ctl.tool = 'belt';
+          ctl.say('Tap the miner, then the building the belt should feed', false);
+        },
+      },
+      { id: 'smelter', text: 'Build a Smelter and pick the Iron ingot recipe', done: s.buildings.some((b) => b.type === 'smelter' && !!b.recipe), show: build('smelter') },
+      { id: 'fasteners', text: 'Complete the Fasteners milestone (20 plates, 20 rods)', done: s.milestones.includes('fasteners'), show: () => ctl.pickTab('tech') },
+    ];
+    return { steps, n: steps.filter((x) => x.done).length, done: steps.every((x) => x.done) };
+  });
+
   $effect(() => {
-    void sel;
+    void ctl.sel;
     confirmDismantle = false;
     clockDraft = null;
   });
@@ -119,11 +174,44 @@
     });
     clockDraft = null;
   }
+
+  function doDismantle() {
+    const b = v?.b;
+    if (!b) return;
+    if (ctl.run((s) => dismantle(s, b.id), 'Dismantled: parts refunded')) ctl.poof(b.x, b.y, 'dismantle');
+  }
+
+  function startCopy() {
+    const b = v?.b;
+    if (!b) return;
+    ctl.copyFrom = b.id;
+    ctl.tool = 'select';
+    ctl.say(`Tap another ${BUILDING[b.type].name} to paste this recipe and clock`, false);
+  }
 </script>
 
 <div class="panel" data-panel>
   {#if !v}
-    <p class="muted">Select a tile on the map to see what's there.</p>
+    {#if !shift.done}
+      <div class="shift">
+        <div class="sh">
+          <h3>First shift</h3>
+          <span class="pill">{shift.n}/{shift.steps.length}</span>
+        </div>
+        <p class="muted small">Get ore flowing and the tower will take care of the rest.</p>
+        <ol class="steps">
+          {#each shift.steps as st (st.id)}
+            <li class:done={st.done}>
+              <span class="tick" aria-hidden="true">{st.done ? '✓' : ''}</span>
+              <span class="txt">{st.text}</span>
+              {#if !st.done}<button class="chip" onclick={st.show}>Show me</button>{/if}
+            </li>
+          {/each}
+        </ol>
+      </div>
+    {:else}
+      <p class="muted">Select a tile on the map to see what's there.</p>
+    {/if}
   {:else if !v.b}
     {#if v.node}
       {@const it = RESOURCE_ITEM[v.node.res]}
@@ -136,7 +224,7 @@
       </div>
       {#if v.nodeOpen}
         <p class="muted">A Miner Mk1 here makes {30 * PURITY[v.node.purity]} {itemName(it)}/min{v.node.res === 'oil' ? ' (use an Oil Pump)' : ''}.</p>
-        <button class="btn" onclick={() => ctl.run((s) => handMine(s, sel!.x, sel!.y), `+1 ${itemName(it)}`)}>⛏ Mine by hand (+1)</button>
+        <button class="btn" onclick={() => ctl.run((s) => handMine(s, ctl.sel!.x, ctl.sel!.y), `+1 ${itemName(it)}`)}>⛏ Mine by hand (+1)</button>
         <p class="muted small">You have {fmt(ctl.stock(it))}.</p>
       {:else}
         <p class="muted">Locked: a milestone unlocks this resource.</p>
@@ -175,6 +263,34 @@
         </select>
       </label>
       {#if !v.recipes.length}<p class="muted small">No recipes unlocked for this building yet.</p>{/if}
+      {#if v.card}
+        {@const c = v.card}
+        <div class="rc">
+          <div class="rio">
+            <div class="rlist">
+              {#each c.ins as x (x.item)}
+                <span class="rit"><FactoryIcon item={x.item} size={16} /><strong>{fmtRate(x.need)}</strong>/min {itemName(x.item)}</span>
+              {/each}
+            </div>
+            <span class="arrow" aria-hidden="true">→</span>
+            <div class="rlist">
+              {#each c.outs as x (x.item)}
+                <span class="rit out"><FactoryIcon item={x.item} size={16} /><strong>{fmtRate(x.rate)}</strong>/min {itemName(x.item)}</span>
+              {/each}
+            </div>
+          </div>
+          <p class="muted small">{v.recipe!.time} s per cycle · {fmtRate(c.cycles)} cycles/min at {Math.round(b.clock * 100)}%{v.boost > 1 ? ' boosted' : ''}</p>
+          <ul class="ratio">
+            {#each c.ins as x (x.item)}
+              <li class:ok={x.bring + 1e-6 >= x.need} class:short={x.bring > 0.01 && x.bring + 1e-6 < x.need} class:none={x.bring <= 0.01}>
+                needs {fmtRate(x.need)}
+                {itemName(x.item)}/min;
+                {#if x.bring > 0.01}connected belts bring {fmtRate(x.bring)}/min{:else if x.feeders}no belt brings {itemName(x.item)} yet{:else}no belt feeds it yet{/if}
+              </li>
+            {/each}
+          </ul>
+        </div>
+      {/if}
     {/if}
 
     {#if v.rows.length}
@@ -255,6 +371,9 @@
       </ul>
     {/if}
 
+    {#if ctl.copyFrom === b.id}
+      <p class="small copying">Copying these settings: tap another {v.def!.name} on the map. <button class="chip" onclick={() => (ctl.copyFrom = null)}>Cancel</button></p>
+    {/if}
     <div class="acts">
       {#if v.def!.outs > 0}<button class="btn" onclick={() => onbelt(b.id)}>Belt from here</button>{/if}
       {#if b.type !== 'camp'}
@@ -263,9 +382,12 @@
       {#if b.type !== 'camp' && b.type !== 'depot'}
         <button class="btn" onclick={() => ctl.run((s) => toggle(s, b.id))}>{b.off ? 'Resume' : 'Pause'}</button>
       {/if}
+      {#if v.copyable && ctl.copyFrom !== b.id}
+        <button class="btn" onclick={startCopy} title="Give another {v.def!.name} this recipe and clock speed">Copy settings</button>
+      {/if}
       {#if b.type !== 'camp'}
         {#if confirmDismantle}
-          <button class="btn danger" onclick={() => ctl.run((s) => dismantle(s, b.id), 'Dismantled: parts refunded')}>Confirm dismantle</button>
+          <button class="btn danger" onclick={doDismantle}>Confirm dismantle</button>
           <button class="btn" onclick={() => (confirmDismantle = false)}>Keep</button>
         {:else}
           <button class="btn" onclick={() => (confirmDismantle = true)}>Dismantle</button>
@@ -286,10 +408,14 @@
     gap: 8px;
     align-content: start;
   }
-  .ph {
+  .ph,
+  .sh {
     display: flex;
     gap: 10px;
     align-items: center;
+  }
+  .sh {
+    justify-content: space-between;
   }
   h3 {
     margin: 0;
@@ -335,6 +461,53 @@
   .bar .st-nofuel {
     background: #a3292d;
   }
+  .shift {
+    display: grid;
+    gap: 6px;
+  }
+  .steps {
+    list-style: none;
+    margin: 2px 0 0;
+    padding: 0;
+    display: grid;
+    gap: 6px;
+    counter-reset: step;
+  }
+  .steps li {
+    counter-increment: step;
+    display: grid;
+    grid-template-columns: 22px 1fr auto;
+    gap: 8px;
+    align-items: center;
+    font-size: 12.5px;
+    padding: 6px 8px;
+    border-radius: 8px;
+    background: var(--f-panel2);
+    border-left: 3px solid var(--f-orange);
+  }
+  .steps li.done {
+    border-left-color: #3fb950;
+    color: var(--f-muted);
+  }
+  .steps li.done .txt {
+    text-decoration: line-through;
+  }
+  .tick {
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    border: 1px solid var(--f-line);
+    display: grid;
+    place-items: center;
+    font-size: 12px;
+    font-weight: 700;
+    color: #3fb950;
+    background: var(--f-panel);
+  }
+  .steps li:not(.done) .tick::before {
+    content: counter(step);
+    color: var(--f-muted);
+  }
   .eff {
     display: flex;
     gap: 8px;
@@ -366,6 +539,61 @@
     border-radius: 8px;
     padding: 8px;
     min-height: 38px;
+  }
+  .rc {
+    display: grid;
+    gap: 5px;
+    padding: 8px;
+    border-radius: 8px;
+    background: linear-gradient(180deg, #23292f, var(--f-panel2));
+    border: 1px solid var(--f-line);
+  }
+  .rio {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+  .rlist {
+    display: grid;
+    gap: 3px;
+  }
+  .rit {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 12px;
+    white-space: nowrap;
+  }
+  .rit.out strong {
+    color: var(--f-orange);
+  }
+  .arrow {
+    color: var(--f-muted);
+    font-size: 16px;
+  }
+  .ratio {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    gap: 2px;
+    font-size: 11.5px;
+  }
+  .ratio li::before {
+    content: '●';
+    margin-right: 5px;
+    font-size: 9px;
+    vertical-align: 1px;
+  }
+  .ratio li.ok::before {
+    color: #3fb950;
+  }
+  .ratio li.short::before {
+    color: var(--f-yellow);
+  }
+  .ratio li.none::before {
+    color: #7a828c;
   }
   .io {
     width: 100%;
@@ -401,6 +629,9 @@
   }
   .boostline {
     color: #7ee0ea;
+  }
+  .copying {
+    color: #8fe7ef;
   }
   .clock {
     display: grid;

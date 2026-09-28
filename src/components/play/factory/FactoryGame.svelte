@@ -9,30 +9,15 @@
   import FactoryStats from './FactoryStats.svelte';
   import FactoryTech from './FactoryTech.svelte';
   import FactoryMarket from './FactoryMarket.svelte';
-  import { FactoryCtl, fmt, fmtRate, fmtTime, itemName } from './controller.svelte';
+  import { FactoryCtl, fmt, fmtRate, fmtTime, itemName, motionOk } from './controller.svelte';
 
   const ctl = new FactoryCtl();
-
-  type Sub = 'map' | 'stats' | 'tech' | 'trade';
-  const SUB_KEY = 'homework-todo:factory-tab';
-  let sub = $state<Sub>(
-    ((): Sub => {
-      try {
-        const v = localStorage.getItem(SUB_KEY);
-        return v === 'stats' || v === 'tech' || v === 'trade' ? v : 'map';
-      } catch {
-        return 'map';
-      }
-    })(),
-  );
-  function pick(next: Sub) {
-    sub = next;
-    try {
-      localStorage.setItem(SUB_KEY, next);
-    } catch {
-      /* ignore */
-    }
-  }
+  const TABS = [
+    { id: 'map', name: 'Factory', icon: 'M2 13h12M4 13V7l3-3 3 3v6M10 7l2-2 2 2v6' },
+    { id: 'stats', name: 'Production', icon: 'M2 13l4-5 3 3 5-7M2 14h12' },
+    { id: 'tech', name: 'Milestones', icon: 'M8 1c2 2 3 5 2 8H6C5 6 6 3 8 1zM6 9l-2 3h2zM10 9l2 3h-2zM7 12h2v3H7z' },
+    { id: 'trade', name: 'Supply & market', icon: 'M2 5h12l-1 8H3zM6 5V3h4v2' },
+  ] as const;
 
   onMount(() => {
     const timer = setInterval(() => ctl.pump(), 1000);
@@ -92,7 +77,7 @@
       </div>
     </div>
     <div class="hud" aria-label="Factory status">
-      <div class="h" class:bad={hud.factor < 0.999} title="Power in use / capacity">
+      <div class="h" class:bad={hud.factor < 0.999} class:pulse={hud.factor < 0.999 && motionOk()} title="Power in use / capacity">
         <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><path d="M9 1 3 9h4l-1 6 6-8H8z" fill="currentColor" /></svg>
         <span><strong>{fmtRate(Math.min(hud.demand, hud.cap))}</strong>/{fmtRate(hud.cap)} MW</span>
         <span class="meter"><span style="width: {Math.min(100, (hud.demand / Math.max(1, hud.cap)) * 100)}%"></span></span>
@@ -141,19 +126,25 @@
   {/if}
 
   <div class="subtabs" role="tablist" aria-label="Factory sections">
-    <button role="tab" aria-selected={sub === 'map'} class:on={sub === 'map'} onclick={() => pick('map')}>Factory</button>
-    <button role="tab" aria-selected={sub === 'stats'} class:on={sub === 'stats'} onclick={() => pick('stats')}>Production</button>
-    <button role="tab" aria-selected={sub === 'tech'} class:on={sub === 'tech'} onclick={() => pick('tech')}>Milestones</button>
-    {#if economy.enabled}<button role="tab" aria-selected={sub === 'trade'} class:on={sub === 'trade'} onclick={() => pick('trade')}>Supply &amp; market</button>{/if}
+    {#each TABS as tb (tb.id)}
+      {#if tb.id !== 'trade' || economy.enabled}
+        <button role="tab" aria-selected={ctl.tab === tb.id} class:on={ctl.tab === tb.id} onclick={() => ctl.pickTab(tb.id)}>
+          <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"
+            ><path d={tb.icon} fill={tb.id === 'tech' ? 'currentColor' : 'none'} stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" /></svg
+          >
+          {tb.name}
+        </button>
+      {/if}
+    {/each}
   </div>
 
   <div class="msg" class:bad={ctl.message?.bad} aria-live="polite" data-msg>{ctl.message?.text ?? ''}</div>
 
-  {#if sub === 'map'}
+  {#if ctl.tab === 'map'}
     <FactoryMap {ctl} />
-  {:else if sub === 'stats'}
+  {:else if ctl.tab === 'stats'}
     <FactoryStats {ctl} />
-  {:else if sub === 'tech'}
+  {:else if ctl.tab === 'tech'}
     <FactoryTech {ctl} />
   {:else}
     <FactoryMarket {ctl} />
@@ -215,20 +206,48 @@
     display: inline-flex;
     align-items: center;
     gap: 6px;
-    background: var(--f-panel);
+    background: linear-gradient(180deg, #2b323a, var(--f-panel));
     border: 1px solid var(--f-line);
     border-radius: 999px;
     padding: 4px 10px;
     font-size: 12.5px;
     font-variant-numeric: tabular-nums;
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.08),
+      0 1px 2px rgba(0, 0, 0, 0.35);
+  }
+  .h svg {
+    color: var(--f-yellow);
+    filter: drop-shadow(0 0 2px rgba(242, 182, 50, 0.35));
   }
   .h.bad {
     border-color: #e5484d;
     color: #ffb4ae;
+    background: linear-gradient(180deg, #4a2326, #31191b);
+  }
+  .h.bad svg {
+    color: #ff9b8f;
+  }
+  .h.pulse {
+    animation: ob-pulse 1.2s ease-in-out infinite;
+  }
+  @keyframes ob-pulse {
+    0%,
+    100% {
+      box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.08),
+        0 0 0 0 rgba(229, 72, 77, 0.5);
+    }
+    50% {
+      box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.08),
+        0 0 0 5px rgba(229, 72, 77, 0);
+    }
   }
   .h.boost {
     border-color: var(--f-teal);
     color: #8fe7ef;
+    background: linear-gradient(180deg, #1c3f45, #14313a);
   }
   .meter {
     width: 44px;
@@ -286,21 +305,35 @@
     display: flex;
     gap: 4px;
     overflow-x: auto;
-    margin-bottom: 6px;
+    margin-bottom: 8px;
+    padding: 4px;
+    border-radius: 10px;
+    background: #121518;
+    border: 1px solid #23282e;
   }
   .subtabs button {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
     padding: 8px 12px;
-    border-radius: 8px 8px 0 0;
+    border-radius: 7px;
     color: var(--f-muted);
     font-weight: 700;
     font-size: 13px;
     white-space: nowrap;
-    border-bottom: 2px solid transparent;
+    transition:
+      background 0.15s,
+      color 0.15s;
   }
   .subtabs button.on {
     color: var(--f-text);
-    border-bottom-color: var(--f-orange);
-    background: var(--f-panel);
+    background: linear-gradient(180deg, #2e3740, var(--f-panel));
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.08),
+      inset 0 -2px 0 var(--f-orange);
+  }
+  .subtabs button.on svg {
+    color: var(--f-orange);
   }
   .msg {
     min-height: 18px;

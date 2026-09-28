@@ -1,5 +1,29 @@
 import { describe, expect, it } from 'vitest';
-import { BUILDING, BUILDINGS, ITEM, ITEMS, MILESTONES, NODES, PHASES, RECIPES, RESEARCH, START_UNLOCKS, MAP_W, MAP_H, CAMP, perMin, powerAt, shardsFor, type ItemId } from './data';
+import {
+  BELTS,
+  BUILDING,
+  BUILDINGS,
+  CAMP,
+  ITEM,
+  ITEMS,
+  MAP_H,
+  MAP_W,
+  MAX_TIER,
+  MILESTONES,
+  NODES,
+  PHASES,
+  RECIPES,
+  RESEARCH,
+  RESOURCE_ITEM,
+  SECTOR,
+  SECTORS,
+  START_UNLOCKS,
+  perMin,
+  powerAt,
+  sectorAt,
+  shardsFor,
+  type ItemId,
+} from './data';
 
 describe('factory data', () => {
   it('has a deep enough tech tree', () => {
@@ -30,6 +54,8 @@ describe('factory data', () => {
       );
     });
     PHASES.forEach((p) => check(p.cost));
+    SECTORS.forEach((x) => check(x.cost));
+    BELTS.forEach((b) => check(b.cost));
     RESEARCH.forEach((r) => {
       check(r.cost);
       expect(RECIPES.find((x) => x.id === r.recipe)?.alt, r.recipe).toBe(true);
@@ -55,17 +81,7 @@ describe('factory data', () => {
       while (grew) {
         grew = false;
         for (const n of NODES) {
-          const item = {
-            iron: 'ironOre',
-            copper: 'copperOre',
-            limestone: 'limestone',
-            coal: 'coal',
-            oil: 'crudeOil',
-            quartz: 'quartz',
-            sulfur: 'sulfur',
-            gold: 'goldOre',
-            grove: 'biomass',
-          }[n.res] as ItemId;
+          const item = RESOURCE_ITEM[n.res];
           if (resources.has(n.res) && !makeable.has(item)) {
             makeable.add(item);
             grew = true;
@@ -134,5 +150,53 @@ describe('factory data', () => {
 
   it('keeps market values on later parts only', () => {
     for (const i of ITEMS) if (i.tier < 2) expect(ITEM[i.id].value ?? 0).toBe(0);
+  });
+
+  it('reaches tier 7 with aluminium, nuclear power and a sixth belt', () => {
+    expect(MAX_TIER).toBe(7);
+    expect(PHASES.map((p) => p.name).slice(-2)).toEqual(['Orbital Station', 'Deep Space Probe']);
+    for (const id of ['logistics', 'aluminium', 'heatSinks', 'belts6', 'nuclear', 'radio'])
+      expect(
+        MILESTONES.some((m) => m.id === id),
+        id,
+      ).toBe(true);
+    expect(BELTS.at(-1)).toMatchObject({ tier: 6, rate: 1200 });
+    expect(BUILDING.nuclearPlant.gen).toEqual({ fuel: 'uraniumRod', mw: 600, burn: 1 });
+    expect(BUILDING.blender.ins).toBe(4);
+    expect(BUILDING.miner3.mines).toEqual(expect.arrayContaining(['bauxite', 'uranium']));
+    expect(BUILDING.miner1.mines).not.toContain('uranium');
+    expect(['storage', 'loader'].map((b) => BUILDING[b as 'storage'].kind)).toEqual(['storage', 'loader']);
+    for (const id of ['radioUnit', 'uraniumRod', 'fusedFrame', 'encasedCell', 'heatSink', 'alumina'] as const) expect(ITEM[id].value).toBeGreaterThan(0);
+  });
+});
+
+describe('sectors', () => {
+  it('tile the whole map without overlapping', () => {
+    const owner = new Map<string, string>();
+    for (let y = 0; y < MAP_H; y++)
+      for (let x = 0; x < MAP_W; x++) {
+        const s = sectorAt(x, y);
+        expect(s, `${x},${y}`).toBeDefined();
+        owner.set(`${x},${y}`, s!.id);
+      }
+    for (const s of SECTORS) expect([...owner.values()].filter((id) => id === s.id).length).toBe(s.w * s.h);
+    expect(sectorAt(-1, 0)).toBeUndefined();
+    expect(sectorAt(MAP_W, 0)).toBeUndefined();
+    expect(SECTOR.home).toMatchObject({ x: 0, y: 0, w: 20, h: 12, tier: 0, insight: 0, cost: {} });
+  });
+
+  it('keep the camp and the original nodes in the free home sector, and the new ores outside it', () => {
+    expect(sectorAt(CAMP.x, CAMP.y)?.id).toBe('home');
+    for (const n of NODES.slice(0, 25)) expect(sectorAt(n.x, n.y)?.id, `${n.x},${n.y}`).toBe('home');
+    expect(NODES.slice(0, 25).some((n) => n.x === 4 && n.y === 3 && n.res === 'iron' && n.purity === 'normal')).toBe(true);
+    for (const n of NODES) if (n.res === 'bauxite' || n.res === 'uranium') expect(sectorAt(n.x, n.y)?.id).not.toBe('home');
+    expect(NODES.filter((n) => n.res === 'uranium').length).toBeGreaterThan(0);
+    for (const s of SECTORS)
+      expect(
+        NODES.some((n) => sectorAt(n.x, n.y)?.id === s.id),
+        s.id,
+      ).toBe(true);
+    const tiers = SECTORS.map((s) => s.tier);
+    expect(tiers).toEqual([...tiers].sort((a, b) => a - b));
   });
 });

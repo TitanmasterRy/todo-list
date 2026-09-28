@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { bankStudy, bankTask, readPending, takePending, PENDING_KEY } from './bridge';
-import { MARKET_DAILY_CAP, PHASES } from './data';
+import { bankDay, bankStudy, bankTask, readPending, takePending, PENDING_KEY } from './bridge';
+import { MARKET_DAILY_CAP, PHASES, REWARD } from './data';
 import { coinsPaidToday, roomToday, sellQuote } from './market';
 import { applyOffer, boughtToday, canBuyOffer, COIN_SHOP, crateFor, NIGHT_SHIFT, OFFER, RUSH_CAP } from './shop';
 import { newGame } from './state';
@@ -93,6 +93,11 @@ describe('coin shop', () => {
     for (let i = 0; i < 4; i++) applyOffer(s, 'cargo');
     expect(s.phase).toBe(1);
     expect(s.delivered).toEqual({});
+    s.phase = PHASES.length - 1;
+    for (let i = 0; i < 5; i++) applyOffer(s, 'cargo');
+    expect(s.phase).toBe(PHASES.length);
+    expect(s.lifetime.launches).toBe(1);
+    expect(crateFor(PHASES.length).fusedFrame).toBeGreaterThan(0);
   });
 });
 
@@ -109,16 +114,25 @@ describe('homework bridge', () => {
     bankTask(st, 't2');
     bankStudy(st);
     expect(readPending(st)).toMatchObject({ tasks: 2, study: 1 });
-    expect(takePending(st)).toEqual({ tasks: 2, study: 1 });
-    expect(takePending(st)).toEqual({ tasks: 0, study: 0 });
+    expect(takePending(st)).toEqual({ tasks: 2, study: 1, days: 0 });
+    expect(takePending(st)).toEqual({ tasks: 0, study: 0, days: 0 });
     bankTask(st, 't1'); // re-completed: already paid
     expect(readPending(st).tasks).toBe(0);
+  });
+
+  it('banks good days (ring closed, streak milestones) up to the cap', () => {
+    const st = memory();
+    for (let i = 0; i < 60; i++) bankDay(st);
+    expect(readPending(st).days).toBe(50);
+    expect(takePending(st)).toEqual({ tasks: 0, study: 0, days: 50 });
+    expect(readPending(st).days).toBe(0);
+    expect(REWARD.day).toEqual({ shards: 1, insight: 2, boost: 900 });
   });
 
   it('survives junk in storage', () => {
     const st = memory();
     st.setItem(PENDING_KEY, '{"tasks":"x","ids":5}');
-    expect(readPending(st)).toEqual({ tasks: 0, study: 0, ids: [] });
+    expect(readPending(st)).toEqual({ tasks: 0, study: 0, days: 0, ids: [] });
     st.setItem(PENDING_KEY, 'nope');
     expect(readPending(st).tasks).toBe(0);
   });

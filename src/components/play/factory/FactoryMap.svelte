@@ -1,35 +1,39 @@
 <script lang="ts">
-  // Orebelt map: a scrollable tile grid with resource nodes, buildings and animated belts, plus the build/belt tools.
-  // Keyboard: arrows move between tiles, Enter/Space acts, R rotates, Esc cancels the tool.
-  import { BELTS, BUILDING, BUILDINGS, ITEM, MAP_H, MAP_W, NODES, RECIPE, RESOURCE_ITEM, RESOURCE_NAME, type BuildingId } from '../../../lib/factory/data';
+  // Orebelt map: a scrollable tile grid with resource nodes, buildings and belts carrying visible items, plus the
+  // build/belt tools and the mass tools. Keyboard: arrows move between tiles, Enter/Space acts, R rotates, Esc cancels.
+  import { BELTS, BUILDING, BUILDINGS, ITEM, MAP_H, MAP_W, NODES, RECIPE, RESOURCE_ITEM, RESOURCE_NAME, type ItemId } from '../../../lib/factory/data';
   import { beltCost, beltPath, connect, DIRS, place, rotate } from '../../../lib/factory/actions';
+  import { copySettings, pauseAll, quoteUpgradeAll, resumeAll, upgradeAllBelts } from '../../../lib/factory/bulk';
   import { has, unlocked, type Dir } from '../../../lib/factory/state';
   import { beltRate, type Status } from '../../../lib/factory/sim';
-  import { store } from '../../../lib/store.svelte';
+  import Burst from './Burst.svelte';
   import FactoryIcon from './FactoryIcon.svelte';
   import FactoryPanel from './FactoryPanel.svelte';
-  import { itemName, type FactoryCtl } from './controller.svelte';
+  import { itemName, motionOk, type FactoryCtl, type MapTool } from './controller.svelte';
 
   interface Props {
     ctl: FactoryCtl;
   }
   let { ctl }: Props = $props();
 
-  type Tool = 'select' | 'build' | 'belt';
-  let tool = $state<Tool>('select');
-  let buildType = $state<BuildingId>('miner1');
   let placeRot = $state<Dir>(0);
   let beltTier = $state(1);
   let beltFrom = $state<number | null>(null);
-  let sel = $state<{ x: number; y: number } | null>(null);
   let cursor = $state({ x: 2, y: 5 });
   let zoom = $state(1);
-  const TILE = [34, 44, 58];
+  let bulkOpen = $state(false);
+  let bulkTier = $state(2);
+  /** A just-placed building, for its drop-in animation. */
+  let fresh = $state<number | null>(null);
+  const TILE = [30, 40, 54];
   const t = $derived(TILE[zoom]);
   let grid: HTMLDivElement | undefined = $state();
+  let wrap: HTMLDivElement | undefined = $state();
 
-  const prefersReduced = typeof window !== 'undefined' && !!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
-  const animate = $derived(!store.settings.reducedMotion && !prefersReduced);
+  const animate = $derived(motionOk());
+  // item markers ride the belt path with CSS motion paths; older browsers get the marching-dash belt instead
+  const OFFSET_OK = typeof CSS !== 'undefined' && !!CSS.supports?.('offset-path', 'path("M0 0")');
+  const markers = $derived(animate && OFFSET_OK);
 
   const STATUS: Record<Status, string> = {
     ok: 'Running',
@@ -41,15 +45,22 @@
     nofuel: 'No fuel',
   };
   const DIR_NAME = ['east', 'south', 'west', 'north'];
+  /** Tiles per second the items travel at, per belt tier. */
+  const SPEED = [0.9, 1.3, 1.9, 2.6, 3.4];
+  /** A small stable hash so each tile's ground looks a little different, the same way every time. */
+  const hash = (x: number, y: number) => (((x + 1) * 73856093) ^ ((y + 1) * 19349663)) >>> 0;
 
   const view = $derived.by(() => {
     void ctl.rev;
     const s = ctl.game;
     const rep = ctl.report;
     const u = unlocked(s);
+    const tool = ctl.tool;
+    const buildType = ctl.buildType;
     const at = new Map(s.buildings.map((b) => [`${b.x},${b.y}`, b]));
     const def = BUILDING[buildType];
     const affordable = has(s.inv, def.cost);
+    const overload = (rep?.power.factor ?? 1) < 0.999;
     const tiles = [];
     for (let y = 0; y < MAP_H; y++)
       for (let x = 0; x < MAP_W; x++) {
@@ -57,7 +68,7 @@
         const node = NODES.find((n) => n.x === x && n.y === y);
         const r = b ? rep?.buildings[b.id] : undefined;
         const recipe = b?.recipe ? RECIPE[b.recipe] : undefined;
-        const outItem = recipe ? (Object.keys(recipe.out)[0] as keyof typeof ITEM) : b && node && BUILDING[b.type].kind === 'miner' ? RESOURCE_ITEM[node.res] : undefined;
+        const outItem = recipe ? (Object.keys(recipe.out)[0] as ItemId) : b && node && BUILDING[b.type].kind === 'miner' ? RESOURCE_ITEM[node.res] : undefined;
         const canHere = tool === 'build' && !b && affordable && (def.kind === 'miner' ? !!node && def.mines!.includes(node.res) && u.resources.has(node.res) : !node);
         let label = `Tile ${x + 1}, ${y + 1}: `;
         if (b) {
@@ -72,13 +83,16 @@
           y,
           id: b?.id,
           type: b?.type,
+          kind: b ? BUILDING[b.type].kind : undefined,
           rot: b?.rot ?? 0,
-          st: r?.st,
+          st: b?.off ? ('off' as Status) : r?.st,
           eff: r?.eff ?? 0,
           off: !!b?.off,
           outItem,
           nodeLocked: !!node && !u.resources.has(node.res),
           canHere,
+          lit: b?.type === 'camp' && overload,
+          g: hash(x, y) % 6,
           label,
         });
       }
@@ -90,18 +104,52 @@
       const kind = BUILDING[b.type].kind;
       const pts = beltPath(a, b, kind === 'camp' || kind === 'depot');
       const d = pts.map((p, i) => `${i ? 'L' : 'M'}${p.x} ${p.y}`).join(' ');
+      const px = pts.map((p, i) => `${i ? 'L' : 'M'}${(p.x * t).toFixed(1)} ${(p.y * t).toFixed(1)}`).join(' ');
+      const len = pts.reduce((sum, p, i) => (i ? sum + Math.abs(p.x - pts[i - 1].x) + Math.abs(p.y - pts[i - 1].y) : 0), 0);
       const flow = rep?.belts[bl.id];
-      return [{ id: bl.id, d, tier: bl.tier, rate: flow?.rate ?? 0, color: flow?.item ? ITEM[flow.item].color : '#888', full: (flow?.rate ?? 0) >= beltRate(bl.tier) * 0.98 }];
+      const rate = flow?.rate ?? 0;
+      const fill = Math.min(1, rate / beltRate(bl.tier));
+      return [
+        {
+          id: bl.id,
+          d,
+          px,
+          tier: bl.tier,
+          rate,
+          color: flow?.item ? ITEM[flow.item].color : '#888',
+          full: fill >= 0.98,
+          // a fuller belt shows more markers; faster tiers move them quicker
+          n: 3 + Math.round(fill * 3),
+          dur: Math.max(0.6, len / SPEED[bl.tier - 1]),
+        },
+      ];
     });
-    const nodes = NODES.map((n) => ({ ...n, locked: !u.resources.has(n.res), color: ITEM[RESOURCE_ITEM[n.res]].color }));
+    const nodes = NODES.map((n) => ({ ...n, locked: !u.resources.has(n.res), color: ITEM[RESOURCE_ITEM[n.res]].color, delay: (hash(n.x, n.y) % 9) * 0.4 }));
     const palette = BUILDINGS.filter((b) => b.id !== 'camp')
       .map((b) => ({ def: b, locked: !u.buildings.has(b.id), afford: has(s.inv, b.cost) }))
       .sort((a, b) => Number(a.locked) - Number(b.locked));
-    return { tiles, belts, nodes, palette, maxBelt: u.belt, beltFromName: beltFrom ? BUILDING[byId.get(beltFrom)?.type ?? 'camp'].name : '' };
+    const paused = s.buildings.filter((b) => b.off).length;
+    const machines = s.buildings.filter((b) => BUILDING[b.type].kind !== 'camp' && BUILDING[b.type].kind !== 'depot').length;
+    const quote = bulkOpen ? quoteUpgradeAll(s, bulkTier) : null;
+    const copyName = ctl.copyFrom !== null ? BUILDING[byId.get(ctl.copyFrom)?.type ?? 'camp'].name : '';
+    return {
+      tiles,
+      belts,
+      nodes,
+      palette,
+      overload,
+      paused,
+      machines,
+      quote,
+      copyName,
+      maxBelt: u.belt,
+      beltFromName: beltFrom ? BUILDING[byId.get(beltFrom)?.type ?? 'camp'].name : '',
+    };
   });
 
-  function pickTool(next: Tool) {
-    tool = next;
+  function pickTool(next: MapTool) {
+    ctl.tool = next;
+    ctl.copyFrom = null;
     beltFrom = null;
   }
 
@@ -109,22 +157,27 @@
     cursor = { x, y };
     const s = ctl.game;
     const here = s.buildings.find((b) => b.x === x && b.y === y);
-    if (tool === 'build') {
+    if (ctl.tool === 'build') {
       let id: number | undefined;
       const ok = ctl.run((g) => {
-        const r = place(g, buildType, x, y, placeRot);
+        const r = place(g, ctl.buildType, x, y, placeRot);
         id = r.id;
         return r;
-      }, `${BUILDING[buildType].name} built`);
-      if (ok && id) sel = { x, y };
+      }, `${BUILDING[ctl.buildType].name} built`);
+      if (ok && id) {
+        ctl.sel = { x, y };
+        ctl.poof(x, y, 'build');
+        fresh = id;
+        setTimeout(() => (fresh = null), 350);
+      }
       return;
     }
-    if (tool === 'belt') {
+    if (ctl.tool === 'belt') {
       if (beltFrom === null) {
         if (!here) return ctl.say('Tap a building to start the belt', true);
         if (BUILDING[here.type].outs <= 0) return ctl.say(`${BUILDING[here.type].name} has no output: start from a miner or machine`, true);
         beltFrom = here.id;
-        sel = { x, y };
+        ctl.sel = { x, y };
         return;
       }
       if (here?.id === beltFrom) {
@@ -136,13 +189,27 @@
       if (ctl.run((g) => connect(g, from, here.id, beltTier), 'Belt connected')) beltFrom = null;
       return;
     }
-    sel = { x, y };
+    if (ctl.copyFrom !== null && here && here.id !== ctl.copyFrom) {
+      const from = ctl.copyFrom;
+      let clock = 1;
+      if (
+        ctl.run((g) => {
+          const r = copySettings(g, from, here.id);
+          if (r.ok) clock = r.clock ?? 1;
+          return r;
+        })
+      ) {
+        ctl.say(`Settings copied: clock ${Math.round(clock * 100)}%`, false);
+        ctl.copyFrom = null;
+      }
+    } else if (ctl.copyFrom !== null && !here) ctl.copyFrom = null;
+    ctl.sel = { x, y };
   }
 
   function rotateAction() {
-    if (tool === 'build') placeRot = ((placeRot + 1) % 4) as Dir;
-    else if (sel) {
-      const b = ctl.game.buildings.find((x) => x.x === sel!.x && x.y === sel!.y);
+    if (ctl.tool === 'build') placeRot = ((placeRot + 1) % 4) as Dir;
+    else if (ctl.sel) {
+      const b = ctl.game.buildings.find((x) => x.x === ctl.sel!.x && x.y === ctl.sel!.y);
       if (b) ctl.run((g) => rotate(g, b.id));
     }
   }
@@ -158,35 +225,83 @@
       e.preventDefault();
       rotateAction();
     } else if (k === 'Escape') {
-      if (tool !== 'select' || beltFrom !== null) {
+      if (ctl.tool !== 'select' || beltFrom !== null || ctl.copyFrom !== null) {
         e.preventDefault();
         pickTool('select');
       }
     }
   }
 
-  const costText = (cost: Partial<Record<keyof typeof ITEM, number>>) =>
+  // mouse users drag the map to pan; touch scrolls the wrap natively. A drag must not count as a tile click.
+  let drag: { x: number; y: number; sx: number; sy: number; moved: boolean } | null = null;
+  function onPointerDown(e: PointerEvent) {
+    if (e.pointerType !== 'mouse' || e.button !== 0 || !wrap) return;
+    drag = { x: e.clientX, y: e.clientY, sx: wrap.scrollLeft, sy: wrap.scrollTop, moved: false };
+  }
+  function onPointerMove(e: PointerEvent) {
+    if (!drag || !wrap) return;
+    if (e.buttons === 0) return (drag = null); // the button came up outside the map
+    const dx = e.clientX - drag.x;
+    const dy = e.clientY - drag.y;
+    if (!drag.moved && Math.hypot(dx, dy) < 6) return;
+    drag.moved = true;
+    wrap.scrollLeft = drag.sx - dx;
+    wrap.scrollTop = drag.sy - dy;
+  }
+  function onPointerUp() {
+    // after a drag the click that follows is swallowed by onClickCapture; if no click comes, forget the drag anyway
+    if (drag?.moved) setTimeout(() => (drag = null), 0);
+    else drag = null;
+  }
+  function onClickCapture(e: MouseEvent) {
+    if (drag?.moved) {
+      e.stopPropagation();
+      e.preventDefault();
+    }
+    drag = null;
+  }
+
+  function upgradeAll() {
+    const tier = bulkTier;
+    let got = { upgraded: 0, cost: {} as Partial<Record<ItemId, number>> };
+    ctl.run((g) => {
+      got = upgradeAllBelts(g, tier);
+      return got.upgraded > 0 ? { ok: true } : { ok: false, error: 'No belt could be upgraded: check the parts' };
+    });
+    if (got.upgraded)
+      ctl.say(`${got.upgraded} belt${got.upgraded === 1 ? '' : 's'} upgraded to Mk${tier}${Object.keys(got.cost).length ? ` for ${costText(got.cost)}` : ''}`, false);
+    bulkOpen = false;
+  }
+  function pauseEverything(pause: boolean) {
+    let n = 0;
+    ctl.run((g) => {
+      n = pause ? pauseAll(g) : resumeAll(g);
+    });
+    ctl.say(n ? `${n} machine${n === 1 ? '' : 's'} ${pause ? 'paused' : 'resumed'}` : pause ? 'Nothing was running' : 'Nothing was paused', !n);
+  }
+
+  const costText = (cost: Partial<Record<ItemId, number>>) =>
     Object.entries(cost)
-      .map(([k, n]) => `${n} ${itemName(k as keyof typeof ITEM)}`)
+      .map(([k, n]) => `${fmtCost(n)} ${itemName(k as ItemId)}`)
       .join(', ');
-  const beltSpeed = (tier: number) => [0.9, 1.3, 1.9, 2.6, 3.4][tier - 1];
+  const fmtCost = (n: number) => (Number.isInteger(n) ? String(n) : n.toFixed(1));
 </script>
 
 <div class="toolbar" role="toolbar" aria-label="Map tools">
   <div class="seg">
-    <button class:on={tool === 'select'} aria-pressed={tool === 'select'} onclick={() => pickTool('select')}>
+    <button class:on={ctl.tool === 'select'} aria-pressed={ctl.tool === 'select'} onclick={() => pickTool('select')}>
       <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><path d="M3 2l10 6-4 1 2 5-2 1-2-5-3 3z" fill="currentColor" /></svg> Inspect
     </button>
-    <button class:on={tool === 'build'} aria-pressed={tool === 'build'} onclick={() => pickTool('build')}>
+    <button class:on={ctl.tool === 'build'} aria-pressed={ctl.tool === 'build'} onclick={() => pickTool('build')}>
       <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><path d="M2 14h12M4 14V7l4-4 4 4v7" stroke="currentColor" stroke-width="2" fill="none" /></svg> Build
     </button>
-    <button class:on={tool === 'belt'} aria-pressed={tool === 'belt'} onclick={() => pickTool('belt')}>
+    <button class:on={ctl.tool === 'belt'} aria-pressed={ctl.tool === 'belt'} onclick={() => pickTool('belt')}>
       <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"
         ><path d="M2 8h12" stroke="currentColor" stroke-width="4" /><path d="M4 8h1M8 8h1M12 8h1" stroke="#1b1f24" stroke-width="2" /></svg
       > Belt
     </button>
   </div>
-  {#if tool === 'belt'}
+  {#if ctl.tool === 'belt'}
     <label class="tier">
       <span class="sr">Belt tier</span>
       <select bind:value={beltTier}>
@@ -196,14 +311,29 @@
       </select>
     </label>
   {/if}
-  {#if tool === 'build' || sel}
+  {#if ctl.tool === 'build' || ctl.sel}
     <button class="tb" onclick={rotateAction} title="Rotate (R)">
       <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"
         ><path d="M13 8a5 5 0 1 1-2-4" stroke="currentColor" stroke-width="2" fill="none" /><path d="M9 1l3 3-3 2" fill="currentColor" /></svg
       >
-      Rotate{tool === 'build' ? ` (${DIR_NAME[placeRot]})` : ''}
+      Rotate{ctl.tool === 'build' ? ` (${DIR_NAME[placeRot]})` : ''}
     </button>
   {/if}
+  <div class="seg mass" role="group" aria-label="Mass tools">
+    {#if view.paused > 0}
+      <button onclick={() => pauseEverything(false)} title="Resume every paused machine">
+        <svg viewBox="0 0 16 16" width="12" height="12" aria-hidden="true"><path d="M4 2l10 6-10 6z" fill="currentColor" /></svg> Resume all
+      </button>
+    {/if}
+    {#if view.machines > view.paused}
+      <button onclick={() => pauseEverything(true)} title="Pause every machine (power drops to idle)">
+        <svg viewBox="0 0 16 16" width="12" height="12" aria-hidden="true"><path d="M3 2h4v12H3zM9 2h4v12H9z" fill="currentColor" /></svg> Pause all
+      </button>
+    {/if}
+    <button class:on={bulkOpen} aria-expanded={bulkOpen} onclick={() => (bulkOpen = !bulkOpen)} title="Upgrade every belt at once">
+      <svg viewBox="0 0 16 16" width="12" height="12" aria-hidden="true"><path d="M8 2l5 6H9v6H7V8H3z" fill="currentColor" /></svg> Upgrade all
+    </button>
+  </div>
   <span class="grow"></span>
   <div class="seg zoom" role="group" aria-label="Zoom">
     <button aria-label="Zoom out" disabled={zoom === 0} onclick={() => (zoom = Math.max(0, zoom - 1))}>−</button>
@@ -211,25 +341,48 @@
   </div>
 </div>
 
-{#if tool === 'build'}
+{#if bulkOpen && view.quote}
+  {@const q = view.quote}
+  <div class="bulk" role="group" aria-label="Upgrade all belts">
+    <label>
+      <span>To</span>
+      <select bind:value={bulkTier}>
+        {#each BELTS.slice(1) as b (b.tier)}
+          <option value={b.tier} disabled={b.tier > view.maxBelt}>{b.name} · {b.rate}/min{b.tier > view.maxBelt ? ' (locked)' : ''}</option>
+        {/each}
+      </select>
+    </label>
+    <span class="q">
+      {#if bulkTier > view.maxBelt}That belt isn't unlocked yet.
+      {:else if !q.belts}Every belt is already Mk{bulkTier} or better.
+      {:else}{q.belts} belt{q.belts === 1 ? '' : 's'} · net {Object.keys(q.net).length ? costText(q.net) : 'nothing'} after refunds{q.affordable
+          ? ''
+          : ' (short on parts: the shortest belts go first)'}{/if}
+    </span>
+    <button class="tb go" disabled={!q.belts || bulkTier > view.maxBelt} onclick={upgradeAll}>Upgrade {q.belts} belt{q.belts === 1 ? '' : 's'}</button>
+    <button class="tb" onclick={() => (bulkOpen = false)}>Close</button>
+  </div>
+{/if}
+
+{#if ctl.tool === 'build'}
   <div class="palette" role="radiogroup" aria-label="Building to place">
     {#each view.palette as p (p.def.id)}
       <button
         role="radio"
-        aria-checked={buildType === p.def.id}
+        aria-checked={ctl.buildType === p.def.id}
         class="pal"
-        class:on={buildType === p.def.id}
+        class:on={ctl.buildType === p.def.id}
         class:locked={p.locked}
         disabled={p.locked}
         data-build={p.def.id}
         title={p.locked ? 'Locked: see Milestones' : `${p.def.desc} Costs ${costText(p.def.cost)}.`}
-        onclick={() => (buildType = p.def.id)}
+        onclick={() => (ctl.buildType = p.def.id)}
       >
         <FactoryIcon building={p.def.id} size={30} />
         <span class="pn">{p.def.name}</span>
         <span class="pc" class:short={!p.afford && !p.locked}>
           {#if p.locked}Locked{:else}
-            {#each Object.entries(p.def.cost) as [k, n] (k)}<span class="cost"><FactoryIcon item={k as keyof typeof ITEM} size={12} />{n}</span>{/each}
+            {#each Object.entries(p.def.cost) as [k, n] (k)}<span class="cost"><FactoryIcon item={k as ItemId} size={12} />{n}</span>{/each}
           {/if}
         </span>
       </button>
@@ -238,101 +391,133 @@
 {/if}
 
 <p class="hint" aria-live="polite">
-  {#if tool === 'build'}
-    Tap a tile to place a <strong>{BUILDING[buildType].name}</strong> (output faces {DIR_NAME[placeRot]}).
-    {BUILDING[buildType].kind === 'miner' ? 'Miners go on glowing resource nodes.' : 'Machines go on open ground.'}
-  {:else if tool === 'belt'}
+  {#if ctl.tool === 'build'}
+    Tap a tile to place a <strong>{BUILDING[ctl.buildType].name}</strong> (output faces {DIR_NAME[placeRot]}).
+    {BUILDING[ctl.buildType].kind === 'miner' ? 'Miners go on glowing resource nodes.' : 'Machines go on open ground.'}
+  {:else if ctl.tool === 'belt'}
     {#if beltFrom === null}Tap the building the belt starts from.{:else}From <strong>{view.beltFromName}</strong>: tap the building to feed ({BELTS[beltTier - 1].name},
       {costText(beltCost(beltTier, 1))} per tile).{/if}
+  {:else if ctl.copyFrom !== null}
+    Copying settings: tap another <strong>{view.copyName}</strong> to give it the same recipe and clock (Esc cancels).
   {:else}
     Tap a building to inspect it, pick a recipe and set its clock speed. Tap a node to mine it by hand.
   {/if}
 </p>
 
 <div class="layout">
-  <div class="map-wrap">
-    <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
-    <div
-      class="map"
-      style="--t: {t}px; width: {MAP_W * t}px; height: {MAP_H * t}px"
-      bind:this={grid}
-      role="application"
-      aria-label="Factory map, {MAP_W} by {MAP_H} tiles"
-      onkeydown={onKey}
-    >
-      <svg class="layer" viewBox="0 0 {MAP_W} {MAP_H}" width={MAP_W * t} height={MAP_H * t} aria-hidden="true">
-        {#each view.nodes as n (`${n.x},${n.y}`)}
-          <g class="node" class:locked={n.locked} transform="translate({n.x} {n.y})">
-            <rect x=".06" y=".06" width=".88" height=".88" rx=".22" fill={n.color} opacity=".28" />
-            <rect x=".06" y=".06" width=".88" height=".88" rx=".22" fill="none" stroke={n.color} stroke-width=".04" stroke-dasharray=".12 .08" />
-            {#if n.res === 'oil'}
-              <path d="M.5 .22c0 0-.2.24-.2.36a.2.2 0 0 0 .4 0c0-.12-.2-.36-.2-.36z" fill={n.color} stroke="#000" stroke-width=".03" />
-            {:else if n.res === 'grove'}
-              <path d="M.3 .72l.12-.4.12.4zM.5 .66l.14-.46.14.46z" fill={n.color} stroke="#000" stroke-width=".03" />
-            {:else}
-              <path d="M.22 .68l.1-.26.2-.08.14.14-.04.24-.2.06z" fill={n.color} stroke="#000" stroke-width=".03" />
-              <path d="M.56 .5l.08-.16.14.04.04.16-.12.08z" fill={n.color} stroke="#000" stroke-width=".03" />
-            {/if}
-            {#each Array.from({ length: n.purity === 'pure' ? 3 : n.purity === 'normal' ? 2 : 1 }) as _, i}
-              <circle cx={0.2 + i * 0.13} cy=".86" r=".045" fill="#f2b632" />
+  <div class="map-frame">
+    <div class="map-wrap" bind:this={wrap}>
+      <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
+      <div
+        class="map"
+        class:anim={animate}
+        class:overload={view.overload}
+        style="--t: {t}px; width: {MAP_W * t}px; height: {MAP_H * t}px"
+        bind:this={grid}
+        role="application"
+        aria-label="Factory map, {MAP_W} by {MAP_H} tiles"
+        onkeydown={onKey}
+        onpointerdown={onPointerDown}
+        onpointermove={onPointerMove}
+        onpointerup={onPointerUp}
+        onpointercancel={onPointerUp}
+        onclickcapture={onClickCapture}
+      >
+        <svg class="layer" viewBox="0 0 {MAP_W} {MAP_H}" width={MAP_W * t} height={MAP_H * t} aria-hidden="true">
+          {#each view.nodes as n (`${n.x},${n.y}`)}
+            <g class="node" class:locked={n.locked} transform="translate({n.x} {n.y})" style="--d: {n.delay}s">
+              <rect class="halo" x="-.02" y="-.02" width="1.04" height="1.04" rx=".28" fill="none" stroke={n.color} stroke-width=".14" />
+              <rect x=".06" y=".06" width=".88" height=".88" rx=".22" fill={n.color} opacity=".26" />
+              <rect x=".06" y=".06" width=".88" height=".88" rx=".22" fill="none" stroke={n.color} stroke-width=".04" stroke-dasharray=".12 .08" />
+              {#if n.res === 'oil'}
+                <path d="M.5 .22c0 0-.2.24-.2.36a.2.2 0 0 0 .4 0c0-.12-.2-.36-.2-.36z" fill={n.color} stroke="#000" stroke-width=".03" />
+              {:else if n.res === 'grove'}
+                <path d="M.3 .72l.12-.4.12.4zM.5 .66l.14-.46.14.46z" fill={n.color} stroke="#000" stroke-width=".03" />
+              {:else}
+                <path d="M.22 .68l.1-.26.2-.08.14.14-.04.24-.2.06z" fill={n.color} stroke="#000" stroke-width=".03" />
+                <path d="M.56 .5l.08-.16.14.04.04.16-.12.08z" fill={n.color} stroke="#000" stroke-width=".03" />
+              {/if}
+              {#each Array.from({ length: n.purity === 'pure' ? 3 : n.purity === 'normal' ? 2 : 1 }) as _, i}
+                <circle cx={0.2 + i * 0.13} cy=".86" r=".045" fill="#f2b632" />
+              {/each}
+              <path class="spark" d="M.74 .16l.035.085.085.035-.085.035-.035.085-.035-.085-.085-.035.085-.035z" fill="#fff" />
+            </g>
+          {/each}
+          {#each view.belts as b (b.id)}
+            <g class="belt tier{b.tier}" class:idle={b.rate <= 0.01}>
+              <path d={b.d} class="edge" fill="none" />
+              <path d={b.d} class="bed" fill="none" />
+              <path d={b.d} class="rail" fill="none" />
+              {#if b.rate > 0.01 && !markers}
+                <path
+                  d={b.d}
+                  class="items"
+                  class:moving={animate}
+                  fill="none"
+                  stroke={b.color}
+                  style="animation-duration: {(0.45 / SPEED[b.tier - 1]).toFixed(2)}s"
+                  stroke-dasharray={b.full ? '0 0.3' : '0 0.45'}
+                />
+              {/if}
+            </g>
+          {/each}
+        </svg>
+        {#if markers}
+          <div class="flows" aria-hidden="true">
+            {#each view.belts as b (b.id)}
+              {#if b.rate > 0.01}
+                <div class="flow" style="--path: path('{b.px}'); --dur: {b.dur.toFixed(2)}s; --c: {b.color}; --s: {Math.round(t * 0.3)}px">
+                  {#each Array.from({ length: b.n }) as _, i (i)}
+                    <i style="animation-delay: {(-(i / b.n) * b.dur).toFixed(2)}s"></i>
+                  {/each}
+                </div>
+              {/if}
             {/each}
-          </g>
-        {/each}
-        {#each view.belts as b (b.id)}
-          <g class="belt tier{b.tier}">
-            <path d={b.d} class="bed" fill="none" />
-            <path d={b.d} class="rail" fill="none" />
-            {#if b.rate > 0.01}
-              <path
-                d={b.d}
-                class="items"
-                class:moving={animate}
-                fill="none"
-                stroke={b.color}
-                style="animation-duration: {(0.45 / beltSpeed(b.tier)).toFixed(2)}s"
-                stroke-dasharray={b.full ? '0 0.3' : '0 0.45'}
-              />
-            {/if}
-          </g>
-        {/each}
-      </svg>
-      <div class="tiles" style="grid-template-columns: repeat({MAP_W}, var(--t))">
-        {#each view.tiles as tile (`${tile.x},${tile.y}`)}
-          <button
-            class="tile"
-            class:sel={sel?.x === tile.x && sel?.y === tile.y}
-            class:can={tile.canHere}
-            class:src={beltFrom !== null && tile.id === beltFrom}
-            class:has={!!tile.type}
-            data-x={tile.x}
-            data-y={tile.y}
-            data-building={tile.type}
-            tabindex={cursor.x === tile.x && cursor.y === tile.y ? 0 : -1}
-            aria-label={tile.label}
-            onclick={() => act(tile.x, tile.y)}
-            onfocus={() => (cursor = { x: tile.x, y: tile.y })}
-          >
-            {#if tile.type}
-              <span class="bg" class:off={tile.off}><FactoryIcon building={tile.type} size={Math.round(t * 0.76)} /></span>
-              {#if tile.type !== 'camp' && tile.type !== 'depot'}
-                <span class="port" style="--dx: {DIRS[tile.rot][0]}; --dy: {DIRS[tile.rot][1]}; rotate: {tile.rot * 90}deg"></span>
+          </div>
+        {/if}
+        <div class="tiles" style="grid-template-columns: repeat({MAP_W}, var(--t))">
+          {#each view.tiles as tile (`${tile.x},${tile.y}`)}
+            <button
+              class="tile g{tile.g} {tile.kind ? `k-${tile.kind}` : ''} {tile.st ? `st-${tile.st}` : ''}"
+              class:sel={ctl.sel?.x === tile.x && ctl.sel?.y === tile.y}
+              class:can={tile.canHere}
+              class:src={(beltFrom !== null && tile.id === beltFrom) || (ctl.copyFrom !== null && tile.id === ctl.copyFrom)}
+              class:has={!!tile.type}
+              class:lit={tile.lit}
+              class:fresh={fresh !== null && tile.id === fresh}
+              data-x={tile.x}
+              data-y={tile.y}
+              data-building={tile.type}
+              tabindex={cursor.x === tile.x && cursor.y === tile.y ? 0 : -1}
+              aria-label={tile.label}
+              onclick={() => act(tile.x, tile.y)}
+              onfocus={() => (cursor = { x: tile.x, y: tile.y })}
+            >
+              {#if tile.type}
+                <span class="bg" class:off={tile.off}><FactoryIcon building={tile.type} size={Math.round(t * 0.76)} /></span>
+                {#if tile.type !== 'camp' && tile.type !== 'depot'}
+                  <span class="port" style="--dx: {DIRS[tile.rot][0]}; --dy: {DIRS[tile.rot][1]}; rotate: {tile.rot * 90}deg"></span>
+                {/if}
+                {#if tile.st && tile.type !== 'camp' && tile.type !== 'depot'}
+                  <span class="led st-{tile.st}"></span>
+                {/if}
+                {#if tile.outItem && tile.type !== 'camp' && t >= 40}
+                  <span class="mini"><FactoryIcon item={tile.outItem} size={Math.round(t * 0.3)} /></span>
+                {/if}
+              {:else if ctl.tool === 'build' && tile.canHere}
+                <span class="ghost"><FactoryIcon building={ctl.buildType} size={Math.round(t * 0.8)} /></span>
               {/if}
-              {#if tile.st && tile.type !== 'camp' && tile.type !== 'depot'}
-                <span class="led st-{tile.st}"></span>
-              {/if}
-              {#if tile.outItem && tile.type !== 'camp' && t >= 40}
-                <span class="mini"><FactoryIcon item={tile.outItem} size={Math.round(t * 0.3)} /></span>
-              {/if}
-            {:else if tool === 'build' && tile.canHere}
-              <span class="ghost"><FactoryIcon building={buildType} size={Math.round(t * 0.8)} /></span>
-            {/if}
-          </button>
-        {/each}
+            </button>
+          {/each}
+        </div>
+        {#if ctl.burst}
+          <Burst trigger={ctl.burst.n} kind={ctl.burst.kind} x={(ctl.burst.x + 0.5) * t} y={(ctl.burst.y + 0.5) * t} size={t} />
+        {/if}
       </div>
     </div>
   </div>
   <aside class="side">
-    <FactoryPanel {ctl} {sel} onbelt={(id) => ((tool = 'belt'), (beltFrom = id))} />
+    <FactoryPanel {ctl} onbelt={(id) => ((ctl.tool = 'belt'), (beltFrom = id))} />
     <div class="legend" aria-hidden="true">
       <span><i class="led st-ok"></i>Running</span><span><i class="led st-starved"></i>Starved</span><span><i class="led st-blocked"></i>Blocked</span><span
         ><i class="led st-power"></i>Low power / no fuel</span
@@ -364,7 +549,7 @@
     padding: 7px 11px;
     min-height: 36px;
     color: var(--f-text);
-    background: var(--f-panel2);
+    background: linear-gradient(180deg, #2e3740, var(--f-panel2));
     font-weight: 600;
     font-size: 13px;
   }
@@ -372,15 +557,24 @@
     border: 1px solid var(--f-line);
     border-radius: 8px;
   }
+  .tb.go {
+    background: var(--f-orange);
+    border-color: var(--f-orange);
+    color: #1b1f24;
+  }
   .seg button + button {
     border-left: 1px solid var(--f-line);
   }
   .seg button.on {
-    background: var(--f-orange);
+    background: linear-gradient(180deg, #f08a3a, var(--f-orange));
     color: #1b1f24;
   }
   .seg button:disabled {
     opacity: 0.4;
+  }
+  .mass button {
+    font-size: 12px;
+    padding: 7px 9px;
   }
   .zoom button {
     width: 36px;
@@ -390,7 +584,8 @@
   .grow {
     flex: 1;
   }
-  .tier select {
+  .tier select,
+  .bulk select {
     background: var(--f-panel2);
     color: var(--f-text);
     border: 1px solid var(--f-line);
@@ -404,6 +599,29 @@
     height: 1px;
     overflow: hidden;
     clip-path: inset(50%);
+  }
+  .bulk {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 10px;
+    margin-bottom: 8px;
+    background: var(--f-panel);
+    border: 1px solid var(--f-line);
+    border-left: 3px solid var(--f-yellow);
+    border-radius: 8px;
+    font-size: 12.5px;
+  }
+  .bulk label {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    color: var(--f-muted);
+  }
+  .bulk .q {
+    flex: 1 1 200px;
+    color: var(--f-muted);
   }
   .palette {
     display: flex;
@@ -469,14 +687,32 @@
       grid-template-columns: minmax(0, 1fr) 300px;
     }
   }
-  .map-wrap {
+  .map-frame {
+    position: relative;
     align-self: start;
+    min-width: 0;
+  }
+  /* a soft vignette over the viewport, not the map, so it stays put while you scroll */
+  .map-frame::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: 10px;
+    pointer-events: none;
+    box-shadow: inset 0 0 38px rgba(0, 0, 0, 0.55);
+  }
+  .map-wrap {
     overflow: auto;
-    max-height: min(68vh, 640px);
+    max-height: min(70vh, 700px);
     border: 2px solid var(--f-line);
     border-radius: 10px;
-    background: #22272d;
+    background: #1d2126;
     overscroll-behavior: contain;
+    cursor: grab;
+    scrollbar-color: #4a525d #1d2126;
+  }
+  .map-wrap:active {
+    cursor: grabbing;
   }
   .map {
     position: relative;
@@ -490,6 +726,32 @@
       100% 100%,
       100% 100%;
   }
+  .map.overload::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background: rgba(229, 72, 77, 0.07);
+    z-index: 3;
+  }
+  .map.anim.overload::after {
+    animation: ob-brownout 1.7s steps(4) infinite;
+  }
+  @keyframes ob-brownout {
+    0%,
+    100% {
+      opacity: 0.4;
+    }
+    30% {
+      opacity: 1;
+    }
+    55% {
+      opacity: 0.2;
+    }
+    80% {
+      opacity: 0.8;
+    }
+  }
   .layer {
     position: absolute;
     inset: 0;
@@ -498,19 +760,66 @@
   .node.locked {
     opacity: 0.4;
   }
+  .node .halo {
+    opacity: 0.22;
+  }
+  .anim .node:not(.locked) .halo {
+    animation: ob-halo 3.2s ease-in-out infinite;
+    animation-delay: var(--d);
+  }
+  @keyframes ob-halo {
+    0%,
+    100% {
+      opacity: 0.16;
+    }
+    50% {
+      opacity: 0.42;
+    }
+  }
+  .node .spark {
+    opacity: 0;
+  }
+  .anim .node:not(.locked) .spark {
+    animation: ob-spark 3.2s ease-in-out infinite;
+    animation-delay: var(--d);
+    transform-origin: 0.74px 0.24px;
+  }
+  @keyframes ob-spark {
+    0%,
+    70%,
+    100% {
+      opacity: 0;
+      transform: scale(0.4);
+    }
+    85% {
+      opacity: 0.9;
+      transform: scale(1.2);
+    }
+  }
+  .belt .edge {
+    stroke: #5c6673;
+    stroke-width: 0.36;
+    stroke-linejoin: round;
+    stroke-linecap: round;
+  }
   .belt .bed {
-    stroke: #16191d;
-    stroke-width: 0.3;
+    stroke: #14171b;
+    stroke-width: 0.28;
     stroke-linejoin: round;
     stroke-linecap: round;
   }
   .belt .rail {
     stroke: #4a525d;
-    stroke-width: 0.2;
+    stroke-width: 0.12;
     stroke-linejoin: round;
+    stroke-dasharray: 0.09 0.13;
+    opacity: 0.75;
+  }
+  .anim .belt:not(.idle) .rail {
+    animation: ob-flow 0.9s linear infinite;
   }
   .belt.tier2 .rail {
-    stroke: #6b7a8a;
+    stroke: #8a9aac;
   }
   .belt.tier3 .rail {
     stroke: #14a3b1;
@@ -520,6 +829,21 @@
   }
   .belt.tier5 .rail {
     stroke: #b15fd6;
+  }
+  .belt.tier2 .edge {
+    stroke: #6b7a8a;
+  }
+  .belt.tier3 .edge {
+    stroke: #1f6e78;
+  }
+  .belt.tier4 .edge {
+    stroke: #8a4a1a;
+  }
+  .belt.tier5 .edge {
+    stroke: #6d3f86;
+  }
+  .belt.idle {
+    opacity: 0.55;
   }
   .belt .items {
     stroke-width: 0.15;
@@ -531,7 +855,43 @@
   }
   @keyframes ob-flow {
     to {
-      stroke-dashoffset: -0.45px;
+      stroke-dashoffset: -0.44px;
+    }
+  }
+  .flows {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    z-index: 1;
+  }
+  .flow i {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: var(--s);
+    height: var(--s);
+    border-radius: 50%;
+    background: #0f1215;
+    box-shadow:
+      inset 0 0 0 1.5px #6b7684,
+      0 1px 2px rgba(0, 0, 0, 0.6);
+    offset-path: var(--path);
+    offset-rotate: 0deg;
+    animation: ob-run var(--dur) linear infinite;
+  }
+  .flow i::after {
+    content: '';
+    position: absolute;
+    inset: 27%;
+    border-radius: 50%;
+    background: var(--c);
+  }
+  @keyframes ob-run {
+    from {
+      offset-distance: 0%;
+    }
+    to {
+      offset-distance: 100%;
     }
   }
   .tiles {
@@ -539,6 +899,7 @@
     inset: 0;
     display: grid;
     grid-auto-rows: var(--t);
+    z-index: 2;
   }
   .tile {
     position: relative;
@@ -551,7 +912,31 @@
     background: transparent;
     touch-action: manipulation;
   }
+  /* ground: a few tints and some gravel, fixed per tile */
+  .tile::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: 6px;
+    pointer-events: none;
+  }
+  .tile.g1::before {
+    background: rgba(255, 255, 255, 0.025);
+  }
+  .tile.g2::before {
+    background: rgba(0, 0, 0, 0.06);
+  }
+  .tile.g3::before,
+  .tile.g4::before {
+    background:
+      radial-gradient(circle at 28% 62%, rgba(255, 255, 255, 0.09) 1px, transparent 1.6px), radial-gradient(circle at 70% 30%, rgba(255, 255, 255, 0.07) 1px, transparent 1.6px),
+      radial-gradient(circle at 58% 78%, rgba(0, 0, 0, 0.18) 1px, transparent 1.8px);
+  }
+  .tile.g4::before {
+    background-color: rgba(255, 255, 255, 0.02);
+  }
   .tile.has .bg {
+    position: relative;
     display: grid;
     place-items: center;
     width: 82%;
@@ -560,13 +945,109 @@
     background: rgba(27, 31, 36, 0.78);
     box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
   }
-  .bg.off {
+  .bg.off,
+  .tile.st-off .bg {
     filter: grayscale(1) brightness(0.7);
   }
-  .tile:hover {
+  .tile.st-power .bg,
+  .tile.st-nofuel .bg {
+    filter: brightness(0.6) saturate(0.7);
+  }
+  .anim .tile.st-power .bg {
+    animation: ob-blink 2.6s ease-in-out infinite;
+  }
+  .anim .tile.k-producer.st-ok .bg {
+    animation: ob-glow 2.2s ease-in-out infinite;
+  }
+  .anim .tile.k-miner.st-ok .bg {
+    animation: ob-bob 1.1s ease-in-out infinite;
+  }
+  .anim .tile.k-generator.st-ok .bg {
+    animation: ob-flicker 1.9s steps(1) infinite;
+  }
+  .map .tile.fresh .bg {
+    animation: ob-drop 0.3s cubic-bezier(0.2, 0.9, 0.3, 1.25);
+  }
+  @keyframes ob-glow {
+    0%,
+    100% {
+      box-shadow:
+        inset 0 0 0 1px rgba(255, 255, 255, 0.08),
+        0 0 3px rgba(224, 112, 26, 0.2);
+    }
+    50% {
+      box-shadow:
+        inset 0 0 0 1px rgba(255, 210, 120, 0.22),
+        0 0 10px rgba(224, 112, 26, 0.6);
+    }
+  }
+  @keyframes ob-bob {
+    0%,
+    100% {
+      transform: translateY(0);
+    }
+    50% {
+      transform: translateY(-1.5px);
+    }
+  }
+  @keyframes ob-flicker {
+    0%,
+    100% {
+      filter: brightness(1);
+    }
+    37% {
+      filter: brightness(1.18);
+    }
+    52% {
+      filter: brightness(0.92);
+    }
+    78% {
+      filter: brightness(1.1);
+    }
+  }
+  @keyframes ob-blink {
+    0%,
+    100% {
+      opacity: 1;
+    }
+    50% {
+      opacity: 0.45;
+    }
+  }
+  @keyframes ob-drop {
+    from {
+      transform: scale(1.5);
+      opacity: 0;
+    }
+    to {
+      transform: scale(1);
+      opacity: 1;
+    }
+  }
+  /* the camp's window lights up while the grid is overloaded */
+  .tile.lit .bg {
+    box-shadow:
+      inset 0 0 0 1px rgba(255, 255, 255, 0.08),
+      0 0 10px 2px rgba(242, 182, 50, 0.35);
+  }
+  .tile.lit .bg::after {
+    content: '';
+    position: absolute;
+    left: 44%;
+    top: 46%;
+    width: 22%;
+    height: 12%;
+    border-radius: 2px;
+    background: #ffd76a;
+    box-shadow: 0 0 6px 1px #f2b632;
+  }
+  .anim .tile.lit .bg::after {
+    animation: ob-blink 1.3s ease-in-out infinite;
+  }
+  .tile:hover::before {
     background: rgba(255, 255, 255, 0.06);
   }
-  .tile.can {
+  .tile.can::before {
     background: rgba(63, 185, 80, 0.14);
     box-shadow: inset 0 0 0 1px rgba(63, 185, 80, 0.5);
   }
@@ -611,21 +1092,21 @@
     border-radius: 50%;
     border: 1px solid #000;
   }
-  .st-ok {
+  .led.st-ok {
     background: #3fb950;
   }
-  .st-starved {
+  .led.st-starved {
     background: #f2b632;
   }
-  .st-blocked {
+  .led.st-blocked {
     background: #e0701a;
   }
-  .st-power,
-  .st-nofuel {
+  .led.st-power,
+  .led.st-nofuel {
     background: #e5484d;
   }
-  .st-off,
-  .st-idle {
+  .led.st-off,
+  .led.st-idle {
     background: #7a828c;
   }
   .mini {
@@ -641,6 +1122,7 @@
     display: grid;
     gap: 10px;
     align-content: start;
+    min-width: 0;
   }
   .legend {
     display: flex;

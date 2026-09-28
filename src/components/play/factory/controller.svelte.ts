@@ -1,11 +1,13 @@
 // Orebelt UI controller: owns the game state, runs the fixed tick against the wall clock, saves, collects homework
-// rewards and keeps the rolling stats the panels show. The game rules themselves live in src/lib/factory.
+// rewards and keeps the rolling stats the panels show. It also holds the UI state that more than one panel needs
+// (the open tab, the selected tile, the map tool). The game rules themselves live in src/lib/factory.
 import { applyRewards, type Result } from '../../../lib/factory/actions';
-import { ITEM, type ItemId } from '../../../lib/factory/data';
+import { ITEM, type BuildingId, type Inv, type ItemId } from '../../../lib/factory/data';
 import { takePending } from '../../../lib/factory/bridge';
 import { loadGame, saveGame } from '../../../lib/factory/save';
 import { catchUp, tick, TICK, type AwaySummary, type TickReport } from '../../../lib/factory/sim';
 import type { FactoryState } from '../../../lib/factory/state';
+import { store } from '../../../lib/store.svelte';
 import { toasts } from '../../../lib/toast.svelte';
 
 export interface PowerSample {
@@ -18,7 +20,21 @@ export interface Rates {
   stocked: Partial<Record<ItemId, number>>;
 }
 
+/** One value every SERIES_STEP seconds per item, SERIES_LEN of them (ten minutes), for the sparklines. */
+export interface Series {
+  made: Partial<Record<ItemId, number[]>>;
+  stocked: Partial<Record<ItemId, number[]>>;
+  /** Samples taken so far (up to SERIES_LEN). */
+  len: number;
+}
+export type FactoryTab = 'map' | 'stats' | 'tech' | 'trade';
+export type MapTool = 'select' | 'build' | 'belt';
+export type BurstKind = 'build' | 'dismantle' | 'milestone' | 'deliver';
+
 const HISTORY = 120;
+export const SERIES_STEP = 10;
+export const SERIES_LEN = 60;
+const TAB_KEY = 'homework-todo:factory-tab';
 /** A gap longer than this is handled as an absence (catch-up + "while you were away"). */
 const GAP = 30;
 const SAVE_EVERY = 5;
@@ -39,15 +55,53 @@ export class FactoryCtl {
   away = $state.raw<AwaySummary | null>(null);
   history = $state.raw<PowerSample[]>([]);
   rates = $state.raw<Rates>({ made: {}, used: {}, stocked: {} });
+  series = $state.raw<Series>({ made: {}, stocked: {}, len: 0 });
   message = $state<{ text: string; bad: boolean } | null>(null);
+  /** Which section is open; remembered across visits. */
+  tab = $state<FactoryTab>('map');
+  /** The tile the panel shows, the active map tool and the building the palette has picked. */
+  sel = $state<{ x: number; y: number } | null>(null);
+  tool = $state<MapTool>('select');
+  buildType = $state<BuildingId>('miner1');
+  /** A machine whose settings the next tapped machine receives (the panel's "Copy settings"). */
+  copyFrom = $state<number | null>(null);
+  /** The last particle burst asked for, in tile coordinates; the map draws it. */
+  burst = $state.raw<{ n: number; x: number; y: number; kind: BurstKind } | null>(null);
   private sinceSave = 0;
   private samples = 0;
+  private bucket: { made: Inv; stocked: Inv; secs: number } = { made: {}, stocked: {}, secs: 0 };
   private msgTimer: ReturnType<typeof setTimeout> | undefined;
 
   constructor(now = Date.now()) {
     this.game = loadGame(storage(), now);
+    const t = storage()?.getItem(TAB_KEY);
+    if (t === 'stats' || t === 'tech' || t === 'trade') this.tab = t;
     this.collectRewards();
     this.pump(now);
+  }
+
+  pickTab(next: FactoryTab): void {
+    this.tab = next;
+    try {
+      storage()?.setItem(TAB_KEY, next);
+    } catch {
+      /* private mode or full: the tab just isn't remembered */
+    }
+  }
+
+  /** Show a building in the panel: open the map, put the inspect tool on it. */
+  select(id: number): void {
+    const b = this.game.buildings.find((x) => x.id === id);
+    if (!b) return;
+    this.sel = { x: b.x, y: b.y };
+    this.tool = 'select';
+    this.copyFrom = null;
+    this.pickTab('map');
+  }
+
+  /** Ask the map for a particle burst on a tile. */
+  poof(x: number, y: number, kind: BurstKind): void {
+    this.burst = { n: (this.burst?.n ?? 0) + 1, x, y, kind };
   }
 
   /** Run the ticks the wall clock says are due (or catch up an absence). */
@@ -92,6 +146,27 @@ export class FactoryCtl {
       return out;
     };
     this.rates = { made: ema(this.rates.made, rep.made), used: ema(this.rates.used, rep.used), stocked: ema(this.rates.stocked, rep.stocked) };
+    this.sample(rep);
+  }
+
+  /** Sum ticks into a SERIES_STEP-second bucket; when it's full, append one per-minute value to every item's series. */
+  private sample(rep: TickReport): void {
+    const b = this.bucket;
+    for (const [k, n] of Object.entries(rep.made) as [ItemId, number][]) b.made[k] = (b.made[k] ?? 0) + n;
+    for (const [k, n] of Object.entries(rep.stocked) as [ItemId, number][]) b.stocked[k] = (b.stocked[k] ?? 0) + n;
+    b.secs += rep.dt;
+    if (b.secs < SERIES_STEP) return;
+    const len = this.series.len;
+    const push = (prev: Partial<Record<ItemId, number[]>>, add: Inv) => {
+      const out: Partial<Record<ItemId, number[]>> = {};
+      for (const k of new Set([...Object.keys(prev), ...Object.keys(add)]) as Set<ItemId>) {
+        // an item seen for the first time gets zeros for the samples before it, so every series lines up
+        out[k] = [...(prev[k] ?? new Array<number>(len).fill(0)), ((add[k] ?? 0) * 60) / b.secs].slice(-SERIES_LEN);
+      }
+      return out;
+    };
+    this.series = { made: push(this.series.made, b.made), stocked: push(this.series.stocked, b.stocked), len: Math.min(SERIES_LEN, len + 1) };
+    this.bucket = { made: {}, stocked: {}, secs: 0 };
   }
 
   save(): void {
@@ -134,6 +209,12 @@ export class FactoryCtl {
   stock(item: ItemId): number {
     return this.game.inv[item] ?? 0;
   }
+}
+
+/** Whether the factory may animate: off with the app's reduced-motion setting or the OS preference. */
+export function motionOk(): boolean {
+  if (store.settings.reducedMotion) return false;
+  return typeof window === 'undefined' || !window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
 }
 
 export function fmt(n: number): string {
