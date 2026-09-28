@@ -79,7 +79,7 @@
         <div class="cz-spot" class:pulled={r && !r.riding[i]} class:win={settled && r!.payout > 0 && r!.riding[i]} bind:this={spotEls[i]}>
           <span class="mark" aria-hidden="true">{i === 2 ? '$' : i + 1}</span>
           {#if !r || r.riding[i]}<span class="stack"><ChipStack amount={r ? r.unit : unit} size={26} tag={false} /></span>{/if}
-          <span class="cz-spot-label">{r ? (r.riding[i] ? `${r.unit} riding` : 'back') : `${unit}`}</span>
+          <span class="cz-spot-label">{i === 2 ? '$' : `Bet ${i + 1}`} · {r ? (r.riding[i] ? `${r.unit} riding` : 'back') : `${unit}`}</span>
         </div>
       {/each}
     </div>
@@ -136,7 +136,7 @@
   .bets {
     display: flex;
     justify-content: center;
-    gap: 22px;
+    gap: 48px;
     padding: 4px 0 20px;
   }
   .bets .cz-spot {
@@ -153,6 +153,10 @@
   .stack {
     position: absolute;
     bottom: 10px;
+  }
+  .bets :global(.cz-spot-label) {
+    letter-spacing: 0.06em;
+    font-size: 10px;
   }
   .cz-spot.pulled {
     opacity: 0.5;
