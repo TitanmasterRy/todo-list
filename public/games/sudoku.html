@@ -42,7 +42,7 @@
   body.flash::after { content: ''; position: fixed; inset: 0; z-index: 8; pointer-events: none; background: var(--flash, rgba(255,70,90,.4)); animation: flash .45s ease-out forwards; }
   @keyframes flash { to { opacity: 0; } }
   @media (prefers-reduced-motion: no-preference) { #new { animation: float 2.4s ease-in-out infinite; } }
-  @keyframes float { 50% { transform: translateY(-3px); } }
+  @keyframes float { 50% { filter: brightness(1.18) drop-shadow(0 0 10px var(--accent)); } }
   @media (prefers-reduced-motion: reduce) { .pop, .fx, .spark, .c.in, body.flash::after { animation-duration: .01s; } }
 </style>
 </head>

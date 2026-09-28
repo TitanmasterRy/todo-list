@@ -251,7 +251,8 @@
   }
   .free {
     font-size: 11px;
-    color: var(--success-text);
+    /* on the card's raised surface the shared success text falls just under 4.5:1 in light mode */
+    color: color-mix(in srgb, var(--success) 45%, var(--text));
     font-weight: 600;
   }
   .ok {

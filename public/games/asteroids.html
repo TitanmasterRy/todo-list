@@ -35,7 +35,7 @@
   body.shake canvas { animation: shake .4s; }
   @keyframes shake { 20%, 60% { transform: translateX(-6px); } 40%, 80% { transform: translateX(6px); } }
   @media (prefers-reduced-motion: no-preference) { #go { animation: float 2.4s ease-in-out infinite; } }
-  @keyframes float { 50% { transform: translateY(-4px); } }
+  @keyframes float { 50% { filter: brightness(1.18) drop-shadow(0 0 10px var(--accent)); } }
   @media (prefers-reduced-motion: reduce) { .pop, .fx, .spark, body.flash::after, body.shake canvas { animation-duration: .01s; } }
 </style>
 </head>

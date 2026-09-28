@@ -9,15 +9,15 @@
   html.dark { --panel: rgba(255,255,255,.07); --line: rgba(255,255,255,.14); --shadow: rgba(0,0,0,.5); --key: #2b2925; --key-ink: #efe8dc; }
   html, body { margin: 0; min-height: 100%; color: var(--fg); font: 500 16px/1.35 Georgia, serif; display: grid; place-items: center; }
   body { background: radial-gradient(120% 80% at 50% -10%, color-mix(in srgb, var(--accent) 18%, var(--bg)), var(--bg) 60%), var(--bg); }
-  .wrap { display: grid; gap: 14px; justify-items: center; padding: 12px; max-width: 560px; box-sizing: border-box; }
+  .wrap { display: grid; gap: 14px; justify-items: center; padding: 12px; max-width: 560px; width: 100%; box-sizing: border-box; }
   .title { margin: 0; font: 900 clamp(22px, 6vw, 32px)/1.2 system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif; letter-spacing: -0.02em; background: linear-gradient(90deg, var(--accent), var(--accent-2)); -webkit-background-clip: text; background-clip: text; color: transparent; filter: drop-shadow(0 0 12px var(--glow)); }
   .hud { display: flex; gap: 8px; font-weight: 800; font-family: system-ui, sans-serif; }
   .hud span { padding: 6px 14px; border-radius: 999px; background: linear-gradient(180deg, color-mix(in srgb, var(--panel) 100%, #fff 6%), var(--panel)); border: 1px solid var(--line); box-shadow: inset 0 1px 0 rgba(255,255,255,.3), 0 4px 14px var(--shadow); font-size: 13px; letter-spacing: .04em; text-transform: uppercase; }
   .hud b { display: inline-block; font-size: 16px; font-variant-numeric: tabular-nums; color: var(--accent); margin-left: 4px; text-shadow: 0 0 10px var(--glow); }
-  .stage { padding: 12px 20px; border-radius: 18px; background: var(--panel); border: 1px solid var(--line); box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 30%, transparent), 0 0 30px var(--glow), 0 18px 40px var(--shadow); display: grid; gap: 8px; justify-items: center; }
+  .stage { box-sizing: border-box; max-width: 100%; padding: 12px 16px; border-radius: 18px; background: var(--panel); border: 1px solid var(--line); box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 30%, transparent), 0 0 30px var(--glow), 0 18px 40px var(--shadow); display: grid; gap: 8px; justify-items: center; }
   svg { width: 180px; height: 180px; filter: drop-shadow(0 2px 4px var(--shadow)); }
   svg :nth-child(n + 5) { stroke: var(--accent); filter: drop-shadow(0 0 4px var(--glow)); }
-  .word { font: 700 30px/1 ui-monospace, monospace; letter-spacing: 0.3em; text-align: center; text-shadow: 0 0 10px var(--glow); }
+  .word { font: 700 clamp(16px, 5vw, 30px)/1.2 ui-monospace, monospace; letter-spacing: 0.22em; text-align: center; text-shadow: 0 0 10px var(--glow); max-width: 100%; overflow-wrap: anywhere; }
   .keys { display: grid; grid-template-columns: repeat(9, 1fr); gap: 5px; }
   .keys button { font: 800 16px system-ui; padding: 9px 0; min-width: 34px; border: 1px solid var(--line); background: linear-gradient(180deg, color-mix(in srgb, var(--key) 100%, #fff 8%), var(--key)); border-radius: 8px; cursor: pointer; color: var(--key-ink); box-shadow: inset 0 1px 0 rgba(255,255,255,.4), 0 3px 0 rgba(0,0,0,.14); transition: transform .1s, filter .1s; }
   .keys button:hover:not(:disabled) { transform: translateY(-2px); filter: brightness(1.05); }
@@ -44,7 +44,7 @@
   body.shake .stage { animation: shake .4s; }
   @keyframes shake { 20%, 60% { transform: translateX(-6px); } 40%, 80% { transform: translateX(6px); } }
   @media (prefers-reduced-motion: no-preference) { #new { animation: float 2.4s ease-in-out infinite; } }
-  @keyframes float { 50% { transform: translateY(-3px); } }
+  @keyframes float { 50% { filter: brightness(1.18) drop-shadow(0 0 10px var(--accent)); } }
   @media (prefers-reduced-motion: reduce) { .pop, .fx, .spark, body.flash::after, body.shake .stage { animation-duration: .01s; } }
 </style>
 </head>

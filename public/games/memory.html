@@ -38,7 +38,7 @@
   body.shake .wrap { animation: shake .4s; }
   @keyframes shake { 20%, 60% { transform: translateX(-6px); } 40%, 80% { transform: translateX(6px); } }
   @media (prefers-reduced-motion: no-preference) { #new { animation: float 2.4s ease-in-out infinite; } }
-  @keyframes float { 50% { transform: translateY(-3px); } }
+  @keyframes float { 50% { filter: brightness(1.18) drop-shadow(0 0 10px var(--accent)); } }
   @media (prefers-reduced-motion: reduce) { .pop, .fx, .spark, .card.just, body.flash::after, body.shake .wrap { animation-duration: .01s; } .card { transition: none; } }
 </style>
 </head>
