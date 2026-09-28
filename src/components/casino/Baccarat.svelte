@@ -56,7 +56,7 @@
         <BotAvatar who="lou" size={48} label="Lou, the dealer" />
         <span class="who"><strong>Lou</strong><span>Dealer</span></span>
       </div>
-      <div class="road" aria-label="Recent winners">
+      <div class="road" role="group" aria-label="Recent winners">
         {#each roads as r, i (i)}<span class="bead {r}" title={LABEL[r]}>{r === 'tie' ? 'T' : r === 'player' ? 'P' : 'B'}</span>{/each}
       </div>
       <span class="cz-shoe" aria-hidden="true"></span>

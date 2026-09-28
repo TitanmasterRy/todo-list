@@ -90,7 +90,7 @@
         <span class="st">{streak} streak</span>
       </div>
     </div>
-    <div class="trail" aria-label="Cards so far">
+    <div class="trail" role="group" aria-label="Cards so far">
       {#each trail.slice(-12) as t, i (i)}
         <span class="mini" class:ok={t.ok === true} class:bad={t.ok === false} class:red={t.suit === 1 || t.suit === 2}>{rankLabel(t.rank)}{SUITS[t.suit]}</span>
       {/each}

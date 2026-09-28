@@ -1,3 +1,4 @@
+import AxeBuilder from '@axe-core/playwright';
 import { expect, test, type Page } from '@playwright/test';
 import { openApp, seedCoins } from './helpers';
 
@@ -90,4 +91,45 @@ test('with reduced motion the games still play, quickly and without errors', asy
   // nothing decorative is left flying around
   await expect(page.locator('.cz-flychip')).toHaveCount(0);
   expect(errors).toEqual([]);
+});
+
+async function axeCasino(page: Page) {
+  await openApp(page);
+  await openCasino(page);
+  const check = async (where: string) => {
+    await page.waitForTimeout(600);
+    const results = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa']).analyze();
+    const serious = results.violations.filter((v) => v.impact === 'serious' || v.impact === 'critical');
+    expect(serious.map((v) => `${where}: ${v.id}: ${v.nodes.length} × ${v.nodes[0]?.target.join(' ')}`)).toEqual([]);
+  };
+  await check('lobby');
+  for (const name of [
+    'Slots',
+    'Roulette',
+    'Blackjack',
+    'Baccarat',
+    'Video poker',
+    'Three Card Poker',
+    'Hi-Lo',
+    'Mines',
+    'Keno',
+    'Big Six',
+    'Craps',
+    'Plinko',
+    'Dice',
+    'Scratch cards',
+    'Let It Ride',
+    "Texas Hold'em",
+  ]) {
+    await page.locator('.tile', { hasText: name }).click();
+    await expect(page.locator('.cz-game')).toBeVisible();
+    await check(name);
+    await page.getByRole('button', { name: '← All games' }).click();
+  }
+}
+
+test('the casino lobby and tables have no serious accessibility violations', async ({ page }) => axeCasino(page));
+test.describe('dark mode', () => {
+  test.use({ colorScheme: 'dark' });
+  test('the casino (dark) has no serious accessibility violations', async ({ page }) => axeCasino(page));
 });

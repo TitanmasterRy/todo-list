@@ -203,7 +203,7 @@
         <div class="last {last === null ? '' : color(last)}" class:pop={settled} aria-live="polite">
           <span class="sr">Last number:</span>{spinning ? '·' : (last ?? '–')}
         </div>
-        <div class="hist" aria-label="Recent numbers">
+        <div class="hist" role="group" aria-label="Recent numbers">
           {#each history as h, i (i)}<span class="h {color(h)}">{h}</span>{/each}
         </div>
       </div>

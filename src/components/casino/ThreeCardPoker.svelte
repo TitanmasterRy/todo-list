@@ -126,11 +126,11 @@
     {/if}
   </div>
   <div class="tables">
-    <div class="cz-paytable" aria-label="Pair Plus paytable">
+    <div class="cz-paytable" role="group" aria-label="Pair Plus paytable">
       <strong class="h">Pair Plus</strong><span></span>
       {#each cats as c (c)}<span class:hit={done && done.player.cat === c && r?.bets.pairPlus}>{TC_LABEL[c]}</span><span>{PAIR_PLUS[c]}:1</span>{/each}
     </div>
-    <div class="cz-paytable" aria-label="Ante bonus paytable">
+    <div class="cz-paytable" role="group" aria-label="Ante bonus paytable">
       <strong class="h">Ante bonus</strong><span></span>
       {#each cats.filter((c) => ANTE_BONUS[c] > 0) as c (c)}<span class:hit={done?.bonus && done.player.cat === c}>{TC_LABEL[c]}</span><span>{ANTE_BONUS[c]}:1</span>{/each}
     </div>

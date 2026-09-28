@@ -50,7 +50,7 @@
 <div class="cz-game">
   <div class="cabinet">
     <div class="screen">
-      <div class="pays" aria-label="Paytable">
+      <div class="pays" role="group" aria-label="Paytable">
         {#each hands as h (h)}
           <span class="pl" class:hit={done && s?.result === h}>{VP_LABEL[h]}</span>
           <span class="pv" class:hit={done && s?.result === h}>{(VP_PAYTABLE[h] * bet).toLocaleString()}</span>

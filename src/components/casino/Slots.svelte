@@ -148,11 +148,11 @@
   </div>
   <div class="cz-paytable pays">
     {#each SLOT_PAY3 as m, i (i)}
-      <span class="combo" aria-label="Three {symbols[i]}"
+      <span class="combo" role="img" aria-label="Three {symbols[i]}"
         >{#each [0, 1, 2] as k (k)}<span class="mini"><SlotSymbol {theme} index={i} /></span>{/each}</span
       ><span>×{m}</span>
     {/each}
-    <span class="combo" aria-label="Two {symbols[0]}"
+    <span class="combo" role="img" aria-label="Two {symbols[0]}"
       >{#each [0, 1] as k (k)}<span class="mini"><SlotSymbol {theme} index={0} /></span>{/each}<span class="any">any</span></span
     ><span>×{SLOT_PAY_TWO_CHERRIES}</span>
   </div>
