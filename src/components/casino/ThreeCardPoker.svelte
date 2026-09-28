@@ -83,7 +83,7 @@
       </div>
     {/key}
     <div class="spots" aria-hidden="true">
-      <div class="cz-spot pp" bind:this={ppEl}>
+      <div class="cz-spot ppspot" bind:this={ppEl}>
         {#if r ? r.bets.pairPlus : pairPlus}<ChipStack amount={r ? r.bets.pairPlus : ante} size={26} />{/if}<span class="cz-spot-label">Pair Plus</span>
       </div>
       <div class="cz-spot" bind:this={anteEl}>
@@ -163,7 +163,7 @@
     width: 62px;
     height: 62px;
   }
-  .spots .pp {
+  .spots .ppspot {
     border-style: dashed;
   }
   .pp {

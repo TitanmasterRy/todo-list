@@ -219,7 +219,7 @@
 {/snippet}
 
 {#snippet face(c: PlayingCard)}
-  <svg viewBox="0 0 100 140">
+  <svg viewBox="0 0 100 140" class="facesvg">
     <g fill={ink}>
       <text x="12" y="23" text-anchor="middle" class="rk" font-size={c.rank === 10 ? 17 : 20}>{rankLabel(c.rank)}</text>
       {@render pip(12, 33, 11, false, c.suit)}
@@ -298,7 +298,7 @@
     background: linear-gradient(160deg, #ffffff 0%, #fbf8f1 60%, #f1ece0 100%);
     border: 1px solid rgba(0, 0, 0, 0.18);
   }
-  .front :global(svg) {
+  .front :global(svg.facesvg) {
     width: 100%;
     height: 100%;
     display: block;

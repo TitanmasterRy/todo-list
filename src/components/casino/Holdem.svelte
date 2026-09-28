@@ -403,9 +403,35 @@
       border-radius: 40px;
       padding: 14px 10px;
     }
+    .seats {
+      display: grid;
+      grid-auto-flow: column;
+      grid-auto-columns: minmax(0, 1fr);
+      gap: 6px;
+    }
     .seat {
       min-width: 0;
-      padding: 6px;
+      padding: 6px 4px 10px;
+      --cw-small: 32px;
+    }
+    .seats .head {
+      flex-direction: column;
+      gap: 2px;
+      text-align: center;
+    }
+    .seats .head :global(.av) {
+      width: 34px !important;
+      height: 34px !important;
+    }
+    .seats .nm {
+      font-size: 12px;
+    }
+    .seats .st {
+      font-size: 11px;
+    }
+    .seats .cz-hand {
+      gap: 3px;
+      flex-wrap: nowrap;
     }
   }
 </style>

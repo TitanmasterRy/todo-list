@@ -386,6 +386,7 @@
   /* ---------- the layout, printed on the felt ---------- */
   .layout {
     display: grid;
+    min-width: 0;
     gap: 4px;
     overflow-x: auto;
     padding: 8px 4px;
@@ -584,7 +585,16 @@
       min-width: 0;
     }
     .nums {
-      grid-template-columns: repeat(13, minmax(20px, 1fr));
+      grid-template-columns: repeat(13, minmax(0, 1fr));
+    }
+    .outs {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+    .outs.six {
+      grid-template-columns: repeat(6, minmax(0, 1fr));
+    }
+    .layout {
+      overflow-x: visible;
     }
     .n .lab {
       width: 20px;
@@ -600,6 +610,9 @@
     .outs {
       margin-left: 26px;
       min-width: 0;
+    }
+    .o {
+      letter-spacing: 0;
     }
     .o {
       font-size: 10px;
