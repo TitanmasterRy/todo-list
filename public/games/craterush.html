@@ -88,7 +88,7 @@
   h3.sec { margin: 18px 2px 8px; font-size: 12px; letter-spacing: 0.16em; text-transform: uppercase; color: var(--muted); font-weight: 900; display: flex; align-items: center; justify-content: space-between; gap: 8px; }
   .muted { color: var(--muted); }
   .btn { appearance: none; border: 1px solid rgba(255, 255, 255, 0.14); background: linear-gradient(180deg, rgba(255, 255, 255, 0.13), rgba(255, 255, 255, 0.04)); font-weight: 800; border-radius: 12px; padding: 9px 14px; cursor: pointer; transition: transform 0.1s, filter 0.2s, opacity 0.2s; box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.14), 0 4px 14px rgba(0, 0, 0, 0.22); white-space: nowrap; display: inline-flex; align-items: center; justify-content: center; gap: 6px; }
-  body.light .btn { border-color: rgba(21, 24, 51, 0.14); background: linear-gradient(180deg, #fff, #eef0fa); }
+  body.light .btn:not(.primary):not(.gold):not(.green):not(.danger) { border-color: rgba(21, 24, 51, 0.14); background: linear-gradient(180deg, #fff, #eef0fa); }
   .btn:hover:not(:disabled) { filter: brightness(1.15); }
   .btn:active:not(:disabled) { transform: scale(0.96); }
   .btn:disabled { opacity: 0.42; cursor: default; }
@@ -194,6 +194,8 @@
   .icard .nm { position: relative; font-size: 10.5px; color: #99a1c8; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 2px; }
   .icard .fn { position: relative; font-weight: 800; font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .icard .meta { position: relative; display: flex; justify-content: space-between; align-items: baseline; gap: 4px; font-size: 11.5px; margin-top: 3px; color: #99a1c8; }
+  .icard { container-type: inline-size; }
+  @container (max-width: 128px) { .icard .meta .fl { display: none; } }
   .icard .meta .val { color: #6dffb0; font-weight: 900; font-variant-numeric: tabular-nums; }
   .icard.r6 { border-color: rgba(255, 211, 90, 0.5); }
   .icard.r6::after, .rcard.r6::after { background: linear-gradient(90deg, #ffb020, #fff1b3, #ffb020); background-size: 200% 100%; animation: shimmer 2s linear infinite; }
@@ -215,6 +217,7 @@
   .rchip i { width: 9px; height: 9px; border-radius: 50%; background: var(--rc); box-shadow: 0 0 6px var(--rc); }
   .rchip.on { color: var(--fg); border-color: var(--rc, #fff); background: rgba(255, 255, 255, 0.12); }
   .rchip:disabled { opacity: 0.35; cursor: default; }
+  @media (max-width: 640px) { .grid { grid-template-columns: repeat(auto-fill, minmax(104px, 1fr)); gap: 8px; } .icard { padding: 6px 7px 9px; } .icard .fn { font-size: 12px; } .rchips { flex-wrap: nowrap; overflow-x: auto; padding-bottom: 4px; scrollbar-width: none; } .rchip { flex: none; } }
   .selbar { position: sticky; bottom: 0; margin-top: 12px; padding: 10px 12px; display: flex; align-items: center; gap: 8px; z-index: 3; }
 
   /* ---------- overlay: reels and reveals ---------- */
@@ -345,12 +348,13 @@
   .bars .track i { display: block; height: 100%; background: var(--rc); box-shadow: 0 0 8px var(--rc); border-radius: 4px; }
 
   /* ---------- toasts and boot ---------- */
-  #toasts { position: fixed; left: 50%; bottom: calc(var(--navh) + 14px + env(safe-area-inset-bottom)); transform: translateX(-50%); z-index: 80; display: flex; flex-direction: column; align-items: center; gap: 6px; pointer-events: none; width: min(420px, calc(100% - 24px)); }
+  #toasts { position: fixed; left: 50%; top: calc(62px + env(safe-area-inset-top)); transform: translateX(-50%); z-index: 80; display: flex; flex-direction: column; align-items: center; gap: 6px; pointer-events: none; width: min(420px, calc(100% - 24px)); }
   .toast { display: flex; align-items: center; gap: 10px; padding: 9px 14px; border-radius: 14px; font-weight: 800; font-size: 13.5px; background: rgba(18, 14, 44, 0.95); border: 1px solid rgba(255, 255, 255, 0.16); box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5); animation: toastin 0.35s cubic-bezier(0.2, 1.4, 0.4, 1); color: #eef0ff; }
   .toast small { display: block; color: #aab1d6; font-weight: 700; font-size: 12px; }
   .toast .ti { width: 30px; height: 30px; flex: none; border-radius: 10px; display: grid; place-items: center; background: linear-gradient(135deg, #ffe07a, #ff9f1c); color: #3b2200; }
   .toast .ti svg { width: 18px; height: 18px; }
-  @media (min-width: 960px) { #toasts { left: auto; right: 18px; bottom: auto; top: 72px; transform: none; align-items: flex-end; } }
+  @media (min-width: 960px) { #toasts { left: auto; right: 18px; top: 72px; transform: none; align-items: flex-end; } }
+  @media (max-width: 640px) { .toast { padding: 7px 12px; font-size: 13px; } .toast .ti { width: 26px; height: 26px; } }
   .toast.out { opacity: 0; transform: translateY(-8px); transition: 0.3s; }
   #boot { position: fixed; inset: 0; z-index: 90; display: grid; place-items: center; background: var(--bg); color: var(--muted); font-weight: 800; }
   #boot svg { width: 90px; height: 90px; animation: bob 1.2s ease-in-out infinite; }
@@ -1785,14 +1789,27 @@ function shake() {
 }
 
 // ---------- toasts ----------
+// toasts wait their turn: one at a time on phones, up to three on wide screens
+const toastQueue = [];
 function toast(msg, sub, icon) {
+  toastQueue.push([msg, sub, icon]);
+  if (toastQueue.length > 8) toastQueue.shift();
+  nextToast();
+}
+function nextToast() {
   const box = $('toasts');
-  const el = document.createElement('div');
-  el.className = 'toast';
-  el.innerHTML = `${icon ? `<span class="ti">${svgi(ICON[icon] || icon)}</span>` : ''}<div>${esc(msg)}${sub ? `<small>${esc(sub)}</small>` : ''}</div>`;
-  box.appendChild(el);
-  while (box.children.length > 3) box.firstChild.remove();
-  setTimeout(() => { el.classList.add('out'); setTimeout(() => el.remove(), 320); }, 2800);
+  const room = innerWidth >= 960 ? 3 : 1;
+  while (toastQueue.length && box.querySelectorAll('.toast:not(.out)').length < room) {
+    const [msg, sub, icon] = toastQueue.shift();
+    const el = document.createElement('div');
+    el.className = 'toast';
+    el.innerHTML = `${icon ? `<span class="ti">${svgi(ICON[icon] || icon)}</span>` : ''}<div>${esc(msg)}${sub ? `<small>${esc(sub)}</small>` : ''}</div>`;
+    box.appendChild(el);
+    setTimeout(() => {
+      el.classList.add('out');
+      setTimeout(() => { el.remove(); nextToast(); }, 320);
+    }, toastQueue.length ? 1900 : 2600);
+  }
 }
 
 // =====================================================================================================
@@ -1851,6 +1868,7 @@ addEventListener('message', (e) => {
     if (!pending || d.id !== pending.id) return;
     const { kind, id } = pending;
     pending = null;
+    lastCashCrate = cashCrateAmount(S, Date.now());
     if (applyPowerup(S, kind, id, Date.now())) powerApplied(kind);
     renderPowers();
     saveSoon();
@@ -1871,10 +1889,9 @@ function buyPower(kind) {
 function powerApplied(kind) {
   const r = $('clicker').getBoundingClientRect();
   if (kind === 'cash') {
-    const amt = S.stats.earned; // earn() already ran: show what the crate paid
     burst(r.left + r.width / 2, r.top + r.height / 2, { n: 40, kind: 'coin', speed: 420, up: 200, size: 7, life: 1.4 });
+    floatText(r.left + r.width / 2, r.top + r.height / 3, `+${short(lastCashCrate)}`, true);
     toast('Cash crate opened!', `${money(lastCashCrate)} added`, 'gift');
-    void amt;
   } else if (kind === 'lucky') toast('Lucky key ready', `Your next ${S.luck} crates have boosted odds`, 'key');
   else toast('Double income!', `2× cash for ${fmtTime((S.boostUntil - Date.now()) / 1000)}`, 'bolt');
   sfx.win();
@@ -2033,12 +2050,12 @@ function badges(it, plain) {
   if (it.s < PRIME_SEEDS) b.push('<span class="bdg pr">PRIME</span>');
   if (it.w < FLAWLESS) b.push('<span class="bdg fl">FLAWLESS</span>');
   if (it.l) b.push(`<span class="bdg lk" title="Locked">${svgi(ICON.lock)}</span>`);
-  if (it.u === S.showcase) b.push(`<span class="bdg sc" title="Showcased">${svgi(ICON.star)}</span>`);
+  if (S.showcase && it.u === S.showcase) b.push(`<span class="bdg sc" title="Showcased">${svgi(ICON.star)}</span>`);
   return b.length ? `<span class="badges">${b.join('')}</span>` : '';
 }
 function card(it, attrs = '', extra = '', cls = '', plain = false, style = '') {
   const def = ITEMS[it.d];
-  return `<button class="icard r${def.rarity} ${cls}" style="${rc(def.rarity)};${style}" ${attrs}>${badges(it, plain)}${extra}<span class="check">${svgi(ICON.check)}</span><div class="art">${itemArt(it.d, it.s, it.w, '')}</div><div class="nm">${esc(KINDS[def.kind])}</div><div class="fn">${esc(def.name)}</div><div class="meta"><span>${WEARS[wearTier(it.w)].short} ${it.w.toFixed(3)}</span><span class="val">${short(itemValue(it))}</span></div></button>`;
+  return `<button class="icard r${def.rarity} ${cls}" style="${rc(def.rarity)};${style}" ${attrs}>${badges(it, plain)}${extra}<span class="check">${svgi(ICON.check)}</span><div class="art">${itemArt(it.d, it.s, it.w, '')}</div><div class="nm">${esc(KINDS[def.kind])}</div><div class="fn">${esc(def.name)}</div><div class="meta"><span>${WEARS[wearTier(it.w)].short}<span class="fl"> ${it.w.toFixed(3)}</span></span><span class="val">${short(itemValue(it))}</span></div></button>`;
 }
 const findItem = (u) => S.inv.find((x) => x.u === u);
 
@@ -2049,7 +2066,7 @@ function viewCrates() {
   h += '<div class="crates">';
   CRATES.forEach((c, i) => {
     const cost = c.price * openN;
-    h += `<div class="card crate" style="--cg:${rgba(c.colors[2], 0.55)}"><div class="cart" data-a="contents" data-v="${i}" role="button" tabindex="0" aria-label="${esc(c.name)} contents">${crateArt(i)}</div><h4>${esc(c.name)} Crate</h4><div class="cp">${money(c.price)}</div><div class="odds" title="Rarities inside">${RARITIES.map((r) => `<i style="--rc:${r.color}"></i>`).join('')}</div><div class="row"><button class="btn primary" data-a="open" data-v="${i}" data-cost="${cost}">Open${openN > 1 ? ` ×${openN}` : ''} · ${short(cost)}</button><button class="btn sm" data-a="contents" data-v="${i}" aria-label="What's inside">${svgi('<circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7.5v.5"/>', '')}</button></div></div>`;
+    h += `<div class="card crate" style="--cg:${rgba(c.colors[2], 0.55)}"><div class="cart" data-a="contents" data-v="${i}" role="button" tabindex="0" aria-label="${esc(c.name)} contents">${crateArt(i)}</div><h4>${esc(c.name)} Crate</h4><div class="cp">$${count(c.price)}</div><div class="odds" title="Rarities inside">${RARITIES.map((r) => `<i style="--rc:${r.color}"></i>`).join('')}</div><div class="row"><button class="btn primary" data-a="open" data-v="${i}" data-cost="${cost}">Open${openN > 1 ? ` ×${openN}` : ''} · ${short(cost)}</button><button class="btn sm" data-a="contents" data-v="${i}" aria-label="What's inside">${svgi('<circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7.5v.5"/>', '')}</button></div></div>`;
   });
   return h + '</div>';
 }
@@ -2309,7 +2326,7 @@ function viewUpgrade() {
   const tgt = upPick >= 0 ? upTargets[upPick] : null;
   const chance = stake && tgt ? upgradeChance(itemValue(stake), itemValue(tgt)) : 0;
   let h = `<div class="card panel"><p class="muted" style="margin:0 0 12px">Stake one item on a pricier one. Win and you get the new item; lose and your stake is gone. Bigger jumps have smaller chances (max ${Math.round(UPGRADE_MAX * 100)}%).</p><div class="upg"><div class="pick">${stake ? card(stake, 'data-a="upclear" title="Change"') : '<div>Pick an item below to stake</div>'}</div><div class="dialw">${dial(chance)}<button class="btn primary big" data-a="upgo" ${stake && tgt ? '' : 'disabled'}>${svgi(ICON.up)}Upgrade</button></div><div class="pick">${tgt ? card(tgt, 'tabindex="-1"') : `<div>${stake ? 'Nothing pricier to aim for!' : 'Then choose a target'}</div>`}</div></div>`;
-  if (stake && upTargets.length) h += `<h3 class="sec">Targets</h3><div class="tgts">${upTargets.map((t, k) => card(t, `data-a="uppick" data-v="${k}"`, `<span class="mul">×${(itemValue(t) / itemValue(stake)).toFixed(1)} · ${pct(upgradeChance(itemValue(stake), itemValue(t)))}</span>`, k === upPick ? 'sel' : '')).join('')}</div>`;
+  if (stake && upTargets.length) h += `<h3 class="sec">Targets</h3><div class="tgts">${upTargets.map((t, k) => card(t, `data-a="uppick" data-v="${k}"`, '', k === upPick ? 'sel' : '').replace(/<\/button>$/, `<span class="odds-tag">×${(itemValue(t) / itemValue(stake)).toFixed(1)} · ${pct(upgradeChance(itemValue(stake), itemValue(t)))}</span></button>`)).join('')}</div>`;
   h += '</div>';
   const list = S.inv.filter((x) => !x.l).sort((a, b) => itemValue(b) - itemValue(a));
   h += `<h3 class="sec">Your items</h3>${list.length ? `<div class="grid">${list.slice(0, 120).map((it) => card(it, `data-a="upstake" data-v="${it.u}"`, '', it.u === upStake ? 'sel' : '')).join('')}</div>` : '<div class="empty">No unlocked items yet.</div>'}`;

@@ -58,6 +58,7 @@ merged into `main` and live on the GitHub Pages site. The full plan, including w
 - [x] Casino tables: Three Card Poker, Let It Ride, Texas Hold'em against bots; coin rain on big wins
 - [x] Chips cash back into coins at half value, up to 100 coins a day (Play → Wallet)
 - [x] Glow Grid (gem block puzzle with coin power-ups), Bubble pop, Fishing (Play → Arcade)
+- [x] Crate Rush (Play → Arcade): a crate-opening clicker with a spinning reel, 104 collectible items, trade-ups, an upgrader, a collection book, rebirths and saved progress
 - [x] Add your own games: HTML/JS files, a .zip or a folder, pasted code, or a link (Play → Arcade → ➕ Add a game)
 - [x] Games can save progress and sell power-ups for coins (you confirm each one)
 - [x] Pet, Garden and Homework dungeon (Play); focus companion under the timer (Focus)
