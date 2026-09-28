@@ -94,50 +94,53 @@
 
 <div class="pet-wrap">
   <section class="card stage mood-{ps.mood}" aria-label="{profile.name} the {species.name.toLowerCase()}">
-    <svg class="pet" viewBox="0 0 160 160" role="img" aria-label="{profile.name} {MOOD_TEXT[ps.mood]}" data-mood={ps.mood}>
-      <ellipse cx="80" cy="146" rx="46" ry="7" fill="rgba(0,0,0,0.12)" />
-      <g class="body">
-        {#if species.id === 'cat'}
-          <path d="M40 62 L48 22 L70 50 Z M120 62 L112 22 L90 50 Z" fill={species.color} stroke="rgba(0,0,0,0.25)" stroke-width="2" />
-        {:else if species.id === 'bunny'}
-          <ellipse cx="60" cy="30" rx="10" ry="28" fill={species.color} stroke="rgba(0,0,0,0.2)" stroke-width="2" />
-          <ellipse cx="100" cy="30" rx="10" ry="28" fill={species.color} stroke="rgba(0,0,0,0.2)" stroke-width="2" />
-        {:else if species.id === 'chick'}
-          <path d="M74 44 Q78 28 84 40 Q90 26 90 46" fill="none" stroke="#e0a800" stroke-width="3" />
-        {:else if species.id === 'frog'}
-          <circle cx="58" cy="56" r="16" fill={species.color} />
-          <circle cx="102" cy="56" r="16" fill={species.color} />
-        {/if}
-        <ellipse cx="80" cy="96" rx="54" ry="48" fill={species.color} stroke="rgba(0,0,0,0.22)" stroke-width="2" />
-        <ellipse cx="80" cy="112" rx="30" ry="22" fill="rgba(255,255,255,0.35)" />
-        <!-- eyes -->
-        {#if ps.mood === 'sleepy'}
-          <path d="M54 88 q8 6 16 0 M90 88 q8 6 16 0" stroke="#2b2b2b" stroke-width="3" fill="none" stroke-linecap="round" />
-        {:else if ps.mood === 'happy'}
-          <path d="M54 90 q8 -10 16 0 M90 90 q8 -10 16 0" stroke="#2b2b2b" stroke-width="3" fill="none" stroke-linecap="round" />
-        {:else}
-          <circle cx="62" cy="88" r="7" fill="#2b2b2b" /><circle cx="98" cy="88" r="7" fill="#2b2b2b" />
-          <circle cx="64" cy="85" r="2.2" fill="#fff" /><circle cx="100" cy="85" r="2.2" fill="#fff" />
-        {/if}
-        {#if ps.mood === 'sad'}<path class="tear" d="M100 98 q-4 8 0 10 q4 -2 0 -10" fill="#6fa8dc" />{/if}
-        <ellipse cx="50" cy="104" rx="8" ry="5" fill="#ff9ecb" opacity="0.6" />
-        <ellipse cx="110" cy="104" rx="8" ry="5" fill="#ff9ecb" opacity="0.6" />
-        <!-- mouth -->
-        {#if ps.mood === 'happy'}
-          <path d="M66 104 q14 16 28 0 z" fill="#8b3a3a" />
-        {:else if ps.mood === 'content'}
-          <path d="M70 106 q10 8 20 0" stroke="#2b2b2b" stroke-width="3" fill="none" stroke-linecap="round" />
-        {:else if ps.mood === 'hungry'}
-          <ellipse cx="80" cy="108" rx="6" ry="7" fill="#8b3a3a" />
-        {:else if ps.mood === 'sad'}
-          <path d="M70 112 q10 -8 20 0" stroke="#2b2b2b" stroke-width="3" fill="none" stroke-linecap="round" />
-        {:else}
-          <path d="M74 108 h12" stroke="#2b2b2b" stroke-width="3" stroke-linecap="round" />
-        {/if}
-      </g>
-      {#if ps.mood === 'sleepy'}<text class="zzz" x="118" y="44" font-size="20">z Z</text>{/if}
-      {#if ps.mood === 'happy'}<text class="hearts" x="116" y="40" font-size="18">💕</text>{/if}
-    </svg>
+    <div class="podium">
+      <span class="spot" aria-hidden="true"></span>
+      <svg class="pet" viewBox="0 0 160 160" role="img" aria-label="{profile.name} {MOOD_TEXT[ps.mood]}" data-mood={ps.mood}>
+        <ellipse cx="80" cy="146" rx="46" ry="7" fill="rgba(0,0,0,0.12)" />
+        <g class="body">
+          {#if species.id === 'cat'}
+            <path d="M40 62 L48 22 L70 50 Z M120 62 L112 22 L90 50 Z" fill={species.color} stroke="rgba(0,0,0,0.25)" stroke-width="2" />
+          {:else if species.id === 'bunny'}
+            <ellipse cx="60" cy="30" rx="10" ry="28" fill={species.color} stroke="rgba(0,0,0,0.2)" stroke-width="2" />
+            <ellipse cx="100" cy="30" rx="10" ry="28" fill={species.color} stroke="rgba(0,0,0,0.2)" stroke-width="2" />
+          {:else if species.id === 'chick'}
+            <path d="M74 44 Q78 28 84 40 Q90 26 90 46" fill="none" stroke="#e0a800" stroke-width="3" />
+          {:else if species.id === 'frog'}
+            <circle cx="58" cy="56" r="16" fill={species.color} />
+            <circle cx="102" cy="56" r="16" fill={species.color} />
+          {/if}
+          <ellipse cx="80" cy="96" rx="54" ry="48" fill={species.color} stroke="rgba(0,0,0,0.22)" stroke-width="2" />
+          <ellipse cx="80" cy="112" rx="30" ry="22" fill="rgba(255,255,255,0.35)" />
+          <!-- eyes -->
+          {#if ps.mood === 'sleepy'}
+            <path d="M54 88 q8 6 16 0 M90 88 q8 6 16 0" stroke="#2b2b2b" stroke-width="3" fill="none" stroke-linecap="round" />
+          {:else if ps.mood === 'happy'}
+            <path d="M54 90 q8 -10 16 0 M90 90 q8 -10 16 0" stroke="#2b2b2b" stroke-width="3" fill="none" stroke-linecap="round" />
+          {:else}
+            <circle cx="62" cy="88" r="7" fill="#2b2b2b" /><circle cx="98" cy="88" r="7" fill="#2b2b2b" />
+            <circle cx="64" cy="85" r="2.2" fill="#fff" /><circle cx="100" cy="85" r="2.2" fill="#fff" />
+          {/if}
+          {#if ps.mood === 'sad'}<path class="tear" d="M100 98 q-4 8 0 10 q4 -2 0 -10" fill="#6fa8dc" />{/if}
+          <ellipse cx="50" cy="104" rx="8" ry="5" fill="#ff9ecb" opacity="0.6" />
+          <ellipse cx="110" cy="104" rx="8" ry="5" fill="#ff9ecb" opacity="0.6" />
+          <!-- mouth -->
+          {#if ps.mood === 'happy'}
+            <path d="M66 104 q14 16 28 0 z" fill="#8b3a3a" />
+          {:else if ps.mood === 'content'}
+            <path d="M70 106 q10 8 20 0" stroke="#2b2b2b" stroke-width="3" fill="none" stroke-linecap="round" />
+          {:else if ps.mood === 'hungry'}
+            <ellipse cx="80" cy="108" rx="6" ry="7" fill="#8b3a3a" />
+          {:else if ps.mood === 'sad'}
+            <path d="M70 112 q10 -8 20 0" stroke="#2b2b2b" stroke-width="3" fill="none" stroke-linecap="round" />
+          {:else}
+            <path d="M74 108 h12" stroke="#2b2b2b" stroke-width="3" stroke-linecap="round" />
+          {/if}
+        </g>
+        {#if ps.mood === 'sleepy'}<text class="zzz" x="118" y="44" font-size="20">z Z</text>{/if}
+        {#if ps.mood === 'happy'}<text class="hearts" x="116" y="40" font-size="18">💕</text>{/if}
+      </svg>
+    </div>
     <div class="info">
       <h2>{profile.name} <span class="muted">the {species.name.toLowerCase()}</span></h2>
       <p class="mood" data-pet-mood>{profile.name} {MOOD_TEXT[ps.mood]}.</p>
@@ -146,19 +149,25 @@
         <span class="bar" role="progressbar" aria-label="Fullness" aria-valuemin="0" aria-valuemax="100" aria-valuenow={ps.fill}
           ><span class="fill f" style="width:{ps.fill}%"></span></span
         >
-        <span class="num" data-pet-fill>{ps.fill}</span>
+        <span class="num" data-pet-fill
+          >{#key ps.fill}<span class="bump">{ps.fill}</span>{/key}</span
+        >
       </div>
       <div class="meter">
         <span>Happiness</span>
         <span class="bar" role="progressbar" aria-label="Happiness" aria-valuemin="0" aria-valuemax="100" aria-valuenow={ps.joy}
           ><span class="fill j" style="width:{ps.joy}%"></span></span
         >
-        <span class="num">{ps.joy}</span>
+        <span class="num"
+          >{#key ps.joy}<span class="bump">{ps.joy}</span>{/key}</span
+        >
       </div>
       <p class="muted">
         {hungryIn > 0 ? `Gets hungry in about ${hungryIn} hour${hungryIn === 1 ? '' : 's'}.` : 'Hungry now.'} Finishing tasks cheers it up; it never runs away or gets sick.
       </p>
-      <p class="react" aria-live="polite">{reaction}</p>
+      <p class="react" aria-live="polite">
+        {#key reaction}<span class="rise-in">{reaction}</span>{/key}
+      </p>
     </div>
   </section>
 
@@ -197,21 +206,61 @@
     display: grid;
     gap: 10px;
   }
+  /* the stage: a soft spotlight behind the pet, tinted by its mood */
   .stage {
+    position: relative;
     display: grid;
     grid-template-columns: minmax(140px, 200px) 1fr;
     gap: 16px;
     align-items: center;
+    overflow: hidden;
+    --mood: var(--accent);
+    background: radial-gradient(60% 70% at 18% 40%, color-mix(in srgb, var(--mood) 14%, transparent), transparent 70%), var(--bg-elev);
+    animation: pop-in var(--dur-slow) var(--spring) both;
+  }
+  .mood-happy {
+    --mood: #ff6fae;
+  }
+  .mood-hungry {
+    --mood: var(--warn);
+  }
+  .mood-sad {
+    --mood: var(--info);
+  }
+  .mood-sleepy {
+    --mood: var(--text-muted);
   }
   @media (max-width: 520px) {
     .stage {
       grid-template-columns: 1fr;
       justify-items: center;
+      background: radial-gradient(60% 50% at 50% 20%, color-mix(in srgb, var(--mood) 14%, transparent), transparent 70%), var(--bg-elev);
     }
   }
-  .pet {
+  .podium {
+    position: relative;
+    display: grid;
+    place-items: center;
     width: 100%;
     max-width: 200px;
+  }
+  .spot {
+    position: absolute;
+    inset: 4% 4% 0;
+    border-radius: 50%;
+    background: radial-gradient(circle at 50% 55%, color-mix(in srgb, var(--mood) 45%, transparent), transparent 65%);
+    animation: spot-breathe 3.4s ease-in-out infinite;
+    pointer-events: none;
+  }
+  .pet {
+    position: relative;
+    width: 100%;
+    max-width: 200px;
+    filter: drop-shadow(0 10px 16px color-mix(in srgb, var(--mood) 35%, rgba(0, 0, 0, 0.25)));
+    transition: transform var(--dur-slow) var(--spring);
+  }
+  .stage:hover .pet {
+    transform: scale(1.04);
   }
   .mood-happy .body {
     animation: bounce 1.4s ease-in-out infinite;
@@ -224,6 +273,10 @@
   .zzz {
     fill: var(--text-muted);
     font-weight: 700;
+    animation: float 2.4s ease-in-out infinite;
+  }
+  .hearts {
+    animation: float 1.6s ease-in-out infinite;
   }
   @keyframes bounce {
     0%,
@@ -243,6 +296,17 @@
       transform: scale(1.02, 0.98);
     }
   }
+  @keyframes spot-breathe {
+    0%,
+    100% {
+      opacity: 0.75;
+      transform: scale(1);
+    }
+    50% {
+      opacity: 1;
+      transform: scale(1.08);
+    }
+  }
   :global(:root.reduced-motion) .body {
     animation: none !important;
   }
@@ -253,44 +317,82 @@
   }
   h2 {
     margin: 0 0 4px;
-    font-size: 20px;
+    font-size: 22px;
+    font-weight: 800;
+    letter-spacing: -0.01em;
   }
-  h3 {
-    margin: 0 0 8px;
+  h2 .muted {
+    font-weight: 500;
     font-size: 15px;
   }
-  .mood {
-    margin: 0 0 8px;
+  h3 {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 0 0 10px;
+    font-size: 15px;
+    font-weight: 800;
   }
+  h3::before {
+    content: '';
+    width: 4px;
+    height: 16px;
+    border-radius: 2px;
+    background: var(--grad-accent);
+    box-shadow: 0 0 8px color-mix(in srgb, var(--accent) 50%, transparent);
+    flex-shrink: 0;
+  }
+  .mood {
+    margin: 0 0 10px;
+    font-weight: 600;
+  }
+  /* meters: gradient bars with a passing shimmer stripe and numbers that bounce when they change */
   .meter {
     display: grid;
     grid-template-columns: 80px 1fr 32px;
     gap: 8px;
     align-items: center;
     font-size: 13px;
-    margin-bottom: 6px;
+    margin-bottom: 8px;
   }
   .bar {
-    height: 10px;
+    height: 12px;
     border-radius: 999px;
     background: var(--bg-elev-2);
+    border: 1px solid var(--border);
+    box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.2);
     overflow: hidden;
   }
   .fill {
+    position: relative;
     display: block;
     height: 100%;
-    transition: width var(--dur);
+    border-radius: 999px;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.35);
+    transition: width var(--dur-slow) var(--spring);
+  }
+  .fill::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(90deg, transparent 0%, rgba(255, 255, 255, 0.4) 50%, transparent 100%);
+    background-size: 200% 100%;
+    animation: shimmer 2.6s linear infinite;
   }
   .f {
-    background: #f4a261;
+    background: linear-gradient(90deg, #e07a2f, #f4a261 60%, #ffd166);
+    box-shadow: 0 0 12px -2px rgba(244, 162, 97, 0.7);
   }
   .j {
-    background: #ff6fae;
+    background: linear-gradient(90deg, #e0407f, #ff6fae 60%, #ffb3d6);
+    box-shadow: 0 0 12px -2px rgba(255, 111, 174, 0.7);
   }
   .num {
     font-variant-numeric: tabular-nums;
+    font-weight: 800;
     text-align: end;
   }
+  /* chunky food buttons with an emoji badge that tilts on hover */
   .foods {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
@@ -302,19 +404,58 @@
     gap: 2px;
     text-align: start;
     height: auto;
-    padding: 10px;
+    padding: 12px;
+    border-radius: var(--radius);
+    background: linear-gradient(180deg, color-mix(in srgb, var(--bg-hover) 55%, var(--bg-elev)), var(--bg-elev));
+    box-shadow:
+      inset 0 1px 0 var(--sheen),
+      var(--shadow-sm);
+    white-space: normal;
+  }
+  .food:not(:disabled):hover {
+    border-color: color-mix(in srgb, var(--accent) 55%, var(--border));
+    transform: translateY(-2px);
+    box-shadow:
+      inset 0 1px 0 var(--sheen),
+      var(--shadow),
+      var(--glow);
+  }
+  .food:not(:disabled):hover .fe {
+    transform: scale(1.2) rotate(-8deg);
+  }
+  .food:not(:disabled):active {
+    transform: translateY(0) scale(0.97);
   }
   .fe {
+    display: grid;
+    place-items: center;
+    width: 40px;
+    height: 40px;
+    border-radius: 12px;
     font-size: 24px;
+    margin-bottom: 4px;
+    background: linear-gradient(135deg, color-mix(in srgb, var(--accent) 24%, transparent), color-mix(in srgb, var(--accent-2) 10%, transparent));
+    border: 1px solid color-mix(in srgb, var(--accent) 28%, transparent);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.25);
+    filter: drop-shadow(0 3px 6px rgba(0, 0, 0, 0.25));
+    transition: transform var(--dur-slow) var(--spring);
+  }
+  .food:disabled .fe {
+    filter: grayscale(0.8);
   }
   .muted {
     color: var(--text-muted);
     font-size: 12px;
   }
+  .food .muted {
+    font-variant-numeric: tabular-nums;
+  }
   .react {
     min-height: 18px;
     font-size: 13px;
+    font-weight: 700;
     margin: 4px 0 0;
+    color: var(--accent-text);
   }
   .opts {
     margin-top: 10px;

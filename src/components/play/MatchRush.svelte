@@ -145,15 +145,17 @@
   <h2>⚡ Match rush · {deck.name}</h2>
   <span class="grow"></span>
   {#if !endedAt}
-    <span class="meta">Round {ri + 1}/{rounds.length} · Misses {misses}</span>
-    <span class="clock" role="timer" aria-label="Time">⏱ {formatTime(elapsed)}</span>
+    <span class="meta"
+      >Round {ri + 1}/{rounds.length} · Misses {#key misses}<span class="bump">{misses}</span>{/key}</span
+    >
+    <span class="clock" class:over={best !== undefined && elapsed > best} role="timer" aria-label="Time">⏱ {formatTime(elapsed)}</span>
   {/if}
 </div>
 
 {#if endedAt}
   <section class="card end">
     <div class="big" aria-hidden="true">⚡</div>
-    <h3>All {matched} matched in {formatTime(elapsed)}</h3>
+    <h3 class="grad-text">All {matched} matched in {formatTime(elapsed)}</h3>
     <p class="muted">
       {misses} miss{misses === 1 ? '' : 'es'} (+{(misses * MISS_PENALTY_MS) / 1000} s) · {newBest
         ? 'New best for this deck!'
@@ -170,6 +172,7 @@
   <p class="muted help">
     Pick a term, then its definition (or drag the term onto it). Each miss adds {MISS_PENALTY_MS / 1000} seconds.{best !== undefined ? ` Best: ${formatTime(best)}.` : ''}
   </p>
+  <div class="prog" aria-hidden="true"><span style="width:{(doneTerms.length / round.terms.length) * 100}%"></span></div>
   <div class="board">
     <div class="col" role="group" aria-label="Terms">
       {#each round.terms as t (t.id)}
@@ -227,6 +230,7 @@
   .bar h2 {
     font-size: 18px;
     margin: 0;
+    font-weight: 800;
   }
   .grow {
     flex: 1;
@@ -234,15 +238,57 @@
   .meta {
     font-size: 13px;
     color: var(--text-muted);
+    font-variant-numeric: tabular-nums;
   }
+  /* the clock is a pill; once you're slower than your best it turns red and pulses */
   .clock {
     font-weight: 800;
     font-variant-numeric: tabular-nums;
-    font-size: 18px;
+    font-size: 16px;
+    padding: 3px 12px;
+    border-radius: 999px;
+    background: var(--bg-elev);
+    border: 1px solid var(--border);
+    box-shadow: inset 0 1px 0 var(--sheen);
+    transition:
+      color var(--dur),
+      border-color var(--dur);
+  }
+  .clock.over {
+    color: var(--danger-text);
+    border-color: color-mix(in srgb, var(--danger) 60%, var(--border));
+    animation: glow-pulse 1.2s ease-out infinite;
   }
   .help {
     margin: 0 0 10px;
     font-size: 13px;
+  }
+  /* round progress: a gradient bar with a shimmer stripe */
+  .prog {
+    height: 8px;
+    border-radius: 999px;
+    background: var(--bg-elev-2);
+    border: 1px solid var(--border);
+    overflow: hidden;
+    margin-bottom: 10px;
+    box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.2);
+  }
+  .prog span {
+    position: relative;
+    display: block;
+    height: 100%;
+    border-radius: 999px;
+    background: var(--grad-accent);
+    box-shadow: 0 0 12px -2px color-mix(in srgb, var(--accent) 70%, transparent);
+    transition: width 0.35s var(--spring);
+  }
+  .prog span::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(90deg, transparent 0%, rgba(255, 255, 255, 0.4) 50%, transparent 100%);
+    background-size: 200% 100%;
+    animation: shimmer 2.2s linear infinite;
   }
   .board {
     display: grid;
@@ -254,7 +300,9 @@
     gap: 8px;
     align-content: start;
   }
+  /* tiles: glossy cards that lift on hover, glow when picked, shake when wrong and pop then fade when matched */
   .tile {
+    position: relative;
     display: flex;
     gap: 8px;
     align-items: center;
@@ -263,12 +311,17 @@
     min-height: 52px;
     border-radius: var(--radius);
     border: 1px solid var(--border);
-    background: var(--bg-elev);
+    background: linear-gradient(180deg, color-mix(in srgb, var(--bg-hover) 55%, var(--bg-elev)), var(--bg-elev));
+    box-shadow:
+      inset 0 1px 0 var(--sheen),
+      var(--shadow-sm);
     font-size: 14px;
     white-space: pre-wrap;
     transition:
       border-color var(--dur),
-      background var(--dur);
+      background var(--dur),
+      transform var(--dur) var(--spring),
+      box-shadow var(--dur);
   }
   .term {
     font-weight: 700;
@@ -277,27 +330,46 @@
   }
   .tile:not(:disabled):hover,
   .tile.hover {
-    border-color: var(--accent);
+    border-color: color-mix(in srgb, var(--accent) 60%, var(--border));
+    transform: translateY(-2px);
+    box-shadow:
+      inset 0 1px 0 var(--sheen),
+      var(--shadow-sm),
+      var(--glow);
+  }
+  .tile.hover {
+    transform: scale(1.03);
+    border-style: dashed;
   }
   .tile.sel {
     border-color: var(--accent);
-    background: color-mix(in srgb, var(--accent) 16%, var(--bg-elev));
+    background: linear-gradient(135deg, color-mix(in srgb, var(--accent) 22%, var(--bg-elev)), color-mix(in srgb, var(--accent-2) 12%, var(--bg-elev)));
+    box-shadow:
+      inset 0 1px 0 var(--sheen),
+      0 0 0 3px color-mix(in srgb, var(--accent) 25%, transparent),
+      var(--glow);
   }
   .tile.wrong {
     border-color: var(--danger);
     background: color-mix(in srgb, var(--danger) 16%, var(--bg-elev));
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--danger) 25%, transparent);
+    animation: shake 0.45s var(--ease);
   }
   .tile.done {
     border-style: dashed;
+    border-color: color-mix(in srgb, var(--success) 40%, var(--border));
     background: color-mix(in srgb, var(--success) 10%, var(--bg-elev));
     color: var(--text-muted);
     cursor: default;
+    box-shadow: none;
+    animation: matched 600ms var(--spring) both;
   }
   .tile.dragging {
     position: relative;
     z-index: 5;
     cursor: grabbing;
-    box-shadow: var(--shadow, 0 8px 20px rgba(0, 0, 0, 0.25));
+    box-shadow: var(--shadow-lg), var(--glow-strong);
+    border-color: var(--accent);
     transition: none;
   }
   .tile img {
@@ -307,26 +379,45 @@
   }
   .tick {
     margin-left: auto;
-    color: var(--success-text);
-    font-weight: 800;
+    display: inline-grid;
+    place-items: center;
+    width: 20px;
+    height: 20px;
+    border-radius: 999px;
+    font-size: 12px;
+    color: #fff;
+    background: var(--success);
+    box-shadow: 0 0 10px -2px color-mix(in srgb, var(--success) 70%, transparent);
+    animation: pop-in var(--dur-slow) var(--spring) both;
   }
   .status {
     min-height: 1.4em;
     margin-top: 10px;
-    font-weight: 600;
+    font-weight: 700;
     text-align: center;
   }
   .end {
+    position: relative;
+    overflow: hidden;
     text-align: center;
     display: grid;
     gap: 6px;
     justify-items: center;
+    background: radial-gradient(60% 50% at 50% 0%, color-mix(in srgb, var(--accent) 16%, transparent), transparent 70%), var(--bg-elev);
+    animation: pop-in var(--dur-slow) var(--spring) both;
   }
   .end h3 {
     margin: 0;
+    font-size: 22px;
+    font-weight: 800;
+    letter-spacing: -0.01em;
+    font-variant-numeric: tabular-nums;
   }
   .big {
-    font-size: 44px;
+    font-size: 52px;
+    line-height: 1;
+    filter: drop-shadow(0 8px 16px color-mix(in srgb, var(--accent) 45%, transparent));
+    animation: float 3s ease-in-out infinite;
   }
   .btns {
     display: flex;
@@ -336,5 +427,19 @@
   }
   .muted {
     color: var(--text-muted);
+  }
+  @keyframes matched {
+    0% {
+      transform: scale(1);
+      opacity: 1;
+    }
+    35% {
+      transform: scale(1.06);
+      opacity: 1;
+    }
+    100% {
+      transform: scale(1);
+      opacity: 0.6;
+    }
   }
 </style>

@@ -224,7 +224,7 @@
 {#if endedAt}
   <section class="card end" aria-live="polite">
     <div class="big" aria-hidden="true">{gaveUp ? '📖' : '🧩'}</div>
-    <h3>{gaveUp ? 'All answers revealed' : `Solved in ${formatTime(elapsed)}`}</h3>
+    <h3 class:grad-text={!gaveUp}>{gaveUp ? 'All answers revealed' : `Solved in ${formatTime(elapsed)}`}</h3>
     <p class="muted">
       {cw.words.length} words{revealed.length && !gaveUp ? ` · ${revealed.length} revealed (+${(revealed.length * REVEAL_PENALTY_MS) / 1000} s)` : ''} · {gaveUp
         ? 'Solve it yourself next time to set a best time.'
@@ -339,6 +339,7 @@
   .bar h2 {
     font-size: 18px;
     margin: 0;
+    font-weight: 800;
   }
   .grow {
     flex: 1;
@@ -346,11 +347,17 @@
   .meta {
     font-size: 13px;
     color: var(--text-muted);
+    font-variant-numeric: tabular-nums;
   }
   .clock {
     font-weight: 800;
     font-variant-numeric: tabular-nums;
-    font-size: 18px;
+    font-size: 16px;
+    padding: 3px 12px;
+    border-radius: 999px;
+    background: var(--bg-elev);
+    border: 1px solid var(--border);
+    box-shadow: inset 0 1px 0 var(--sheen);
   }
   .help {
     margin: 0 0 10px;
@@ -362,11 +369,16 @@
     flex-wrap: wrap;
     margin-bottom: 10px;
   }
+  /* the current clue: a card with a gradient hairline */
   .current {
     min-height: 1.5em;
     padding: 8px 12px;
     border-radius: var(--radius-sm);
-    background: var(--bg-elev-2);
+    border: 1px solid transparent;
+    background:
+      linear-gradient(var(--bg-elev-2), var(--bg-elev-2)) padding-box,
+      linear-gradient(135deg, color-mix(in srgb, var(--accent) 70%, var(--border)), color-mix(in srgb, var(--accent-2) 60%, var(--border))) border-box;
+    box-shadow: 0 0 24px -12px color-mix(in srgb, var(--accent) 60%, transparent);
     margin-bottom: 10px;
     font-size: 15px;
   }
@@ -383,27 +395,47 @@
     grid-auto-rows: var(--cell);
     padding: 1px 0 0 1px;
     flex: none;
+    animation: pop-in var(--dur-slow) var(--spring) both;
   }
-  /* only letter squares are drawn (a freeform grid); the -1px margins collapse neighbouring borders into one line */
+  /* only letter squares are drawn (a freeform grid); the -1px margins collapse neighbouring borders into one line.
+     Squares are softly inset; the square you're on glows in the accent above its neighbours. */
   .sq {
     position: relative;
-    background: var(--bg-elev);
+    background: linear-gradient(180deg, var(--bg-elev), color-mix(in srgb, var(--bg-elev-2) 60%, var(--bg-elev)));
     border: 1px solid var(--border-strong);
     margin: -1px 0 0 -1px;
+    box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.12);
+    transition:
+      background var(--dur),
+      box-shadow var(--dur);
   }
   .sq.block {
     background: none;
     border-color: transparent;
+    box-shadow: none;
   }
   .sq.hl {
-    background: color-mix(in srgb, var(--accent) 16%, var(--bg-elev));
+    background: color-mix(in srgb, var(--accent) 18%, var(--bg-elev));
   }
   .sq.cur {
-    background: color-mix(in srgb, var(--accent) 38%, var(--bg-elev));
+    z-index: 1;
+    background: color-mix(in srgb, var(--accent) 40%, var(--bg-elev));
+    border-color: var(--accent);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.25),
+      0 0 0 2px color-mix(in srgb, var(--accent) 45%, transparent),
+      0 0 14px color-mix(in srgb, var(--accent) 55%, transparent);
+  }
+  .sq.wrong {
+    background: color-mix(in srgb, var(--danger) 16%, var(--bg-elev));
+    animation: shake 0.4s var(--ease);
   }
   .sq.wrong input {
     color: var(--danger-text);
     text-decoration: line-through;
+  }
+  .sq.shown {
+    background: color-mix(in srgb, var(--accent-2) 14%, var(--bg-elev));
   }
   .sq.shown input {
     color: var(--accent-text);
@@ -425,7 +457,7 @@
     padding: calc(var(--cell) * 0.18) 0 0;
     text-align: center;
     text-transform: uppercase;
-    font-weight: 700;
+    font-weight: 800;
     font-size: calc(var(--cell) * 0.55);
     color: var(--text);
     caret-color: transparent;
@@ -435,6 +467,7 @@
   .sq input:focus {
     outline: 2px solid var(--accent);
     outline-offset: -2px;
+    box-shadow: none;
   }
   .clues {
     flex: 1 1 260px;
@@ -444,8 +477,24 @@
     min-width: 0;
   }
   .clues h3 {
-    font-size: 14px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--text-muted);
     margin: 0 0 6px;
+  }
+  .clues h3::before {
+    content: '';
+    width: 4px;
+    height: 14px;
+    border-radius: 2px;
+    background: var(--grad-accent);
+    box-shadow: 0 0 8px color-mix(in srgb, var(--accent) 50%, transparent);
+    flex-shrink: 0;
   }
   .clues ol {
     list-style: none;
@@ -454,6 +503,7 @@
     display: grid;
     gap: 2px;
   }
+  /* clues: the active one gets an accent tint, a solved one flashes green then settles to a strike-through */
   .clue {
     display: flex;
     gap: 8px;
@@ -463,13 +513,21 @@
     border-radius: var(--radius-sm);
     font-size: 14px;
     border-left: 3px solid transparent;
+    transition:
+      background var(--dur),
+      transform var(--dur) var(--spring);
   }
   .clue:hover {
     background: var(--bg-hover);
+    transform: translateX(2px);
   }
   .clue.on {
     background: color-mix(in srgb, var(--accent) 16%, var(--bg-elev));
     border-left-color: var(--accent);
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 25%, transparent);
+  }
+  .clue.solved {
+    animation: solved-flash 900ms var(--ease) both;
   }
   .clue.solved .ct {
     color: var(--text-muted);
@@ -478,19 +536,30 @@
   .cn {
     font-weight: 800;
     min-width: 1.6em;
+    font-variant-numeric: tabular-nums;
   }
   .ct {
     white-space: pre-wrap;
   }
   .tick {
     margin-left: auto;
-    color: var(--success-text);
-    font-weight: 800;
+    display: inline-grid;
+    place-items: center;
+    align-self: center;
+    width: 18px;
+    height: 18px;
+    border-radius: 999px;
+    font-size: 11px;
+    color: #fff;
+    background: var(--success);
+    box-shadow: 0 0 10px -2px color-mix(in srgb, var(--success) 70%, transparent);
+    animation: pop-in var(--dur-slow) var(--spring) both;
+    flex-shrink: 0;
   }
   .status {
     min-height: 1.4em;
     margin-top: 10px;
-    font-weight: 600;
+    font-weight: 700;
     text-align: center;
   }
   .small {
@@ -500,16 +569,27 @@
     margin: 0 0 8px;
   }
   .end {
+    position: relative;
+    overflow: hidden;
     text-align: center;
     display: grid;
     gap: 6px;
     justify-items: center;
+    background: radial-gradient(60% 50% at 50% 0%, color-mix(in srgb, var(--accent) 14%, transparent), transparent 70%), var(--bg-elev);
+    animation: pop-in var(--dur-slow) var(--spring) both;
   }
   .end h3 {
     margin: 0;
+    font-size: 22px;
+    font-weight: 800;
+    letter-spacing: -0.01em;
+    font-variant-numeric: tabular-nums;
   }
   .big {
-    font-size: 44px;
+    font-size: 52px;
+    line-height: 1;
+    filter: drop-shadow(0 8px 16px color-mix(in srgb, var(--accent) 45%, transparent));
+    animation: float 3s ease-in-out infinite;
   }
   .answers {
     list-style: none;
@@ -531,6 +611,16 @@
   }
   .print-only {
     display: none;
+  }
+  @keyframes solved-flash {
+    0% {
+      background: color-mix(in srgb, var(--success) 45%, var(--bg-elev));
+      transform: scale(1.02);
+    }
+    100% {
+      background: transparent;
+      transform: scale(1);
+    }
   }
   /* print a blank puzzle: only the sheet, empty numbered squares and the clues */
   @media print {
@@ -558,12 +648,17 @@
     }
     .grid {
       --cell: 28px;
+      animation: none;
     }
     .sq,
     .sq.hl,
-    .sq.cur {
+    .sq.cur,
+    .sq.wrong,
+    .sq.shown {
       background: #fff;
       border-color: #000;
+      box-shadow: none;
+      animation: none;
     }
     .sq.block {
       border-color: transparent;
@@ -576,9 +671,16 @@
     .clues h3 {
       color: #000;
     }
+    .clues h3::before {
+      display: none;
+    }
     .clue.on {
       background: none;
       border-left-color: transparent;
+      box-shadow: none;
+    }
+    .clue.solved {
+      animation: none;
     }
     .clue.solved .ct,
     .clue .muted {
