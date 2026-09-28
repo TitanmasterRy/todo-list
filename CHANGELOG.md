@@ -4,6 +4,7 @@
 
 - **🏭 Orebelt** (Play → Factory): a factory-building idle game. Mine ore, smelt and build parts through six tiers, route belts with throughput limits, run a power grid with overclocking, deliver to the Launch Tower, and keep producing while you're away. Finished homework gives shards, research and production boosts; coins buy a few daily supply drops.
 - **📺 Watch** (Play → Watch): sign in to your Jellyfin or Emby server to browse and play with resume across devices, show Plex or any other site, play YouTube/Vimeo/Twitch links, direct video links and files from your device. Optional homework rules: finish your ring first, vouchers for watch time, a daily limit. See WATCH.md.
+- **📦 Crate Rush** (Play → Arcade): a crate-opening clicker. Click and build income, open crates on a spinning reel, collect 104 procedurally drawn items with wear and patterns, trade up, upgrade, fill the collection book and rebirth. Coins buy a few power-ups.
 - **Español** now covers Stats, Tools, Settings, Schoology and every message (Play is still English).
 - **Patch notes** open by themselves after an update and show every update this device missed; they're always in Settings → Help.
 - Guides for coding agents and local models (AGENTS.md, LOCAL_LLM.md).

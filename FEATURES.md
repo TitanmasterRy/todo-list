@@ -132,7 +132,6 @@ merged into `main` and live on the GitHub Pages site. The full plan, including w
 
 ## 🚧 Being built right now (next merge)
 
-- [ ] Case clicker game (original, like the CS:GO case clicker)
 - [ ] Casino visual overhaul: more eye candy on every casino game
 
 ## ⏳ Not done yet
