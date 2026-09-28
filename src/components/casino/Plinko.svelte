@@ -168,7 +168,7 @@
 <div class="cz-game">
   <div class="cz-table night board">
     <div class="wrap">
-      <canvas bind:this={canvas} role="img" aria-label="Plinko board"></canvas>
+      <div role="img" aria-label="Plinko board"><canvas bind:this={canvas} aria-hidden="true"></canvas></div>
       <div class="buckets" style="padding-inline:{(gap / 2 / W) * 100}%">
         {#each PLINKO_TABLE[risk] as m, i (i)}
           {#key glow?.bucket === i ? glow.id : 0}
