@@ -5,8 +5,11 @@
   import { canMilestone, canResearch, completeMilestone, deliverPhase, doResearch } from '../../../lib/factory/actions';
   import { toasts } from '../../../lib/toast.svelte';
   import Burst from './Burst.svelte';
+  import FactoryContracts from './FactoryContracts.svelte';
   import FactoryIcon from './FactoryIcon.svelte';
+  import FactoryPrestige from './FactoryPrestige.svelte';
   import { fmt, itemName, motionOk, type FactoryCtl } from './controller.svelte';
+  import { play } from './sfx';
 
   interface Props {
     ctl: FactoryCtl;
@@ -60,6 +63,7 @@
     const after = ctl.game.phase;
     if (after <= before) return;
     const final = after >= PHASES.length;
+    play(final ? 'launch' : 'phase');
     toasts.push({
       message: `${name} complete!`,
       detail: final ? 'The launch is a success. Your factory keeps running.' : `Tier ${after} unlocked`,
@@ -72,7 +76,7 @@
     showTimer = setTimeout(() => (show = null), motionOk() ? (final ? 9000 : 5200) : 3500);
   }
   function milestone(m: Milestone) {
-    if (ctl.run((s) => completeMilestone(s, m.id))) {
+    if (ctl.run((s) => completeMilestone(s, m.id), undefined, 'milestone')) {
       toasts.push({ message: `Milestone: ${m.name}`, detail: unlockText(m).join(' · '), kind: 'success', emoji: '🏗️' });
       msBurst = { id: m.id, n: msBurst.n + 1 };
     }
@@ -91,6 +95,8 @@
     {/each}
   </ul>
 {/snippet}
+
+<FactoryContracts {ctl} />
 
 <section class="tower card" aria-labelledby="ob-tower">
   {#if show}
@@ -158,10 +164,12 @@
       <button class="btn primary" onclick={deliver}>Deliver parts</button>
       <p class="muted small">Partial deliveries count. Parts come from your stock (belt them into the Base Camp or a depot).</p>
     {:else}
-      <p><strong>Launched!</strong> Every tier is open. Keep optimising, or sell spare parts at the market.</p>
+      <p><strong>Launched!</strong> Every tier is open. Keep optimising, sell spare parts at the market, or relaunch below for stars.</p>
     {/if}
   </div>
 </section>
+
+<FactoryPrestige {ctl} />
 
 <h3 class="sec">Milestones</h3>
 {#each v.tiers as t (t.tier)}
@@ -209,7 +217,7 @@
       </p>
       {#if !done}
         {@render costs(r.cost, v.inv)}
-        <button class="btn" disabled={!check.ok} title={check.ok ? '' : check.error} onclick={() => ctl.run((s) => doResearch(s, r.id), `${recipe.name} researched`)}
+        <button class="btn" disabled={!check.ok} title={check.ok ? '' : check.error} onclick={() => ctl.run((s) => doResearch(s, r.id), `${recipe.name} researched`, 'milestone')}
           >Research ({r.insight} insight)</button
         >
         {#if !check.ok}<p class="muted small">{check.error}</p>{/if}

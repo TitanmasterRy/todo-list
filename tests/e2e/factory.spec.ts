@@ -114,11 +114,98 @@ test('every factory section has no serious accessibility violations', async ({ p
   await page.getByRole('tab', { name: /Factory/ }).click();
   await page.getByRole('toolbar', { name: 'Map tools' }).getByRole('button', { name: 'Build' }).click();
   await page.locator('.factory .tile[data-x="2"][data-y="5"]').click();
-  for (const section of ['Factory', 'Production', 'Milestones', 'Supply & market']) {
+  for (const section of ['Factory', 'Production', 'Milestones', 'Records', 'Supply & market']) {
     await page.getByRole('tab', { name: section, exact: true }).click();
     await page.waitForTimeout(300);
     const results = await new AxeBuilder({ page }).include('.factory').withTags(['wcag2a', 'wcag2aa']).analyze();
     const serious = results.violations.filter((v) => v.impact === 'serious' || v.impact === 'critical');
     expect(serious.map((v) => `${section} ${v.id}: ${v.nodes.length} × ${v.nodes[0]?.target.join(' ')}`)).toEqual([]);
   }
+});
+
+/** A tier-1 save with a full stock, so the expansion features are reachable without an hour of play. */
+async function seedFactory(page: Page): Promise<void> {
+  await page.evaluate(() => {
+    const save = {
+      v: 3,
+      lastSeen: Date.now(),
+      simTime: 0,
+      nextId: 2,
+      buildings: [{ id: 1, type: 'camp', x: 2, y: 5, rot: 0, clock: 1, shards: 0, inBuf: {}, outBuf: {} }],
+      belts: [],
+      inv: { ironPlate: 500, ironRod: 200, wire: 200, screw: 200, concrete: 200, ironOre: 300, copperIngot: 100 },
+      milestones: ['fasteners', 'copper', 'logistics'],
+      research: [],
+      phase: 1,
+      delivered: {},
+      shards: 2,
+      insight: 5,
+      boostLeft: 0,
+      rushLeft: 0,
+      extraOffline: 0,
+      made: {},
+      credit: 0,
+      rewards: { tasks: 0, study: 0 },
+      sectors: ['home'],
+      contracts: { day: '', done: [], progress: {} },
+      ach: [],
+      stars: 0,
+      runs: 0,
+      perks: [],
+      event: null,
+      madeTotal: 0,
+      lifetime: { launches: 0, contracts: 0, relaunches: 0 },
+    };
+    localStorage.setItem('homework-todo:factory', JSON.stringify(save));
+  });
+}
+
+test('Orebelt 2: survey a sector, feed a smelter from stock with a loader, see contracts, records and perks', async ({ page }) => {
+  await page.clock.install();
+  const errors = await openApp(page);
+  await seedFactory(page);
+  await page.goto('./?view=play');
+  await page.getByRole('tab', { name: /Factory/ }).click();
+  const tools = page.getByRole('toolbar', { name: 'Map tools' });
+
+  // East Ridge costs 100 plates, 50 concrete and an insight; once surveyed its button is gone
+  await expect(page.locator('[data-sector="east"]')).toBeVisible();
+  await page
+    .locator('[data-sector="east"]')
+    .getByRole('button', { name: /Survey/ })
+    .click();
+  await expect(page.locator('[data-sector="east"]')).toHaveCount(0);
+  expect(await stockOf(page, 'ironPlate')).toBe(400);
+  await page.getByRole('tab', { name: 'Factory', exact: true }).click();
+
+  // a loader pulls ore out of stock and feeds a smelter through a belt
+  await tools.getByRole('button', { name: 'Build' }).click();
+  await page.locator('[data-build="loader"]').click();
+  await tile(page, 5, 3).click();
+  await expect(tile(page, 5, 3)).toHaveAttribute('data-building', 'loader');
+  await page.locator('[data-build="smelter"]').click();
+  await tile(page, 6, 3).click();
+  await tools.getByRole('button', { name: 'Inspect' }).click();
+  await tile(page, 5, 3).click();
+  await page.locator('[data-loader-item]').selectOption('ironOre');
+  await tile(page, 6, 3).click();
+  await page.locator('[data-recipe]').selectOption('ironIngot');
+  await tools.getByRole('button', { name: 'Belt' }).click();
+  await tile(page, 5, 3).click();
+  await tile(page, 6, 3).click();
+  await expect(page.locator('[data-msg]')).toHaveText('Belt connected');
+  await page.clock.runFor(30_000);
+  await tools.getByRole('button', { name: 'Inspect' }).click();
+  await tile(page, 5, 3).click();
+  await expect(page.locator('[data-panel] [data-status]')).toHaveText('Running');
+  expect(await stockOf(page, 'ironOre')).toBeLessThan(300);
+
+  // three contracts a day, a records tab with achievements, and the Star Charts perks
+  await page.getByRole('tab', { name: 'Milestones' }).click();
+  await expect(page.locator('[data-contract]')).toHaveCount(3);
+  await expect(page.locator('[data-perk]').first()).toBeVisible();
+  await page.getByRole('tab', { name: 'Records' }).click();
+  await expect(page.locator('[data-achievement="belt1"]')).toHaveAttribute('data-earned', 'true');
+  await expect(page.locator('[data-achievement="launched"]')).toHaveAttribute('data-earned', 'false');
+  expect(errors).toEqual([]);
 });

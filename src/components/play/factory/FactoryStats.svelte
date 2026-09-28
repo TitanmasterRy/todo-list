@@ -189,6 +189,7 @@
         boost.
       </li>
       <li>Each notecard session or pomodoro: +{REWARD.study.insight} insight and a {REWARD.study.boost / 60}-minute boost.</li>
+      <li>Each day you close your ring (or hit a streak milestone): +{REWARD.day.shards} shard, +{REWARD.day.insight} insight and a {REWARD.day.boost / 60}-minute boost.</li>
       <li>Boosts stack up to {REWARD.boostCap / 3600} hours. Rewards bank even while the game is closed.</li>
     </ul>
     <p class="small">

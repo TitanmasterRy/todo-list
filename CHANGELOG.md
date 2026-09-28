@@ -1,9 +1,18 @@
 # Changelog
 
-## Roadmap pass 9: the zen garden and the Tree of Wisdom
+## Roadmap pass 9: the zen garden, the Tree of Wisdom and Orebelt 2
 
 - **🪴 Zen garden** (Play → Garden), after the classic one: 32 terracotta pots on a patio under a picket fence, with the sky following the real time of day. Every finished task drops a care pack (a seed packet in the course's color, a bag of fertilizer, tree food, and bug spray every third task). Plant a seed and the sprout asks for water, fertilizer, bug spray or music in a thought bubble; meet the need and it dances, drops a coin to tap (up to 30 a day) and grows a size per bag until it's a full-grown flower with a face. Six kinds of flower, shiny plants that pay double, a golden watering can, a phonograph, a wheelbarrow that retires full-grown plants to the meadow, and Stinky the snail, who collects coins for an hour per bar of chocolate. Supplies also come from a garden shop paid in coins; the garden is saved on this device.
 - **🌳 Tree of Wisdom** (Play → Garden → Tree of Wisdom): feed it a foot at a time and it shares a line of study wisdom. Its leaves take the colors of the courses that fed it, it changes with the season and the time of day, and it picks up residents and decorations as it grows: a bird, a swing, a birdhouse, lanterns, a treehouse, fruit, fireflies, an owl, the cloud tops, the moon, a hammock.
+- **🏭 Orebelt 2** (Play → Factory), a massive update:
+  - **Logistics:** storage crates that buffer 500 of an item and loaders that pull parts back out of stock onto belts, plus per-belt item filters, so a line can be fed from what you've already made (milestone Logistics).
+  - **A bigger map:** 32×18 in four sectors. Survey East Ridge, South Flats and Far Marsh with parts and insight to reach new nodes, bauxite and uranium.
+  - **Tiers 6 and 7:** aluminium (blender, alumina, sheets, heat sinks, fused frames), nuclear power on uranium rods, radio units, Belt Mk6, three new alt recipes to research, and two more Launch Tower phases: Orbital Station and Deep Space Probe.
+  - **Relaunch:** after the launch, start over for Star Charts and spend them on perks: faster machines, deeper drills, a head start, keeping research, extra shards per task, longer offline runs.
+  - **Contracts:** three delivery contracts a day that pay shards and insight. **Achievements** on a new Records tab with lifetime numbers.
+  - **Events:** dust storms, rich seams, grid surges and belt jams to clear; never while you're away.
+  - **Homework:** closing your ring and streak milestones now power the factory too (a shard, insight and a boost).
+  - **Look and feel:** parts visibly ride the belts, machines glow, bob and flicker by status, ground and node textures, an overload flicker, launch celebrations with a rising rocket, particle bursts, sparklines, a bottlenecks list, a lifetime card, a first-shift checklist, recipe cards with ratio hints, copy settings, upgrade-all belts, pause and resume all, and a set of factory sound effects.
 
 ## Roadmap pass 8: a new look, casino makeover, Orebelt factory, Crate Rush, Watch, Spanish everywhere, patch notes
 

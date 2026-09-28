@@ -1,9 +1,39 @@
 <script lang="ts">
   // Orebelt detail panel for the selected tile: recipe picker with a rate card and belt ratio hints, clock speed,
   // rates in/out, belts and actions. With nothing selected on a young factory it shows the "First shift" checklist.
-  import { BELTS, BUILDING, nodeAt, perMin, PURITY, RECIPES, RESOURCE_ITEM, RESOURCE_NAME, shardsFor, type BuildingId, type ItemId } from '../../../lib/factory/data';
-  import { beltCost, beltLength, dismantle, handMine, maxClock, removeBelt, rotate, setClock, setRecipe, toggle, upgradeBelt } from '../../../lib/factory/actions';
-  import { unlocked } from '../../../lib/factory/state';
+  import {
+    BELTS,
+    BUILDING,
+    ITEMS,
+    nodeAt,
+    perMin,
+    PURITY,
+    RECIPE,
+    RECIPES,
+    RESOURCE_ITEM,
+    RESOURCE_NAME,
+    shardsFor,
+    STORAGE_CAP,
+    type BuildingId,
+    type ItemId,
+  } from '../../../lib/factory/data';
+  import {
+    beltCost,
+    beltLength,
+    clearJam,
+    dismantle,
+    handMine,
+    maxClock,
+    removeBelt,
+    rotate,
+    setBeltFilter,
+    setClock,
+    setLoaderItem,
+    setRecipe,
+    toggle,
+    upgradeBelt,
+  } from '../../../lib/factory/actions';
+  import { unlocked, type Building } from '../../../lib/factory/state';
   import { beltRate, boostMult, fullPower, minerRate, type Status } from '../../../lib/factory/sim';
   import FactoryIcon from './FactoryIcon.svelte';
   import { fmt, fmtRate, itemName, type FactoryCtl } from './controller.svelte';
@@ -25,6 +55,17 @@
   };
   let confirmDismantle = $state(false);
   let clockDraft = $state<number | null>(null);
+
+  /** What a building can put on a belt: its recipe's outputs, its node's ore, a loader's item, or whatever it holds. */
+  function madeBy(src: Building): ItemId[] {
+    const def = BUILDING[src.type];
+    const rec = src.recipe ? RECIPE[src.recipe] : undefined;
+    const node = nodeAt(src.x, src.y);
+    if (rec) return Object.keys(rec.out) as ItemId[];
+    if (def.kind === 'miner' && node) return [RESOURCE_ITEM[node.res]];
+    if (def.kind === 'loader') return src.item ? [src.item] : [];
+    return (Object.keys(src.outBuf) as ItemId[]).filter((k) => (src.outBuf[k] ?? 0) >= 0.5);
+  }
 
   const v = $derived.by(() => {
     void ctl.rev;
@@ -52,15 +93,34 @@
     } else if (def.kind === 'generator') {
       const g = def.gen!;
       rows.push({ item: g.fuel, dir: 'in', target: g.burn * b.clock, now: g.burn * b.clock * eff, buf: b.inBuf[g.fuel] ?? 0 });
+    } else if (def.kind === 'loader' && b.item) {
+      const target = def.rate! * b.clock * boost;
+      rows.push({ item: b.item, dir: 'out', target, now: target * eff, buf: b.outBuf[b.item] ?? 0 });
     }
+    // storage: everything it holds, input and output side together
+    const held =
+      def.kind === 'storage'
+        ? ITEMS.map((i) => ({ item: i.id, n: (b.inBuf[i.id] ?? 0) + (b.outBuf[i.id] ?? 0) }))
+            .filter((x) => x.n >= 0.5)
+            .sort((p, q) => q.n - p.n)
+        : [];
+    // loader picker: what's in stock first, then everything else you could reach, by tier
+    const stocked = ITEMS.filter((i) => (s.inv[i.id] ?? 0) >= 1 || i.id === b.item);
+    const tiers = Array.from({ length: s.phase + 2 }, (_, tier) => ({
+      label: `Tier ${tier}`,
+      items: ITEMS.filter((i) => i.tier === tier && !stocked.includes(i)),
+    })).filter((g) => g.items.length);
+    const loaderItems = def.kind === 'loader' ? [{ label: 'In stock', items: stocked }, ...tiers].filter((g) => g.items.length) : [];
     const byId = new Map(s.buildings.map((x) => [x.id, x]));
     const belts = s.belts
       .filter((x) => x.from === b.id || x.to === b.id)
       .map((x) => {
+        const src = byId.get(x.from)!;
         const other = byId.get(x.from === b.id ? x.to : x.from)!;
         const flow = ctl.report?.belts[x.id];
         const next = x.tier + 1;
-        const len = beltLength(byId.get(x.from)!, byId.get(x.to)!);
+        const len = beltLength(src, byId.get(x.to)!);
+        const made = madeBy(src);
         return {
           id: x.id,
           out: x.from === b.id,
@@ -72,8 +132,13 @@
           len,
           next: next <= u.belt ? next : 0,
           nextCost: next <= BELTS.length ? beltCost(next, len) : {},
+          filter: x.filter,
+          jammed: s.event?.beltId === x.id,
+          // the source's own items first, then everything else
+          filterItems: [...made, ...ITEMS.map((i) => i.id).filter((i) => !made.includes(i))],
         };
       });
+    const sink = def.kind === 'camp' || def.kind === 'depot' || def.kind === 'storage';
     // the recipe card: what this machine wants per minute at its clock, against what its belts actually bring
     const speed = b.clock * boost;
     const card = recipe
@@ -101,7 +166,11 @@
       card,
       recipes: RECIPES.filter((r) => r.building === b.type && u.recipes.has(r.id)),
       rows,
+      held,
+      loaderItems,
       belts,
+      sink,
+      intake: def.kind === 'camp' || def.kind === 'depot',
       maxClock: maxClock(s, b),
       freeShards: s.shards,
       boost,
@@ -110,7 +179,7 @@
       outsOut: belts.filter((x) => x.out).length,
       outsMax: def.outs,
       stockIn: belts.filter((x) => !x.out).reduce((a, x) => a + x.rate, 0),
-      copyable: def.kind !== 'camp' && def.kind !== 'depot' && s.buildings.filter((x) => x.type === b.type).length > 1,
+      copyable: !sink && s.buildings.filter((x) => x.type === b.type).length > 1,
     };
   });
 
@@ -178,7 +247,7 @@
   function doDismantle() {
     const b = v?.b;
     if (!b) return;
-    if (ctl.run((s) => dismantle(s, b.id), 'Dismantled: parts refunded')) ctl.poof(b.x, b.y, 'dismantle');
+    if (ctl.run((s) => dismantle(s, b.id), 'Dismantled: parts refunded', 'dismantle')) ctl.poof(b.x, b.y, 'dismantle');
   }
 
   function startCopy() {
@@ -211,6 +280,7 @@
       </div>
     {:else}
       <p class="muted">Select a tile on the map to see what's there.</p>
+      <p class="muted small">Tip: a <strong>Loader</strong> puts parts from your stock back onto belts, and <strong>Storage</strong> soaks up bursts between machines.</p>
     {/if}
   {:else if !v.b}
     {#if v.node}
@@ -238,14 +308,14 @@
       <FactoryIcon building={b.type} size={40} />
       <div>
         <h3>{v.def!.name}</h3>
-        {#if v.st && b.type !== 'camp' && b.type !== 'depot'}
-          <span class="pill st-{v.st}" data-status={v.st}>{STATUS[v.st]}</span>
+        {#if v.st && !v.sink}
+          <span class="pill st-{v.st}" data-status={v.st}>{v.st === 'idle' && v.def!.kind === 'loader' ? 'No item' : STATUS[v.st]}</span>
         {/if}
       </div>
     </div>
     <p class="muted small">{v.def!.desc}</p>
 
-    {#if b.type !== 'camp' && b.type !== 'depot'}
+    {#if !v.sink}
       <div class="eff" title="Efficiency: share of the target rate reached">
         <div class="bar"><span style="width: {Math.round(v.eff * 100)}%" class="st-{v.st}"></span></div>
         <strong data-eff>{Math.round(v.eff * 100)}%</strong>
@@ -293,6 +363,47 @@
       {/if}
     {/if}
 
+    {#if v.def!.kind === 'loader'}
+      <label class="field">
+        <span>Item to pull from stock</span>
+        <select
+          value={b.item ?? ''}
+          onchange={(e) => ctl.run((s) => setLoaderItem(s, b.id, ((e.currentTarget as HTMLSelectElement).value || undefined) as ItemId | undefined))}
+          data-loader-item
+        >
+          <option value="">Choose an item…</option>
+          {#each v.loaderItems as g (g.label)}
+            <optgroup label={g.label}>
+              {#each g.items as i (i.id)}
+                <option value={i.id}>{i.name} ({fmt(ctl.stock(i.id))})</option>
+              {/each}
+            </optgroup>
+          {/each}
+        </select>
+      </label>
+      {#if b.item}
+        <p class="muted small">Pulls {fmtRate(v.def!.rate! * b.clock)}/min while your stock lasts: {fmt(ctl.stock(b.item))} {itemName(b.item)} left.</p>
+      {/if}
+    {/if}
+
+    {#if v.def!.kind === 'storage'}
+      <h4>Contents <span class="muted small">up to {STORAGE_CAP} of each</span></h4>
+      {#if v.held.length}
+        <ul class="held" data-storage>
+          {#each v.held as h (h.item)}
+            <li>
+              <FactoryIcon item={h.item} size={16} />
+              <span class="hn">{itemName(h.item)}</span>
+              <span class="bar"><span style="width: {Math.min(100, (h.n / STORAGE_CAP) * 100)}%" class:full={h.n >= STORAGE_CAP * 0.98}></span></span>
+              <strong>{fmt(h.n)}</strong>
+            </li>
+          {/each}
+        </ul>
+      {:else}
+        <p class="muted small">Empty. Belt items in and they wait here until the belts out can take them.</p>
+      {/if}
+    {/if}
+
     {#if v.rows.length}
       <table class="io">
         <thead><tr><th>Item</th><th>per min</th><th>now</th><th>held</th></tr></thead>
@@ -316,11 +427,11 @@
     {#if v.def!.kind === 'generator'}
       <p class="small">Output: <strong>{fmtRate(v.mw)} MW</strong> of {fmtRate(v.def!.gen!.mw * b.clock)} MW max.</p>
     {/if}
-    {#if b.type === 'camp' || b.type === 'depot'}
+    {#if v.intake}
       <p class="small">Intake: <strong>{fmtRate(v.stockIn)}/min</strong> into your stock from {v.insIn} belt{v.insIn === 1 ? '' : 's'} (max {v.insMax}).</p>
     {/if}
 
-    {#if b.type !== 'camp' && b.type !== 'depot'}
+    {#if !v.sink}
       {@const pct = clockDraft ?? Math.round(b.clock * 100)}
       <div class="clock">
         <label for="ob-clock">Clock speed <strong>{pct}%</strong></label>
@@ -356,15 +467,35 @@
               <span>{x.out ? 'To' : 'From'} {x.other}</span>
               <span class="rate" class:full={x.rate >= x.cap * 0.98}>{fmtRate(x.rate)}/{x.cap} per min · Mk{x.tier}</span>
             </div>
+            {#if x.jammed}
+              <p class="small jam">
+                Jammed: nothing moves until it's cleared.
+                <button class="chip" onclick={() => ctl.run((s) => clearJam(s), 'Belt cleared: it moves again', 'belt')}>Clear the jam</button>
+              </p>
+            {/if}
             <div class="bb">
+              <label class="flt">
+                <span class="sr">Only carry</span>
+                <select
+                  value={x.filter ?? ''}
+                  title="Let only one item ride this belt"
+                  data-belt-filter={x.id}
+                  onchange={(e) => ctl.run((s) => setBeltFilter(s, x.id, ((e.currentTarget as HTMLSelectElement).value || undefined) as ItemId | undefined))}
+                >
+                  <option value="">Any item</option>
+                  {#each x.filterItems as i (i)}
+                    <option value={i}>Only {itemName(i)}</option>
+                  {/each}
+                </select>
+              </label>
               {#if x.next}
                 <button
                   class="chip"
                   title="Costs {costLine(x.nextCost)} (the old belt is refunded)"
-                  onclick={() => ctl.run((s) => upgradeBelt(s, x.id, x.next), `Belt upgraded to Mk${x.next}`)}>Upgrade to Mk{x.next}</button
+                  onclick={() => ctl.run((s) => upgradeBelt(s, x.id, x.next), `Belt upgraded to Mk${x.next}`, 'belt')}>Upgrade to Mk{x.next}</button
                 >
               {/if}
-              <button class="chip" onclick={() => ctl.run((s) => removeBelt(s, x.id), 'Belt removed (refunded)')}>Remove</button>
+              <button class="chip" onclick={() => ctl.run((s) => removeBelt(s, x.id), 'Belt removed (refunded)', 'dismantle')}>Remove</button>
             </div>
           </li>
         {/each}
@@ -379,8 +510,8 @@
       {#if b.type !== 'camp'}
         <button class="btn" onclick={() => ctl.run((s) => rotate(s, b.id))}>Rotate</button>
       {/if}
-      {#if b.type !== 'camp' && b.type !== 'depot'}
-        <button class="btn" onclick={() => ctl.run((s) => toggle(s, b.id))}>{b.off ? 'Resume' : 'Pause'}</button>
+      {#if !v.sink}
+        <button class="btn" onclick={() => ctl.run((s) => toggle(s, b.id), undefined, 'click')}>{b.off ? 'Resume' : 'Pause'}</button>
       {/if}
       {#if v.copyable && ctl.copyFrom !== b.id}
         <button class="btn" onclick={startCopy} title="Give another {v.def!.name} this recipe and clock speed">Copy settings</button>
@@ -698,6 +829,53 @@
     padding: 6px 8px;
     display: grid;
     gap: 4px;
+  }
+  .flt select {
+    font-size: 12px;
+    padding: 4px 6px;
+    min-height: 30px;
+    max-width: 160px;
+    border-radius: 999px;
+  }
+  .sr {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+  }
+  .jam {
+    color: #ffb4ae;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    align-items: center;
+  }
+  .held {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    gap: 4px;
+    font-size: 12px;
+    font-variant-numeric: tabular-nums;
+  }
+  .held li {
+    display: grid;
+    grid-template-columns: 18px minmax(70px, 1fr) minmax(40px, 2fr) auto;
+    gap: 6px;
+    align-items: center;
+  }
+  .hn {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .held .bar span {
+    background: var(--f-teal);
+  }
+  .held .bar span.full {
+    background: var(--f-yellow);
   }
   .bl {
     display: flex;

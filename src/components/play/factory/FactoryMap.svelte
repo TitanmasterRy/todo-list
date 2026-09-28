@@ -2,14 +2,16 @@
   // Orebelt map: a scrollable tile grid with resource nodes, buildings and belts carrying visible items, plus the
   // build/belt tools and the mass tools. Keyboard: arrows move between tiles, Enter/Space acts, R rotates, Esc cancels.
   import { BELTS, BUILDING, BUILDINGS, ITEM, MAP_H, MAP_W, NODES, RECIPE, RESOURCE_ITEM, RESOURCE_NAME, type ItemId } from '../../../lib/factory/data';
-  import { beltCost, beltPath, connect, DIRS, place, rotate } from '../../../lib/factory/actions';
+  import { beltCost, beltPath, connect, DIRS, place, rotate, surveyed } from '../../../lib/factory/actions';
   import { copySettings, pauseAll, quoteUpgradeAll, resumeAll, upgradeAllBelts } from '../../../lib/factory/bulk';
   import { has, unlocked, type Dir } from '../../../lib/factory/state';
   import { beltRate, type Status } from '../../../lib/factory/sim';
   import Burst from './Burst.svelte';
   import FactoryIcon from './FactoryIcon.svelte';
   import FactoryPanel from './FactoryPanel.svelte';
+  import SectorOverlay from './SectorOverlay.svelte';
   import { itemName, motionOk, type FactoryCtl, type MapTool } from './controller.svelte';
+  import { play } from './sfx';
 
   interface Props {
     ctl: FactoryCtl;
@@ -45,6 +47,13 @@
     nofuel: 'No fuel',
   };
   const DIR_NAME = ['east', 'south', 'west', 'north'];
+  /** Where each kind of building may go, for the build hint. */
+  const PLACE_HINT: Partial<Record<string, string>> = {
+    miner: 'Miners go on glowing resource nodes.',
+    loader: 'Loaders go on open ground and pull one item out of your stock: pick it in the panel once placed.',
+    storage: 'Storage goes on open ground and buffers up to 500 of each item passing through it.',
+    generator: 'Generators go on open ground; belt their fuel in.',
+  };
   /** Tiles per second the items travel at, per belt tier. */
   const SPEED = [0.9, 1.3, 1.9, 2.6, 3.4];
   /** A small stable hash so each tile's ground looks a little different, the same way every time. */
@@ -68,23 +77,31 @@
         const node = NODES.find((n) => n.x === x && n.y === y);
         const r = b ? rep?.buildings[b.id] : undefined;
         const recipe = b?.recipe ? RECIPE[b.recipe] : undefined;
-        const outItem = recipe ? (Object.keys(recipe.out)[0] as ItemId) : b && node && BUILDING[b.type].kind === 'miner' ? RESOURCE_ITEM[node.res] : undefined;
-        const canHere = tool === 'build' && !b && affordable && (def.kind === 'miner' ? !!node && def.mines!.includes(node.res) && u.resources.has(node.res) : !node);
+        const kind = b ? BUILDING[b.type].kind : undefined;
+        const open = surveyed(s, x, y);
+        // storage shows whatever it holds most of
+        const held = kind === 'storage' ? (Object.entries(b!.outBuf) as [ItemId, number][]).sort((p, q) => q[1] - p[1]) : [];
+        const outItem = recipe ? (Object.keys(recipe.out)[0] as ItemId) : kind === 'miner' && node ? RESOURCE_ITEM[node.res] : kind === 'loader' ? b!.item : held[0]?.[0];
+        const canHere = tool === 'build' && open && !b && affordable && (def.kind === 'miner' ? !!node && def.mines!.includes(node.res) && u.resources.has(node.res) : !node);
         let label = `Tile ${x + 1}, ${y + 1}: `;
         if (b) {
           label += BUILDING[b.type].name;
-          if (outItem && b.type !== 'camp') label += ` making ${itemName(outItem)}`;
-          if (r) label += `, ${STATUS[r.st]}${b.type === 'camp' || b.type === 'depot' ? '' : ` ${Math.round(r.eff * 100)}%`}`;
+          if (kind === 'loader') label += b.item ? ` pulling ${itemName(b.item)} from stock` : ', no item picked';
+          else if (kind === 'storage') label += held.length ? ` holding ${held.map(([k, n]) => `${Math.floor(n)} ${itemName(k)}`).join(', ')}` : ', empty';
+          else if (outItem && b.type !== 'camp') label += ` making ${itemName(outItem)}`;
+          if (r) label += `, ${STATUS[r.st]}${b.type === 'camp' || b.type === 'depot' || kind === 'storage' ? '' : ` ${Math.round(r.eff * 100)}%`}`;
           if (b.type !== 'camp' && b.type !== 'depot') label += `, output ${DIR_NAME[b.rot]}`;
         } else if (node) label += `${RESOURCE_NAME[node.res]} (${node.purity})${u.resources.has(node.res) ? '' : ', locked'}`;
         else label += 'open ground';
+        if (!open) label += ', unsurveyed sector';
         tiles.push({
           x,
           y,
           id: b?.id,
           type: b?.type,
-          kind: b ? BUILDING[b.type].kind : undefined,
+          kind,
           rot: b?.rot ?? 0,
+          open,
           st: b?.off ? ('off' as Status) : r?.st,
           eff: r?.eff ?? 0,
           off: !!b?.off,
@@ -115,6 +132,7 @@
           d,
           px,
           tier: bl.tier,
+          jammed: s.event?.beltId === bl.id,
           rate,
           color: flow?.item ? ITEM[flow.item].color : '#888',
           full: fill >= 0.98,
@@ -148,6 +166,7 @@
   });
 
   function pickTool(next: MapTool) {
+    if (next !== ctl.tool) play('click');
     ctl.tool = next;
     ctl.copyFrom = null;
     beltFrom = null;
@@ -159,11 +178,15 @@
     const here = s.buildings.find((b) => b.x === x && b.y === y);
     if (ctl.tool === 'build') {
       let id: number | undefined;
-      const ok = ctl.run((g) => {
-        const r = place(g, ctl.buildType, x, y, placeRot);
-        id = r.id;
-        return r;
-      }, `${BUILDING[ctl.buildType].name} built`);
+      const ok = ctl.run(
+        (g) => {
+          const r = place(g, ctl.buildType, x, y, placeRot);
+          id = r.id;
+          return r;
+        },
+        `${BUILDING[ctl.buildType].name} built`,
+        'build',
+      );
       if (ok && id) {
         ctl.sel = { x, y };
         ctl.poof(x, y, 'build');
@@ -186,7 +209,7 @@
       }
       if (!here) return ctl.say('Tap the building the belt should feed', true);
       const from = beltFrom;
-      if (ctl.run((g) => connect(g, from, here.id, beltTier), 'Belt connected')) beltFrom = null;
+      if (ctl.run((g) => connect(g, from, here.id, beltTier), 'Belt connected', 'belt')) beltFrom = null;
       return;
     }
     if (ctl.copyFrom !== null && here && here.id !== ctl.copyFrom) {
@@ -264,10 +287,14 @@
   function upgradeAll() {
     const tier = bulkTier;
     let got = { upgraded: 0, cost: {} as Partial<Record<ItemId, number>> };
-    ctl.run((g) => {
-      got = upgradeAllBelts(g, tier);
-      return got.upgraded > 0 ? { ok: true } : { ok: false, error: 'No belt could be upgraded: check the parts' };
-    });
+    ctl.run(
+      (g) => {
+        got = upgradeAllBelts(g, tier);
+        return got.upgraded > 0 ? { ok: true } : { ok: false, error: 'No belt could be upgraded: check the parts' };
+      },
+      undefined,
+      'belt',
+    );
     if (got.upgraded)
       ctl.say(`${got.upgraded} belt${got.upgraded === 1 ? '' : 's'} upgraded to Mk${tier}${Object.keys(got.cost).length ? ` for ${costText(got.cost)}` : ''}`, false);
     bulkOpen = false;
@@ -393,7 +420,7 @@
 <p class="hint" aria-live="polite">
   {#if ctl.tool === 'build'}
     Tap a tile to place a <strong>{BUILDING[ctl.buildType].name}</strong> (output faces {DIR_NAME[placeRot]}).
-    {BUILDING[ctl.buildType].kind === 'miner' ? 'Miners go on glowing resource nodes.' : 'Machines go on open ground.'}
+    {PLACE_HINT[BUILDING[ctl.buildType].kind] ?? 'Machines go on open ground.'} Hatched sectors need a survey first.
   {:else if ctl.tool === 'belt'}
     {#if beltFrom === null}Tap the building the belt starts from.{:else}From <strong>{view.beltFromName}</strong>: tap the building to feed ({BELTS[beltTier - 1].name},
       {costText(beltCost(beltTier, 1))} per tile).{/if}
@@ -444,7 +471,7 @@
             </g>
           {/each}
           {#each view.belts as b (b.id)}
-            <g class="belt tier{b.tier}" class:idle={b.rate <= 0.01}>
+            <g class="belt tier{b.tier}" class:idle={b.rate <= 0.01} class:jammed={b.jammed}>
               <path d={b.d} class="edge" fill="none" />
               <path d={b.d} class="bed" fill="none" />
               <path d={b.d} class="rail" fill="none" />
@@ -485,6 +512,7 @@
               class:has={!!tile.type}
               class:lit={tile.lit}
               class:fresh={fresh !== null && tile.id === fresh}
+              class:locked={!tile.open}
               data-x={tile.x}
               data-y={tile.y}
               data-building={tile.type}
@@ -510,6 +538,7 @@
             </button>
           {/each}
         </div>
+        <SectorOverlay {ctl} {t} />
         {#if ctl.burst}
           <Burst trigger={ctl.burst.n} kind={ctl.burst.kind} x={(ctl.burst.x + 0.5) * t} y={(ctl.burst.y + 0.5) * t} size={t} />
         {/if}
@@ -845,6 +874,21 @@
   .belt.idle {
     opacity: 0.55;
   }
+  /* a jammed belt: red, broken up, and not moving */
+  .belt.jammed {
+    opacity: 1;
+  }
+  .belt.jammed .edge {
+    stroke: #a3292d;
+  }
+  .belt.jammed .bed {
+    stroke: #e5484d;
+    stroke-dasharray: 0.22 0.14;
+  }
+  .belt.jammed .rail {
+    animation: none;
+    opacity: 0.3;
+  }
   .belt .items {
     stroke-width: 0.15;
     stroke-linecap: round;
@@ -1050,6 +1094,9 @@
   .tile.can::before {
     background: rgba(63, 185, 80, 0.14);
     box-shadow: inset 0 0 0 1px rgba(63, 185, 80, 0.5);
+  }
+  .tile.locked:hover::before {
+    background: rgba(229, 72, 77, 0.12);
   }
   .tile.sel {
     box-shadow:

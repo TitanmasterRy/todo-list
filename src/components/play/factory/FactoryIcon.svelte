@@ -121,6 +121,43 @@
       <path d="M6 20h36M6 32h36" stroke={OR} stroke-width="2.5" />
       <rect x="20" y="8" width="8" height="5" rx="1" fill="#d44b3a" stroke={O} />
       <path d="M26 17l-6 9h5l-3 7 8-10h-5l3-6z" fill={HZ} stroke={O} stroke-width=".8" />
+    {:else if building === 'storage'}
+      {@render stripes(7, 39, 34, 4)}
+      <rect x="11" y="10" width="26" height="29" rx="4" fill="#7d8896" stroke={O} />
+      <path d="M11 17h26M11 24h26M11 31h26" stroke="#4a525d" stroke-width="1.5" />
+      <path d="M11 13a13 6 0 0 1 26 0" fill="#8f9aa6" stroke={O} />
+      <rect x="20" y="27" width="8" height="8" rx="1" fill={OR} stroke={O} />
+      <rect x="22" y="29" width="4" height="2" fill={HZ} />
+      <rect x="15" y="4" width="4" height="7" fill="#4a525d" stroke={O} />
+    {:else if building === 'loader'}
+      {@render stripes(7, 39, 34, 4)}
+      <path d="M8 8h26l-6 16H14z" fill={ST} stroke={O} stroke-linejoin="round" />
+      <path d="M8 11h26" stroke={OR} stroke-width="2" />
+      <rect x="18" y="24" width="6" height="8" fill="#4a525d" stroke={O} />
+      <rect x="6" y="32" width="26" height="7" rx="1.5" fill="#2a2f36" stroke={O} />
+      <path d="M10 35.5h18" stroke="#4a525d" stroke-width="2" stroke-dasharray="2 2" />
+      <path d="M32 29h7l4 6.5-4 6.5h-7z" fill={TL} stroke={O} stroke-linejoin="round" />
+      <path d="M34 35.5h5" stroke="#0e1013" stroke-width="1.6" />
+    {:else if building === 'blender'}
+      {@render stripes(5, 39, 38, 4)}
+      <path d="M10 14h28l-3 25H13z" fill={ST} stroke={O} stroke-linejoin="round" />
+      <rect x="8" y="10" width="32" height="5" rx="1.5" fill="#4a525d" stroke={O} />
+      <path d="M14 24h20l-1 10H15z" fill={TL} opacity=".55" />
+      <path d="M24 4v24" stroke="#c3cad2" stroke-width="2.5" />
+      <path d="M18 28c2-4 10-4 12 0-2 4-10 4-12 0z" fill="#c3cad2" stroke={O} stroke-width=".8" />
+      <rect x="20" y="2" width="8" height="5" rx="1" fill={OR} stroke={O} />
+      <circle cx="17" cy="21" r="1.5" fill="#fff" opacity=".5" />
+      <circle cx="31" cy="19" r="1" fill="#fff" opacity=".5" />
+    {:else if building === 'nuclearPlant'}
+      {@render stripes(3, 39, 42, 4)}
+      <path d="M12 39c2-14-1-24 3-33h12c4 9 1 19 3 33z" fill="#8f9aa6" stroke={O} stroke-linejoin="round" />
+      <path d="M15 6h12" stroke={O} stroke-width="1.5" />
+      <path d="M14 22h14M13 30h16" stroke="#6c7782" stroke-width="1" />
+      <ellipse cx="21" cy="6" rx="6" ry="2" fill="#c8f06a" opacity=".85" />
+      <path d="M17 4c1-3 7-3 8 0" fill="none" stroke="#c8f06a" stroke-width="1.5" opacity=".7" />
+      <path d="M32 39V30a6 6 0 0 1 12 0v9z" fill="#4a525d" stroke={O} />
+      <circle cx="38" cy="30" r="2" fill="#7bc043" />
+      <path d="M36 26l2-3 2 3" fill="none" stroke={HZ} stroke-width="1.2" />
     {:else if building === 'depot'}
       {@render stripes(5, 39, 38, 4)}
       <rect x="6" y="15" width="36" height="24" rx="1.5" fill={OR} stroke={O} />

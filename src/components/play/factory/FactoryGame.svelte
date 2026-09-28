@@ -2,20 +2,24 @@
   // Orebelt: a factory-building idle game in Play. Mine ore, belt it through smelters and assemblers, keep the power
   // grid up, and deliver parts to the Launch Tower. Homework powers it: tasks give overclock shards, insight and boosts.
   import { onMount } from 'svelte';
+  import { clearJam } from '../../../lib/factory/actions';
   import { PHASES, type ItemId } from '../../../lib/factory/data';
+  import { EVENT } from '../../../lib/factory/events';
   import { economy } from '../../../lib/economy.svelte';
   import FactoryIcon from './FactoryIcon.svelte';
   import FactoryMap from './FactoryMap.svelte';
   import FactoryStats from './FactoryStats.svelte';
   import FactoryTech from './FactoryTech.svelte';
+  import FactoryRecords from './FactoryRecords.svelte';
   import FactoryMarket from './FactoryMarket.svelte';
-  import { FactoryCtl, fmt, fmtRate, fmtTime, itemName, motionOk } from './controller.svelte';
+  import { EVENT_UI, FactoryCtl, fmt, fmtClock, fmtRate, fmtTime, itemName, motionOk } from './controller.svelte';
 
   const ctl = new FactoryCtl();
   const TABS = [
     { id: 'map', name: 'Factory', icon: 'M2 13h12M4 13V7l3-3 3 3v6M10 7l2-2 2 2v6' },
     { id: 'stats', name: 'Production', icon: 'M2 13l4-5 3 3 5-7M2 14h12' },
     { id: 'tech', name: 'Milestones', icon: 'M8 1c2 2 3 5 2 8H6C5 6 6 3 8 1zM6 9l-2 3h2zM10 9l2 3h-2zM7 12h2v3H7z' },
+    { id: 'records', name: 'Records', icon: 'M5 1h6l-1 5H6zM8 15a4.5 4.5 0 1 0 0-9 4.5 4.5 0 0 0 0 9zM8 8.5l.9 1.8 2 .3-1.45 1.4.35 2L8 13l-1.8 1 .35-2L5.1 10.6l2-.3z' },
     { id: 'trade', name: 'Supply & market', icon: 'M2 5h12l-1 8H3zM6 5V3h4v2' },
   ] as const;
 
@@ -54,6 +58,12 @@
       boost: s.boostLeft,
       rush: s.rushLeft,
       extra: s.extraOffline,
+      stars: s.stars,
+      runs: s.runs,
+      event:
+        s.event && EVENT[s.event.id]
+          ? { id: s.event.id, name: EVENT[s.event.id].name, desc: EVENT[s.event.id].desc, left: s.event.left, jam: s.event.beltId !== undefined, ...EVENT_UI[s.event.id] }
+          : null,
     };
   });
 
@@ -107,6 +117,21 @@
       {#if hud.extra > 0}
         <div class="h" title="Offline cap raised for your next long absence"><span>🌙 Night shift booked</span></div>
       {/if}
+      {#if hud.stars > 0 || hud.runs > 0}
+        <div class="h star" title="Stars to spend on Star Charts perks (Milestones)" data-stars>
+          <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><path d="M8 1l2 4.5 4.8.5-3.6 3.3 1 4.7L8 11.6 3.8 14l1-4.7L1.2 6l4.8-.5z" fill="currentColor" /></svg>
+          <span><strong>{hud.stars}</strong> star{hud.stars === 1 ? '' : 's'}</span>
+        </div>
+      {/if}
+      {#if hud.event}
+        <div class="h ev" class:good={hud.event.good} class:bad={!hud.event.good} title={hud.event.desc} data-event={hud.event.id}>
+          <span aria-hidden="true">{hud.event.emoji}</span>
+          <span><strong>{hud.event.name}</strong> · {fmtClock(hud.event.left)}</span>
+          {#if hud.event.jam}
+            <button class="fix" onclick={() => ctl.run((s) => clearJam(s), 'Belt cleared: it moves again', 'belt')}>Clear the jam</button>
+          {/if}
+        </div>
+      {/if}
     </div>
   </header>
   <div class="hazard" aria-hidden="true"></div>
@@ -130,7 +155,7 @@
       {#if tb.id !== 'trade' || economy.enabled}
         <button role="tab" aria-selected={ctl.tab === tb.id} class:on={ctl.tab === tb.id} onclick={() => ctl.pickTab(tb.id)}>
           <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"
-            ><path d={tb.icon} fill={tb.id === 'tech' ? 'currentColor' : 'none'} stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" /></svg
+            ><path d={tb.icon} fill={tb.id === 'tech' || tb.id === 'records' ? 'currentColor' : 'none'} stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" /></svg
           >
           {tb.name}
         </button>
@@ -146,6 +171,8 @@
     <FactoryStats {ctl} />
   {:else if ctl.tab === 'tech'}
     <FactoryTech {ctl} />
+  {:else if ctl.tab === 'records'}
+    <FactoryRecords {ctl} />
   {:else}
     <FactoryMarket {ctl} />
   {/if}
@@ -244,10 +271,24 @@
         0 0 0 5px rgba(229, 72, 77, 0);
     }
   }
-  .h.boost {
+  .h.boost,
+  .h.ev.good {
     border-color: var(--f-teal);
     color: #8fe7ef;
     background: linear-gradient(180deg, #1c3f45, #14313a);
+  }
+  .h.star {
+    border-color: var(--f-yellow);
+    color: #ffe08a;
+  }
+  .h.ev .fix {
+    font-size: 11.5px;
+    font-weight: 700;
+    padding: 2px 8px;
+    min-height: 24px;
+    border-radius: 999px;
+    background: #ffb4ae;
+    color: #31191b;
   }
   .meter {
     width: 44px;

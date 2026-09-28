@@ -66,6 +66,7 @@ merged into `main` and live on the GitHub Pages site. The full plan, including w
 - [x] Zen garden (Play → Garden): pots on a patio, plants that ask for water, fertilizer, bug spray or music and drop capped coins when happy, Stinky the snail, a garden shop, a meadow, and the Tree of Wisdom that grows a foot per feeding with study wisdom and milestone decorations
 - [x] Seasonal events with limited items and event quests; gifts for friends; opt-in leaderboards
 - [x] Orebelt factory idle game: miners, smelters to manufacturers, belts with throughput limits, a power grid with overclocking, milestones and a Launch Tower, offline progress; homework gives overclock shards, insight and boosts, and coins buy daily-limited supply drops (Play → Factory)
+- [x] Orebelt 2: storage and loaders with belt filters, a four-sector map to survey, tiers 6–7 (aluminium, nuclear, radio) and two more launch phases, Relaunch for Star Charts and perks, daily contracts, achievements and records, events, parts riding the belts, launch celebrations and sound
 
 ## ✅ Sharing and social (no server needed)
 

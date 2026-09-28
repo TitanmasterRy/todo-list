@@ -59,6 +59,7 @@
         g.credit = q.credit;
       },
       `Sold ${q.qty} ${itemName(item)}${q.coins ? ` for ${q.coins} coin${q.coins === 1 ? '' : 's'}` : ''}`,
+      'coin',
     );
     if (q.coins > 0) economy.earn(q.coins, 'factory', `${store.today}:${Date.now()}`);
   }
