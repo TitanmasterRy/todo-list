@@ -60,36 +60,44 @@
 
   <div class="tiles">
     {#if store.settings.gamification}
-      <div class="card tile">
+      <div class="card tile lift streak">
+        <span class="ico" aria-hidden="true">🔥</span>
         <div class="k">{t('today.streak')}</div>
-        <div class="v">🔥 {store.streak}<span class="unit">{t('stats.days', { count: store.streak })}</span></div>
+        <div class="v">
+          {#key store.streak}<span class="bump">{store.streak}</span>{/key}<span class="unit">{t('stats.days', { count: store.streak })}</span>
+        </div>
         <div class="s">{t('stats.best', { best: store.stats.streak.best, count: store.stats.streak.freezes })}</div>
       </div>
-      <div class="card tile frame-{store.settings.equippedFrame ?? 'none'}">
+      <div class="card tile lift level frame-{store.settings.equippedFrame ?? 'none'}">
+        <span class="ico" aria-hidden="true">⭐</span>
         <div class="k">
           {t('stats.level', { level: lp.level })}{#if store.settings.equippedTitle}
             · {TITLE_TEXT[store.settings.equippedTitle]}{/if}
         </div>
-        <div class="v">{store.stats.xp}<span class="unit">XP</span></div>
+        <div class="v">
+          {#key store.stats.xp}<span class="bump">{store.stats.xp}</span>{/key}<span class="unit">XP</span>
+        </div>
         <div class="bar"><div class="fill" style="width:{lp.pct * 100}%"></div></div>
         <div class="s">{t('stats.toLevel', { xp: lp.needed - lp.into, level: lp.level + 1, total: xpForLevel(lp.level) })}</div>
       </div>
     {/if}
     {#if accuracy}
-      <div class="card tile">
+      <div class="card tile lift est">
+        <span class="ico" aria-hidden="true">⏱</span>
         <div class="k">{t('stats.estimates')}</div>
         <div class="v">×{accuracy.medianRatio}<span class="unit">{t('stats.ratio')}</span></div>
         <div class="s">{accuracy.message} {t('stats.basedOn', { count: accuracy.n })}</div>
       </div>
     {/if}
-    <div class="card tile ring">
+    <div class="card tile lift ring">
       <GoalRing value={store.completedToday} goal={store.settings.dailyGoal} size={64} stroke={7} />
       <div>
         <div class="k">{t('nav.today')}</div>
         <div class="s">{t('stats.todayOf', { done: store.completedToday, goal: store.settings.dailyGoal })} · {t('stats.pomodoros', { count: pomToday })}</div>
       </div>
     </div>
-    <div class="card tile">
+    <div class="card tile lift week">
+      <span class="ico" aria-hidden="true">📈</span>
       <div class="k">{t('stats.last7')}</div>
       <div class="v">{week7}<span class="unit">{t('stats.done', { count: week7 })}</span></div>
       <div class="spark" aria-hidden="true">
@@ -100,7 +108,7 @@
     </div>
   </div>
 
-  <div class="card block">
+  <div class="card block lift">
     <Heatmap data={store.stats.completionsByDay} weekStart={store.settings.weekStart} endKey={store.today} />
   </div>
 
@@ -161,9 +169,53 @@
     margin-bottom: 12px;
   }
   .tile {
+    --tc: var(--accent);
+    position: relative;
     display: flex;
     flex-direction: column;
     gap: 4px;
+    overflow: hidden;
+  }
+  .tile.streak {
+    --tc: #ff7a18;
+  }
+  .tile.level {
+    --tc: var(--gold);
+  }
+  .tile.est {
+    --tc: var(--info);
+  }
+  .tile.week {
+    --tc: var(--accent-2);
+  }
+  /* a colored badge in the corner holding the tile's emoji */
+  .ico {
+    position: absolute;
+    top: 12px;
+    inset-inline-end: 12px;
+    width: 34px;
+    height: 34px;
+    display: grid;
+    place-items: center;
+    border-radius: 10px;
+    font-size: 17px;
+    background: color-mix(in srgb, var(--tc) 18%, var(--bg-elev-2));
+    box-shadow:
+      inset 0 1px 0 var(--sheen),
+      0 0 14px -4px color-mix(in srgb, var(--tc) 60%, transparent);
+    transition: transform var(--dur-slow) var(--spring);
+  }
+  .tile:hover .ico {
+    transform: scale(1.15) rotate(-8deg);
+  }
+  .tile.level {
+    background: radial-gradient(60% 80% at 100% 0%, color-mix(in srgb, var(--gold) 18%, transparent), transparent 70%), var(--bg-elev);
+    border-color: color-mix(in srgb, var(--gold) 35%, var(--border));
+  }
+  .tile.level .v {
+    background: var(--grad-gold);
+    -webkit-background-clip: text;
+    background-clip: text;
   }
   .tile.ring {
     flex-direction: row;
@@ -178,14 +230,21 @@
     font-weight: 600;
   }
   .v {
-    font-size: 26px;
-    font-weight: 700;
+    font-size: 32px;
+    font-weight: 800;
     line-height: 1.1;
+    letter-spacing: -0.02em;
+    font-variant-numeric: tabular-nums;
+    background: linear-gradient(135deg, var(--text) 25%, color-mix(in srgb, var(--tc) 75%, var(--text)));
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
   }
   .unit {
     font-size: 13px;
     font-weight: 500;
     color: var(--text-muted);
+    -webkit-text-fill-color: var(--text-muted);
     margin-left: 6px;
   }
   .s {
@@ -200,9 +259,21 @@
     margin: 4px 0;
   }
   .bar .fill {
+    position: relative;
     height: 100%;
-    background: var(--accent);
+    background: var(--grad-gold);
+    box-shadow: 0 0 10px -2px var(--gold);
     transition: width 400ms var(--ease);
+    overflow: hidden;
+  }
+  .bar .fill::after,
+  .track .fill::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(115deg, transparent 30%, rgba(255, 255, 255, 0.45) 50%, transparent 70%);
+    background-size: 200% 100%;
+    animation: shimmer 2.6s linear infinite;
   }
   .spark {
     display: flex;
@@ -213,16 +284,39 @@
   }
   .spark span {
     flex: 1;
-    background: var(--accent);
-    border-radius: 2px;
-    opacity: 0.8;
+    background: linear-gradient(180deg, var(--accent-2), var(--accent));
+    border-radius: 3px 3px 2px 2px;
+    opacity: 0.85;
+    transform-origin: bottom;
+    transition:
+      transform var(--dur) var(--spring),
+      opacity var(--dur);
+  }
+  .spark span:hover {
+    opacity: 1;
+    transform: scaleY(1.08);
+    box-shadow: 0 0 10px -2px var(--accent);
   }
   .block {
     margin-bottom: 12px;
   }
   .block-title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
     font-weight: 700;
     margin-bottom: 10px;
+  }
+  .block-title::before {
+    content: '';
+    width: 4px;
+    height: 14px;
+    border-radius: 2px;
+    background: var(--grad-accent);
+    box-shadow: 0 0 8px color-mix(in srgb, var(--accent) 50%, transparent);
+  }
+  .num {
+    font-variant-numeric: tabular-nums;
   }
   .muted {
     color: var(--text-muted);
@@ -262,8 +356,11 @@
     overflow: hidden;
   }
   .track .fill {
+    position: relative;
     height: 100%;
     border-radius: 5px;
+    overflow: hidden;
+    transition: width 400ms var(--ease);
   }
   .num {
     color: var(--text-muted);
@@ -296,13 +393,27 @@
     opacity: 0.45;
   }
   .badge.on {
-    border-color: color-mix(in srgb, var(--warn) 50%, var(--border));
+    border-color: color-mix(in srgb, var(--gold) 55%, var(--border));
+    background: linear-gradient(180deg, color-mix(in srgb, var(--gold) 14%, var(--bg-elev-2)), var(--bg-elev-2));
+    box-shadow:
+      inset 0 1px 0 var(--sheen),
+      0 0 18px -6px color-mix(in srgb, var(--gold) 70%, transparent);
+  }
+  .badge.on .medal {
+    filter: drop-shadow(0 4px 10px color-mix(in srgb, var(--gold) 60%, transparent));
   }
   .badge.on:hover {
-    transform: translateY(-2px);
+    transform: translateY(-3px);
+    box-shadow:
+      inset 0 1px 0 var(--sheen),
+      0 8px 24px -10px color-mix(in srgb, var(--gold) 90%, transparent);
+  }
+  .badge.on:hover .medal {
+    transform: scale(1.2) rotate(-8deg);
   }
   .medal {
     font-size: 26px;
+    transition: transform var(--dur-slow) var(--spring);
   }
   .bn {
     font-weight: 600;

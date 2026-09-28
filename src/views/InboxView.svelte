@@ -189,7 +189,7 @@
     {/if}
   </div>
   {#if saving}
-    <form class="card savelist" onsubmit={saveList}>
+    <form class="card savelist glow-edge" onsubmit={saveList}>
       <input class="input em" bind:value={listEmoji} maxlength="4" aria-label={t('inbox.listEmoji')} />
       <input class="input" bind:value={listName} placeholder={t('inbox.listNamePh')} aria-label={t('inbox.listName')} />
       <button class="btn primary" type="submit" disabled={!listName.trim()}>{t('common.save')}</button>
@@ -268,6 +268,25 @@
     gap: 6px;
     margin: 12px 0 4px;
     align-items: center;
+    padding: 8px;
+    border-radius: var(--radius);
+    background: var(--glass);
+    border: 1px solid var(--border);
+    box-shadow: inset 0 1px 0 var(--sheen);
+  }
+  .savelist {
+    animation: pop-in var(--dur-slow) var(--spring) backwards;
+  }
+  .presets .chip {
+    cursor: pointer;
+  }
+  .presets .chip:hover {
+    transform: translateY(-1px);
+    border-color: color-mix(in srgb, var(--accent) 50%, var(--border));
+    color: var(--text);
+  }
+  .section-title .count {
+    font-variant-numeric: tabular-nums;
   }
   .filters .select,
   .filters .input {

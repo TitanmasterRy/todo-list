@@ -86,6 +86,7 @@
 
 <style>
   .now {
+    animation: rise-in var(--dur-slow) var(--ease) backwards;
     display: flex;
     flex-wrap: wrap;
     align-items: center;
@@ -98,8 +99,9 @@
     font-weight: 700;
     padding: 2px 8px;
     border-radius: 999px;
-    background: color-mix(in srgb, var(--accent) 18%, transparent);
-    color: var(--accent-text);
+    background: var(--grad-accent);
+    color: var(--accent-contrast, #fff);
+    box-shadow: 0 2px 10px -3px color-mix(in srgb, var(--accent) 70%, transparent);
   }
   .line {
     display: flex;
@@ -140,5 +142,15 @@
   .marks .chip {
     font-size: 12px;
     padding: 2px 8px;
+  }
+  .marks .chip:hover {
+    transform: translateY(-1px);
+    border-color: var(--border-strong);
+  }
+  .marks .chip.on {
+    color: var(--accent-text);
+    border-color: color-mix(in srgb, var(--accent) 50%, transparent);
+    background: color-mix(in srgb, var(--accent) 14%, transparent);
+    box-shadow: 0 0 10px -3px var(--accent);
   }
 </style>

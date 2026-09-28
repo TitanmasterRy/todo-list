@@ -69,7 +69,8 @@
 </script>
 
 <div class="page" class:event={!!event} data-season={event?.season.id}>
-  <header class="page-head">
+  <header class="page-head hero">
+    <div class="hero-orb" aria-hidden="true">🎮</div>
     <div>
       <h1>Play</h1>
       <div class="sub">Spend the coins you earn from schoolwork.</div>
@@ -84,11 +85,19 @@
     {/if}
   </header>
 
-  <div class="wallet" aria-label="Wallet">
-    <div class="w"><span class="e">🪙</span><span class="n">{economy.wallet.coins.toLocaleString()}</span><span class="l">coins</span></div>
-    {#if store.settings.casinoEnabled}<div class="w"><span class="e">🎰</span><span class="n">{economy.wallet.chips.toLocaleString()}</span><span class="l">chips</span></div>{/if}
-    <div class="w"><span class="e">🎟️</span><span class="n">{economy.wallet.vouchers.toLocaleString()}</span><span class="l">vouchers</span></div>
-    {#if economy.wallet.items.booster}<div class="w"><span class="e">⚡</span><span class="n">{economy.wallet.items.booster}</span><span class="l">boosted tasks</span></div>{/if}
+  <div class="wallet stagger" aria-label="Wallet">
+    <div class="w coins">
+      <span class="e">🪙</span>{#key economy.wallet.coins}<span class="n bump">{economy.wallet.coins.toLocaleString()}</span>{/key}<span class="l">coins</span>
+    </div>
+    {#if store.settings.casinoEnabled}<div class="w chips">
+        <span class="e">🎰</span>{#key economy.wallet.chips}<span class="n bump">{economy.wallet.chips.toLocaleString()}</span>{/key}<span class="l">chips</span>
+      </div>{/if}
+    <div class="w vouchers">
+      <span class="e">🎟️</span>{#key economy.wallet.vouchers}<span class="n bump">{economy.wallet.vouchers.toLocaleString()}</span>{/key}<span class="l">vouchers</span>
+    </div>
+    {#if economy.wallet.items.booster}<div class="w boost">
+        <span class="e">⚡</span><span class="n">{economy.wallet.items.booster}</span><span class="l">boosted tasks</span>
+      </div>{/if}
   </div>
 
   <div class="tabs" role="tablist">
@@ -123,50 +132,122 @@
   .page {
     max-width: 980px;
   }
+  .hero {
+    position: relative;
+    padding: 14px 16px;
+    border-radius: var(--radius-lg);
+    background:
+      radial-gradient(60% 120% at 0% 0%, color-mix(in srgb, var(--season, var(--accent)) 26%, transparent), transparent 60%),
+      radial-gradient(50% 120% at 100% 100%, color-mix(in srgb, var(--season-2, var(--accent-2)) 20%, transparent), transparent 60%), var(--bg-elev);
+    border: 1px solid color-mix(in srgb, var(--season, var(--accent)) 35%, var(--border));
+    box-shadow:
+      inset 0 1px 0 var(--sheen),
+      var(--shadow-sm),
+      0 0 40px -16px color-mix(in srgb, var(--season, var(--accent)) 60%, transparent);
+    overflow: hidden;
+  }
+  .hero-orb {
+    width: 52px;
+    height: 52px;
+    border-radius: 16px;
+    display: grid;
+    place-items: center;
+    font-size: 28px;
+    background: linear-gradient(135deg, var(--season, var(--accent)), var(--season-2, var(--accent-2)));
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.35),
+      0 10px 24px -8px color-mix(in srgb, var(--season, var(--accent)) 80%, transparent);
+    animation: float 3.4s ease-in-out infinite;
+  }
   .wallet {
     display: flex;
     gap: 8px;
     flex-wrap: wrap;
-    margin-bottom: 12px;
+    margin: 12px 0;
   }
   .w {
     display: flex;
     align-items: baseline;
     gap: 6px;
-    background: var(--bg-elev);
-    border: 1px solid var(--border);
     border-radius: 999px;
-    padding: 6px 14px;
+    padding: 7px 16px 7px 12px;
+    border: 1px solid transparent;
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.5),
+      inset 0 -2px 0 rgba(0, 0, 0, 0.12),
+      var(--shadow-sm);
+    transition: transform var(--dur) var(--spring);
+  }
+  .w:hover {
+    transform: translateY(-2px) scale(1.03);
+  }
+  .w.coins {
+    background: var(--grad-gold);
+    color: #3a2a00;
+  }
+  .w.chips {
+    background: linear-gradient(135deg, #ff8a80, #d63031 60%, #a31515);
+    color: #fff;
+  }
+  .w.vouchers {
+    background: linear-gradient(135deg, #a29bfe, #6c5ce7 60%, #4834d4);
+    color: #fff;
+  }
+  .w.boost {
+    background: linear-gradient(135deg, #81ecec, #00cec9 60%, #00a8a3);
+    color: #003a38;
   }
   .e {
     font-size: 18px;
+    filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.25));
   }
   .n {
-    font-weight: 800;
+    font-weight: 900;
     font-size: 18px;
     font-variant-numeric: tabular-nums;
   }
   .l {
     font-size: 12px;
-    color: var(--text-muted);
+    font-weight: 700;
+    opacity: 0.8;
   }
   .tabs {
     display: flex;
     gap: 4px;
-    border-bottom: 1px solid var(--border);
     margin-bottom: 14px;
     overflow-x: auto;
+    padding: 4px;
+    border-radius: 999px;
+    background: var(--bg-elev-2);
+    border: 1px solid var(--border);
+    scrollbar-width: none;
+  }
+  .tabs::-webkit-scrollbar {
+    display: none;
   }
   .tabs button {
-    padding: 10px 14px;
-    border-bottom: 2px solid transparent;
+    padding: 8px 14px;
+    border-radius: 999px;
     color: var(--text-muted);
-    font-weight: 600;
+    font-weight: 700;
+    font-size: 13px;
     white-space: nowrap;
+    transition:
+      background var(--dur),
+      color var(--dur),
+      transform var(--dur) var(--spring),
+      box-shadow var(--dur);
+  }
+  .tabs button:hover {
+    color: var(--text);
+    background: var(--bg-hover);
   }
   .tabs button.on {
-    color: var(--text);
-    border-bottom-color: var(--season, var(--accent));
+    color: var(--accent-contrast, #fff);
+    background: linear-gradient(135deg, var(--season, var(--accent)), var(--season-2, var(--accent-2)));
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.3),
+      0 6px 16px -6px color-mix(in srgb, var(--season, var(--accent)) 80%, transparent);
   }
   .grow {
     flex: 1;
@@ -188,16 +269,8 @@
     --season: #f4a261;
     --season-2: #2ec4b6;
   }
-  .page.event .page-head {
-    background: linear-gradient(120deg, color-mix(in srgb, var(--season) 20%, var(--bg-elev)), color-mix(in srgb, var(--season-2) 16%, var(--bg-elev)));
-    border: 1px solid color-mix(in srgb, var(--season) 45%, var(--border));
-    border-radius: var(--radius);
-    padding: 12px 14px;
-    flex-wrap: wrap;
-    gap: 8px;
-  }
   .page.event .w {
-    border-color: color-mix(in srgb, var(--season) 40%, var(--border));
+    border-color: color-mix(in srgb, var(--season) 40%, transparent);
   }
   .event-tag {
     display: grid;
@@ -209,6 +282,7 @@
   .decor {
     font-size: 20px;
     letter-spacing: 4px;
+    animation: float 3s ease-in-out infinite;
   }
   .left {
     color: var(--text-muted);

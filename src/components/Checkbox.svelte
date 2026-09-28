@@ -80,6 +80,7 @@
     border-radius: 50%;
   }
   .box {
+    position: relative;
     width: var(--size);
     height: var(--size);
     border-radius: 50%;
@@ -96,14 +97,38 @@
   .cb:hover .box {
     border-color: var(--c);
     background: color-mix(in srgb, var(--c) 15%, transparent);
+    transform: scale(1.08);
+    box-shadow: 0 0 12px color-mix(in srgb, var(--c) 35%, transparent);
   }
   .cb:active .box {
     transform: scale(0.85);
   }
   .checked .box {
-    background: var(--c);
+    background: linear-gradient(135deg, var(--c), color-mix(in srgb, var(--c) 70%, #fff));
     border-color: var(--c);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.35),
+      0 0 14px color-mix(in srgb, var(--c) 55%, transparent);
     animation: spring-pop 420ms var(--spring);
+  }
+  /* a ring that expands and fades from the box on check */
+  .checked .box::after {
+    content: '';
+    position: absolute;
+    inset: -2px;
+    border-radius: 50%;
+    border: 2px solid var(--c);
+    animation: ring-out 600ms var(--ease) forwards;
+  }
+  @keyframes ring-out {
+    from {
+      transform: scale(1);
+      opacity: 0.9;
+    }
+    to {
+      transform: scale(2.1);
+      opacity: 0;
+    }
   }
   .tick {
     width: 70%;

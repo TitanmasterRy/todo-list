@@ -102,14 +102,20 @@
       </form>
     </div>
     <div class="dial">
-      <svg viewBox="0 0 200 200" width="200" height="200" aria-hidden="true">
+      <svg viewBox="0 0 200 200" width="240" height="240" aria-hidden="true">
+        <defs>
+          <linearGradient id="focus-grad" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0" stop-color="var(--tint)" />
+            <stop offset="1" stop-color="var(--accent-2)" />
+          </linearGradient>
+        </defs>
         <circle cx="100" cy="100" r={R} fill="none" stroke="var(--border)" stroke-width="8" />
         <circle
           cx="100"
           cy="100"
           r={R}
           fill="none"
-          stroke="var(--accent)"
+          stroke="url(#focus-grad)"
           stroke-width="8"
           stroke-linecap="round"
           stroke-dasharray={C}
@@ -253,19 +259,46 @@
     max-width: 680px;
   }
   .timer {
+    --tint: var(--success);
     display: flex;
     flex-direction: column;
     align-items: center;
     gap: 12px;
     padding: 20px;
     margin-bottom: 12px;
+    background: linear-gradient(180deg, color-mix(in srgb, var(--tint) 10%, var(--bg-elev)), var(--bg-elev) 65%);
+    border-color: color-mix(in srgb, var(--tint) 30%, var(--border));
+  }
+  .timer.work {
+    --tint: var(--accent);
+  }
+  .timer.running {
+    animation: breathe 2.6s ease-in-out infinite;
+  }
+  @keyframes breathe {
+    0%,
+    100% {
+      box-shadow:
+        inset 0 1px 0 var(--sheen),
+        var(--shadow-sm),
+        0 0 30px -10px color-mix(in srgb, var(--tint) 45%, transparent);
+    }
+    50% {
+      box-shadow:
+        inset 0 1px 0 var(--sheen),
+        var(--shadow),
+        0 0 60px -10px color-mix(in srgb, var(--tint) 75%, transparent);
+    }
   }
   .modes {
     display: flex;
     gap: 4px;
     background: var(--bg-elev-2);
+    border: 1px solid var(--border);
     padding: 4px;
     border-radius: 999px;
+    flex-wrap: wrap;
+    justify-content: center;
   }
   .modes button {
     padding: 6px 14px;
@@ -273,11 +306,21 @@
     font-size: 13px;
     font-weight: 600;
     color: var(--text-muted);
+    transition:
+      background var(--dur),
+      color var(--dur),
+      transform var(--dur) var(--spring);
+  }
+  .modes button:hover {
+    color: var(--text);
+    transform: translateY(-1px);
   }
   .modes button.on {
-    background: var(--bg-elev);
-    color: var(--text);
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+    background: linear-gradient(135deg, var(--tint), var(--accent-2));
+    color: var(--accent-contrast, #fff);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.3),
+      0 3px 12px -4px color-mix(in srgb, var(--tint) 80%, transparent);
   }
   .presets {
     display: flex;
@@ -292,6 +335,8 @@
   .presets .chip.on {
     border-color: var(--accent);
     color: var(--accent-text);
+    background: color-mix(in srgb, var(--accent) 12%, transparent);
+    box-shadow: 0 0 12px -4px var(--accent);
   }
   .custom {
     display: flex;
@@ -304,14 +349,32 @@
   }
   .dial {
     position: relative;
-    width: 200px;
-    height: 200px;
+    width: 240px;
+    height: 240px;
+  }
+  /* soft color pool behind the ring, brighter while the timer runs */
+  .dial::before {
+    content: '';
+    position: absolute;
+    inset: 12%;
+    border-radius: 50%;
+    background: radial-gradient(circle, color-mix(in srgb, var(--tint) 24%, transparent), transparent 70%);
+    opacity: 0.5;
+    transition: opacity var(--dur-slow);
+  }
+  .running .dial::before {
+    opacity: 1;
+    animation: float 3.2s ease-in-out infinite;
+  }
+  .dial svg {
+    position: relative;
+    display: block;
   }
   .prog {
     transition: stroke-dashoffset 250ms linear;
   }
   .running .prog {
-    filter: drop-shadow(0 0 6px color-mix(in srgb, var(--accent) 60%, transparent));
+    filter: drop-shadow(0 0 8px color-mix(in srgb, var(--tint) 70%, transparent));
   }
   .time {
     position: absolute;
@@ -322,10 +385,14 @@
     justify-content: center;
   }
   .digits {
-    font-size: 48px;
-    font-weight: 700;
+    font-size: 56px;
+    font-weight: 800;
     font-variant-numeric: tabular-nums;
-    letter-spacing: -0.02em;
+    letter-spacing: -0.03em;
+    background: linear-gradient(135deg, var(--text) 30%, color-mix(in srgb, var(--tint) 70%, var(--text)));
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
   }
   .mode {
     font-size: 12px;
@@ -347,6 +414,11 @@
   .task-card {
     border-top: 4px solid var(--course);
     padding: 20px;
+    box-shadow:
+      inset 0 1px 0 var(--sheen),
+      inset 0 14px 28px -22px var(--course),
+      var(--shadow-sm),
+      0 -4px 24px -16px var(--course);
   }
   .top {
     display: flex;
@@ -448,9 +520,18 @@
     margin-top: 18px;
     align-items: center;
   }
-  .big {
-    padding: 12px 22px;
-    font-size: 16px;
+  .task-actions .big {
+    padding: 14px 28px;
+    font-size: 17px;
+    border-radius: var(--radius);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.28),
+      var(--glow);
+  }
+  .task-actions .big:hover {
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.28),
+      var(--glow-strong);
   }
   .snooze-wrap {
     position: relative;
@@ -478,8 +559,20 @@
     color: var(--text);
     font-size: 15px;
   }
+  .picker li button {
+    transition:
+      background var(--dur),
+      transform var(--dur) var(--spring);
+  }
   .picker li button:hover {
     background: var(--bg-hover);
+    transform: translateX(3px);
+  }
+  .picker li button:hover .dot {
+    transform: scale(1.35);
+  }
+  .picker .dot {
+    transition: transform var(--dur) var(--spring);
   }
   .muted {
     color: var(--text-muted);

@@ -5,27 +5,66 @@
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Typing defense</title>
 <style>
-  :root { --accent: #7c9cff; }
-  html, body { margin: 0; height: 100%; background: radial-gradient(#10163a, #05060f); color: #dfe6ff; font: 16px system-ui, sans-serif; overflow: hidden; }
+  :root { --bg: #05060f; --fg: #dfe6ff; --accent: #7c9cff; --accent-2: #c77dff; --glow: color-mix(in srgb, var(--accent) 55%, transparent); --panel: rgba(255,255,255,.08); --line: rgba(255,255,255,.14); --shadow: rgba(0,0,0,.5); --bar: #0b0f25; --btn-ink: #05060f; }
+  html.light { --bg: #eef1fb; --fg: #141a3a; --panel: rgba(0,0,0,.06); --line: rgba(0,0,0,.1); --shadow: rgba(30,40,80,.22); --bar: #dfe4f5; --btn-ink: #fff; }
+  html, body { margin: 0; height: 100%; color: var(--fg); font: 500 16px/1.35 system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif; overflow: hidden; }
+  body { background: radial-gradient(120% 80% at 50% -10%, color-mix(in srgb, var(--accent) 28%, var(--bg)), var(--bg) 60%), var(--bg); }
+  body::before { content: ''; position: fixed; inset: 0; pointer-events: none; background-image: radial-gradient(rgba(255,255,255,.5) 1px, transparent 1.5px), radial-gradient(rgba(255,255,255,.3) 1px, transparent 1.5px); background-size: 140px 140px, 90px 90px; background-position: 20px 30px, 60px 80px; opacity: .35; }
   #field { position: fixed; inset: 0 0 70px 0; }
-  .w { position: absolute; font: 700 20px ui-monospace, monospace; white-space: nowrap; text-shadow: 0 0 8px #0008; }
-  .w b { color: var(--accent); }
-  .base { position: fixed; left: 0; right: 0; bottom: 60px; height: 4px; background: linear-gradient(90deg, #ff6b6b, #feca57, #1dd1a1); opacity: 0.7; }
-  .bar { position: fixed; left: 0; right: 0; bottom: 0; height: 60px; display: flex; gap: 14px; align-items: center; justify-content: center; background: #0b0f25; font-weight: 700; }
-  input { font: 700 18px ui-monospace, monospace; padding: 8px 12px; border-radius: 8px; border: 2px solid var(--accent); background: #05060f; color: #fff; width: min(260px, 50vw); text-transform: uppercase; }
-  .center { position: fixed; inset: 0; display: grid; place-items: center; text-align: center; pointer-events: none; }
-  .center button { pointer-events: auto; font: inherit; padding: 10px 22px; border: 0; border-radius: 10px; background: var(--accent); color: #05060f; font-weight: 800; cursor: pointer; }
+  .w { position: absolute; font: 800 20px ui-monospace, monospace; white-space: nowrap; padding: 4px 12px; border-radius: 999px; background: linear-gradient(180deg, color-mix(in srgb, var(--panel) 100%, #fff 6%), var(--panel)); border: 1px solid var(--line); box-shadow: 0 4px 14px var(--shadow); text-shadow: 0 0 8px #0008; }
+  .w b { color: var(--accent); text-shadow: 0 0 10px var(--glow); }
+  .base { position: fixed; left: 0; right: 0; bottom: 60px; height: 4px; background: linear-gradient(90deg, #ff6b6b, #feca57, #1dd1a1); opacity: 0.8; box-shadow: 0 0 14px rgba(254,202,87,.6); }
+  .bar { position: fixed; left: 0; right: 0; bottom: 0; height: 60px; display: flex; gap: 10px; align-items: center; justify-content: center; background: var(--bar); font-weight: 800; box-shadow: 0 -8px 30px var(--shadow); }
+  .bar > span { padding: 6px 14px; border-radius: 999px; background: linear-gradient(180deg, color-mix(in srgb, var(--panel) 100%, #fff 6%), var(--panel)); border: 1px solid var(--line); box-shadow: inset 0 1px 0 rgba(255,255,255,.14), 0 4px 14px var(--shadow); font-size: 13px; letter-spacing: .04em; text-transform: uppercase; white-space: nowrap; }
+  .bar b { display: inline-block; font-size: 16px; font-variant-numeric: tabular-nums; color: var(--accent); margin-left: 4px; text-shadow: 0 0 10px var(--glow); }
+  input { font: 800 18px ui-monospace, monospace; padding: 8px 12px; border-radius: 999px; border: 2px solid var(--accent); background: var(--bg); color: var(--fg); width: min(240px, 40vw); text-transform: uppercase; box-shadow: 0 0 16px var(--glow); outline: none; }
+  input:focus { box-shadow: 0 0 24px var(--glow), 0 0 0 3px color-mix(in srgb, var(--accent) 30%, transparent); }
+  .center { position: fixed; inset: 0; display: grid; place-items: center; text-align: center; pointer-events: none; z-index: 3; }
+  .center > div { padding: 22px 26px; border-radius: 22px; background: linear-gradient(180deg, color-mix(in srgb, var(--panel) 100%, #fff 6%), var(--panel)); border: 1px solid var(--line); box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 35%, transparent), 0 0 34px var(--glow), 0 22px 50px var(--shadow); backdrop-filter: blur(10px); max-width: 86vw; }
+  .center h2 { margin: 0 0 6px; font-size: clamp(24px, 6vw, 34px); font-weight: 900; letter-spacing: -0.02em; background: linear-gradient(90deg, var(--accent), var(--accent-2)); -webkit-background-clip: text; background-clip: text; color: transparent; filter: drop-shadow(0 0 14px var(--glow)); }
+  .center p { margin: 0 0 14px; font-weight: 600; opacity: .85; }
+  .center button { pointer-events: auto; font: inherit; padding: 10px 22px; border: 0; border-radius: 999px; background: linear-gradient(135deg, var(--accent), var(--accent-2)); color: var(--btn-ink); font-weight: 900; letter-spacing: .02em; cursor: pointer; box-shadow: 0 8px 22px var(--glow), inset 0 1px 0 rgba(255,255,255,.4); transition: filter .12s, box-shadow .12s, transform .12s; }
+  .center button:hover { filter: brightness(1.08); box-shadow: 0 12px 28px var(--glow), inset 0 1px 0 rgba(255,255,255,.4); }
+  .center button:active { transform: scale(.96); animation: none; }
+  /* juice */
+  .pop { animation: pop .38s cubic-bezier(.3,1.6,.5,1); }
+  @keyframes pop { 35% { transform: scale(1.35); } }
+  .fx { position: fixed; z-index: 9; pointer-events: none; font: 900 20px system-ui, sans-serif; color: var(--accent); text-shadow: 0 0 12px var(--glow), 0 2px 0 rgba(0,0,0,.3); transform: translate(-50%, -50%); animation: rise .8s ease-out forwards; white-space: nowrap; }
+  @keyframes rise { to { transform: translate(-50%, -160%); opacity: 0; } }
+  .spark { position: fixed; z-index: 9; pointer-events: none; width: 7px; height: 7px; border-radius: 50%; margin: -3px 0 0 -3px; box-shadow: 0 0 8px currentColor; animation: spark .6s ease-out forwards; }
+  @keyframes spark { to { transform: translate(var(--dx), var(--dy)) scale(0); opacity: 0; } }
+  body.flash::after { content: ''; position: fixed; inset: 0; z-index: 8; pointer-events: none; background: var(--flash, rgba(255,70,90,.4)); animation: flash .45s ease-out forwards; }
+  @keyframes flash { to { opacity: 0; } }
+  body.shake #field { animation: shake .4s; }
+  @keyframes shake { 20%, 60% { transform: translateX(-6px); } 40%, 80% { transform: translateX(6px); } }
+  @media (prefers-reduced-motion: no-preference) { #go { animation: float 2.4s ease-in-out infinite; } }
+  @keyframes float { 50% { filter: brightness(1.18) drop-shadow(0 0 10px var(--accent)); } }
+  @media (prefers-reduced-motion: reduce) { .pop, .fx, .spark, body.flash::after, body.shake #field { animation-duration: .01s; } }
 </style>
 </head>
 <body>
 <div id="field"></div>
 <div class="base"></div>
-<div class="bar"><span>Score <span id="score">0</span></span><input id="in" autocomplete="off" autocapitalize="characters" spellcheck="false" aria-label="Type the words" /><span>Shields <span id="hp">5</span></span></div>
+<div class="bar"><span>Score <b id="score">0</b></span><input id="in" autocomplete="off" autocapitalize="characters" spellcheck="false" aria-label="Type the words" /><span>Shields <b id="hp">5</b></span></div>
 <div class="center" id="menu"><div><h2>⌨️ Typing defense</h2><p>Type the falling words before they hit the base.<br />Uses words from your notecards when it can.</p><button id="go">Start</button></div></div>
 <script>
   const q = new URLSearchParams(location.search);
   if (q.get('accent')) document.documentElement.style.setProperty('--accent', q.get('accent'));
+  if (q.get('dark') === '0') document.documentElement.classList.add('light');
   const report = (score) => parent.postMessage({ type: 'hwtodo:score', score }, '*');
+  // --- visual juice (no game logic here) ---
+  const FX = (() => {
+    const calm = matchMedia('(prefers-reduced-motion: reduce)').matches; let live = 0;
+    const re = (el, cls) => { el.classList.remove(cls); void el.offsetWidth; el.classList.add(cls); };
+    const at = (el) => { const r = el.getBoundingClientRect(); return [r.left + r.width / 2, r.top + r.height / 2]; };
+    const text = (t, x, y, color) => { if (live > 40) return; live++; const d = document.createElement('div'); d.className = 'fx'; d.textContent = t; d.style.left = x + 'px'; d.style.top = y + 'px'; if (color) d.style.color = color; document.body.appendChild(d); setTimeout(() => { d.remove(); live--; }, 800); };
+    const burst = (x, y, color, k = 8) => { if (calm) return; for (let i = 0; i < k && live < 40; i++) { live++; const d = document.createElement('i'); d.className = 'spark'; const a = Math.random() * 6.283, r = 26 + Math.random() * 44; d.style.cssText = `left:${x}px;top:${y}px;color:${color};background:${color};--dx:${Math.cos(a) * r}px;--dy:${Math.sin(a) * r}px`; document.body.appendChild(d); setTimeout(() => { d.remove(); live--; }, 600); } };
+    const flash = (color) => { document.body.style.setProperty('--flash', color || ''); re(document.body, 'flash'); setTimeout(() => document.body.classList.remove('flash'), 500); };
+    const shake = () => { if (calm) return; re(document.body, 'shake'); setTimeout(() => document.body.classList.remove('shake'), 450); };
+    const watch = (id) => { const el = document.getElementById(id); if (!el) return; let prev = el.textContent; new MutationObserver(() => { if (el.textContent === prev) return; prev = el.textContent; re(el, 'pop'); }).observe(el, { childList: true, characterData: true, subtree: true }); };
+    return { calm, text, burst, flash, shake, watch, at };
+  })();
+  FX.watch('score'); FX.watch('hp');
   const DEFAULT = 'atom cell verb noun graph proof essay quiz orbit prism lens force mass volt ratio slope sine cosine vector matrix nucleus enzyme protein genome fossil climate tundra delta empire treaty senate thesis clause'.split(' ');
   const custom = (q.get('words') || '').split(',').map((w) => w.toLowerCase().replace(/[^a-z]/g, '')).filter((w) => w.length >= 3 && w.length <= 12);
   const POOL = custom.length >= 4 ? custom : DEFAULT;
@@ -44,7 +83,7 @@
       const pre = typed && o.w.startsWith(typed) ? typed.length : 0;
       o.el.innerHTML = `<b>${o.w.slice(0, pre)}</b>${o.w.slice(pre)}`;
       o.el.style.transform = `translate(${o.x}px, ${o.y}px)`;
-      if (o.y > field.clientHeight - 20) { o.dead = true; hp--; hud(); }
+      if (o.y > field.clientHeight - 20) { o.dead = true; hp--; hud(); FX.flash(); FX.shake(); FX.burst(o.x + 40, field.clientHeight - 10, '#ff6b6b', 8); }
     }
     words = words.filter((o) => { if (o.dead) o.el.remove(); return !o.dead; });
     if (hp <= 0) { running = false; report(score); $('menu').style.display = 'grid'; $('menu').querySelector('h2').textContent = `Score ${score}`; $('go').textContent = 'Again'; return; }
@@ -53,7 +92,7 @@
   input.addEventListener('input', () => {
     const typed = input.value.trim().toLowerCase();
     const hit = words.find((o) => o.w === typed);
-    if (hit) { hit.dead = true; hit.el.remove(); words = words.filter((o) => o !== hit); score += hit.w.length * 10; hud(); input.value = ''; }
+    if (hit) { const [hx, hy] = FX.at(hit.el); FX.burst(hx, hy, '#ffd54a', 10); FX.text('+' + hit.w.length * 10, hx, hy - 10, '#ffd54a'); hit.dead = true; hit.el.remove(); words = words.filter((o) => o !== hit); score += hit.w.length * 10; hud(); input.value = ''; }
   });
   $('go').onclick = start;
 </script>

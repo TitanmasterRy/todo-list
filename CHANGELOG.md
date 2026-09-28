@@ -1,7 +1,15 @@
 # Changelog
 
-## Roadmap pass 8: casino makeover, Orebelt factory, Crate Rush, Watch, Spanish everywhere, patch notes
+## Roadmap pass 8: a new look, casino makeover, Orebelt factory, Crate Rush, Watch, Spanish everywhere, patch notes
 
+- **✨ A new look for the whole app:** gradient accents with a companion hue derived from your accent color, layered shadows and glows, glass panels (tab bar, toasts, dialogs), an ambient color wash that drifts slowly behind everything, slim accent scrollbars, and pages and lists that rise in as they load.
+- **Shell:** a gradient logo, a glowing active-page pill in the sidebar, a gold wallet pill that bounces when your coins change, an XP bar with a shimmer, a glass bottom tab bar on phones with a lit indicator, and a pulsing add button.
+- **Tasks:** rows carry their course color as a glowing edge and lift on hover; checking one off sweeps the course color across the row, the checkbox fills with a gradient and sends out a ring; the streak flame glows; the daily ring is a gradient with a glow when closed; quick add lights up with a gradient border when focused.
+- **Rewards:** toasts with a glowing color bar per kind and bouncing emoji; coin pops as gold pills; level-ups get rotating light rays, gradient numbers and confetti; badges arrive on a shining medal.
+- **Play:** a hero header, glossy coin/chip/voucher tiles, pill tabs, lobby tiles with a colored glow and a sheen sweep per game, and a game player with a glowing header and a countdown that pulses when time is short.
+- **Play worlds and study games:** the shop, wallet, quests, star map, pet, garden, dungeon, leaderboards, boss battle, match rush, quiz race and crossword all pick up the same language: gradient progress bars, hue-glow cards, gold owned/claimed states, bouncing numbers.
+- **Arcade games:** all twenty built-in games got a modern arcade look with glowing frames, glossy HUD pills, gradient buttons, score pops, particle bursts and flashes on scoring and game over, in dark and light.
+- Everything still respects reduced motion (the app setting or the OS), high contrast, and the WCAG contrast checks; the first-load CSS budget is unchanged.
 - **🎰 Casino makeover:** every game got real tables, chips, cards and animation: felt tables with flying chips, dealt and flipped cards, spinning slot reels with near misses and big-win banners, a roulette ball that drops into its pocket, a ticking Big Six wheel, bouncing Plinko balls, 3D dice, exploding mines, a Keno globe, scratch-off foil you rub with your finger, a CRT video poker cabinet and a Hold'em table with the three bots. New lobby with illustrated tiles and synthesized sound effects.
 - **🏭 Orebelt** (Play → Factory): a factory-building idle game. Mine ore, smelt and build parts through six tiers, route belts with throughput limits, run a power grid with overclocking, deliver to the Launch Tower, and keep producing while you're away. Finished homework gives shards, research and production boosts; coins buy a few daily supply drops.
 - **📺 Watch** (Play → Watch): sign in to your Jellyfin or Emby server to browse and play with resume across devices, show Plex or any other site, play YouTube/Vimeo/Twitch links, direct video links and files from your device. Optional homework rules: finish your ring first, vouchers for watch time, a daily limit. See WATCH.md.

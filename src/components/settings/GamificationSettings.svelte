@@ -26,7 +26,7 @@
     />
   </div>
   <p class="help">
-    {t('stats.level', { level: store.stats.level })}: <strong>{levelTitle(store.stats.level)}</strong>. {t('gam.help')}
+    {t('stats.level', { level: store.stats.level })}: <strong class="grad-text">{levelTitle(store.stats.level)}</strong>. {t('gam.help')}
   </p>
   <p class="help">
     {t('gam.freezes', { max: MAX_FREEZES })}
@@ -96,5 +96,10 @@
     font-size: 13px;
     color: var(--text-muted);
     margin: 6px 0;
+  }
+  .num {
+    font-variant-numeric: tabular-nums;
+    font-weight: 700;
+    color: var(--text);
   }
 </style>

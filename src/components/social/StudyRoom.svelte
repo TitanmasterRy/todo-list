@@ -168,19 +168,46 @@
     align-items: center;
   }
   h2 {
+    display: flex;
+    align-items: center;
+    gap: 8px;
     font-size: 16px;
+    font-weight: 800;
+    letter-spacing: -0.01em;
     margin: 0;
+  }
+  h2::before {
+    content: '';
+    width: 4px;
+    height: 15px;
+    border-radius: 2px;
+    background: var(--grad-accent);
+    box-shadow: 0 0 8px color-mix(in srgb, var(--accent) 50%, transparent);
+    flex-shrink: 0;
   }
   .grow {
     flex: 1;
     min-width: 0;
   }
   .live {
+    --tint: var(--accent);
     text-align: center;
     display: flex;
     flex-direction: column;
     gap: 4px;
     align-items: center;
+    padding: 14px 12px;
+    border-radius: var(--radius);
+    border: 1px solid color-mix(in srgb, var(--tint) 30%, var(--border));
+    background: radial-gradient(70% 60% at 50% 0%, color-mix(in srgb, var(--tint) 14%, transparent), transparent 70%), var(--bg-elev-2);
+    box-shadow:
+      inset 0 1px 0 var(--sheen),
+      0 0 30px -12px color-mix(in srgb, var(--tint) 55%, transparent);
+    animation: pop-in var(--dur-slow) var(--spring) backwards;
+  }
+  .live[data-phase='break'],
+  .live[data-phase='long'] {
+    --tint: var(--success, #10b981);
   }
   .rname {
     font-weight: 700;
@@ -192,9 +219,14 @@
     color: var(--text-muted);
   }
   .left {
-    font-size: 40px;
-    font-weight: 700;
+    font-size: 44px;
+    font-weight: 800;
+    letter-spacing: -0.03em;
     font-variant-numeric: tabular-nums;
+    background: linear-gradient(135deg, var(--text) 30%, color-mix(in srgb, var(--tint) 70%, var(--text)));
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
   }
   .bar {
     width: 100%;
@@ -205,13 +237,21 @@
     overflow: hidden;
   }
   .fill {
+    position: relative;
     height: 100%;
-    background: var(--accent);
+    border-radius: 3px;
+    background: linear-gradient(90deg, var(--tint), var(--accent-2));
+    box-shadow: 0 0 10px -2px var(--tint);
+    overflow: hidden;
     transition: width 400ms linear;
   }
-  [data-phase='break'] .fill,
-  [data-phase='long'] .fill {
-    background: var(--success, #10b981);
+  .fill::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(115deg, transparent 30%, rgba(255, 255, 255, 0.45) 50%, transparent 70%);
+    background-size: 200% 100%;
+    animation: shimmer 2.6s linear infinite;
   }
   .row {
     display: flex;

@@ -450,6 +450,12 @@
     border: 1px solid var(--danger);
     border-radius: var(--radius-sm);
     padding: 10px 12px;
+    background: color-mix(in srgb, var(--danger) 6%, transparent);
+    box-shadow: 0 0 24px -10px color-mix(in srgb, var(--danger) 60%, transparent);
+    animation: pop-in var(--dur-slow) var(--spring) backwards;
+  }
+  .csvprev {
+    animation: rise-in var(--dur-slow) var(--ease) backwards;
   }
   .wipe-list {
     margin: 6px 0;

@@ -232,9 +232,26 @@
   .board td {
     padding: 6px;
     border-top: 1px solid var(--border);
+    font-variant-numeric: tabular-nums;
+  }
+  .board tbody tr {
+    transition: background var(--dur);
+  }
+  .board tbody tr:hover {
+    background: color-mix(in srgb, var(--accent) 8%, transparent);
   }
   .board tr.me td {
     font-weight: 700;
+    background: color-mix(in srgb, var(--accent) 10%, transparent);
+  }
+  .board tr.me td:first-child {
+    box-shadow: inset 3px 0 0 var(--accent);
+  }
+  :global([dir='rtl']) .board tr.me td:first-child {
+    box-shadow: inset -3px 0 0 var(--accent);
+  }
+  .board tbody tr:first-child td {
+    color: var(--text);
   }
   .stale {
     color: var(--warning, #f59e0b);

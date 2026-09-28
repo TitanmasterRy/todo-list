@@ -81,7 +81,7 @@
         <ul class="wins">
           {#each wins as t (t.id)}
             <li>
-              🏆 <strong>{t.title}</strong>{#if store.courseById(t.courseId)}
+              <span class="trophy" aria-hidden="true">🏆</span> <strong>{t.title}</strong>{#if store.courseById(t.courseId)}
                 <span class="muted">· {store.courseById(t.courseId)?.name}</span>{/if}{#if t.estimateMin}
                 <span class="muted">· {formatMinutes(t.estimateMin)}</span>{/if}
             </li>
@@ -112,7 +112,9 @@
       <section>
         <h3>{tr('review.coins')}</h3>
         <p>
-          {coinParts[0]}<strong>{formatNumber(weekCoins.earned)} 🪙</strong>{coinParts[1]}{weekCoins.quests ? ` · ${tr('review.quests', { count: weekCoins.quests })}` : ''}.
+          {coinParts[0]}<strong class="stat gold">{formatNumber(weekCoins.earned)} 🪙</strong>{coinParts[1]}{weekCoins.quests
+            ? ` · ${tr('review.quests', { count: weekCoins.quests })}`
+            : ''}.
         </p>
       </section>
     {/if}
@@ -120,7 +122,7 @@
     <section>
       <h3>{tr('review.next')}</h3>
       {#if overdue}<p class="warn">
-          ⚠ {tr('review.overdue', { count: overdue })}
+          ⚠ <span class="stat warn-num">{tr('review.overdue', { count: overdue })}</span>
           <button
             class="link"
             onclick={() => {
@@ -131,7 +133,7 @@
       {#if heaviest && heaviest.n}
         {@const parts = tr('review.heaviest', { tasks: tr('common.tasks', { count: heaviest.n }) }).split('{day}')}
         <p>
-          {parts[0]}<strong>{dayLabel(heaviest.key)}</strong>{parts[1]}{heaviest.min ? ` (${formatMinutes(heaviest.min)})` : ''}{heaviest.exams
+          {parts[0]}<strong class="stat">{dayLabel(heaviest.key)}</strong>{parts[1]}{heaviest.min ? ` (${formatMinutes(heaviest.min)})` : ''}{heaviest.exams
             ? tr('review.including', { count: heaviest.exams })
             : ''}.
         </p>
@@ -159,6 +161,19 @@
   }
   section {
     margin: 14px 0;
+    animation: rise-in 360ms var(--ease) backwards;
+  }
+  section:nth-of-type(2) {
+    animation-delay: 50ms;
+  }
+  section:nth-of-type(3) {
+    animation-delay: 100ms;
+  }
+  section:nth-of-type(4) {
+    animation-delay: 150ms;
+  }
+  section:nth-of-type(n + 5) {
+    animation-delay: 200ms;
   }
   h3 {
     font-size: 13px;
@@ -169,6 +184,46 @@
     display: flex;
     gap: 8px;
     align-items: baseline;
+  }
+  h3::before {
+    content: '';
+    align-self: center;
+    width: 4px;
+    height: 13px;
+    border-radius: 2px;
+    background: var(--grad-accent);
+    box-shadow: 0 0 8px color-mix(in srgb, var(--accent) 50%, transparent);
+    flex-shrink: 0;
+  }
+  /* the week's numbers: bigger, tabular, gradient */
+  .stat {
+    font-weight: 800;
+    font-size: 1.15em;
+    font-variant-numeric: tabular-nums;
+    background: var(--grad-accent);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    text-transform: none;
+    letter-spacing: 0;
+  }
+  .stat.gold {
+    background: var(--grad-gold);
+    -webkit-background-clip: text;
+    background-clip: text;
+  }
+  .stat.warn-num {
+    background: linear-gradient(135deg, var(--warn), var(--danger));
+    -webkit-background-clip: text;
+    background-clip: text;
+  }
+  .trophy {
+    display: inline-block;
+    filter: drop-shadow(0 3px 6px color-mix(in srgb, var(--gold) 60%, transparent));
+    transition: transform var(--dur-slow) var(--spring);
+  }
+  .wins li:hover .trophy {
+    transform: scale(1.3) rotate(-10deg);
   }
   .muted {
     color: var(--text-muted);
@@ -224,6 +279,20 @@
     display: block;
     height: 100%;
     border-radius: 4px;
+    box-shadow: 0 0 8px -2px currentColor;
+    animation: grow-x 600ms var(--ease) backwards;
+    transform-origin: left;
+  }
+  :global([dir='rtl']) .track .fill {
+    transform-origin: right;
+  }
+  @keyframes grow-x {
+    from {
+      transform: scaleX(0);
+    }
+  }
+  .num {
+    font-variant-numeric: tabular-nums;
   }
   .num {
     color: var(--text-muted);
@@ -238,6 +307,10 @@
     align-items: center;
     gap: 6px;
     flex-wrap: wrap;
+    padding: 6px 8px;
+    border-radius: var(--radius-sm);
+    border: 1px solid color-mix(in srgb, var(--warn) 30%, var(--border));
+    background: color-mix(in srgb, var(--warn) 6%, transparent);
   }
   .grow {
     flex: 1;
@@ -259,25 +332,38 @@
   }
   .bar {
     width: 100%;
-    height: 44px;
+    height: 48px;
     background: var(--bg-elev-2);
-    border-radius: 6px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
     display: flex;
     align-items: flex-end;
     overflow: hidden;
+    transition: transform var(--dur) var(--spring);
+  }
+  .day:hover .bar {
+    transform: translateY(-2px);
   }
   .bar .fill {
     width: 100%;
-    background: var(--accent);
-    opacity: 0.7;
+    background: linear-gradient(180deg, var(--accent-2), var(--accent));
+    opacity: 0.85;
+    border-radius: 4px 4px 0 0;
+    box-shadow: 0 0 10px -2px var(--accent);
+    transition: height 400ms var(--ease);
   }
   .day.heavy .fill {
     opacity: 1;
-    background: var(--warn);
+    background: linear-gradient(180deg, #ffb347, var(--warn));
+    box-shadow: 0 0 12px -2px var(--warn);
+  }
+  .day.heavy .n {
+    color: var(--warn-text);
   }
   .n {
-    font-weight: 600;
+    font-weight: 700;
     color: var(--text);
     min-height: 1.2em;
+    font-variant-numeric: tabular-nums;
   }
 </style>

@@ -176,7 +176,7 @@
 
     {#if mode === 'files'}
       <div class="drop">
-        <div class="big">📦</div>
+        <div class="big" aria-hidden="true">📦</div>
         <p><strong>Drop a game here</strong>: an <code>.html</code> file, a <code>.js</code> file, a <code>.zip</code>, or a whole folder.</p>
         <div class="row center">
           <label class="btn sm primary"
@@ -216,7 +216,7 @@
     {#if note}<p class="warn">{note}</p>{/if}
 
     {#if ready}
-      <div class="details">
+      <div class="details rise-in">
         <div class="row">
           <input class="input grow" bind:value={title} placeholder="Name" aria-label="Game name" maxlength="60" />
           <select class="select em" bind:value={emoji} aria-label="Icon"
@@ -253,10 +253,20 @@
 <style>
   .add {
     width: min(560px, 96vw);
+    transition: box-shadow var(--dur-slow) var(--ease);
   }
   .add.drag {
     outline: 3px dashed var(--accent);
     outline-offset: -8px;
+    box-shadow:
+      inset 0 1px 0 var(--sheen),
+      var(--shadow-lg),
+      var(--glow-strong);
+  }
+  .add.drag .drop {
+    border-color: var(--accent);
+    background: radial-gradient(60% 60% at 50% 30%, color-mix(in srgb, var(--accent) 22%, transparent), transparent 70%), var(--bg-elev-2);
+    transform: scale(1.01);
   }
   h2 {
     margin: 0 0 10px;
@@ -265,14 +275,28 @@
   .seg {
     margin-bottom: 10px;
   }
+  /* the drop zone: a dashed card with a soft accent pool behind a floating box */
   .drop {
+    position: relative;
     border: 2px dashed var(--border-strong);
     border-radius: var(--radius);
-    padding: 16px;
+    padding: 18px 16px;
     text-align: center;
+    background: radial-gradient(60% 60% at 50% 30%, color-mix(in srgb, var(--accent) 10%, transparent), transparent 70%), var(--bg-elev-2);
+    transition:
+      border-color var(--dur),
+      background var(--dur),
+      transform var(--dur-slow) var(--spring);
+  }
+  .drop:hover {
+    border-color: color-mix(in srgb, var(--accent) 55%, var(--border-strong));
   }
   .big {
-    font-size: 34px;
+    font-size: 40px;
+    line-height: 1;
+    margin-bottom: 4px;
+    filter: drop-shadow(0 8px 16px color-mix(in srgb, var(--accent) 40%, transparent));
+    animation: float 3.2s ease-in-out infinite;
   }
   .drop p {
     margin: 6px 0;
@@ -284,24 +308,47 @@
   .warn {
     color: var(--warn-text);
     font-size: 13px;
+    padding: 8px 10px;
+    border-radius: var(--radius-sm);
+    background: color-mix(in srgb, var(--warn) 10%, transparent);
+    border: 1px solid color-mix(in srgb, var(--warn) 35%, transparent);
   }
   .err {
     color: var(--danger-text);
     font-size: 13px;
+    padding: 8px 10px;
+    border-radius: var(--radius-sm);
+    background: color-mix(in srgb, var(--danger) 10%, transparent);
+    border: 1px solid color-mix(in srgb, var(--danger) 35%, transparent);
+    animation: shake 0.45s var(--ease);
   }
   code,
   .mono {
     font-family: var(--mono);
     font-size: 12px;
   }
+  code {
+    padding: 1px 5px;
+    border-radius: 5px;
+    background: var(--bg-elev);
+    border: 1px solid var(--border);
+  }
   textarea {
     width: 100%;
     resize: vertical;
   }
+  /* the details panel slides up once a game is ready */
   .details {
     margin-top: 10px;
     display: grid;
     gap: 8px;
+    padding: 12px;
+    border-radius: var(--radius);
+    background: color-mix(in srgb, var(--bg-elev-2) 75%, transparent);
+    border: 1px solid color-mix(in srgb, var(--accent) 30%, var(--border));
+    box-shadow:
+      inset 0 1px 0 var(--sheen),
+      0 0 24px -12px color-mix(in srgb, var(--accent) 60%, transparent);
   }
   .row {
     display: flex;
@@ -325,9 +372,12 @@
   }
   .em {
     width: 70px;
+    font-size: 18px;
+    text-align: center;
   }
   .num {
     width: 64px;
+    font-variant-numeric: tabular-nums;
   }
   .actions {
     display: flex;

@@ -28,17 +28,20 @@
   );
 </script>
 
-<div class="summary">
-  <div class="card stat">
-    <div class="n">{lifetimeEarned(store.ledger).toLocaleString()}</div>
+<div class="summary stagger">
+  <div class="card stat lift gold">
+    <span class="orb" aria-hidden="true">🪙</span>
+    {#key lifetimeEarned(store.ledger)}<div class="n gold-text bump">{lifetimeEarned(store.ledger).toLocaleString()}</div>{/key}
     <div class="l">coins earned, all time</div>
   </div>
-  <div class="card stat">
-    <div class="n">{earnedToday.toLocaleString()}</div>
+  <div class="card stat lift">
+    <span class="orb" aria-hidden="true">✨</span>
+    {#key earnedToday}<div class="n grad-text bump">{earnedToday.toLocaleString()}</div>{/key}
     <div class="l">coins earned today</div>
   </div>
-  <div class="card stat">
-    <div class="n">{Object.keys(economy.wallet.items).length}</div>
+  <div class="card stat lift">
+    <span class="orb" aria-hidden="true">🎒</span>
+    {#key Object.keys(economy.wallet.items).length}<div class="n grad-text bump">{Object.keys(economy.wallet.items).length}</div>{/key}
     <div class="l">items owned</div>
   </div>
 </div>
@@ -77,7 +80,7 @@
       <li>
         <span class="when">{new Date(e.at).toLocaleString([], { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}</span>
         <span class="what">{reasonLabel(e)}</span>
-        <span class="amt" class:pos={e.amount > 0}>{e.amount > 0 ? '+' : ''}{e.amount.toLocaleString()} {EMOJI[e.currency] ?? '📦'}</span>
+        <span class="amt" class:pos={e.amount > 0} class:neg={e.amount < 0}>{e.amount > 0 ? '+' : ''}{e.amount.toLocaleString()} {EMOJI[e.currency] ?? '📦'}</span>
       </li>
     {/each}
   </ul>
@@ -85,9 +88,26 @@
 {/if}
 
 <style>
+  /* ---- cash-out card with a gold accent ---- */
   .cash {
+    position: relative;
     margin: 12px 0;
-    padding: 12px;
+    padding: 14px;
+    overflow: hidden;
+    border-color: color-mix(in srgb, var(--gold) 40%, var(--border));
+    background: radial-gradient(60% 100% at 0% 0%, color-mix(in srgb, var(--gold) 12%, transparent), transparent 60%), var(--bg-elev);
+    box-shadow:
+      inset 0 1px 0 var(--sheen),
+      var(--shadow-sm),
+      0 0 30px -12px color-mix(in srgb, var(--gold) 50%, transparent);
+  }
+  .cash::before {
+    content: '';
+    position: absolute;
+    inset: 0 auto 0 0;
+    width: 4px;
+    background: var(--grad-gold);
+    box-shadow: 0 0 10px color-mix(in srgb, var(--gold) 60%, transparent);
   }
   .cash .row {
     display: flex;
@@ -104,56 +124,154 @@
   }
   .num {
     width: 110px;
+    font-variant-numeric: tabular-nums;
   }
   .grow {
     flex: 1;
   }
+  /* ---- glossy stat tiles with big gradient numbers ---- */
   .summary {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
     gap: 8px;
   }
   .stat {
-    padding: 12px;
+    position: relative;
+    padding: 14px 14px 12px;
+    overflow: hidden;
+    background: radial-gradient(70% 70% at 100% 0%, color-mix(in srgb, var(--accent) 14%, transparent), transparent 70%), var(--bg-elev);
+  }
+  .stat.gold {
+    border-color: color-mix(in srgb, var(--gold) 45%, var(--border));
+    background: radial-gradient(70% 70% at 100% 0%, color-mix(in srgb, var(--gold) 18%, transparent), transparent 70%), var(--bg-elev);
+  }
+  .stat.gold:hover {
+    border-color: color-mix(in srgb, var(--gold) 70%, var(--border));
+    box-shadow:
+      inset 0 1px 0 var(--sheen),
+      var(--shadow),
+      0 0 24px -6px color-mix(in srgb, var(--gold) 60%, transparent);
+  }
+  .orb {
+    position: absolute;
+    top: 8px;
+    right: 10px;
+    font-size: 26px;
+    opacity: 0.9;
+    filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.3));
+    transition: transform var(--dur-slow) var(--spring);
+  }
+  :global([dir='rtl']) .orb {
+    right: auto;
+    left: 10px;
+  }
+  .stat:hover .orb {
+    transform: scale(1.2) rotate(-10deg);
   }
   .n {
-    font-size: 22px;
-    font-weight: 800;
+    font-size: 30px;
+    font-weight: 900;
+    letter-spacing: -0.02em;
+    line-height: 1.1;
+    font-variant-numeric: tabular-nums;
+    padding-inline-end: 36px;
   }
   .l {
     font-size: 12px;
+    font-weight: 600;
     color: var(--text-muted);
+    margin-top: 2px;
   }
   .sec {
+    display: flex;
+    align-items: center;
+    gap: 8px;
     font-size: 15px;
     margin: 18px 0 8px;
   }
+  .sec::before {
+    content: '';
+    width: 4px;
+    height: 16px;
+    border-radius: 2px;
+    background: var(--grad-accent);
+    box-shadow: 0 0 8px color-mix(in srgb, var(--accent) 50%, transparent);
+    flex-shrink: 0;
+  }
+  .cash .sec {
+    margin: 0 0 6px;
+  }
+  .cash .sec::before {
+    background: var(--grad-gold);
+    box-shadow: 0 0 8px color-mix(in srgb, var(--gold) 60%, transparent);
+  }
+  /* ---- history: colored amounts, soft row hover ---- */
   .hist {
     list-style: none;
     margin: 0;
     padding: 0;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: var(--bg-elev);
+    box-shadow:
+      inset 0 1px 0 var(--sheen),
+      var(--shadow-sm);
+    overflow: hidden;
   }
   .hist li {
     display: grid;
     grid-template-columns: 120px 1fr auto;
     gap: 10px;
-    padding: 6px 0;
-    border-top: 1px solid var(--border);
+    align-items: center;
+    padding: 8px 12px;
     font-size: 13px;
+    transition:
+      background var(--dur),
+      transform var(--dur) var(--spring);
+  }
+  .hist li + li {
+    border-top: 1px solid var(--border);
+  }
+  .hist li:hover {
+    background: color-mix(in srgb, var(--accent) 6%, var(--bg-elev-2));
+  }
+  .hist li:hover .amt {
+    transform: scale(1.08);
   }
   .when {
     color: var(--text-muted);
+    font-variant-numeric: tabular-nums;
   }
   .amt {
+    display: inline-block;
     font-variant-numeric: tabular-nums;
     color: var(--text-muted);
+    font-weight: 600;
+    padding: 2px 8px;
+    border-radius: 999px;
+    transition: transform var(--dur) var(--spring);
   }
   .amt.pos {
     color: var(--success-text);
+    font-weight: 800;
+    background: color-mix(in srgb, var(--success) 12%, transparent);
+  }
+  .amt.neg {
+    color: var(--danger-text);
     font-weight: 700;
+    background: color-mix(in srgb, var(--danger) 10%, transparent);
   }
   .muted {
     color: var(--text-muted);
     font-size: 13px;
+  }
+  @media (max-width: 520px) {
+    .hist li {
+      grid-template-columns: 1fr auto;
+    }
+    .when {
+      grid-column: 1 / -1;
+      font-size: 11px;
+    }
   }
 </style>

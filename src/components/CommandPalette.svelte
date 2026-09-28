@@ -202,6 +202,27 @@
   .palette {
     padding: 10px;
     max-width: 520px;
+    background: linear-gradient(180deg, color-mix(in srgb, var(--accent) 7%, var(--bg-elev)), var(--bg-elev) 40%);
+  }
+  /* the search box sits in a gradient frame that lights up while focused */
+  .palette .input {
+    position: relative;
+    padding: 12px 14px;
+    font-size: 16px;
+    border-radius: var(--radius);
+    border-color: transparent;
+    background:
+      linear-gradient(var(--bg-elev), var(--bg-elev)) padding-box,
+      linear-gradient(135deg, color-mix(in srgb, var(--accent) 45%, var(--border)), color-mix(in srgb, var(--accent-2) 40%, var(--border))) border-box;
+  }
+  .palette .input:focus {
+    border-color: transparent;
+    background:
+      linear-gradient(var(--bg-elev), var(--bg-elev)) padding-box,
+      var(--grad-accent) border-box;
+    box-shadow:
+      0 0 0 3px color-mix(in srgb, var(--accent) 18%, transparent),
+      var(--glow);
   }
   ul {
     list-style: none;
@@ -210,7 +231,11 @@
     max-height: 50vh;
     overflow-y: auto;
   }
+  li {
+    animation: rise-in 260ms var(--ease) backwards;
+  }
   li button {
+    position: relative;
     width: 100%;
     display: flex;
     align-items: center;
@@ -220,13 +245,58 @@
     text-align: start;
     font-size: 14px;
     color: var(--text);
+    overflow: hidden;
+    transition:
+      background var(--dur),
+      transform var(--dur) var(--spring);
+  }
+  li button:hover {
+    background: var(--bg-hover);
+  }
+  /* glowing bar along the leading edge of the active row */
+  li button::before {
+    content: '';
+    position: absolute;
+    inset-block: 6px;
+    inset-inline-start: 0;
+    width: 3px;
+    border-radius: 3px;
+    background: var(--grad-accent);
+    box-shadow: 0 0 10px var(--accent);
+    transform: scaleY(0);
+    transition: transform var(--dur) var(--spring);
   }
   li.active button {
-    background: color-mix(in srgb, var(--accent) 16%, transparent);
+    background: linear-gradient(90deg, color-mix(in srgb, var(--accent) 22%, transparent), color-mix(in srgb, var(--accent-2) 10%, transparent));
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 30%, transparent);
+    transform: translateX(2px);
+  }
+  li.active button::before {
+    transform: scaleY(1);
   }
   .ico {
-    width: 22px;
-    text-align: center;
+    width: 30px;
+    height: 30px;
+    display: grid;
+    place-items: center;
+    flex-shrink: 0;
+    border-radius: 9px;
+    font-size: 15px;
+    background: var(--bg-elev-2);
+    border: 1px solid var(--border);
+    box-shadow: inset 0 1px 0 var(--sheen);
+    transition:
+      transform var(--dur-slow) var(--spring),
+      border-color var(--dur),
+      box-shadow var(--dur);
+  }
+  li.active .ico {
+    transform: scale(1.12) rotate(-6deg);
+    border-color: color-mix(in srgb, var(--accent) 50%, var(--border));
+    background: color-mix(in srgb, var(--accent) 16%, var(--bg-elev-2));
+    box-shadow:
+      inset 0 1px 0 var(--sheen),
+      0 0 14px -4px color-mix(in srgb, var(--accent) 70%, transparent);
   }
   .lbl {
     flex: 1;
@@ -234,9 +304,21 @@
     text-overflow: ellipsis;
     white-space: nowrap;
   }
+  li.active .lbl {
+    font-weight: 600;
+  }
   .hint {
     font-size: 12px;
     color: var(--text-faint);
+    font-variant-numeric: tabular-nums;
+    padding: 1px 7px;
+    border-radius: 999px;
+    background: var(--bg-elev-2);
+    border: 1px solid var(--border);
+  }
+  li.active .hint {
+    color: var(--accent-text);
+    border-color: color-mix(in srgb, var(--accent) 40%, transparent);
   }
   .none {
     padding: 10px;

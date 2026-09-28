@@ -129,11 +129,24 @@
     height: 28px;
     border-radius: 50%;
     border: 2px solid transparent;
-    transition: transform var(--dur) var(--spring);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.3);
+    transition:
+      transform var(--dur) var(--spring),
+      box-shadow var(--dur);
+  }
+  .sw:hover {
+    transform: scale(1.2);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.3),
+      0 4px 12px -4px rgba(0, 0, 0, 0.5);
   }
   .sw.on {
     border-color: var(--text);
-    transform: scale(1.15);
+    transform: scale(1.2);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.3),
+      0 0 0 3px color-mix(in srgb, var(--accent) 30%, transparent),
+      0 0 14px -2px var(--accent);
   }
   .custom {
     width: 28px;
@@ -148,10 +161,25 @@
     border-radius: 8px;
     font-size: 18px;
     border: 1px solid var(--border);
+    background: var(--bg-elev-2);
+    box-shadow: inset 0 1px 0 var(--sheen);
+    transition:
+      transform var(--dur-slow) var(--spring),
+      border-color var(--dur),
+      background var(--dur),
+      box-shadow var(--dur);
+  }
+  .em:hover {
+    transform: translateY(-2px) scale(1.12) rotate(-6deg);
+    border-color: color-mix(in srgb, var(--accent) 50%, var(--border));
   }
   .em.on {
     border-color: var(--accent);
     background: color-mix(in srgb, var(--accent) 15%, transparent);
+    transform: scale(1.1);
+    box-shadow:
+      inset 0 1px 0 var(--sheen),
+      0 0 12px -3px var(--accent);
   }
   .em-input {
     width: 80px;

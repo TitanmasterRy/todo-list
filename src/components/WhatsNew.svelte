@@ -131,6 +131,22 @@
   }
   .md :global(li) {
     margin: 4px 0;
+    animation: rise-in 360ms var(--ease) backwards;
+  }
+  .md :global(li:nth-child(2)) {
+    animation-delay: 40ms;
+  }
+  .md :global(li:nth-child(3)) {
+    animation-delay: 80ms;
+  }
+  .md :global(li:nth-child(4)) {
+    animation-delay: 120ms;
+  }
+  .md :global(li:nth-child(n + 5)) {
+    animation-delay: 160ms;
+  }
+  .md :global(li::marker) {
+    color: var(--accent-text);
   }
   .more {
     align-self: center;

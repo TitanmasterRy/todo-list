@@ -36,5 +36,14 @@
     height: 120px;
     margin-bottom: 12px;
     border-radius: var(--radius);
+    animation:
+      skeleton 1.4s ease-in-out infinite,
+      rise-in 320ms var(--ease) both;
+  }
+  .card-sk:nth-child(3) {
+    animation-delay: 0s, 60ms;
+  }
+  .card-sk:nth-child(4) {
+    animation-delay: 0s, 120ms;
   }
 </style>
