@@ -111,8 +111,7 @@
     maxlength="300"
     bind:value={text}
     placeholder="e.g. New: Three Card Poker in the casino! (leave empty for no banner)"
-    aria-label="Announcement text"
-  ></textarea>
+    aria-label="Announcement text"></textarea>
   <div class="row">
     <select class="select" bind:value={level} aria-label="Banner style">
       <option value="info">📣 Info</option>

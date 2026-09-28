@@ -559,6 +559,8 @@ export function reasonLabel(e: LedgerEntry): string {
     return r === 'gift:sent' ? `Gift sent: ${name}` : `Gift received: ${name}`;
   }
   if (r.startsWith('pet:')) return `Pet snack: ${r.slice(4)}`;
+  if (r === 'garden') return 'Garden coins';
+  if (r.startsWith('garden:')) return `Garden shop: ${r.slice(7)}`;
   if (r === 'quest' && e.ref?.startsWith('event:')) return 'Event quest';
   if (r === 'quest') return 'Daily quest';
   if (r === 'factory') return 'Factory market';

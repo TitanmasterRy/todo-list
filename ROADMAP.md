@@ -195,7 +195,7 @@ Each ships as a standalone HTML file in `public/games/`, so they double as examp
 - [x] Cute → Virtual pet you feed with coins; bubble pop (Play → Pet: fullness and happiness drift in real time, food is a coin spend, it naps instead of dying; `bubbles.html`)
 - [x] Arcade → Breakout
 - [x] Arcade → Space-invaders-lite (Invaders); the Flappy-style game is the Paper paper-plane glider
-- [x] Nature → Garden that grows as you finish tasks; fishing (Play → Garden: four finished tasks grow a plant to bloom, colored by course; `fishing.html`)
+- [x] Nature → Zen garden and Tree of Wisdom; fishing (Play → Garden: every finished task drops a seed packet, fertilizer and tree food; plants ask for care, grow a size per bag and drop capped coins; `fishing.html`)
 - [x] Space → Lunar lander (`lander.html`); star map you fill in with streak days (Play → Star map)
 - [x] Paper → Hangman from your vocab decks
 - [x] Paper → Crossword from your vocab (Play → Study games, printable); paper-plane glider (`glider.html`)

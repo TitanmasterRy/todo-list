@@ -133,7 +133,9 @@ test('the garden grows and the dungeon opens rooms as tasks get done', async ({ 
   await page.goto('./?view=play');
   await page.getByRole('tab', { name: /Garden/ }).click();
   await expect(page.locator('[data-garden-summary]')).toContainText('0 tasks finished');
-  await expect(page.locator('.plant[data-stage="0"]')).toHaveCount(1);
+  await expect(page.locator('[data-seeds]')).toHaveText('0');
+  await page.getByRole('button', { name: 'Pot 1: empty' }).click();
+  await expect(page.locator('[data-garden-reaction]')).toContainText('No seed packets');
   await page.getByRole('tab', { name: /Dungeon/ }).click();
   await expect(page.locator('[data-room]')).toHaveCount(3);
   await expect(page.locator('[data-room][data-open="true"]')).toHaveCount(0);
@@ -144,7 +146,37 @@ test('the garden grows and the dungeon opens rooms as tasks get done', async ({ 
   await page.goto('./?view=play');
   await page.getByRole('tab', { name: /Garden/ }).click();
   await expect(page.locator('[data-garden-summary]')).toContainText('2 tasks finished');
-  await expect(page.locator('.plant[data-stage="2"]')).toHaveCount(1);
+  // two finished tasks: two seed packets and two bags of fertilizer
+  await expect(page.locator('[data-seeds]')).toHaveText('2');
+  await expect(page.locator('[data-fertilizer]')).toHaveText('2');
+  await page.getByRole('button', { name: 'Pot 1: empty' }).click();
+  await expect(page.locator('.plant[data-stage="0"]')).toHaveCount(1);
+  await expect(page.locator('[data-seeds]')).toHaveText('1');
+  // a sprout wants water, then fertilizer; each happy moment drops a coin to tap
+  const pot = page.getByRole('button', { name: /^Pot 1: / });
+  await expect(pot).toHaveAttribute('aria-label', /wants water/);
+  await pot.click();
+  await expect(pot).toHaveAttribute('aria-label', /wants fertilizer/);
+  await pot.click();
+  await expect(page.locator('.plant[data-stage="1"]')).toHaveCount(1);
+  await expect(page.locator('[data-fertilizer]')).toHaveText('1');
+  await expect(pot).toHaveAttribute('aria-label', /resting/);
+  const coin = page.getByRole('button', { name: /Collect \d+ coins?/ });
+  await expect(coin).toHaveCount(2);
+  await coin.first().click();
+  await expect(coin).toHaveCount(1);
+  await page.goto('./?view=play');
+  await page.getByRole('tab', { name: /Garden/ }).click();
+  // the garden is remembered on this device, and the coins landed in the wallet
+  await expect(page.locator('.plant[data-stage="1"]')).toHaveCount(1);
+  await expect(page.locator('.wallet .w', { hasText: 'coins' })).not.toContainText(/^🪙0/);
+  // the Tree of Wisdom grows a foot per feeding and shares a thought
+  await page.getByRole('button', { name: 'Tree of Wisdom' }).click();
+  await page.getByRole('button', { name: /Feed the tree/ }).click();
+  await expect(page.locator('[data-tree-height]')).toHaveText('1 ft');
+  await expect(page.locator('[data-wisdom]')).not.toBeEmpty();
+  await page.getByRole('tab', { name: /Wallet/ }).click();
+  await expect(page.getByText('Garden coins').first()).toBeVisible();
   await page.getByRole('tab', { name: /Dungeon/ }).click();
   await expect(page.locator('[data-dungeon-summary]')).toContainText('2 of 3 rooms opened');
   await expect(page.locator('[data-room][data-open="true"]')).toHaveCount(2);

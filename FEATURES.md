@@ -62,7 +62,8 @@ merged into `main` and live on the GitHub Pages site. The full plan, including w
 - [x] Crate Rush (Play → Arcade): a crate-opening clicker with a spinning reel, 104 collectible items, trade-ups, an upgrader, a collection book, rebirths and saved progress
 - [x] Add your own games: HTML/JS files, a .zip or a folder, pasted code, or a link (Play → Arcade → ➕ Add a game)
 - [x] Games can save progress and sell power-ups for coins (you confirm each one)
-- [x] Pet, Garden and Homework dungeon (Play); focus companion under the timer (Focus)
+- [x] Pet and Homework dungeon (Play); focus companion under the timer (Focus)
+- [x] Zen garden (Play → Garden): pots on a patio, plants that ask for water, fertilizer, bug spray or music and drop capped coins when happy, Stinky the snail, a garden shop, a meadow, and the Tree of Wisdom that grows a foot per feeding with study wisdom and milestone decorations
 - [x] Seasonal events with limited items and event quests; gifts for friends; opt-in leaderboards
 - [x] Orebelt factory idle game: miners, smelters to manufacturers, belts with throughput limits, a power grid with overclocking, milestones and a Launch Tower, offline progress; homework gives overclock shards, insight and boosts, and coins buy daily-limited supply drops (Play → Factory)
 

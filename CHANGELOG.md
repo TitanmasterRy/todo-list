@@ -1,5 +1,10 @@
 # Changelog
 
+## Roadmap pass 9: the zen garden and the Tree of Wisdom
+
+- **🪴 Zen garden** (Play → Garden), after the classic one: 32 terracotta pots on a patio under a picket fence, with the sky following the real time of day. Every finished task drops a care pack (a seed packet in the course's color, a bag of fertilizer, tree food, and bug spray every third task). Plant a seed and the sprout asks for water, fertilizer, bug spray or music in a thought bubble; meet the need and it dances, drops a coin to tap (up to 30 a day) and grows a size per bag until it's a full-grown flower with a face. Six kinds of flower, shiny plants that pay double, a golden watering can, a phonograph, a wheelbarrow that retires full-grown plants to the meadow, and Stinky the snail, who collects coins for an hour per bar of chocolate. Supplies also come from a garden shop paid in coins; the garden is saved on this device.
+- **🌳 Tree of Wisdom** (Play → Garden → Tree of Wisdom): feed it a foot at a time and it shares a line of study wisdom. Its leaves take the colors of the courses that fed it, it changes with the season and the time of day, and it picks up residents and decorations as it grows: a bird, a swing, a birdhouse, lanterns, a treehouse, fruit, fireflies, an owl, the cloud tops, the moon, a hammock.
+
 ## Roadmap pass 8: a new look, casino makeover, Orebelt factory, Crate Rush, Watch, Spanish everywhere, patch notes
 
 - **✨ A new look for the whole app:** gradient accents with a companion hue derived from your accent color, layered shadows and glows, glass panels (tab bar, toasts, dialogs), an ambient color wash that drifts slowly behind everything, slim accent scrollbars, and pages and lists that rise in as they load.

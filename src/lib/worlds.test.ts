@@ -4,7 +4,7 @@ import { EVENT_QUESTS, eventQuestRef } from './eventquests';
 import { canBuy, purchaseEntries, SHOP, shopItem } from './economy';
 import { canRedeem, canSend, decodeGift, encodeGift, giftable, GIFTS_PER_DAY, redeemEntries, sendEntries, type Gift } from './gifts';
 import { canFeed, FOODS, FULL_AT, hoursUntilHungry, moodFor, petState, START, type PetEvent } from './pet';
-import { buildGarden, BED_SIZE, STEPS_PER_PLANT, stepsToBloom, type Completion } from './garden';
+import { dropsFor, emptyGarden, GROWN, plant, seedsFrom, tend, type Completion } from './garden';
 import { buildDungeon, dungeonSummary, roomKind, snake } from './dungeon';
 import { companionState } from './companion';
 import { toB64url } from './b64url';
@@ -192,26 +192,18 @@ describe('virtual pet', () => {
 describe('garden', () => {
   const done = (i: number, color?: string): Completion => ({ id: `c${i}`, at: new Date(2026, 9, 1, i).toISOString(), color });
 
-  it('starts as one seed and grows a plant every four tasks', () => {
-    expect(buildGarden([]).beds).toEqual([[expect.objectContaining({ stage: 0 })]]);
-    const g = buildGarden([done(1, '#111111'), done(2), done(3)]);
-    expect(g.beds[0]).toHaveLength(1);
-    expect(g.beds[0][0]).toMatchObject({ stage: 3, color: '#111111' });
-    expect(stepsToBloom(g.beds[0][0])).toBe(1);
-    const g2 = buildGarden([1, 2, 3, 4].map((i) => done(i)));
-    expect(g2.blooms).toBe(1);
-    expect(g2.beds[0].map((p) => p.stage)).toEqual([STEPS_PER_PLANT, 0]); // next seed waiting
-  });
-
-  it('fills beds of twelve in completion order', () => {
-    const all = Array.from({ length: BED_SIZE * STEPS_PER_PLANT + 5 }, (_, i) => done(i));
-    const g = buildGarden([...all].reverse());
-    expect(g.steps).toBe(all.length);
-    expect(g.beds).toHaveLength(2);
-    expect(g.beds[0]).toHaveLength(BED_SIZE);
-    expect(g.beds[1].map((p) => p.stage)).toEqual([4, 1]);
-    expect(g.beds[0][0].plantedAt).toBe(all[0].at);
-    expect(g.blooms).toBe(BED_SIZE + 1);
+  it('every finished task is a seed packet, and a planted seed grows with water and fertilizer', () => {
+    expect(seedsFrom([])).toEqual([]);
+    expect(dropsFor(3)).toMatchObject({ seeds: 3, fertilizer: 3, spray: 1 });
+    const seeds = seedsFrom([done(2), done(1, '#111111')]);
+    expect(seeds[0]).toMatchObject({ id: 'c1', color: '#111111' });
+    let g = plant(emptyGarden(), 0, seeds[0], 1000);
+    expect(g.pots[0]).toMatchObject({ stage: 0, need: 'water' });
+    g = tend(g, 0, 'water', 1000).garden;
+    const grew = tend(g, 0, 'fertilizer', 1000);
+    expect(grew).toMatchObject({ ok: true, grew: true });
+    expect(grew.garden.pots[0]!.stage).toBe(1);
+    expect(GROWN).toBe(3);
   });
 });
 
