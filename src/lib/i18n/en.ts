@@ -191,6 +191,7 @@ const en = {
   'toast.imported': 'Imported {count} tasks',
   // quick add
   'quick.placeholder': 'Add a task… try “Read ch 4 tomorrow 8pm #calc !high ~45m”',
+  'quick.placeholderShort': 'Add a task… “Read ch 4 tomorrow 8pm”',
   'quick.placeholderUpcoming': 'Add a task… “Essay draft fri ~2h #hist”',
   'quick.placeholderCourse': 'Add a task to {name}…',
   'quick.pasted': 'Added {count} tasks from your paste',
@@ -262,6 +263,9 @@ const en = {
   'inbox.select': 'Select',
   'inbox.showMore': { one: 'Show {count} more', other: 'Show {count} more' },
   'inbox.search': 'Search tasks…  ( / )',
+  'inbox.searchTouch': 'Search tasks…',
+  'inbox.filters': 'Filters',
+  'inbox.hideFilters': 'Hide filters',
   'inbox.searchLabel': 'Search',
   'inbox.status': 'Status',
   'inbox.open': 'Open',

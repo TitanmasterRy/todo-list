@@ -1,5 +1,6 @@
 <script lang="ts">
   import { voiceToQuickAdd } from '../lib/voice';
+  import { narrowScreen } from '../lib/touch';
   import { store, type NewTaskInput } from '../lib/store.svelte';
   import { parseQuickAdd } from '../lib/parser';
   import { ui } from '../lib/ui.svelte';
@@ -198,7 +199,7 @@
   <input
     bind:this={input}
     bind:value={text}
-    placeholder={placeholder ?? t('quick.placeholder')}
+    placeholder={placeholder ?? (narrowScreen() ? t('quick.placeholderShort') : t('quick.placeholder'))}
     aria-label={t('quick.input')}
     autocomplete="off"
     enterkeyhint="done"

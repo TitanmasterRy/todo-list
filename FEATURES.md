@@ -116,6 +116,7 @@ merged into `main` and live on the GitHub Pages site. The full plan, including w
 - [x] Dates and numbers in your region's format; right-to-left layout support
 - [x] High contrast, reading fonts, text size, confetti toggle, reduced motion; contrast checked in every theme
 - [x] Effects level (Auto / Full / Lite) for weaker phones, and a vibration switch (Settings → Appearance, Sounds)
+- [x] Phone layout: bottom-sheet dialogs with pinned buttons, folded Inbox filters, two toasts at most, 40 px touch targets, no iOS zoom on fields, notch-aware spacing
 - [x] Visual overhaul: gradients, glows, glass panels, an ambient background and celebration animations across the app, the casino and all arcade games (respects reduced motion)
 
 ## ✅ Watch

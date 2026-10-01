@@ -1,5 +1,14 @@
 # Changelog
 
+## Mobile pass: sheets, folded filters, tidier toasts and bigger targets
+
+- **📱 Dialogs are bottom sheets on phones.** The task editor, course editor and the other dialogs now slide up full-width, scroll inside, and keep their Save / Cancel / Delete buttons pinned at the bottom, so you never scroll a long form to find them.
+- **Toasts stay out of the way:** on a phone only the two newest show, narrower and to the left of the + button, so the list underneath stays usable and the × is never under the button.
+- **Inbox filters fold away** behind a Filters button on phones (with a count of the active ones); the search box stays. Desktop is unchanged.
+- **Overdue actions** (Roll all to today, Spread over the week) take their own line under the heading on phones instead of wrapping awkwardly.
+- **Fingers, not mice:** icon buttons are 40 px on touch screens, every field is at least 16 px so iPhones stop zooming into them, and keyboard hints (the `n` badge, “Space starts the timer”, `⌘↵`, “( / )”) don't show where there is no keyboard.
+- **Installed-app polish:** the top of every screen respects the notch, the layout uses the dynamic viewport height so nothing hides under the browser bar, and the + button is a little smaller and closer to the corner. Quick add shows a shorter example on narrow screens.
+
 ## Roadmap pass 10: smooth celebrations, lite effects, the priority matrix and spreading overdue work
 
 - **🎉 Confetti without the lag.** Finishing a task that closed the ring, a level-up or a streak milestone could stutter badly, above all on phones. The confetti now draws every piece from a pre-rendered sprite instead of laying out emoji text 180 times a frame, runs its physics on real elapsed time (a slow frame no longer slows the burst), caps the canvas resolution, scales the number of pieces to the screen, and holds the drifting background light still while it's in the air so the glass panels over it aren't re-blurred every frame. The level-up card no longer blurs the whole page behind it.

@@ -2,6 +2,7 @@
   import { onDestroy } from 'svelte';
   import { store } from '../lib/store.svelte';
   import { ui } from '../lib/ui.svelte';
+  import { touchOnly } from '../lib/touch';
   import type { TaskType } from '../lib/types';
   import { TASK_TYPES } from '../lib/types';
   import { applyFilter, EMPTY_FILTER, isFiltered, LIST_PRESETS, type FilterSort, type FilterStatus, type SavedList, type TaskFilter } from '../lib/filters';
@@ -63,6 +64,9 @@
   const shown = $derived(filtered.length > limit ? filtered.slice(0, limit) : filtered);
   const more = () => (limit += LIST_PAGE);
   const hasFilters = $derived(isFiltered(filter));
+  // phones start with the panel folded to the search box; it opens on its own when a saved list sets filters
+  let showFilters = $state(false);
+  const filterCount = $derived([courseId, tag, type, from, to, dueWindow, prio, blocked].filter(Boolean).length + (status !== 'open' ? 1 : 0));
   const activeList = $derived(store.settings.smartLists.find((l) => l.id === ui.inboxList));
 
   /** Load a saved list's filter into the controls. */
@@ -131,62 +135,74 @@
   <QuickAdd />
 
   <div class="filters" role="search">
-    <input class="input search" bind:this={searchInput} bind:value={ui.searchQuery} placeholder={t('inbox.search')} aria-label={t('inbox.searchLabel')} data-search />
-    <select class="select" bind:value={status} aria-label={t('inbox.status')}>
-      <option value="open">{t('inbox.open')}</option>
-      <option value="done">{t('inbox.completed')}</option>
-      <option value="all">{t('common.all')}</option>
-    </select>
-    <select class="select" bind:value={courseId} aria-label={t('inbox.course')}>
-      <option value="">{t('inbox.anyCourse')}</option>
-      <option value="none">{t('inbox.noCourse')}</option>
-      {#each store.courses as c (c.id)}
-        <option value={c.id}>{c.emoji ? c.emoji + ' ' : ''}{c.name}{c.archived ? ` ${t('inbox.archived')}` : ''}</option>
-      {/each}
-    </select>
-    <select class="select" bind:value={tag} aria-label={t('inbox.tag')}>
-      <option value="">{t('inbox.anyTag')}</option>
-      {#each store.allTags as tg}
-        <option value={tg}>#{tg}</option>
-      {/each}
-    </select>
-    <select class="select" bind:value={type} aria-label={t('inbox.type')}>
-      <option value="">{t('inbox.anyType')}</option>
-      {#each TASK_TYPES as ty}
-        <option value={ty}>{t(`type.${ty}` as const)}</option>
-      {/each}
-    </select>
-    <label class="range"><span>{t('inbox.from')}</span><input class="input" type="date" bind:value={from} aria-label={t('inbox.dueFrom')} /></label>
-    <label class="range"><span>{t('inbox.to')}</span><input class="input" type="date" bind:value={to} aria-label={t('inbox.dueTo')} /></label>
-    <select class="select" bind:value={sort} aria-label={t('inbox.sort')}>
-      <option value="due">{t('inbox.sortDue')}</option>
-      <option value="priority">{t('inbox.sortPriority')}</option>
-      <option value="manual">{t('inbox.sortManual')}</option>
-      <option value="created">{t('inbox.sortNewest')}</option>
-    </select>
-    <select class="select" bind:value={dueWindow} aria-label={t('inbox.dueWindow')}>
-      <option value="">{t('inbox.anyDue')}</option>
-      <option value="overdue">{t('today.overdue')}</option>
-      <option value="7">{t('inbox.nextDays', { n: 7 })}</option>
-      <option value="14">{t('inbox.nextDays', { n: 14 })}</option>
-      <option value="30">{t('inbox.nextDays', { n: 30 })}</option>
-    </select>
-    <select class="select" bind:value={prio} aria-label={t('inbox.priority')}>
-      <option value="">{t('inbox.anyPriority')}</option>
-      <option value="high">{t('inbox.highOrUrgent')}</option>
-      <option value="urgent">{t('priority.urgent')}</option>
-    </select>
-    <select class="select" bind:value={blocked} aria-label={t('inbox.waiting')}>
-      <option value="">{t('inbox.waitingShow')}</option>
-      <option value="hide">{t('inbox.waitingHide')}</option>
-      <option value="only">{t('inbox.waitingOnly')}</option>
-    </select>
-    {#if hasFilters}<button class="btn ghost sm" onclick={clear}>{t('inbox.clear')}</button>{/if}
-    {#if activeList}
-      <button class="btn ghost sm" onclick={() => deleteList(activeList.id)}>{t('inbox.deleteList')}</button>
-    {:else}
-      <button class="btn sm" onclick={() => (saving = !saving)} aria-expanded={saving}>☆ {t('inbox.saveList')}</button>
-    {/if}
+    <input
+      class="input search"
+      bind:this={searchInput}
+      bind:value={ui.searchQuery}
+      placeholder={touchOnly() ? t('inbox.searchTouch') : t('inbox.search')}
+      aria-label={t('inbox.searchLabel')}
+      data-search
+    />
+    <button type="button" class="btn sm fold" class:primary={filterCount > 0} aria-expanded={showFilters} onclick={() => (showFilters = !showFilters)}
+      >{showFilters ? t('inbox.hideFilters') : t('inbox.filters')}{filterCount ? ` · ${filterCount}` : ''}</button
+    >
+    <div class="adv" class:open={showFilters}>
+      <select class="select" bind:value={status} aria-label={t('inbox.status')}>
+        <option value="open">{t('inbox.open')}</option>
+        <option value="done">{t('inbox.completed')}</option>
+        <option value="all">{t('common.all')}</option>
+      </select>
+      <select class="select" bind:value={courseId} aria-label={t('inbox.course')}>
+        <option value="">{t('inbox.anyCourse')}</option>
+        <option value="none">{t('inbox.noCourse')}</option>
+        {#each store.courses as c (c.id)}
+          <option value={c.id}>{c.emoji ? c.emoji + ' ' : ''}{c.name}{c.archived ? ` ${t('inbox.archived')}` : ''}</option>
+        {/each}
+      </select>
+      <select class="select" bind:value={tag} aria-label={t('inbox.tag')}>
+        <option value="">{t('inbox.anyTag')}</option>
+        {#each store.allTags as tg}
+          <option value={tg}>#{tg}</option>
+        {/each}
+      </select>
+      <select class="select" bind:value={type} aria-label={t('inbox.type')}>
+        <option value="">{t('inbox.anyType')}</option>
+        {#each TASK_TYPES as ty}
+          <option value={ty}>{t(`type.${ty}` as const)}</option>
+        {/each}
+      </select>
+      <label class="range"><span>{t('inbox.from')}</span><input class="input" type="date" bind:value={from} aria-label={t('inbox.dueFrom')} /></label>
+      <label class="range"><span>{t('inbox.to')}</span><input class="input" type="date" bind:value={to} aria-label={t('inbox.dueTo')} /></label>
+      <select class="select" bind:value={sort} aria-label={t('inbox.sort')}>
+        <option value="due">{t('inbox.sortDue')}</option>
+        <option value="priority">{t('inbox.sortPriority')}</option>
+        <option value="manual">{t('inbox.sortManual')}</option>
+        <option value="created">{t('inbox.sortNewest')}</option>
+      </select>
+      <select class="select" bind:value={dueWindow} aria-label={t('inbox.dueWindow')}>
+        <option value="">{t('inbox.anyDue')}</option>
+        <option value="overdue">{t('today.overdue')}</option>
+        <option value="7">{t('inbox.nextDays', { n: 7 })}</option>
+        <option value="14">{t('inbox.nextDays', { n: 14 })}</option>
+        <option value="30">{t('inbox.nextDays', { n: 30 })}</option>
+      </select>
+      <select class="select" bind:value={prio} aria-label={t('inbox.priority')}>
+        <option value="">{t('inbox.anyPriority')}</option>
+        <option value="high">{t('inbox.highOrUrgent')}</option>
+        <option value="urgent">{t('priority.urgent')}</option>
+      </select>
+      <select class="select" bind:value={blocked} aria-label={t('inbox.waiting')}>
+        <option value="">{t('inbox.waitingShow')}</option>
+        <option value="hide">{t('inbox.waitingHide')}</option>
+        <option value="only">{t('inbox.waitingOnly')}</option>
+      </select>
+      {#if hasFilters}<button class="btn ghost sm" onclick={clear}>{t('inbox.clear')}</button>{/if}
+      {#if activeList}
+        <button class="btn ghost sm" onclick={() => deleteList(activeList.id)}>{t('inbox.deleteList')}</button>
+      {:else}
+        <button class="btn sm" onclick={() => (saving = !saving)} aria-expanded={saving}>☆ {t('inbox.saveList')}</button>
+      {/if}
+    </div>
   </div>
   {#if saving}
     <form class="card savelist glow-edge" onsubmit={saveList}>
@@ -304,5 +320,32 @@
     gap: 4px;
     font-size: 12px;
     color: var(--text-muted);
+  }
+  .adv {
+    display: contents;
+  }
+  .fold {
+    display: none;
+  }
+  @media (max-width: 720px) {
+    .fold {
+      display: inline-flex;
+    }
+    .adv:not(.open) {
+      display: none;
+    }
+    .adv.open {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      flex-basis: 100%;
+    }
+    .range {
+      flex: 1 1 45%;
+    }
+    .range .input {
+      flex: 1;
+      min-width: 0;
+    }
   }
 </style>

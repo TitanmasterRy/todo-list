@@ -126,10 +126,12 @@
     <div class="section-title overdue">
       <span>{t('today.overdue')}</span><span class="count">{store.overdueTasks.length}</span>
       <span class="spacer"></span>
-      <button class="btn sm" onclick={() => store.rollOverdueToToday()}>{t('today.rollAll')}</button>
-      {#if store.overdueTasks.length > 1}
-        <button class="btn sm" title={t('today.spreadTitle')} onclick={() => store.spreadOverdue()}>{t('today.spread')}</button>
-      {/if}
+      <span class="acts">
+        <button class="btn sm" onclick={() => store.rollOverdueToToday()}>{t('today.rollAll')}</button>
+        {#if store.overdueTasks.length > 1}
+          <button class="btn sm" title={t('today.spreadTitle')} onclick={() => store.spreadOverdue()}>{t('today.spread')}</button>
+        {/if}
+      </span>
     </div>
     <Sortable items={overdue} onreorder={(ids) => store.reorder(ids)} ondropfrom={(id) => onDrop(id, 'today')} group="today">
       {#snippet item(task)}
@@ -315,6 +317,19 @@
   }
   .section-title.overdue span:first-child {
     color: var(--overdue);
+  }
+  .acts {
+    display: flex;
+    gap: 6px;
+  }
+  @media (max-width: 720px) {
+    /* two buttons don't fit beside the title on a phone: they take the next line */
+    .section-title.overdue {
+      flex-wrap: wrap;
+    }
+    .acts {
+      flex-basis: 100%;
+    }
   }
   .toggle {
     width: 100%;

@@ -423,7 +423,7 @@
         <button type="button" class="btn danger" onclick={del}>{t('common.delete')}</button>
         <span class="grow"></span>
         <button type="button" class="btn" onclick={onclose}>{t('common.cancel')}</button>
-        <button type="submit" class="btn primary">{t('common.save')} <span class="kbd">⌘↵</span></button>
+        <button type="submit" class="btn primary">{t('common.save')} <span class="kbd hint-only">⌘↵</span></button>
       </div>
     {/if}
   </form>

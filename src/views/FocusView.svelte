@@ -62,7 +62,7 @@
   <header class="page-head">
     <div>
       <h1>{t('nav.focus')}</h1>
-      <div class="sub">{t('focus.sub1')} <span class="kbd">{t('focus.space')}</span> {t('focus.sub2')}</div>
+      <div class="sub">{t('focus.sub1')} <span class="hint-only"><span class="kbd">{t('focus.space')}</span> {t('focus.sub2')}</span></div>
     </div>
     <div class="grow"></div>
     <span class="chip">🍅 {pomToday} {t('today.minToday')}</span>

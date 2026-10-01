@@ -191,6 +191,7 @@ const es: Dict = {
   'toast.imported': { one: '{count} tarea importada', other: '{count} tareas importadas' },
   // quick add
   'quick.placeholder': 'Añade una tarea… prueba “Leer cap. 4 mañana a las 5 #mate !alta ~45m”',
+  'quick.placeholderShort': 'Añade una tarea… “Leer cap. 4 mañana”',
   'quick.placeholderUpcoming': 'Añade una tarea… “Borrador del ensayo el viernes ~2h #historia”',
   'quick.placeholderCourse': 'Añade una tarea a {name}…',
   'quick.pasted': { one: '{count} tarea añadida desde lo que pegaste', other: '{count} tareas añadidas desde lo que pegaste' },
@@ -262,6 +263,9 @@ const es: Dict = {
   'inbox.select': 'Seleccionar',
   'inbox.showMore': { one: 'Mostrar {count} más', other: 'Mostrar {count} más' },
   'inbox.search': 'Buscar tareas…  ( / )',
+  'inbox.searchTouch': 'Buscar tareas…',
+  'inbox.filters': 'Filtros',
+  'inbox.hideFilters': 'Ocultar filtros',
   'inbox.searchLabel': 'Buscar',
   'inbox.status': 'Estado',
   'inbox.open': 'Pendientes',

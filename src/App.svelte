@@ -261,6 +261,7 @@
   }
   .loading {
     height: 100vh;
+    height: 100dvh;
     display: flex;
     gap: 24px;
     padding: 16px;
@@ -294,6 +295,7 @@
   .shell {
     display: flex;
     min-height: 100vh;
+    min-height: 100dvh;
   }
   .main {
     flex: 1;
@@ -336,6 +338,10 @@
     .fab {
       display: grid;
       place-items: center;
+      width: 52px;
+      height: 52px;
+      bottom: calc(var(--tabbar-h) + 12px + env(safe-area-inset-bottom));
+      inset-inline-end: 12px;
     }
   }
 </style>
