@@ -248,7 +248,7 @@ Each ships as a standalone HTML file in `public/games/`, so they double as examp
 - [ ] Background sync and push reminders. Partly done: notifications go through the service worker, and installed Chromium apps get a background morning digest and badge via periodic sync. True push needs a server.
 - [x] App icon badge with today's due count.
 - [x] Share files into the app (PDFs straight to the reader). (Installed app: share a PDF, photo or document → Book reader or a new task with it attached.)
-- [x] Phone pass: dialogs as bottom sheets with the buttons pinned, Inbox filters folded behind a button, toasts capped at two and clear of the + button, 40 px icon buttons and 16 px fields on touch screens, keyboard hints hidden without a keyboard, safe-area and dynamic-viewport spacing.
+- [x] Phone overhaul: a four-tab bar with a More sheet, quick add in a sheet from the + button, a ⋯ action sheet per task row (done, timer, focus, frog, edit, duplicate, delete, snooze), a Settings jump row, an install bar; dialogs as bottom sheets with the buttons pinned, Inbox filters folded behind a button, toasts capped at two and clear of the + button, 40 px icon buttons and 16 px fields on touch screens, keyboard hints hidden without a keyboard, safe-area and dynamic-viewport spacing.
 - [x] Swipe to complete/snooze with haptics. (A vibration on arm, swipe, complete, ring closed and level-up; Settings → Sounds → Vibration.)
 - [ ] Capacitor wrap for iOS/Android.
 - [x] Browser extension: add the current page as a task. (`extension/`: toolbar button, right-click menu, Alt+Shift+H.)

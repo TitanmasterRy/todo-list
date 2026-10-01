@@ -67,3 +67,74 @@ test('overdue actions sit on their own line under the heading @phone', async ({ 
   const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
   expect(overflow).toBeLessThanOrEqual(0);
 });
+
+test('the tab bar has four tabs and a More sheet with the rest @phone', async ({ page }) => {
+  const errors = await openApp(page);
+  const bar = page.locator('.tabbar');
+  await expect(bar.getByRole('button')).toHaveCount(5);
+  await bar.getByRole('button', { name: 'More' }).click();
+  const sheet = page.getByRole('dialog', { name: 'More' });
+  await expect(sheet).toBeVisible();
+  await expect(sheet.getByRole('menuitem')).toHaveCount(6);
+  await sheet.getByRole('menuitem', { name: /Stats/ }).click();
+  await expect(sheet).toHaveCount(0);
+  await expect(page.getByRole('heading', { name: 'Stats' })).toBeVisible();
+  // the More tab now shows where you are
+  await expect(bar.getByRole('button', { name: 'More' })).toHaveCount(0);
+  await expect(bar.getByRole('button', { name: 'Stats' })).toBeVisible();
+  expect(errors).toEqual([]);
+});
+
+test('the + button opens quick add in a sheet, which closes once the task is in @phone', async ({ page }) => {
+  const errors = await openApp(page);
+  await page.goto('./?view=focus');
+  await expect(page.locator('.shell')).toBeVisible();
+  await page.getByRole('button', { name: 'Add task' }).click();
+  const sheet = page.getByRole('dialog', { name: 'Add task' });
+  await expect(sheet).toBeVisible();
+  const box = sheet.locator('[data-quick-add]');
+  await expect(box).toBeFocused();
+  await box.fill('From the sheet tomorrow');
+  await box.press('Enter');
+  await expect(sheet).toHaveCount(0);
+  await page.goto('./?view=upcoming');
+  await expect(page.locator('.task', { hasText: 'From the sheet' })).toBeVisible();
+  expect(errors).toEqual([]);
+});
+
+test('a row’s ⋯ opens the action sheet: snooze, done, delete @phone', async ({ page }) => {
+  const errors = await openApp(page);
+  await addTask(page, 'Sheet me today');
+  await addTask(page, 'And me today');
+  await addTask(page, 'Bin me today');
+  const row = page.locator('.task', { hasText: 'Sheet me' });
+  // the hover strip is gone on phones; the ⋯ is there
+  await expect(row.locator('.actions')).toBeHidden();
+  await row.getByRole('button', { name: 'More actions' }).click();
+  const sheet = page.getByRole('dialog', { name: 'Task actions' });
+  await expect(sheet).toContainText('Sheet me');
+  await sheet.getByRole('button', { name: /Tomorrow/ }).click();
+  await expect(sheet).toHaveCount(0);
+  await expect(row).toHaveCount(0); // it moved to tomorrow
+  const other = page.locator('.task', { hasText: 'And me' });
+  await other.getByRole('button', { name: 'More actions' }).click();
+  await page.getByRole('dialog', { name: 'Task actions' }).getByRole('button', { name: 'Done', exact: true }).click();
+  await expect(page.locator('.toast', { hasText: 'And me' })).toBeVisible();
+  await expect(other.getByRole('checkbox')).toHaveAttribute('aria-checked', 'true');
+  const third = page.locator('.task', { hasText: 'Bin me' });
+  await third.getByRole('button', { name: 'More actions' }).click();
+  await page.getByRole('dialog', { name: 'Task actions' }).getByRole('button', { name: 'Delete' }).click();
+  await expect(third).toHaveCount(0);
+  expect(errors).toEqual([]);
+});
+
+test('settings has a jump row that scrolls to a section @phone', async ({ page }) => {
+  await openApp(page);
+  await page.goto('./?view=settings');
+  await expect(page.locator('.shell')).toBeVisible();
+  const jump = page.getByRole('navigation', { name: 'Jump to a section' });
+  await expect(jump).toBeVisible();
+  await jump.getByRole('button', { name: 'Trash' }).click();
+  await page.waitForTimeout(800);
+  await expect(page.getByRole('heading', { name: /Trash/ })).toBeInViewport();
+});

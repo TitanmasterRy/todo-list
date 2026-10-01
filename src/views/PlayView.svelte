@@ -216,6 +216,8 @@
     gap: 4px;
     margin-bottom: 14px;
     overflow-x: auto;
+    scrollbar-width: none;
+    scroll-snap-type: x proximity;
     padding: 4px;
     border-radius: 999px;
     background: var(--bg-elev-2);
@@ -287,5 +289,20 @@
   .left {
     color: var(--text-muted);
     font-size: 12px;
+  }
+  .tabs::-webkit-scrollbar {
+    display: none;
+  }
+  .tabs button {
+    scroll-snap-align: start;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+  @media (max-width: 720px) {
+    .tabs {
+      mask-image: linear-gradient(to right, #000 calc(100% - 32px), transparent);
+      -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 32px), transparent);
+      padding-inline-end: 32px;
+    }
   }
 </style>

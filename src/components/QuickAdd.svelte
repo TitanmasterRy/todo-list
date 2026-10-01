@@ -12,9 +12,10 @@
     defaultDueKey?: string;
     defaultCourseId?: string;
     placeholder?: string;
-    autofocus?: boolean;
+    autofocus?: boolean | 'always'; // 'always' focuses on phones too (the sheet)
+    onadded?: () => void; // after a task is added (the phone sheet closes itself)
   }
-  let { defaultDueKey, defaultCourseId, placeholder, autofocus = false }: Props = $props();
+  let { defaultDueKey, defaultCourseId, placeholder, autofocus = false, onadded }: Props = $props();
 
   let text = $state('');
   let input: HTMLInputElement | undefined = $state();
@@ -116,7 +117,7 @@
     }
   });
   $effect(() => {
-    if (autofocus && input && window.innerWidth > 720) input.focus();
+    if (autofocus && input && (autofocus === 'always' || window.innerWidth > 720)) input.focus();
   });
 
   function lineToInput(line: string): NewTaskInput {
@@ -173,6 +174,7 @@
     primeAudio();
     store.addTask(base, { describe: describeNext && store.settings.autoDescribe });
     text = '';
+    onadded?.();
   }
 
   function applySuggestion(kind: '@' | '#', name: string) {

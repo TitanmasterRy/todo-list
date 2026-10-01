@@ -246,6 +246,7 @@
   .groups {
     display: flex;
     gap: 2px;
+    scrollbar-width: none;
     background: var(--bg-elev-2);
     border: 1px solid var(--border);
     border-radius: 999px;
@@ -385,5 +386,17 @@
   .muted {
     color: var(--text-muted);
     font-size: 13px;
+  }
+  .groups::-webkit-scrollbar {
+    display: none;
+  }
+  @media (max-width: 720px) {
+    .groups {
+      width: 100%;
+    }
+    .groups button {
+      flex: 1;
+      padding-inline: 8px;
+    }
   }
 </style>

@@ -26,7 +26,9 @@ class UIState {
   adminUnlocked = $state(false); // unlocked for this session (the passphrase isn't kept after a reload)
   shareTasks = $state<string[] | null>(null); // bulk bar → share these tasks by link
   receivedTasks = $state<string | null>(null); // a #tasks=… link's code
-  captureKeys = $state(false); // a tool (e.g. notecard study) owns single-key shortcuts
+  captureKeys = $state(false);
+  quickAddSheet = $state(false); // phones: the + button opens quick add in a sheet
+  taskActionsFor = $state<string | null>(null); // phones: the ⋯ on a row opens its action sheet // a tool (e.g. notecard study) owns single-key shortcuts
 }
 
 export const ui = new UIState();

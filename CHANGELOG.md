@@ -1,7 +1,12 @@
 # Changelog
 
-## Mobile pass: sheets, folded filters, tidier toasts and bigger targets
+## Mobile overhaul: a new tab bar, sheets for everything, and one-thumb task actions
 
+- **📱 New phone navigation.** Four tabs (Today, Upcoming, Inbox, Courses) and a More button that opens a sheet with big tiles for Focus, Stats, Tools, Schoology, Play and Settings, plus your streak, level and ring at a glance. The More tab shows where you are.
+- **➕ Quick add comes to your thumb.** On a phone the + button opens quick add in a bottom sheet with the keyboard up, instead of scrolling back to the top; it understands the same shortcuts, shows the same preview chips, and closes once the task is in.
+- **⋯ One-thumb task actions.** Task rows lose the strip of tiny hover buttons on phones; a ⋯ opens an action sheet: Done, Start timer, Focus, Today's frog, Plan for today, Edit, Duplicate, Delete, and Snooze to tomorrow, the weekend, next week, a date, or skip the next repeat. Swiping a row still completes or snoozes it. Chips stay on one line and scroll sideways.
+- **🧭 Settings has a jump row** on phones: tap a section name to scroll to it. The Focus mode strip, the Play tabs and the Tools groups scroll sideways with a fade instead of wrapping.
+- **📲 Install bar:** on phones, a one-time bar above the tab bar offers to install the app once the browser allows it.
 - **📱 Dialogs are bottom sheets on phones.** The task editor, course editor and the other dialogs now slide up full-width, scroll inside, and keep their Save / Cancel / Delete buttons pinned at the bottom, so you never scroll a long form to find them.
 - **Toasts stay out of the way:** on a phone only the two newest show, narrower and to the left of the + button, so the list underneath stays usable and the × is never under the button.
 - **Inbox filters fold away** behind a Filters button on phones (with a count of the active ones); the search box stays. Desktop is unchanged.

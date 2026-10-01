@@ -242,6 +242,15 @@
       </ul>
     {/if}
   </div>
+  <button
+    class="btn ghost sm icon row-more"
+    aria-label={t('task.more')}
+    aria-haspopup="dialog"
+    onclick={(e) => {
+      e.stopPropagation();
+      ui.taskActionsFor = task.id;
+    }}>⋯</button
+  >
   {#if !done}
     <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
     <div class="actions" onclick={(e) => e.stopPropagation()}>
@@ -627,12 +636,38 @@
       transform: none;
     }
   }
+  .row-more {
+    display: none;
+    align-self: center;
+    color: var(--text-muted);
+    font-size: 18px;
+  }
   @media (max-width: 720px) {
-    .actions .icon:not(.del):not(:first-child) {
+    /* one ⋯ instead of a strip of tiny buttons; everything is in the action sheet (and swipe still works) */
+    .actions {
       display: none;
     }
-    .actions .snooze-wrap ~ .icon:nth-child(3) {
+    .row-more {
       display: inline-flex;
+    }
+    /* chips stay on one line and scroll sideways, fading out at the edge */
+    .meta {
+      flex-wrap: nowrap;
+      overflow-x: auto;
+      scrollbar-width: none;
+      padding-bottom: 2px;
+      mask-image: linear-gradient(to right, #000 calc(100% - 28px), transparent);
+      -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 28px), transparent);
+    }
+    .meta::-webkit-scrollbar {
+      display: none;
+    }
+    .meta > :global(*) {
+      flex-shrink: 0;
+      white-space: nowrap;
+    }
+    .task {
+      padding: 10px 8px 10px 4px;
     }
   }
 </style>
