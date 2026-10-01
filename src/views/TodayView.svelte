@@ -127,6 +127,9 @@
       <span>{t('today.overdue')}</span><span class="count">{store.overdueTasks.length}</span>
       <span class="spacer"></span>
       <button class="btn sm" onclick={() => store.rollOverdueToToday()}>{t('today.rollAll')}</button>
+      {#if store.overdueTasks.length > 1}
+        <button class="btn sm" title={t('today.spreadTitle')} onclick={() => store.spreadOverdue()}>{t('today.spread')}</button>
+      {/if}
     </div>
     <Sortable items={overdue} onreorder={(ids) => store.reorder(ids)} ondropfrom={(id) => onDrop(id, 'today')} group="today">
       {#snippet item(task)}

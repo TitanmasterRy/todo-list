@@ -70,6 +70,7 @@
     list.push({ id: 'recap', label: t('cmd.recap'), icon: '🌙', run: () => (ui.recap = true) });
     list.push({ id: 'frog', label: t('cmd.frog'), icon: '🐸', run: () => (ui.frogPrompt = true) });
     list.push({ id: 'roll', label: t('cmd.roll'), icon: '⏩', run: () => store.rollOverdueToToday() });
+    list.push({ id: 'spread', label: t('cmd.spread'), icon: '🗓️', run: () => store.spreadOverdue() });
     list.push({
       id: 'export',
       label: t('cmd.export'),

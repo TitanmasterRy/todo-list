@@ -4,6 +4,7 @@
   import type { SoundPack } from '../../lib/types';
   import { previewPack, playSound } from '../../lib/sounds';
   import { set } from './settings';
+  import { buzz } from '../../lib/haptics';
   import { t } from '../../lib/i18n/index.svelte';
   const s = $derived(store.settings);
 </script>
@@ -40,6 +41,20 @@
       {/each}
     </div>
   </div>
+  <div class="row">
+    <label for="hap">{t('settings.haptics')}</label>
+    <input
+      id="hap"
+      type="checkbox"
+      class="switch"
+      checked={s.haptics !== false}
+      onchange={(e) => {
+        set('haptics', (e.target as HTMLInputElement).checked);
+        if ((e.target as HTMLInputElement).checked) buzz('done');
+      }}
+    />
+  </div>
+  <p class="help">{t('settings.hapticsHint')}</p>
 </section>
 
 <style>
@@ -52,6 +67,11 @@
     display: flex;
     align-items: center;
     gap: 8px;
+  }
+  .help {
+    font-size: 13px;
+    color: var(--text-muted);
+    margin: 6px 0;
   }
   .row {
     display: flex;

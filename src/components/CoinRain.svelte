@@ -2,6 +2,7 @@
   // Coin rain for big payouts (a casino win of 10× or more, a level-up). Loaded the first time it's needed.
   // Decorative only: nothing when reduced motion is on (app setting or the OS) or confetti is switched off.
   import { store } from '../lib/store.svelte';
+  import { liteEffects, readDeviceHints, sawJank } from '../lib/effects';
 
   interface Props {
     tick: number; // bump to start a new shower
@@ -23,6 +24,7 @@
 
   function allowed(): boolean {
     if (store.settings.celebrations === false || store.settings.reducedMotion) return false;
+    if (liteEffects(store.settings.effects, readDeviceHints(), sawJank())) return false;
     return !(typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches);
   }
 

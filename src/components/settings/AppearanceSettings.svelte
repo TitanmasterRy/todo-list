@@ -6,8 +6,10 @@
   import { FONTS } from '../../lib/fonts';
   import { dayName } from '../../lib/dates';
   import { set } from './settings';
+  import { liteEffects, readDeviceHints, sawJank } from '../../lib/effects';
   import { t } from '../../lib/i18n/index.svelte';
   const s = $derived(store.settings);
+  const autoLite = $derived((s.effects ?? 'auto') === 'auto' && liteEffects('auto', readDeviceHints(), sawJank()));
 </script>
 
 <section class="card">
@@ -49,6 +51,15 @@
     <label for="celeb">{t('settings.celebrations')}</label>
     <input id="celeb" type="checkbox" class="switch" checked={s.celebrations} onchange={(e) => set('celebrations', (e.target as HTMLInputElement).checked)} />
   </div>
+  <div class="row">
+    <label for="fx">{t('settings.effects')}</label>
+    <select id="fx" class="select" value={s.effects ?? 'auto'} onchange={(e) => set('effects', (e.target as HTMLSelectElement).value as 'auto' | 'full' | 'lite')}>
+      <option value="auto">{t('settings.effectsAuto')}</option>
+      <option value="full">{t('settings.effectsFull')}</option>
+      <option value="lite">{t('settings.effectsLite')}</option>
+    </select>
+  </div>
+  <p class="help">{t('settings.effectsHint')}{autoLite ? ` ${t('settings.effectsAutoLite')}` : ''}</p>
   <div class="row">
     <label for="hc">{t('settings.highContrast')}</label>
     <input id="hc" type="checkbox" class="switch" checked={s.highContrast} onchange={(e) => set('highContrast', (e.target as HTMLInputElement).checked)} />

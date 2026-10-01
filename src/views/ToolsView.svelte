@@ -21,6 +21,7 @@
     | 'elements'
     | 'canvas'
     | 'planner'
+    | 'matrix'
     | 'calendar'
     | 'reading'
     | 'calculator'
@@ -51,6 +52,7 @@
   const tabs: { id: Tab; label: string; icon: string; group: Group }[] = $derived([
     { id: 'planner', label: t('tools.planner'), icon: '🗓️', group: 'plan' },
     { id: 'week', label: t('tools.week'), icon: '📅', group: 'plan' },
+    { id: 'matrix', label: t('tools.matrix'), icon: '🧭', group: 'plan' },
     { id: 'timetable', label: t('tools.timetable'), icon: '🏫', group: 'plan' },
     { id: 'syllabus', label: t('tools.syllabus'), icon: '📋', group: 'plan' },
     { id: 'reading', label: t('tools.reading'), icon: '📖', group: 'plan' },
@@ -153,6 +155,12 @@
     {/await}
   {:else if tab === 'practice'}
     {#await import('../components/tools/PracticeTestTool.svelte')}
+      <div class="card muted">{t('common.loading')}</div>
+    {:then m}
+      <m.default />
+    {/await}
+  {:else if tab === 'matrix'}
+    {#await import('../components/tools/MatrixTool.svelte')}
       <div class="card muted">{t('common.loading')}</div>
     {:then m}
       <m.default />

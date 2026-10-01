@@ -4,6 +4,7 @@ import type { Task } from '../types';
 import { uid } from '../id';
 import { addDaysKey, dueKey, formatDue, isDateOnly, isoNow, nextWeekKey, thisWeekendKey } from '../dates';
 import { nextOccurrenceKey } from '../recurrence';
+import { spreadDays, spreadPlan } from '../spread';
 import { undo } from '../undo.svelte';
 import { toasts } from '../toast.svelte';
 import { playSound } from '../sounds';
@@ -59,6 +60,46 @@ export const planningMethods = {
     this.persistTasks(updated);
     undo.push({
       label: tr('toast.rolled', { count: updated.length }),
+      undo: () => {
+        const now = isoNow();
+        const back = snaps.map((t) => ({ ...t, updatedAt: now }));
+        const m = new Map(back.map((t) => [t.id, t]));
+        this.tasks = this.tasks.map((t) => m.get(t.id) ?? t);
+        this.persistTasks(back);
+      },
+    });
+  },
+
+  /** Overdue work handed out over the next days, most important first, inside the planner's daily capacity. */
+  spreadOverdue(this: Store, days = 5): void {
+    const overdue = this.overdueTasks;
+    if (!overdue.length) return;
+    const usedMin: Record<string, number> = {};
+    for (const t of this.openTasks) {
+      if (!t.dueAt || overdue.includes(t)) continue;
+      const k = dueKey(t.dueAt);
+      usedMin[k] = (usedMin[k] ?? 0) + (t.estimateMin ?? 0);
+    }
+    const plan = spreadPlan(overdue, this.today, { days, budgetMin: this.settings.dailyCapacityMin || 180, weekdayBudget: this.settings.weekdayCapacityMin, usedMin });
+    const day = new Map(plan.map((p) => [p.id, p.day]));
+    const snaps = overdue.map((t) => structuredClone($state.snapshot(t)) as Task);
+    const now = isoNow();
+    const updated = overdue.map((t) => {
+      const toKey = day.get(t.id) ?? this.today;
+      let dueAt: string = toKey;
+      if (t.dueAt && !isDateOnly(t.dueAt)) {
+        const d = new Date(t.dueAt);
+        const n = new Date(toKey + 'T00:00:00');
+        n.setHours(d.getHours(), d.getMinutes(), 0, 0);
+        dueAt = n.toISOString();
+      }
+      return { ...t, dueAt, deferredCount: t.deferredCount + 1, updatedAt: now, pinnedDay: undefined };
+    });
+    const map = new Map(updated.map((t) => [t.id, t]));
+    this.tasks = this.tasks.map((t) => map.get(t.id) ?? t);
+    this.persistTasks(updated);
+    undo.push({
+      label: tr('toast.spread', { count: updated.length, days: spreadDays(plan) }),
       undo: () => {
         const now = isoNow();
         const back = snaps.map((t) => ({ ...t, updatedAt: now }));
