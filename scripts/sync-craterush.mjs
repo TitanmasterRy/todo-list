@@ -19,5 +19,8 @@ if (!re.test(html)) {
   console.error('craterush.html has no // logic:start … // logic:end block');
   process.exit(1);
 }
-writeFileSync(page, html.replace(re, (_m, start, end) => `${start}${js}\n${end}`));
+writeFileSync(
+  page,
+  html.replace(re, (_m, start, end) => `${start}${js}\n${end}`),
+);
 console.log('Updated the rules in public/games/craterush.html');

@@ -27,7 +27,10 @@ function cspMeta(): Plugin {
     apply: 'build',
     configResolved(config) {
       const env = { ...config.env, ...process.env } as Record<string, string | undefined>;
-      policy = env.VITE_CSP === 'off' ? '' : buildCsp({ supabaseUrl: env.VITE_SUPABASE_URL, arcadeManifest: env.VITE_ARCADE_MANIFEST, extraConnect: env.VITE_CSP_CONNECT, mediaServers: env.VITE_MEDIA_SERVERS });
+      policy =
+        env.VITE_CSP === 'off'
+          ? ''
+          : buildCsp({ supabaseUrl: env.VITE_SUPABASE_URL, arcadeManifest: env.VITE_ARCADE_MANIFEST, extraConnect: env.VITE_CSP_CONNECT, mediaServers: env.VITE_MEDIA_SERVERS });
     },
     transformIndexHtml(html) {
       if (!policy) return html;
