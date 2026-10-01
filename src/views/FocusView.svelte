@@ -62,7 +62,7 @@
   <header class="page-head">
     <div>
       <h1>{t('nav.focus')}</h1>
-      <div class="sub">{t('focus.sub1')} <span class="kbd">{t('focus.space')}</span> {t('focus.sub2')}</div>
+      <div class="sub">{t('focus.sub1')} <span class="hint-only"><span class="kbd">{t('focus.space')}</span> {t('focus.sub2')}</span></div>
     </div>
     <div class="grow"></div>
     <span class="chip">🍅 {pomToday} {t('today.minToday')}</span>
@@ -299,6 +299,23 @@
     border-radius: 999px;
     flex-wrap: wrap;
     justify-content: center;
+  }
+  @media (max-width: 720px) {
+    /* one scrolling strip instead of two wrapped rows of pills */
+    .modes {
+      flex-wrap: nowrap;
+      justify-content: flex-start;
+      overflow-x: auto;
+      scrollbar-width: none;
+      max-width: 100%;
+    }
+    .modes::-webkit-scrollbar {
+      display: none;
+    }
+    .modes button {
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
   }
   .modes button {
     padding: 6px 14px;

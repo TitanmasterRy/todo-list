@@ -1,5 +1,19 @@
 # Changelog
 
+## Mobile overhaul: a new tab bar, sheets for everything, and one-thumb task actions
+
+- **📱 New phone navigation.** Four tabs (Today, Upcoming, Inbox, Courses) and a More button that opens a sheet with big tiles for Focus, Stats, Tools, Schoology, Play and Settings, plus your streak, level and ring at a glance. The More tab shows where you are.
+- **➕ Quick add comes to your thumb.** On a phone the + button opens quick add in a bottom sheet with the keyboard up, instead of scrolling back to the top; it understands the same shortcuts, shows the same preview chips, and closes once the task is in.
+- **⋯ One-thumb task actions.** Task rows lose the strip of tiny hover buttons on phones; a ⋯ opens an action sheet: Done, Start timer, Focus, Today's frog, Plan for today, Edit, Duplicate, Delete, and Snooze to tomorrow, the weekend, next week, a date, or skip the next repeat. Swiping a row still completes or snoozes it. Chips stay on one line and scroll sideways.
+- **🧭 Settings has a jump row** on phones: tap a section name to scroll to it. The Focus mode strip, the Play tabs and the Tools groups scroll sideways with a fade instead of wrapping.
+- **📲 Install bar:** on phones, a one-time bar above the tab bar offers to install the app once the browser allows it.
+- **📱 Dialogs are bottom sheets on phones.** The task editor, course editor and the other dialogs now slide up full-width, scroll inside, and keep their Save / Cancel / Delete buttons pinned at the bottom, so you never scroll a long form to find them.
+- **Toasts stay out of the way:** on a phone only the two newest show, narrower and to the left of the + button, so the list underneath stays usable and the × is never under the button.
+- **Inbox filters fold away** behind a Filters button on phones (with a count of the active ones); the search box stays. Desktop is unchanged.
+- **Overdue actions** (Roll all to today, Spread over the week) take their own line under the heading on phones instead of wrapping awkwardly.
+- **Fingers, not mice:** icon buttons are 40 px on touch screens, every field is at least 16 px so iPhones stop zooming into them, and keyboard hints (the `n` badge, “Space starts the timer”, `⌘↵`, “( / )”) don't show where there is no keyboard.
+- **Installed-app polish:** the top of every screen respects the notch, the layout uses the dynamic viewport height so nothing hides under the browser bar, and the + button is a little smaller and closer to the corner. Quick add shows a shorter example on narrow screens.
+
 ## Roadmap pass 10: smooth celebrations, lite effects, the priority matrix and spreading overdue work
 
 - **🎉 Confetti without the lag.** Finishing a task that closed the ring, a level-up or a streak milestone could stutter badly, above all on phones. The confetti now draws every piece from a pre-rendered sprite instead of laying out emoji text 180 times a frame, runs its physics on real elapsed time (a slow frame no longer slows the burst), caps the canvas resolution, scales the number of pieces to the screen, and holds the drifting background light still while it's in the air so the glass panels over it aren't re-blurred every frame. The level-up card no longer blurs the whole page behind it.

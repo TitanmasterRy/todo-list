@@ -140,8 +140,8 @@
 }
 
 @media (hover: none) {
-  .kbd.hint-only {
-    display: none;
+  .hint-only {
+    display: none !important;
   }
 }
 
@@ -635,13 +635,74 @@ a.card:hover,
 
 @media (max-width: 720px) {
   .page {
-    padding: 12px 12px calc(var(--tabbar-h) + 90px);
+    /* room for the notch on an installed app, and for the tab bar and the + button below the last row */
+    padding: calc(12px + env(safe-area-inset-top)) 12px calc(var(--tabbar-h) + 96px + env(safe-area-inset-bottom));
   }
   .page-head h1 {
     font-size: 22px;
   }
+  /* dialogs become bottom sheets: full width, scrolling inside, the buttons always in reach */
   .modal-backdrop {
-    padding: 4vh 8px 8px;
+    padding: 0;
+    align-items: flex-end;
+  }
+  .modal {
+    max-width: none;
+    max-height: calc(100dvh - 24px - env(safe-area-inset-top));
+    overflow-y: auto;
+    border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+    border-bottom: none;
+    padding: 16px 14px calc(14px + env(safe-area-inset-bottom));
+    animation: sheet-in 320ms var(--spring) backwards;
+  }
+  .modal .actions {
+    position: sticky;
+    bottom: calc(-14px - env(safe-area-inset-bottom));
+    margin: 8px -14px calc(-14px - env(safe-area-inset-bottom));
+    padding: 10px 14px calc(10px + env(safe-area-inset-bottom));
+    background: var(--bg-elev);
+    border-top: 1px solid var(--border);
+  }
+  .modal .actions .btn {
+    flex: 1 1 auto;
+    justify-content: center;
+  }
+  .modal .actions .grow {
+    display: none;
+  }
+  /* section headers keep their buttons on one line by shrinking them */
+  .section-title .btn.sm {
+    padding: 4px 8px;
+    font-size: 12px;
+  }
+}
+@keyframes sheet-in {
+  from {
+    transform: translateY(40px);
+    opacity: 0;
+  }
+  to {
+    transform: none;
+    opacity: 1;
+  }
+}
+
+/* touch screens: fingers need bigger targets, and iOS zooms into any field smaller than 16px */
+@media (pointer: coarse) {
+  .btn.icon {
+    width: 40px;
+    height: 40px;
+  }
+  .btn.sm {
+    min-height: 36px;
+  }
+  .input,
+  .select,
+  .textarea,
+  input:not([type='checkbox']):not([type='radio']):not([type='range']):not([type='color']),
+  select,
+  textarea {
+    font-size: max(16px, 1em);
   }
 }
 

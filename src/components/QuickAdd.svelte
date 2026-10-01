@@ -1,5 +1,6 @@
 <script lang="ts">
   import { voiceToQuickAdd } from '../lib/voice';
+  import { narrowScreen } from '../lib/touch';
   import { store, type NewTaskInput } from '../lib/store.svelte';
   import { parseQuickAdd } from '../lib/parser';
   import { ui } from '../lib/ui.svelte';
@@ -11,9 +12,10 @@
     defaultDueKey?: string;
     defaultCourseId?: string;
     placeholder?: string;
-    autofocus?: boolean;
+    autofocus?: boolean | 'always'; // 'always' focuses on phones too (the sheet)
+    onadded?: () => void; // after a task is added (the phone sheet closes itself)
   }
-  let { defaultDueKey, defaultCourseId, placeholder, autofocus = false }: Props = $props();
+  let { defaultDueKey, defaultCourseId, placeholder, autofocus = false, onadded }: Props = $props();
 
   let text = $state('');
   let input: HTMLInputElement | undefined = $state();
@@ -115,7 +117,7 @@
     }
   });
   $effect(() => {
-    if (autofocus && input && window.innerWidth > 720) input.focus();
+    if (autofocus && input && (autofocus === 'always' || window.innerWidth > 720)) input.focus();
   });
 
   function lineToInput(line: string): NewTaskInput {
@@ -172,6 +174,7 @@
     primeAudio();
     store.addTask(base, { describe: describeNext && store.settings.autoDescribe });
     text = '';
+    onadded?.();
   }
 
   function applySuggestion(kind: '@' | '#', name: string) {
@@ -198,7 +201,7 @@
   <input
     bind:this={input}
     bind:value={text}
-    placeholder={placeholder ?? t('quick.placeholder')}
+    placeholder={placeholder ?? (narrowScreen() ? t('quick.placeholderShort') : t('quick.placeholder'))}
     aria-label={t('quick.input')}
     autocomplete="off"
     enterkeyhint="done"

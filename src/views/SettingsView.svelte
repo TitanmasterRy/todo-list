@@ -22,31 +22,60 @@
   import HelpSettings from '../components/settings/HelpSettings.svelte';
 
   // Each section is its own component under components/settings/, rendered in this order.
+  // On phones a chip row at the top jumps to a section (the page is long); each section is wrapped with an id.
+  const sections = $derived([
+    { id: 'theme', label: t('settings.themePack') },
+    { id: 'appearance', label: t('settings.appearance') },
+    { id: 'language', label: t('settings.language') },
+    { id: 'sounds', label: t('settings.sounds') },
+    { id: 'goals', label: t('settings.goals') },
+    { id: 'gamification', label: t('settings.gamification') },
+    { id: 'economy', label: t('settings.economy') },
+    { id: 'adding', label: t('settings.adding') },
+    { id: 'ai', label: t('settings.ai') },
+    { id: 'notifications', label: t('settings.notifications') },
+    { id: 'music', label: t('settings.music') },
+    { id: 'schoology', label: t('settings.schoology') },
+    { id: 'templates', label: t('settings.templates') },
+    { id: 'account', label: t('settings.account') },
+    { id: 'gist', label: t('settings.gist') },
+    { id: 'privacy', label: t('settings.privacy') },
+    { id: 'data', label: t('settings.data') },
+    { id: 'trash', label: t('settings.trash') },
+    { id: 'collection', label: t('settings.collection') },
+    { id: 'help', label: t('settings.help') },
+  ]);
+  function jump(id: string) {
+    document.getElementById(`s-${id}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
 </script>
 
 <div class="page settings">
   <header class="page-head"><h1>{t('nav.settings')}</h1></header>
+  <nav class="jump" aria-label={t('settings.jump')}>
+    {#each sections as s (s.id)}<button class="chip" onclick={() => jump(s.id)}>{s.label}</button>{/each}
+  </nav>
 
-  <ThemePackSettings />
-  <AppearanceSettings />
-  <LanguageSettings />
-  <SoundSettings />
-  <GoalsSettings />
-  <GamificationSettings />
-  <EconomySettings />
-  <TaskEntrySettings />
-  <AiSettings />
-  <NotificationSettings />
-  <MusicAccountsSettings />
-  <SchoologySettings />
-  <TemplateSettings />
-  <AccountPanel />
-  <GistSettings />
-  <PrivacySettings />
-  <DataSettings />
-  <TrashSettings />
-  <CollectionSettings />
-  <HelpSettings />
+  <div id="s-theme"><ThemePackSettings /></div>
+  <div id="s-appearance"><AppearanceSettings /></div>
+  <div id="s-language"><LanguageSettings /></div>
+  <div id="s-sounds"><SoundSettings /></div>
+  <div id="s-goals"><GoalsSettings /></div>
+  <div id="s-gamification"><GamificationSettings /></div>
+  <div id="s-economy"><EconomySettings /></div>
+  <div id="s-adding"><TaskEntrySettings /></div>
+  <div id="s-ai"><AiSettings /></div>
+  <div id="s-notifications"><NotificationSettings /></div>
+  <div id="s-music"><MusicAccountsSettings /></div>
+  <div id="s-schoology"><SchoologySettings /></div>
+  <div id="s-templates"><TemplateSettings /></div>
+  <div id="s-account"><AccountPanel /></div>
+  <div id="s-gist"><GistSettings /></div>
+  <div id="s-privacy"><PrivacySettings /></div>
+  <div id="s-data"><DataSettings /></div>
+  <div id="s-trash"><TrashSettings /></div>
+  <div id="s-collection"><CollectionSettings /></div>
+  <div id="s-help"><HelpSettings /></div>
 </div>
 
 <style>
@@ -132,5 +161,32 @@
   .settings :global(.input.num) {
     font-variant-numeric: tabular-nums;
     text-align: center;
+  }
+  .jump {
+    display: none;
+    gap: 6px;
+    overflow-x: auto;
+    scrollbar-width: none;
+    margin: -4px -12px 12px;
+    padding: 4px 12px;
+    scroll-padding-inline: 12px;
+  }
+  .jump::-webkit-scrollbar {
+    display: none;
+  }
+  .jump .chip {
+    flex-shrink: 0;
+    white-space: nowrap;
+    cursor: pointer;
+    padding: 7px 12px;
+    font-size: 13px;
+  }
+  [id^='s-'] {
+    scroll-margin-top: calc(8px + env(safe-area-inset-top));
+  }
+  @media (max-width: 720px) {
+    .jump {
+      display: flex;
+    }
   }
 </style>

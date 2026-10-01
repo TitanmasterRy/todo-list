@@ -1,50 +1,58 @@
 <script lang="ts">
-  import { fly } from 'svelte/transition';
+  // Phone navigation: four tabs and a More button that opens a sheet with everything else.
   import { store, VIEWS } from '../lib/store.svelte';
+  import { economy } from '../lib/economy.svelte';
+  import { buzz } from '../lib/haptics';
+  import Sheet from './Sheet.svelte';
   import { t } from '../lib/i18n/index.svelte';
-  const tabs = VIEWS.filter((v) => ['today', 'upcoming', 'courses', 'inbox', 'stats'].includes(v.id));
-  const more = $derived(VIEWS.filter((v) => ['focus', 'tools', 'schoology', 'play', 'settings'].includes(v.id) && (v.id !== 'play' || store.settings.economyEnabled)));
+  const tabs = VIEWS.filter((v) => ['today', 'upcoming', 'inbox', 'courses'].includes(v.id));
+  const more = $derived(VIEWS.filter((v) => ['focus', 'stats', 'tools', 'schoology', 'play', 'settings'].includes(v.id) && (v.id !== 'play' || store.settings.economyEnabled)));
   let open = $state(false);
   const moreActive = $derived(more.some((v) => v.id === store.view));
+  function go(id: (typeof VIEWS)[number]['id']) {
+    buzz('tap');
+    open = false;
+    store.go(id);
+  }
 </script>
 
 <nav class="tabbar" aria-label={t('nav.main')}>
   {#each tabs as v (v.id)}
-    <button
-      class:active={store.view === v.id}
-      onclick={() => {
-        open = false;
-        store.go(v.id);
-      }}
-      aria-current={store.view === v.id ? 'page' : undefined}
-      aria-label={v.label}
-    >
+    <button class:active={store.view === v.id} onclick={() => go(v.id)} aria-current={store.view === v.id ? 'page' : undefined} aria-label={v.label}>
       <span class="ico" aria-hidden="true">{v.icon}</span>
       <span class="lbl">{v.label}</span>
     </button>
   {/each}
-  <button class:active={moreActive} onclick={() => (open = !open)} aria-label={t('nav.more')} aria-expanded={open} aria-haspopup="menu">
+  <button
+    class:active={moreActive}
+    onclick={() => (open = !open)}
+    aria-label={moreActive ? (VIEWS.find((v) => v.id === store.view)?.label ?? t('nav.more')) : t('nav.more')}
+    aria-expanded={open}
+    aria-haspopup="dialog"
+  >
     <span class="ico" aria-hidden="true">{moreActive ? VIEWS.find((v) => v.id === store.view)?.icon : '⋯'}</span>
     <span class="lbl">{moreActive ? VIEWS.find((v) => v.id === store.view)?.label : t('nav.more')}</span>
   </button>
 </nav>
 {#if open}
-  <!-- svelte-ignore a11y_no_static_element_interactions, a11y_click_events_have_key_events -->
-  <div class="more-backdrop" onclick={() => (open = false)}></div>
-  <div class="more" role="menu" transition:fly={{ y: 20, duration: 180 }}>
-    {#each more as v (v.id)}
-      <button
-        role="menuitem"
-        class:active={store.view === v.id}
-        onclick={() => {
-          open = false;
-          store.go(v.id);
-        }}
-      >
-        <span class="ico" aria-hidden="true">{v.icon}</span>{v.label}
-      </button>
-    {/each}
-  </div>
+  <Sheet title={t('nav.more')} onclose={() => (open = false)}>
+    <div class="grid" role="menu">
+      {#each more as v (v.id)}
+        <button role="menuitem" class="tile" class:active={store.view === v.id} onclick={() => go(v.id)} aria-current={store.view === v.id ? 'page' : undefined}>
+          <span class="ico" aria-hidden="true">{v.icon}</span>
+          <span>{v.label}</span>
+          {#if v.id === 'play' && economy.wallet.coins > 0}<span class="badge">🪙 {economy.wallet.coins}</span>{/if}
+        </button>
+      {/each}
+    </div>
+    {#if store.settings.gamification}
+      <div class="me">
+        <span>🔥 {store.streak}</span>
+        <span>⭐ Lv {store.stats.level}</span>
+        <span>🎯 {store.completedToday}/{store.settings.dailyGoal}</span>
+      </div>
+    {/if}
+  </Sheet>
 {/if}
 
 <style>
@@ -72,9 +80,10 @@
     justify-content: center;
     gap: 2px;
     color: var(--text-faint);
-    font-size: 10px;
+    font-size: 11px;
     font-weight: 700;
     border-radius: 14px;
+    -webkit-tap-highlight-color: transparent;
     transition:
       color var(--dur),
       background var(--dur);
@@ -94,7 +103,7 @@
     box-shadow: 0 0 10px var(--accent);
   }
   .tabbar .ico {
-    font-size: 21px;
+    font-size: 22px;
     transition: transform var(--dur-slow) var(--spring);
   }
   .tabbar button.active .ico {
@@ -104,53 +113,61 @@
   .tabbar button:active .ico {
     transform: scale(0.9);
   }
-  .more-backdrop {
-    display: none;
-    position: fixed;
-    inset: 0;
-    z-index: 21;
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
   }
-  .more {
-    display: none;
-    position: fixed;
-    inset-inline-end: 8px;
-    bottom: calc(var(--tabbar-h) + 8px + env(safe-area-inset-bottom));
-    background: var(--glass);
-    backdrop-filter: blur(16px) saturate(1.4);
-    -webkit-backdrop-filter: blur(16px) saturate(1.4);
-    border: 1px solid color-mix(in srgb, var(--accent) 25%, var(--border-strong));
-    border-radius: 16px;
-    box-shadow: var(--shadow-lg);
-    padding: 6px;
-    flex-direction: column;
-    min-width: 180px;
-    z-index: 22;
-  }
-  .more button {
+  .tile {
+    position: relative;
     display: flex;
+    flex-direction: column;
     align-items: center;
-    gap: 10px;
-    padding: 10px 12px;
-    border-radius: 10px;
-    font-size: 15px;
-    font-weight: 600;
+    gap: 6px;
+    padding: 14px 6px 12px;
+    border-radius: var(--radius);
+    background: var(--bg-elev-2);
+    border: 1px solid var(--border);
+    font-size: 13px;
+    font-weight: 700;
     color: var(--text);
-    text-align: start;
+    min-height: 84px;
+    -webkit-tap-highlight-color: transparent;
   }
-  .more button:hover {
-    background: var(--bg-hover);
+  .tile:active {
+    transform: scale(0.96);
   }
-  .more button.active {
-    background: linear-gradient(90deg, color-mix(in srgb, var(--accent) 22%, transparent), transparent);
+  .tile.active {
+    border-color: var(--accent);
+    background: color-mix(in srgb, var(--accent) 14%, var(--bg-elev-2));
+    color: var(--accent-text);
+  }
+  .tile .ico {
+    font-size: 28px;
+  }
+  .badge {
+    position: absolute;
+    top: 6px;
+    inset-inline-end: 6px;
+    font-size: 11px;
+    padding: 1px 6px;
+    border-radius: 999px;
+    background: var(--grad-gold);
+    color: #3a2a00;
+    font-weight: 800;
+  }
+  .me {
+    display: flex;
+    justify-content: center;
+    gap: 18px;
+    margin-top: 14px;
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--text-muted);
   }
   @media (max-width: 720px) {
-    .tabbar,
-    .more,
-    .more-backdrop {
+    .tabbar {
       display: flex;
-    }
-    .more-backdrop {
-      display: block;
     }
   }
 </style>

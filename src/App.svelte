@@ -33,6 +33,12 @@
   const loadReceiveTasks = () => import('./components/ReceiveTasks.svelte');
   import { site } from './lib/site.svelte';
   const loadRain = () => import('./components/CoinRain.svelte');
+  const loadTaskActions = () => import('./components/TaskActionsSheet.svelte');
+  import Sheet from './components/Sheet.svelte';
+  import QuickAdd from './components/QuickAdd.svelte';
+  import { narrowScreen } from './lib/touch';
+  import { pwa, promptInstall } from './lib/pwa.svelte';
+  import { addDaysKey } from './lib/dates';
   import { hasSecret, promptAtStartup, vault } from './lib/secrets.svelte';
   import DailyPrompts from './components/DailyPrompts.svelte';
   import BulkBar from './components/BulkBar.svelte';
@@ -94,6 +100,11 @@
   const viewLabel = $derived(VIEWS.find((v) => v.id === store.view)?.label ?? '');
   const listViews = ['today', 'upcoming', 'courses', 'inbox'];
   function fab() {
+    // phones: quick add comes to the thumb instead of scrolling back to the top of the page
+    if (narrowScreen()) {
+      ui.quickAddSheet = true;
+      return;
+    }
     if (!listViews.includes(store.view)) store.go('today');
     setTimeout(() => {
       const el = document.querySelector<HTMLInputElement>('[data-quick-add]');
@@ -194,6 +205,24 @@
     <TabBar />
   </div>
   <button class="fab" onclick={fab} aria-label={t('app.addTask')}>+</button>
+  {#if ui.quickAddSheet}
+    <Sheet title={t('app.addTask')} onclose={() => (ui.quickAddSheet = false)}>
+      <QuickAdd autofocus="always" defaultDueKey={store.view === 'upcoming' ? addDaysKey(store.today, 1) : store.today} onadded={() => (ui.quickAddSheet = false)} />
+      <p class="sheet-hint">{t('quick.sheetHint')}</p>
+    </Sheet>
+  {/if}
+  {#if ui.taskActionsFor}
+    {#await loadTaskActions() then m}
+      {#if ui.taskActionsFor}<m.default taskId={ui.taskActionsFor} onclose={() => (ui.taskActionsFor = null)} />{/if}
+    {/await}
+  {/if}
+  {#if pwa.installEvent && !pwa.installed && store.settings.onboarded && !store.settings.installBannerDismissed}
+    <div class="install" role="status">
+      <span class="grow">📱 {t('app.installHint')}</span>
+      <button class="btn sm primary" onclick={() => void promptInstall()}>{t('data.install')}</button>
+      <button class="btn ghost sm icon" aria-label={t('app.dismiss')} onclick={() => store.updateSettings({ installBannerDismissed: true })}>×</button>
+    </div>
+  {/if}
   <BulkBar />
   <Toasts />
   <FeedbackLayer />
@@ -261,6 +290,7 @@
   }
   .loading {
     height: 100vh;
+    height: 100dvh;
     display: flex;
     gap: 24px;
     padding: 16px;
@@ -294,6 +324,7 @@
   .shell {
     display: flex;
     min-height: 100vh;
+    min-height: 100dvh;
   }
   .main {
     flex: 1;
@@ -332,10 +363,42 @@
   .fab:active {
     transform: scale(0.92);
   }
+  .sheet-hint {
+    margin: 10px 2px 0;
+    font-size: 12px;
+    color: var(--text-muted);
+  }
+  /* "Install app" bar: phones only, above the tab bar, once per device */
+  .install {
+    display: none;
+    position: fixed;
+    left: 12px;
+    right: 12px;
+    bottom: calc(var(--tabbar-h) + 12px + env(safe-area-inset-bottom));
+    align-items: center;
+    gap: 8px;
+    padding: 8px 8px 8px 12px;
+    border-radius: 14px;
+    background: var(--bg-elev);
+    border: 1px solid color-mix(in srgb, var(--accent) 40%, var(--border));
+    box-shadow: var(--shadow-lg);
+    font-size: 13px;
+    z-index: 25;
+    animation: rise-in var(--dur-slow) var(--ease) backwards;
+  }
+  @media (max-width: 720px) {
+    .install {
+      display: flex;
+    }
+  }
   @media (max-width: 720px) {
     .fab {
       display: grid;
       place-items: center;
+      width: 52px;
+      height: 52px;
+      bottom: calc(var(--tabbar-h) + 12px + env(safe-area-inset-bottom));
+      inset-inline-end: 12px;
     }
   }
 </style>

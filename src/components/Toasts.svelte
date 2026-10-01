@@ -131,8 +131,19 @@
     background: var(--bg-hover);
   }
   @media (max-width: 720px) {
+    /* sits left of the + button; only the two newest show, so the list underneath stays usable */
     .toasts {
       bottom: calc(var(--tabbar-h) + 12px + env(safe-area-inset-bottom));
+      left: 12px;
+      transform: none;
+      width: calc(100vw - 88px);
+    }
+    .toast:nth-last-child(n + 3) {
+      display: none;
+    }
+    .toast {
+      padding: 8px 10px 8px 14px;
+      font-size: 13px;
     }
   }
 </style>
