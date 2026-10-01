@@ -1,6 +1,7 @@
 // Swipe a task row on a touch screen: right to complete, left to snooze to tomorrow. A small vibration marks the point
 // where letting go will act. Mouse and pen are left alone (they have the checkbox and the snooze button).
 import type { Action } from 'svelte/action';
+import { buzz } from './haptics';
 
 export type SwipeDir = 'right' | 'left';
 
@@ -21,14 +22,6 @@ export function swipeOffset(dx: number, width: number): number {
   const a = Math.abs(dx);
   const out = a <= t ? a : t + (a - t) * 0.35;
   return Math.sign(dx) * Math.min(out, width * 0.6);
-}
-
-export function buzz(ms = 10): void {
-  try {
-    navigator.vibrate?.(ms);
-  } catch {
-    /* not allowed */
-  }
 }
 
 interface SwipeOpts {
@@ -86,7 +79,7 @@ export const swipe: Action<HTMLElement, SwipeOpts> = (node, initial) => {
     const d = swipeDecision(dx, w);
     if (d !== armed) {
       armed = d;
-      if (d) buzz(8);
+      if (d) buzz('arm');
       if (d) node.dataset.swipeArmed = '';
       else delete node.dataset.swipeArmed;
     }
@@ -107,7 +100,7 @@ export const swipe: Action<HTMLElement, SwipeOpts> = (node, initial) => {
       setTimeout(() => node.removeEventListener('click', stop, { capture: true }), 350);
     }
     if (d) {
-      buzz(18);
+      buzz('swipe');
       opts.onswipe(d);
     }
   }

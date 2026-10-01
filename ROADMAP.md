@@ -52,6 +52,8 @@ Everything we could improve or add to Homework To-Do, grouped by area. Checked i
 - [x] Contrast audit of all theme packs in light and dark.
 - [x] High-contrast theme and a dyslexia-friendly font option.
 - [x] Separate toggles for confetti/particles and sounds.
+- [x] Effects level (Auto / Full / Lite): lite drops the glass blur, the ambient background and coin rain, and Auto picks it on weak phones or after a celebration dropped frames.
+- [x] 🔴 **Confetti lag on task completion.** Emoji text drawn per particle per frame, a per-particle font change and the ambient background re-blurring under glass panels made the burst stutter. Fixed with pre-rendered sprites, delta-time physics, a capped canvas resolution, a screen-sized particle budget and a paused background while confetti is in the air.
 
 ## 🌍 Reach
 
@@ -71,6 +73,8 @@ Everything we could improve or add to Homework To-Do, grouped by area. Checked i
 - [x] Month calendar view next to Upcoming.
 - [x] Time tracking per task vs. estimate, with a personal "estimates are usually off by X%" note.
 - [x] "What should I do now?" auto-priority from due date, weight and estimate.
+- [x] Priority matrix (Tools → Plan): open tasks in four boxes by urgency and importance.
+- [x] Spread overdue work over the week within the daily capacity (Today → Overdue → Spread over the week).
 - [x] Recurrence exceptions (skip one) and "every 2nd Tuesday".
 - [x] Trash can: deleted tasks kept 30 days and restorable (built on the tombstones).
 
@@ -244,7 +248,7 @@ Each ships as a standalone HTML file in `public/games/`, so they double as examp
 - [ ] Background sync and push reminders. Partly done: notifications go through the service worker, and installed Chromium apps get a background morning digest and badge via periodic sync. True push needs a server.
 - [x] App icon badge with today's due count.
 - [x] Share files into the app (PDFs straight to the reader). (Installed app: share a PDF, photo or document → Book reader or a new task with it attached.)
-- [ ] Swipe to complete/snooze with haptics.
+- [x] Swipe to complete/snooze with haptics. (A vibration on arm, swipe, complete, ring closed and level-up; Settings → Sounds → Vibration.)
 - [ ] Capacitor wrap for iOS/Android.
 - [x] Browser extension: add the current page as a task. (`extension/`: toolbar button, right-click menu, Alt+Shift+H.)
 - [ ] Skeleton loading and virtual scrolling for large lists.
@@ -259,7 +263,7 @@ Each ships as a standalone HTML file in `public/games/`, so they double as examp
 
 - [x] Field-level merge so two devices editing different fields both win. (Tasks track when each field changed; older tasks start tracking on their next save.)
 - [ ] Dropbox / OneDrive / pick-a-file sync.
-- [ ] Per-task edit history.
+- [x] Per-task edit history. (Task editor → History: what changed and when, kept on the task so it syncs.)
 - [x] Import from Todoist (and any CSV).
 - [x] Import from Google Tasks. (Settings → Data → Import: the Tasks.json from Google Takeout; lists become tags, child tasks become steps.)
 - [ ] Import from Microsoft To Do (it has no export file; would need a Microsoft Graph app).

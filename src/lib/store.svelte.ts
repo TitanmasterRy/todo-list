@@ -27,6 +27,7 @@ import { addDaysKey, dueKey, isDueToday, isOverdue, isoNow, todayKey, daysAgoKey
 import { activeBreak, applyCompletion, applyGrade, effectiveStreak, isPowerHour, rollCollectible, STREAK_MILESTONES, type ComboState } from './gamification';
 import { applyThemePack } from './themes';
 import { applyFont } from './fonts';
+import { liteEffects, readDeviceHints, sawJank } from './effects';
 import { autoDescribe } from './autodescribe';
 import { spawnNextInstance } from './recurrence';
 import { undo } from './undo.svelte';
@@ -195,7 +196,16 @@ export class Store {
       this.stats = { ...this.stats, dailyGoal: this.settings.dailyGoal };
       void db.putStats($state.snapshot(this.stats));
     }
-    if ('theme' in patch || 'accent' in patch || 'reducedMotion' in patch || 'themePack' in patch || 'highContrast' in patch || 'fontChoice' in patch || 'textScale' in patch)
+    if (
+      'theme' in patch ||
+      'accent' in patch ||
+      'reducedMotion' in patch ||
+      'themePack' in patch ||
+      'highContrast' in patch ||
+      'fontChoice' in patch ||
+      'textScale' in patch ||
+      'effects' in patch
+    )
       this.applyTheme();
     if ('soundsEnabled' in patch || 'soundPack' in patch) {
       configureSounds({ enabled: this.settings.soundsEnabled, pack: this.settings.soundPack });
@@ -217,6 +227,7 @@ export class Store {
     applyThemePack(themePack, dark, accent);
     root.classList.toggle('reduced-motion', reducedMotion);
     root.classList.toggle('high-contrast', !!this.settings.highContrast);
+    root.classList.toggle('lite-fx', liteEffects(this.settings.effects, readDeviceHints(), sawJank()));
     // sizes are in px throughout, so scale with zoom (like browser zoom, but only for this app)
     root.style.zoom = this.settings.textScale && this.settings.textScale !== 100 ? String(this.settings.textScale / 100) : '';
     void applyFont(this.settings.fontChoice ?? 'system');

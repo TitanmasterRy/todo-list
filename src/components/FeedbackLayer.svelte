@@ -8,6 +8,7 @@
   import { undo } from '../lib/undo.svelte';
   import { playSound, primeAudio } from '../lib/sounds';
   import { badgeById } from '../lib/gamification';
+  import { buzz } from '../lib/haptics';
   import Confetti from './Confetti.svelte';
   import { t as tr } from '../lib/i18n/index.svelte';
 
@@ -38,6 +39,7 @@
   onMount(() => {
     const offs = [
       on('completed', (e) => {
+        buzz('done');
         const g = store.settings.gamification;
         const entry = undo.stack[undo.stack.length - 1];
         const parts: string[] = [];
@@ -116,6 +118,7 @@
         enqueue(() => {
           confetti++;
           playSound('levelup');
+          buzz('levelup');
           toasts.push({ message: tr('xp.streak', { n: days }), detail: days >= 30 ? tr('xp.streak30') : tr('xp.streakKeep'), kind: 'levelup', emoji: '🔥', timeout: 6000 });
           done(1500);
         });
@@ -129,6 +132,7 @@
           levelUp = level;
           confetti++;
           playSound('levelup');
+          buzz('levelup');
           setTimeout(() => (levelUp = null), 2200);
           done(2400);
         });
@@ -140,6 +144,7 @@
         enqueue(() => {
           badge = def;
           playSound('badge');
+          buzz('tap');
           setTimeout(() => (badge = null), 2600);
           done(2800);
         });
@@ -151,6 +156,7 @@
         enqueue(() => {
           confetti++;
           playSound('ring');
+          buzz('ring');
           toasts.push({
             message: tr('xp.goal'),
             detail: tr('xp.goalDetail', { count: store.settings.dailyGoal }),
@@ -221,8 +227,6 @@
     display: grid;
     place-items: center;
     background: radial-gradient(circle at 50% 50%, color-mix(in srgb, var(--accent) 30%, transparent), rgba(0, 0, 0, 0.55) 70%);
-    backdrop-filter: blur(4px);
-    -webkit-backdrop-filter: blur(4px);
     z-index: 400;
     pointer-events: none;
     overflow: hidden;

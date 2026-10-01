@@ -222,6 +222,8 @@ export interface Settings {
   soundPromptShown: boolean;
   reducedMotion: boolean;
   celebrations: boolean; // confetti and checkbox particle bursts (separate from sounds and motion)
+  effects?: 'auto' | 'full' | 'lite'; // glass blur, ambient light, coin rain and confetti density ('auto' goes lite on weak phones)
+  haptics?: boolean; // a short vibration on complete, swipe, level-up (phones only)
   highContrast: boolean;
   fontChoice: 'system' | 'atkinson' | 'lexend' | 'dyslexic';
   textScale: number; // percent: 100, 112, 125, 140
@@ -332,6 +334,8 @@ export const DEFAULT_SETTINGS: Settings = {
   soundPromptShown: false,
   reducedMotion: false,
   celebrations: true,
+  effects: 'auto',
+  haptics: true,
   highContrast: false,
   fontChoice: 'system',
   textScale: 100,

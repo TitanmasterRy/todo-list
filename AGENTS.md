@@ -23,7 +23,7 @@ with LM Studio is covered in [LOCAL_LLM.md](LOCAL_LLM.md).
 ## Before every commit
 
 ```sh
-npx prettier --write src tests          # formatting
+npx prettier --write .                  # formatting (CI checks the whole tree)
 npx eslint src tests scripts vite.config.ts
 npx svelte-check --threshold warning    # 0 errors, 0 warnings
 npx vitest run                          # unit tests

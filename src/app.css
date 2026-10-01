@@ -98,6 +98,37 @@
   transition-duration: 0.001ms !important;
 }
 
+/* Lite effects (Settings → Appearance → Effects, or picked automatically on a weak phone): the glass panels go
+   solid, the ambient light stands still and the heavier loops stop. Confetti still fires, with fewer pieces. */
+:root.lite-fx {
+  --glass: var(--bg-elev);
+}
+:root.lite-fx body::before {
+  animation: none;
+}
+:root.lite-fx .toast,
+:root.lite-fx .tabbar,
+:root.lite-fx .more,
+:root.lite-fx .more-backdrop,
+:root.lite-fx .modal-backdrop,
+:root.lite-fx .bulk,
+:root.lite-fx .badge-pop,
+:root.lite-fx .overlay,
+:root.lite-fx .compact .actions {
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+:root.lite-fx .fab::before,
+:root.lite-fx .rays,
+:root.lite-fx .glow,
+:root.lite-fx .medal .shine {
+  animation: none;
+}
+/* while confetti is in the air the drifting background light holds still, so the glass panels over it aren't re-blurred every frame */
+:root.celebrating body::before {
+  animation-play-state: paused;
+}
+
 @media (prefers-reduced-motion: reduce) {
   :root:not(.motion-ok) *,
   :root:not(.motion-ok) *::before,
