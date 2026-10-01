@@ -1,5 +1,5 @@
 // Casino sound effects: tiny WebAudio synths (no files). Silent unless the app's sounds are on (Settings).
-import { soundContext } from '../../lib/sounds';
+import { soundBus, soundContext } from '../../lib/sounds';
 
 export type Sfx =
   'chip' | 'chips' | 'deal' | 'flip' | 'reel' | 'spin' | 'tick' | 'peg' | 'win' | 'bigwin' | 'lose' | 'dice' | 'ball' | 'gem' | 'boom' | 'scratch' | 'pop' | 'tease' | 'click';
@@ -17,7 +17,7 @@ function tones(c: AudioContext, list: Tone[], master = 0.18): void {
   const t0 = c.currentTime + 0.005;
   const out = c.createGain();
   out.gain.value = master;
-  out.connect(c.destination);
+  out.connect(soundBus() ?? c.destination);
   for (const n of list) {
     const at = t0 + (n.at ?? 0);
     const o = c.createOscillator();
@@ -51,7 +51,10 @@ function hiss(c: AudioContext, dur: number, o: { gain?: number; type?: BiquadFil
   const g = c.createGain();
   g.gain.setValueAtTime(o.gain ?? 0.2, at);
   g.gain.exponentialRampToValueAtTime(0.0001, at + dur);
-  src.connect(f).connect(g).connect(c.destination);
+  src
+    .connect(f)
+    .connect(g)
+    .connect(soundBus() ?? c.destination);
   src.start(at, Math.random() * 0.5);
   src.stop(at + dur + 0.02);
 }

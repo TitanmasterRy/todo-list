@@ -108,6 +108,7 @@ describe('Spanish file', () => {
   // Values that are the same in both languages on purpose: brand names, words spelled the same, and patterns
   // that are only placeholders. Anything else identical to English was probably copied and not translated.
   const SAME_IN_SPANISH = new Set([
+    'chime.gong',
     'priority.normal',
     'nav.schoology',
     'app.title',

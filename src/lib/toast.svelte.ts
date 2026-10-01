@@ -14,6 +14,8 @@ export interface Toast {
   emoji?: string;
 }
 
+import { playSound } from './sounds';
+
 let nextId = 1;
 
 class ToastStore {
@@ -22,6 +24,7 @@ class ToastStore {
   push(t: Omit<Toast, 'id' | 'timeout'> & { timeout?: number }): number {
     const id = nextId++;
     const toast: Toast = { timeout: 4000, ...t, id };
+    if (toast.kind === 'warn') playSound('error');
     this.items = [...this.items, toast].slice(-4);
     if (toast.timeout > 0) {
       setTimeout(() => this.dismiss(id), toast.timeout);

@@ -5,7 +5,7 @@
   import { parseQuickAdd } from '../lib/parser';
   import { ui } from '../lib/ui.svelte';
   import { toasts } from '../lib/toast.svelte';
-  import { primeAudio } from '../lib/sounds';
+  import { playSound, primeAudio } from '../lib/sounds';
   import { locale, t } from '../lib/i18n/index.svelte';
 
   interface Props {
@@ -173,6 +173,7 @@
     else if (defaultDueKey) base.dueAt = defaultDueKey;
     primeAudio();
     store.addTask(base, { describe: describeNext && store.settings.autoDescribe });
+    playSound('add');
     text = '';
     onadded?.();
   }

@@ -45,6 +45,7 @@ class Economy {
     const emoji = currency === 'coins' ? '🪙' : currency === 'chips' ? '🎰' : '🎟️';
     const p = { id: popId++, text: `${amount > 0 ? '+' : ''}${amount.toLocaleString()} ${emoji}` };
     this.pops = [...this.pops, p].slice(-4);
+    if (amount > 0) playSound('coin');
     setTimeout(() => (this.pops = this.pops.filter((x) => x.id !== p.id)), 1800);
   }
 

@@ -117,7 +117,7 @@
       on('streakMilestone', ({ days }) => {
         enqueue(() => {
           confetti++;
-          playSound('levelup');
+          playSound('streak');
           buzz('levelup');
           toasts.push({ message: tr('xp.streak', { n: days }), detail: days >= 30 ? tr('xp.streak30') : tr('xp.streakKeep'), kind: 'levelup', emoji: '🔥', timeout: 6000 });
           done(1500);

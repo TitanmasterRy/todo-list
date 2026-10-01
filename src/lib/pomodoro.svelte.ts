@@ -53,6 +53,7 @@ class Pomodoro {
     if (this.remaining <= 0) this.remaining = this.total;
     this.endAt = Date.now() + this.remaining * 1000;
     this.running = true;
+    playSound(this.mode === 'break' || this.mode === 'long' ? 'breakStart' : 'timerStart');
     this.timer = setInterval(() => this.tick(), 250);
     this.tick();
   }

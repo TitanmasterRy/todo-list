@@ -27,6 +27,7 @@ export const planningMethods = {
     const next: Task = { ...task, dueAt, deferredCount: task.deferredCount + 1, updatedAt: isoNow(), pinnedDay: undefined };
     this.tasks = this.tasks.map((t) => (t.id === id ? next : t));
     this.persistTask(next);
+    playSound('snooze');
     undo.push({ label: `${label} “${task.title}”`, undo: () => this.restoreTaskInternal(snapshot) });
   },
 
