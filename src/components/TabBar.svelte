@@ -3,6 +3,7 @@
   import { store, VIEWS } from '../lib/store.svelte';
   import { economy } from '../lib/economy.svelte';
   import { buzz } from '../lib/haptics';
+  import { playSound } from '../lib/sounds';
   import Sheet from './Sheet.svelte';
   import { t } from '../lib/i18n/index.svelte';
   const tabs = VIEWS.filter((v) => ['today', 'upcoming', 'inbox', 'courses'].includes(v.id));
@@ -11,6 +12,7 @@
   const moreActive = $derived(more.some((v) => v.id === store.view));
   function go(id: (typeof VIEWS)[number]['id']) {
     buzz('tap');
+    playSound('nav');
     open = false;
     store.go(id);
   }

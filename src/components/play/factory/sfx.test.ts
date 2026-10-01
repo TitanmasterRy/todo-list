@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { soundContext } from '../../../lib/sounds';
 import { play, type FactorySound } from './sfx';
 
-vi.mock('../../../lib/sounds', () => ({ soundContext: vi.fn(() => null) }));
+vi.mock('../../../lib/sounds', () => ({ soundContext: vi.fn(() => null), soundBus: vi.fn(() => null) }));
 
 const SOUNDS: FactorySound[] = ['build', 'belt', 'dismantle', 'error', 'milestone', 'phase', 'launch', 'badge', 'alarm', 'coin', 'click'];
 

@@ -10,6 +10,7 @@
   import { socialUi } from '../lib/social/state.svelte';
   import { locale as appLocale, t } from '../lib/i18n/index.svelte';
   const loadMusic = () => import('../components/MusicPanel.svelte');
+  const loadAmbience = () => import('../components/AmbiencePanel.svelte');
   const loadRoom = () => import('../components/social/StudyRoom.svelte');
   const loadCompanion = () => import('../components/FocusCompanion.svelte');
   let customInput = $state(String(pomodoro.customMin));
@@ -166,6 +167,7 @@
   </div>
 
   {#await loadCompanion() then m}<m.default />{/await}
+  {#await loadAmbience() then m}<m.default />{/await}
   {#if showMusic}
     {#await loadMusic() then m}<m.default />{/await}
   {/if}

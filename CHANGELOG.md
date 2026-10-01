@@ -1,5 +1,12 @@
 # Changelog
 
+## Sound overhaul: seven packs for every sound, one volume, a timer chime of your own, and Focus ambience
+
+- **🔊 A rebuilt sound engine.** Every sound is still synthesized on the spot (no files), but now through one master bus with a **volume slider** and a limiter, so nothing clips and one setting rules everything, the casino and Orebelt included. Mobile browsers unlock audio on your first tap.
+- **🎼 Seven packs, every sound.** Soft, click, arcade, bubble, chime, synth and paper are all in Settings → Sounds now, as tiles that play a preview when you pick them, and every pack covers the full vocabulary: complete, add, delete, snooze, undo, tick, tab, open, close, warning, coins, level-up, badge, goal reached, streak, timer start, break, timer end. New sounds play when you add a task, delete or snooze one, switch tabs, open a sheet, earn coins, hit a streak milestone, start the timer or a break, and when something goes wrong.
+- **🎚️ What plays:** three switches for interface, rewards and timer sounds, a **Try them** board with every sound, and a **timer chime** that stays the same whatever the pack: the pack's own, a bell, beeps or a gong.
+- **🎧 Focus ambience** (Focus, under the timer): rain, a fireplace, wind, waves, or brown, pink and white noise, generated live with its own volume and a slow fade. It can start and stop with the timer, and it plays even with interface sounds off.
+
 ## Mobile overhaul: a new tab bar, sheets for everything, and one-thumb task actions
 
 - **📱 New phone navigation.** Four tabs (Today, Upcoming, Inbox, Courses) and a More button that opens a sheet with big tiles for Focus, Stats, Tools, Schoology, Play and Settings, plus your streak, level and ring at a glance. The More tab shows where you are.

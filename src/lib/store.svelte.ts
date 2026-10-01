@@ -161,7 +161,7 @@ export class Store {
       this.stats = { ...stats, dailyGoal: this.settings.dailyGoal };
       this.dayNotes = notes;
       this.applyTheme();
-      configureSounds({ enabled: this.settings.soundsEnabled, pack: this.settings.soundPack });
+      this.applySounds();
       await this.archiveOldCompleted();
       await language;
       this.ready = true;
@@ -207,15 +207,27 @@ export class Store {
       'effects' in patch
     )
       this.applyTheme();
-    if ('soundsEnabled' in patch || 'soundPack' in patch) {
-      configureSounds({ enabled: this.settings.soundsEnabled, pack: this.settings.soundPack });
-    }
+    if (['soundsEnabled', 'soundPack', 'soundVolume', 'soundUi', 'soundRewards', 'soundTimer', 'timerChime'].some((k) => k in patch)) this.applySounds();
     if ('locale' in patch || 'forceRtl' in patch) void this.applyLocale();
   }
 
   /** App language and text direction (<html lang dir>); non-English strings load on demand. */
   applyLocale(): Promise<void> {
     return setLocale(this.settings.locale ?? 'auto', { forceRtl: this.settings.forceRtl });
+  }
+
+  /** Push the sound settings into the engine. */
+  applySounds(): void {
+    const s = this.settings;
+    configureSounds({
+      enabled: s.soundsEnabled,
+      pack: s.soundPack,
+      volume: s.soundVolume ?? 70,
+      ui: s.soundUi ?? true,
+      rewards: s.soundRewards ?? true,
+      timer: s.soundTimer ?? true,
+      chime: s.timerChime ?? 'pack',
+    });
   }
 
   applyTheme(): void {
@@ -665,6 +677,7 @@ export class Store {
     const task = this.tasks.find((t) => t.id === id);
     if (!task) return;
     const snapshot = structuredClone($state.snapshot(task)) as Task;
+    playSound('delete');
     if (task.externalId && !this.settings.schoologyIgnored.includes(task.externalId)) {
       this.updateSettings({ schoologyIgnored: [...this.settings.schoologyIgnored, task.externalId] });
     }

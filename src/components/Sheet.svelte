@@ -4,6 +4,7 @@
   import type { Snippet } from 'svelte';
   import { onMount } from 'svelte';
   import { focusTrap } from '../lib/focusTrap';
+  import { playSound } from '../lib/sounds';
   import { t } from '../lib/i18n/index.svelte';
 
   interface Props {
@@ -22,6 +23,7 @@
   function close() {
     if (closing) return;
     closing = true;
+    playSound('close');
     // let the slide-down play before the element goes away
     setTimeout(onclose, 160);
   }
@@ -49,6 +51,7 @@
   }
   // the page behind doesn't scroll while the sheet is up
   onMount(() => {
+    playSound('open');
     const prev = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
     return () => {

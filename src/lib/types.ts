@@ -220,6 +220,14 @@ export interface Settings {
   soundsEnabled: boolean;
   soundPack: SoundPack;
   soundPromptShown: boolean;
+  soundVolume?: number; // 0–100 (default 70)
+  soundUi?: boolean; // interface sounds: complete, add, snooze, tabs, sheets
+  soundRewards?: boolean; // coins, level-ups, badges, the ring, streaks
+  soundTimer?: boolean; // Focus timer start, break, end
+  timerChime?: 'pack' | 'bell' | 'beeps' | 'gong'; // the timer-end sound
+  ambienceKind?: 'rain' | 'fire' | 'wind' | 'waves' | 'brown' | 'pink' | 'white'; // Focus ambience
+  ambienceVolume?: number; // 0–100
+  ambienceAuto?: boolean; // start and stop with the timer
   reducedMotion: boolean;
   celebrations: boolean; // confetti and checkbox particle bursts (separate from sounds and motion)
   effects?: 'auto' | 'full' | 'lite'; // glass blur, ambient light, coin rain and confetti density ('auto' goes lite on weak phones)

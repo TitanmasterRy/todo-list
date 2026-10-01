@@ -52,6 +52,7 @@ Everything we could improve or add to Homework To-Do, grouped by area. Checked i
 - [x] Contrast audit of all theme packs in light and dark.
 - [x] High-contrast theme and a dyslexia-friendly font option.
 - [x] Separate toggles for confetti/particles and sounds.
+- [x] Sound overhaul: a master volume with a limiter that the games share, seven packs each covering every event, interface / rewards / timer switches, a fixed timer chime, and generated Focus ambience (rain, fire, wind, waves, noise colors).
 - [x] Effects level (Auto / Full / Lite): lite drops the glass blur, the ambient background and coin rain, and Auto picks it on weak phones or after a celebration dropped frames.
 - [x] 🔴 **Confetti lag on task completion.** Emoji text drawn per particle per frame, a per-particle font change and the ambient background re-blurring under glass panels made the burst stutter. Fixed with pre-rendered sprites, delta-time physics, a capped canvas resolution, a screen-sized particle budget and a paused background while confetti is in the air.
 
