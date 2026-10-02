@@ -46,6 +46,11 @@ describe('spawnNextInstance', () => {
     expect(next?.deferredCount).toBe(0);
     expect(next?.subtasks[0].done).toBe(false);
   });
+  it('does not carry over being planned for today or the paid completion', () => {
+    const next = spawnNextInstance({ ...base, pinnedDay: '2026-09-14', rewardedAt: base.completedAt }, new Date(2026, 8, 14, 10), 'b');
+    expect(next?.pinnedDay).toBeUndefined();
+    expect(next?.rewardedAt).toBeUndefined();
+  });
   it('schedules after today when overdue', () => {
     const next = spawnNextInstance({ ...base, dueAt: '2026-09-01' }, new Date(2026, 8, 14, 10), 'b');
     expect(next?.dueAt).toBe('2026-09-15');

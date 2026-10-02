@@ -105,6 +105,10 @@ export function parseBundle(raw: unknown): ExportBundle {
     ledger,
     ...(schedule ? { schedule } : {}),
     settings: b.settings,
+    // sealed keys and sign-ins: their shape is checked when they're opened (accountBackup.ts)
+    ...(b.account && typeof b.account === 'object' ? { account: b.account } : {}),
+    // checked key by key when it's restored (gameData.ts), so this stays out of the first load
+    ...(b.gameData && typeof b.gameData === 'object' ? { gameData: b.gameData } : {}),
   };
 }
 
@@ -166,6 +170,7 @@ export function normalizeTask(t: Partial<Task>): Task {
     url: t.url,
     syncedAt: t.syncedAt,
     gradedXpAt: t.gradedXpAt,
+    rewardedAt: typeof t.rewardedAt === 'string' ? t.rewardedAt : undefined,
     autoDescribed: t.autoDescribed,
     blockedBy: Array.isArray(t.blockedBy) ? t.blockedBy.filter((x): x is string => typeof x === 'string') : undefined,
     reminders: Array.isArray(t.reminders) ? t.reminders.filter((r) => r && typeof r === 'object') : undefined,
@@ -246,7 +251,7 @@ export function mergeBundles(local: ExportBundle, remote: ExportBundle, now: Dat
   stats.cardsReviewed = Math.max(local.stats.cardsReviewed ?? 0, remote.stats.cardsReviewed ?? 0);
   const breaks = mergeBreaks(local.stats.breaks, remote.stats.breaks);
   stats.breaks = breaks.length ? breaks : undefined;
-  // ledger entries are immutable, so a union by id is exact
+  // ledger entries are immutable, so a union by id is exact; on a clash this device's copy (always sealed) wins
   const ledger = new Map<string, LedgerEntry>();
   for (const e of [...(remote.ledger ?? []), ...(local.ledger ?? [])]) ledger.set(e.id, e);
   // timetable: last write wins (the whole schedule is one object)

@@ -1,10 +1,13 @@
 <script lang="ts">
   // Admin → Economy: grant or take coins, chips and vouchers, give shop items, set XP and streaks, undo ledger entries.
   // Every change is a ledger entry with reason "admin" (entries are never edited), so it syncs and can be undone.
+  // This panel is the only place to grant coins by hand: entries typed into a backup, a synced copy or IndexedDB
+  // fail the ledger seal and wait under "Tamper check" for an admin to approve or discard them.
   import { store } from '../../lib/store.svelte';
   import { economy } from '../../lib/economy.svelte';
   import { SHOP, owned } from '../../lib/economy';
   import { adjustEntries, reversal } from '../../lib/admin';
+  import { approveLedger, discardRejected } from '../../lib/ledgerAdmin.svelte';
   import { levelForXp, MAX_FREEZES } from '../../lib/gamification';
   import { toasts } from '../../lib/toast.svelte';
   import type { Currency, LedgerEntry } from '../../lib/types';
@@ -72,6 +75,16 @@
     store.addLedger([reversal(e)]);
   }
 
+  function approve(e: LedgerEntry) {
+    approveLedger(e.id);
+    toasts.push({ message: `Approved ${e.amount > 0 ? '+' : ''}${e.amount} ${e.currency}`, kind: 'success' });
+  }
+
+  function discardAll() {
+    if (!confirm(`Delete all ${store.rejectedLedger.length} set-aside entries for good?`)) return;
+    discardRejected(store.rejectedLedger.map((e) => e.id));
+  }
+
   const recent = $derived(
     store.ledger
       .filter((e) => !filter || `${e.reason} ${e.ref ?? ''} ${e.currency}`.toLowerCase().includes(filter.toLowerCase()))
@@ -114,6 +127,36 @@
     <label>Freezes <input class="input num" type="number" min="0" max={MAX_FREEZES} bind:value={freezes} /></label>
     <button class="btn sm primary" onclick={saveStats}>Save</button>
   </div>
+</section>
+
+<section class="card" aria-labelledby="tamper-h">
+  <h3 id="tamper-h">Tamper check <span class="muted">({store.rejectedLedger.length} set aside)</span></h3>
+  {#if store.rejectedLedger.length}
+    <p class="muted">
+      These entries don't carry the app's seal: they were added or changed outside the app (an edited backup, synced copy or browser storage). They don't count toward any balance
+      until you approve them.
+    </p>
+    <table>
+      <thead><tr><th>When</th><th>Amount</th><th>Reason</th><th>Ref</th><th></th></tr></thead>
+      <tbody>
+        {#each store.rejectedLedger as e (e.id)}
+          <tr>
+            <td class="nowrap">{new Date(e.at).toLocaleString()}</td>
+            <td class="nowrap" class:neg={e.amount < 0}>{e.amount > 0 ? '+' : ''}{e.amount} {e.currency in EMOJI ? EMOJI[e.currency as Currency] : e.currency}</td>
+            <td>{e.reason}</td>
+            <td class="ref">{e.ref ?? ''}</td>
+            <td class="nowrap">
+              <button class="btn ghost sm" onclick={() => approve(e)}>Approve</button>
+              <button class="btn ghost sm" onclick={() => discardRejected([e.id])}>Discard</button>
+            </td>
+          </tr>
+        {/each}
+      </tbody>
+    </table>
+    <div class="row"><button class="btn sm" onclick={discardAll}>Discard all</button></div>
+  {:else}
+    <p class="muted">Every ledger entry passes the seal. Coins only change through schoolwork, the shop and games, or this panel.</p>
+  {/if}
 </section>
 
 <section class="card">

@@ -1,5 +1,6 @@
 import type { HistoryEntry } from './history';
 import type { SavedList } from './filters';
+import type { EncryptedEnvelope } from './crypto';
 
 export type Priority = 'low' | 'normal' | 'high' | 'urgent';
 
@@ -68,6 +69,7 @@ export interface Task {
   url?: string; // link back to the assignment
   syncedAt?: string;
   gradedXpAt?: string; // when grade XP was awarded (once per task)
+  rewardedAt?: string; // the completion that paid XP and coins; completing again after reopening pays nothing
   autoDescribed?: boolean;
   blockedBy?: string[]; // ids of tasks that must be done first
   reminders?: ReminderRule[];
@@ -185,6 +187,7 @@ export interface LedgerEntry {
   amount: number; // positive = earned/bought, negative = spent/used
   reason: string; // 'task', 'ring', 'shop:chips-100', 'casino:slots', 'arcade:snake', ...
   ref?: string; // task id, game id, ...
+  sig?: string; // anti-tamper seal (ledgerSeal.ts); entries without a valid one don't count
 }
 
 /** A game added by the site admin (games.json) or locally in the admin panel. */
@@ -508,6 +511,10 @@ export interface ExportBundle {
   ledger?: LedgerEntry[];
   schedule?: SchoolSchedule;
   settings?: Partial<Settings>;
+  /** Keys and sign-ins, sealed with the sync passphrase (accountBackup.ts). Only in backups made with one set. */
+  account?: EncryptedEnvelope;
+  /** Play games' progress on the device that made the backup (gameData.ts). */
+  gameData?: { local: Record<string, string>; saves: Record<string, string> };
 }
 
 export const PRIORITIES: Priority[] = ['low', 'normal', 'high', 'urgent'];

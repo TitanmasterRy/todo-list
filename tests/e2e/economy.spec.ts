@@ -119,3 +119,22 @@ test('an arcade game can sell a power-up for coins after the player confirms', a
   await expect(frame.locator('#s')).toHaveText('denied Not enough coins');
   expect(errors.filter((e) => !/sandboxed/.test(e))).toEqual([]);
 });
+
+test('reopening a finished task and finishing it again pays nothing twice', async ({ page }) => {
+  const errors = await openApp(page, { economyEnabled: true, autoDescribe: false });
+  await addTask(page, 'Worksheet 7 today');
+  const wallet = page.locator('.sidebar .wallet');
+  await page.locator('.task', { hasText: 'Worksheet 7' }).getByRole('checkbox').click();
+  const done = page.locator('.done-list .task', { hasText: 'Worksheet 7' });
+  await expect(done).toBeVisible();
+  const paid = await wallet.innerText();
+  expect(paid).not.toContain('🪙 0');
+  for (let i = 0; i < 3; i++) {
+    await done.getByRole('checkbox').click(); // out of Done
+    await expect(done).toHaveCount(0);
+    await page.locator('.task', { hasText: 'Worksheet 7' }).getByRole('checkbox').click();
+    await expect(done).toBeVisible();
+  }
+  await expect(wallet).toHaveText(paid);
+  expect(errors).toEqual([]);
+});

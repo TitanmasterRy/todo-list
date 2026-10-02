@@ -1,5 +1,13 @@
 # Changelog
 
+## Fuller backups and fair coins: your keys and game saves in the backup, a tamper-proof wallet, and a fix for finished tasks coming back
+
+- **🔑 Keys and sign-ins in your backup, encrypted.** With a sync passphrase set (Settings → Privacy & security), **Download backup** also saves your AI keys, GitHub token, Schoology and Canvas links, Spotify sign-in, media-server sign-ins, sync passphrase and the account server you use, encrypted with that passphrase. Importing the file on another device asks for the backup's password once and puts them all back (or **Import without keys**). Without a sync passphrase, keys are never written into a backup.
+- **🎮 Game progress comes along too:** the Orebelt factory, the zen garden, your pet, arcade high scores and best times, arcade game saves, Quiz Race ghosts, the Hold'em table and your focus companion are in every JSON and folder backup. Import with **replace** to restore them all; **merge** only fills in games you haven't played on this device.
+- **🛡️ Anti-cheat for coins.** Every coin, chip and voucher entry now carries a seal. Entries added or changed outside the app (in a hand-edited backup, a synced copy or browser storage) don't count, and wait in the admin panel's **Tamper check** to be approved or discarded. The admin panel is the only place to give or take coins by hand.
+- **No double rewards:** reopening a task from Done (or dragging it out of the board's Done column) and finishing it again puts it back on its first completion. It pays no XP, coins, streak, ring or quest progress a second time.
+- **Fixed: finished tasks showing up again.** Completing a repeating task that was planned for today no longer puts its next occurrence straight back on Today, and Today's **Done today** list uses your own time zone.
+
 ## Sound overhaul: seven packs for every sound, one volume, a timer chime of your own, and Focus ambience
 
 - **🔊 A rebuilt sound engine.** Every sound is still synthesized on the spot (no files), but now through one master bus with a **volume slider** and a limiter, so nothing clips and one setting rules everything, the casino and Orebelt included. Mobile browsers unlock audio on your first tap.

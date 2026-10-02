@@ -63,7 +63,7 @@ On each start the app downloads `site.json` from the site it's hosted on (the ow
 ## Encryption
 
 - **Lock my keys with a passphrase** (Settings → Privacy & security): API keys, tokens, the Schoology feed link and the sync passphrase are encrypted with AES-256-GCM using a key derived from your passphrase (PBKDF2-SHA-256, 600,000 iterations, random salt). The passphrase is asked once per session and the derived key is kept in memory only. Forgetting it means adding the keys again; your data is not affected.
-- **End-to-end encrypt my synced copy**: the Gist, Drive and account copies are encrypted in the browser with your sync passphrase (same algorithms) before upload, so GitHub, Google and the Supabase project only store ciphertext. If you forget the sync passphrase, the synced copy can't be read by anyone; the data on your devices is not affected. Encrypted backups (Settings → Data) use the same format.
+- **End-to-end encrypt my synced copy**: the Gist, Drive and account copies are encrypted in the browser with your sync passphrase (same algorithms) before upload, so GitHub, Google and the Supabase project only store ciphertext. If you forget the sync passphrase, the synced copy can't be read by anyone; the data on your devices is not affected. Encrypted backups (Settings → Data) use the same format. With a sync passphrase set, a backup file also holds your keys and sign-ins (AI keys, tokens, feed links, the account server), sealed with that passphrase in their own encrypted block; without one, keys are never written into a backup.
 
 See `DECISIONS.md` ("Key lock and end-to-end sync encryption") for the details and limits.
 

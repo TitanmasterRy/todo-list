@@ -9,11 +9,13 @@
   import { tasksToCSV, tasksToMarkdown } from '../../lib/exporters';
   import { importCSV } from '../../lib/csvimport';
   import type { ExportBundle, Task } from '../../lib/types';
-  import { hasSecret, useSecret } from '../../lib/secrets.svelte';
-  import { openEnvelope, sealWith } from '../../lib/syncCrypto';
+  import { hasSecret, secret, setSecrets, useSecret } from '../../lib/secrets.svelte';
+  import { clearSyncKeys, openEnvelope, rememberPreviousPassphrase, sealWith } from '../../lib/syncCrypto';
+  import { backupHasAccount, collectAccountDetails, hasAccountDetails, openAccountDetails, sealAccountDetails, type AccountDetails } from '../../lib/accountBackup';
   import { isEncryptedEnvelope, WrongPassphraseError, type EncryptedEnvelope } from '../../lib/crypto';
   import { folderBackupSupported, chooseFolder, forgetFolder, folderName, requestPersistence, isPersisted, writeBackup } from '../../lib/localBackup.svelte';
   import { withoutSecrets } from '../../lib/secretSlots';
+  import { readGameData, writeGameData } from '../../lib/gameData';
   import { deleteEverything, remoteCopies, type RemoteCopy, type RemoteId, type WipeResult } from '../../lib/wipe';
   import { set } from './settings';
   import { t } from '../../lib/i18n/index.svelte';
@@ -72,28 +74,52 @@
     toasts.push({ message: t('toast.imported', { count: made.length }), kind: 'success', emoji: '📥' });
     csvPreview = null;
   }
-  // with a sync passphrase set, backups can be end-to-end encrypted too (same format as the synced copy)
+  // with a sync passphrase set, backups can be end-to-end encrypted too (same format as the synced copy),
+  // and can carry this device's keys and sign-ins, sealed with that passphrase; without one they're left out
   let encryptExport = $state(true); // only offered (and applied) while a sync passphrase is set
+  let includeAccount = $state(true);
   async function exportNow() {
     try {
-      let data: unknown = store.snapshotBundle();
-      if (encryptExport && hasSecret('syncPassphrase')) {
-        const pass = await useSecret('syncPassphrase');
-        if (!pass) return;
-        data = await sealWith(data, pass);
+      const syncOn = hasSecret('syncPassphrase');
+      const pass = syncOn && (encryptExport || includeAccount) ? await useSecret('syncPassphrase') : '';
+      if (syncOn && (encryptExport || includeAccount) && !pass) return;
+      const bundle: ExportBundle = { ...store.snapshotBundle(), gameData: await readGameData() };
+      let withKeys = false;
+      if (pass && includeAccount) {
+        const { account } = await import('../../lib/account.svelte');
+        const details = collectAccountDetails(store.settings, account.email);
+        if (hasAccountDetails(details)) {
+          bundle.account = await sealAccountDetails(details, pass);
+          withKeys = true;
+        }
       }
-      downloadJSON(backupFilename(), data);
+      downloadJSON(backupFilename(), pass && encryptExport ? await sealWith(bundle, pass) : bundle);
       set('lastExportAt', new Date().toISOString());
-      toasts.push({ message: encryptExport && hasSecret('syncPassphrase') ? t('data.encDownloaded') : t('cmd.exported'), kind: 'success', emoji: '💾' });
+      toasts.push({
+        message: withKeys ? t('data.withKeys') : pass && encryptExport ? t('data.encDownloaded') : t('cmd.exported'),
+        kind: 'success',
+        emoji: '💾',
+      });
     } catch (err) {
       toasts.push({ message: t('data.backupFailed'), detail: err instanceof Error ? err.message : String(err), kind: 'warn' });
     }
   }
 
-  // an encrypted file waiting for its passphrase (when the sync passphrase isn't set or doesn't fit)
-  let encryptedFile = $state<EncryptedEnvelope | null>(null);
+  // a backup waiting for its password: the whole file is encrypted, or only the keys and sign-ins inside it are
+  let locked = $state.raw<{ file: EncryptedEnvelope } | { bundle: ExportBundle } | null>(null); // raw: the bundle goes to IndexedDB as is
   let filePass = $state('');
   let filePassError = $state('');
+
+  function askPassword(next: NonNullable<typeof locked>) {
+    locked = next;
+    filePass = '';
+    filePassError = '';
+  }
+
+  /** This device's sync passphrase ('' when there is none): the usual password for backups made here. */
+  async function devicePass(): Promise<string> {
+    return hasSecret('syncPassphrase') ? await useSecret('syncPassphrase') : '';
+  }
 
   async function importFile(e: Event) {
     const file = (e.target as HTMLInputElement).files?.[0];
@@ -101,19 +127,21 @@
     try {
       const raw: unknown = JSON.parse(await file.text());
       if (isEncryptedEnvelope(raw)) {
-        const pass = hasSecret('syncPassphrase') ? await useSecret('syncPassphrase') : '';
+        const pass = await devicePass();
+        let bundle: ExportBundle;
         try {
           if (!pass) throw new WrongPassphraseError();
-          await applyImport(parseBundle(await openEnvelope(raw, [pass])));
+          bundle = parseBundle(await openEnvelope(raw, [pass]));
         } catch (err) {
           if (!(err instanceof WrongPassphraseError)) throw err;
-          encryptedFile = raw;
-          filePass = '';
-          filePassError = '';
+          askPassword({ file: raw });
+          return;
         }
+        await importWithAccount(bundle, [pass]);
         return;
       }
-      await applyImport(parseBundle(raw));
+      const bundle = parseBundle(raw);
+      await importWithAccount(bundle, backupHasAccount(bundle) ? [await devicePass()] : []);
     } catch (err) {
       toasts.push({ message: t('data.importFailed'), detail: err instanceof Error ? err.message : String(err), kind: 'warn' });
     } finally {
@@ -121,16 +149,71 @@
     }
   }
 
-  async function openEncryptedFile(e: Event) {
-    e.preventDefault();
-    if (!encryptedFile || !filePass) return;
+  /** Import the data, and the keys and sign-ins too when one of these passwords opens them (else ask for it). */
+  async function importWithAccount(bundle: ExportBundle, passes: string[]) {
+    if (!backupHasAccount(bundle)) return applyImport(bundle);
+    let details: AccountDetails;
     try {
-      const bundle = parseBundle(await openEnvelope(encryptedFile, [filePass]));
-      encryptedFile = null;
-      await applyImport(bundle);
+      details = await openAccountDetails(bundle.account, passes);
     } catch (err) {
-      filePassError = err instanceof WrongPassphraseError ? t('data.wrongPass') : err instanceof Error ? err.message : String(err);
+      if (!(err instanceof WrongPassphraseError)) throw err;
+      askPassword({ bundle });
+      return;
     }
+    await applyImport(bundle);
+    await restoreAccount(details);
+  }
+
+  async function submitPassword(e: Event) {
+    e.preventDefault();
+    if (!locked || !filePass) return;
+    const pending = locked;
+    try {
+      if ('file' in pending) {
+        const bundle = parseBundle(await openEnvelope(pending.file, [filePass]));
+        locked = null;
+        await importWithAccount(bundle, [filePass, await devicePass()]);
+      } else if (backupHasAccount(pending.bundle)) {
+        const details = await openAccountDetails(pending.bundle.account, [filePass]);
+        locked = null;
+        await applyImport(pending.bundle);
+        await restoreAccount(details);
+      }
+    } catch (err) {
+      const message = err instanceof WrongPassphraseError ? t('data.wrongPass') : err instanceof Error ? err.message : String(err);
+      // once the password worked the form is gone, so a later failure needs a toast
+      if (locked) filePassError = message;
+      else toasts.push({ message: t('data.importFailed'), detail: message, kind: 'warn' });
+    }
+  }
+
+  async function skipKeys() {
+    if (!locked || !('bundle' in locked)) return;
+    const { bundle } = locked;
+    locked = null;
+    await applyImport(bundle);
+  }
+
+  /** Put the backup's keys and sign-ins on this device (they replace this device's copies of the same keys). */
+  async function restoreAccount(d: AccountDetails) {
+    const { account, accountConfig, reconfigure } = await import('../../lib/account.svelte');
+    const server = JSON.stringify(accountConfig());
+    store.updateSettings(d.settings);
+    const old = secret('syncPassphrase');
+    if (d.secrets.syncPassphrase && old !== d.secrets.syncPassphrase) {
+      if (old) rememberPreviousPassphrase(old);
+      clearSyncKeys();
+    }
+    setSecrets(d.secrets);
+    if (JSON.stringify(accountConfig()) !== server) await reconfigure();
+    const count = Object.keys(d.secrets).length;
+    toasts.push({
+      message: t('data.keysRestored', { count }),
+      detail: d.email && account.email !== d.email ? t('data.keysSignIn', { email: d.email }) : undefined,
+      kind: 'success',
+      emoji: '🔑',
+      timeout: 8000,
+    });
   }
 
   async function applyImport(bundle: ExportBundle) {
@@ -147,6 +230,17 @@
     }
     // settings from a file never replace this device's keys or sync connection
     if (bundle.settings) store.updateSettings({ ...withoutSecrets(bundle.settings), gistId: store.settings.gistId });
+    // game progress: the games read their saves when they start, so a reload shows it
+    if (bundle.gameData && (await writeGameData(bundle.gameData, importMode)) > 0) {
+      toasts.push({
+        message: t('data.gamesRestored'),
+        detail: t('data.gamesReload'),
+        kind: 'success',
+        emoji: '🎮',
+        timeout: 12000,
+        action: { label: t('data.reload'), onClick: () => location.reload() },
+      });
+    }
   }
 
   // "Delete everything": a confirmation that lists what goes, including the synced copies elsewhere
@@ -212,13 +306,17 @@
   </div>
   {#if hasSecret('syncPassphrase')}
     <label class="check"><input type="checkbox" bind:checked={encryptExport} /> <span>{t('data.encrypt')}</span></label>
+    <label class="check"><input type="checkbox" bind:checked={includeAccount} /> <span>{t('data.includeAccount')}</span></label>
+  {:else}
+    <p class="help">{t('data.accountOff')}</p>
   {/if}
-  {#if encryptedFile}
-    <form class="btns" onsubmit={openEncryptedFile}>
-      <span class="muted">{t('data.encrypted')}</span>
+  {#if locked}
+    <form class="btns" onsubmit={submitPassword}>
+      <span class="muted">{'file' in locked ? t('data.encrypted') : t('data.accountFound')}</span>
       <input class="input" type="password" bind:value={filePass} aria-label={t('data.backupPass')} autocomplete="off" />
-      <button class="btn primary" type="submit" disabled={!filePass}>{t('data.openImport')}</button>
-      <button class="btn ghost" type="button" onclick={() => (encryptedFile = null)}>{t('common.cancel')}</button>
+      <button class="btn primary" type="submit" disabled={!filePass}>{'file' in locked ? t('data.openImport') : t('data.restoreKeys')}</button>
+      {#if 'bundle' in locked}<button class="btn" type="button" onclick={() => void skipKeys()}>{t('data.skipKeys')}</button>{/if}
+      <button class="btn ghost" type="button" onclick={() => (locked = null)}>{t('common.cancel')}</button>
       {#if filePassError}<span class="err" role="alert">{filePassError}</span>{/if}
     </form>
   {/if}
