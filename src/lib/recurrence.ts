@@ -112,6 +112,8 @@ export function spawnNextInstance(task: Task, now: Date = new Date(), newId: str
     deferredCount: 0,
     frog: false,
     frogDate: undefined,
+    pinnedDay: undefined, // planned for today was this occurrence; the next one shows up on its own date
+    rewardedAt: undefined, // a new occurrence pays when it's done
     archived: false,
     timeSpentMin: undefined,
     timerStartedAt: undefined,

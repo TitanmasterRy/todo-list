@@ -1,4 +1,5 @@
 import { expect, type Page } from '@playwright/test';
+import { ledgerSig } from '../../src/lib/ledgerSeal';
 
 /** Open the app with onboarding and the daily prompts already dismissed. Fails the test on page errors. */
 export async function openApp(page: Page, settings: Record<string, unknown> = {}): Promise<string[]> {
@@ -35,19 +36,21 @@ export async function addTask(page: Page, text: string): Promise<void> {
   await box.press('Enter');
 }
 
-/** Put coins (or vouchers) in the wallet directly (IndexedDB ledger), then reload. */
-export async function seedCoins(page: Page, amount: number, currency: 'coins' | 'vouchers' | 'chips' = 'coins'): Promise<void> {
+/** Put coins (or vouchers) in the wallet directly (IndexedDB ledger), then reload. Sealed like the app's own entries unless `sealed` is false. */
+export async function seedCoins(page: Page, amount: number, currency: 'coins' | 'vouchers' | 'chips' = 'coins', sealed = true): Promise<void> {
+  const entry = { id: `seed-${Date.now()}`, at: new Date().toISOString(), currency, amount, reason: 'task' };
+  const row = sealed ? { ...entry, sig: ledgerSig(entry) } : entry;
   await page.evaluate(
-    ([n, cur]) =>
+    (e) =>
       new Promise<void>((resolve) => {
         const r = indexedDB.open('homework-todo');
         r.onsuccess = () => {
           const tx = r.result.transaction('ledger', 'readwrite');
-          tx.objectStore('ledger').put({ id: `seed-${Date.now()}`, at: new Date().toISOString(), currency: cur, amount: n, reason: 'task' });
+          tx.objectStore('ledger').put(e);
           tx.oncomplete = () => resolve();
         };
       }),
-    [amount, currency] as const,
+    row,
   );
   await page.reload();
   await expect(page.locator('.shell')).toBeVisible();

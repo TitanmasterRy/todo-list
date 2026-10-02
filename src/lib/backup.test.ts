@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { bundlesDiffer, mergeBundles, parseBundle } from './backup';
+import { sealEntry } from './ledgerSeal';
 import type { ExportBundle, Task } from './types';
 import { DEFAULT_STATS } from './types';
 
@@ -171,5 +172,13 @@ describe('field-level task merge in bundles', () => {
     expect(merged.tasks[0]).toMatchObject({ dueAt: '2026-10-09', notes: 'Bring goggles' });
     // and the result survives another round trip
     expect(parseBundle(JSON.parse(JSON.stringify(merged))).tasks[0].fieldAt).toEqual(merged.tasks[0].fieldAt);
+  });
+});
+
+describe('mergeBundles and the ledger seal', () => {
+  it("an edited copy of an entry can't replace this device's sealed one", () => {
+    const real = sealEntry({ id: 'l1', at: '2026-10-02T10:00:00.000Z', currency: 'coins', amount: 5, reason: 'task' });
+    const { merged } = mergeBundles({ ...bundle([]), ledger: [real] }, { ...bundle([]), ledger: [{ ...real, amount: 5000 }] });
+    expect(merged.ledger).toEqual([real]);
   });
 });

@@ -83,7 +83,8 @@ async function ensurePermission(): Promise<boolean> {
 /** Write homework-todo-backup.json (and a dated copy once per day) into the chosen folder. */
 export async function writeBackup(): Promise<boolean> {
   if (!handle || !(await ensurePermission())) return false;
-  const bundle = store.snapshotBundle();
+  const { readGameData } = await import('./gameData');
+  const bundle = { ...store.snapshotBundle(), gameData: await readGameData() };
   const json = JSON.stringify(bundle, null, 2);
   const write = async (name: string) => {
     const f = await handle!.getFileHandle(name, { create: true });

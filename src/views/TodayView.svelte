@@ -12,7 +12,7 @@
   import Sortable from '../components/Sortable.svelte';
 
   import type { Task } from '../lib/types';
-  import { isOverdue, isDueToday } from '../lib/dates';
+  import { dueKey, isOverdue, isDueToday } from '../lib/dates';
   import { byDueThenOrder, byFrogThenOrder, byOrder } from '../lib/store.svelte';
   import { isPowerHour, powerHourFor } from '../lib/gamification';
   let courseChip = $state<string | null>(null);
@@ -42,7 +42,7 @@
   const empty = $derived(overdue.length === 0 && dueToday.length === 0 && pinned.length === 0);
   let showNoDate = $state(false);
   const frog = $derived(store.frogTask);
-  const doneToday = $derived(store.completedTasks.filter((t) => t.completedAt && t.completedAt.slice(0, 10) === new Date().toISOString().slice(0, 10)));
+  const doneToday = $derived(store.completedTasks.filter((t) => t.completedAt && dueKey(t.completedAt) === store.today));
 
   function onDrop(id: string, section: 'today' | 'pinned') {
     const task = store.taskById(id);

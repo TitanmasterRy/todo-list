@@ -72,6 +72,15 @@ export type NewTaskInput = Partial<Omit<Task, 'id' | 'createdAt' | 'updatedAt' |
 };
 
 const LINGER_MS = 700;
+/** IndexedDB meta flag: this device's ledger has been through the one-time sealing. */
+const LEDGER_SEAL_META = 'ledgerSeal';
+// The ledger seal loads with the data (init awaits it), not with the first paint.
+let seal: typeof import('./ledgerSeal') | null = null;
+let sealLoading: Promise<typeof import('./ledgerSeal')> | null = null;
+function loadSeal(): Promise<typeof import('./ledgerSeal')> {
+  sealLoading ??= import('./ledgerSeal').then((m) => (seal = m));
+  return sealLoading;
+}
 
 // eslint-disable-next-line @typescript-eslint/no-unsafe-declaration-merging -- method groups are merged in below
 export class Store {
@@ -83,6 +92,8 @@ export class Store {
   dayNotes = $state<DayNote[]>([]);
   tombstones = $state<Tombstone[]>([]);
   ledger = $state<LedgerEntry[]>([]);
+  /** Ledger entries that failed the anti-tamper seal: kept out of every balance until an admin approves them. */
+  rejectedLedger = $state<LedgerEntry[]>([]);
   schedule = $state<SchoolSchedule | undefined>(undefined); // class timetable (Tools → Timetable)
   stats = $state<Stats>(structuredClone(DEFAULT_STATS));
   settings = $state<Settings>(db.loadSettings());
@@ -151,7 +162,7 @@ export class Store {
       this.schedule = schedule;
       this.tombstones = mergeTombstones(tombstones, [], this.now);
       if (this.tombstones.length !== tombstones.length) void db.putTombstones($state.snapshot(this.tombstones) as Tombstone[]);
-      this.ledger = ledger.sort((a, b) => (a.at < b.at ? -1 : a.at > b.at ? 1 : 0));
+      this.ledger = (await this.checkStoredLedger(ledger)).sort((a, b) => (a.at < b.at ? -1 : a.at > b.at ? 1 : 0));
       this.tasks = tasks;
       this.rememberSaved(tasks);
       this.courses = courses;
@@ -340,10 +351,12 @@ export class Store {
 
   // ---------- economy ledger ----------
   /** Append ledger entries (earn / spend). Entries are never edited; reversals are new entries. */
-  addLedger(entries: Omit<LedgerEntry, 'id' | 'at'>[]): LedgerEntry[] {
+  addLedger(entries: Omit<LedgerEntry, 'id' | 'at' | 'sig'>[]): LedgerEntry[] {
     const at = isoNow();
-    const made = entries.filter((e) => e.amount !== 0).map((e) => ({ ...e, id: uid('l'), at }));
+    const made = entries.filter((e) => e.amount !== 0).map((e) => ({ ...e, id: uid('l'), at }) as LedgerEntry);
     if (!made.length) return [];
+    if (seal) for (const e of made) e.sig = seal.ledgerSig(e);
+    else void loadSeal().then(() => this.sealLate(made.map((e) => e.id))); // only before init has loaded it
     this.ledger = [...this.ledger, ...made];
     db.putLedgerEntries(made).catch((e) => console.error('save failed', e));
     emit('changed', { reason: 'ledger' });
@@ -373,6 +386,40 @@ export class Store {
   removeBreak(id: string): void {
     this.stats = { ...this.stats, breaks: (this.stats.breaks ?? []).map((b) => (b.id === id ? { ...b, deleted: true } : b)) };
     this.persistStats();
+  }
+
+  /**
+   * Seal check at startup. The first run with seals stamps what this device already has (earned before seals
+   * existed); after that, anything unsealed in IndexedDB was put there by hand and is set aside.
+   * @internal
+   */
+  async checkStoredLedger(entries: LedgerEntry[]): Promise<LedgerEntry[]> {
+    const { checkLedger, sealEntry } = await loadSeal();
+    if (!(await db.getMeta<number>(LEDGER_SEAL_META))) {
+      const sealed = entries.map(sealEntry);
+      await db.putLedgerEntries(sealed);
+      await db.putMeta(LEDGER_SEAL_META, 1);
+      return sealed;
+    }
+    const { valid, rejected } = checkLedger(entries);
+    this.setRejected(rejected);
+    return valid;
+  }
+
+  private sealLate(ids: string[]): void {
+    const late = this.ledger.filter((e) => ids.includes(e.id)).map((e) => seal!.sealEntry($state.snapshot(e) as LedgerEntry));
+    this.ledger = this.ledger.map((e) => late.find((x) => x.id === e.id) ?? e);
+    db.putLedgerEntries(late).catch((e) => console.error('save failed', e));
+  }
+
+  /** Keep entries that failed the seal (in IndexedDB, not in balances or sync) and say so once per new batch. */
+  private setRejected(list: LedgerEntry[]): void {
+    const known = new Set(this.rejectedLedger.map((e) => e.id));
+    const fresh = list.filter((e) => !known.has(e.id));
+    this.rejectedLedger = list;
+    if (fresh.length) {
+      toasts.push({ message: tr('tamper.found', { count: fresh.length }), detail: tr('tamper.detail'), kind: 'warn', emoji: '🛡️', timeout: 10000 });
+    }
   }
 
   // ---------- bundle ----------
@@ -544,6 +591,7 @@ export class Store {
     if (this.tasks.find((t) => t.id === id)?.timerStartedAt) this.stopTimer(id);
     const task = this.tasks.find((t) => t.id === id);
     if (!task || task.completedAt) return;
+    if (task.rewardedAt) return this.recompleteTask(task);
     const completedAt = new Date();
     const prevTask = structuredClone($state.snapshot(task)) as Task;
     const prevStats = structuredClone($state.snapshot(this.stats)) as Stats;
@@ -564,6 +612,7 @@ export class Store {
     // recurrence: spawn next instance (history untouched)
     const spawned = spawnNextInstance(done, completedAt, uid('t'));
     if (spawned) spawned.order = this.nextOrder();
+    done.rewardedAt = done.completedAt;
 
     this.tasks = this.tasks.map((t) => (t.id === id ? done : t)).concat(spawned ? [spawned] : []);
     this.lingering = new Set([...this.lingering, id]);
@@ -626,6 +675,43 @@ export class Store {
     if (milestone) emit('streakMilestone', { days: milestone });
   }
 
+  /**
+   * Complete a task again after it was reopened from Done. Its rewards were paid the first time, so it goes back
+   * to that completion (same day, same counts) and pays nothing: no XP, coins, streak, ring, quest or new repeat.
+   */
+  private recompleteTask(task: Task): void {
+    const prevTask = structuredClone($state.snapshot(task)) as Task;
+    const prevStats = structuredClone($state.snapshot(this.stats)) as Stats;
+    const done: Task = {
+      ...structuredClone(prevTask),
+      completedAt: prevTask.rewardedAt,
+      doing: undefined,
+      updatedAt: isoNow(),
+      subtasks: prevTask.subtasks.map((s) => ({ ...s, done: true })),
+    };
+    const stats = structuredClone(prevStats);
+    const day = dueKey(done.completedAt!);
+    stats.completionsByDay[day] = (stats.completionsByDay[day] ?? 0) + 1;
+    stats.totalCompleted += 1;
+    this.tasks = this.tasks.map((t) => (t.id === task.id ? done : t));
+    this.stats = stats;
+    this.persistTask(done);
+    this.persistStats();
+    if (this.selectedTaskId === task.id) this.selectedTaskId = null;
+    playSound('pop');
+    undo.push({
+      label: tr('toast.completed', { title: task.title }),
+      undo: () => {
+        const reopened = { ...prevTask, updatedAt: isoNow() };
+        this.tasks = this.tasks.map((t) => (t.id === task.id ? reopened : t));
+        this.stats = prevStats;
+        this.persistTask(reopened);
+        this.persistStats();
+        playSound('undo');
+      },
+    });
+  }
+
   duplicateTask(id: string): Task | undefined {
     const t = this.tasks.find((x) => x.id === id);
     if (!t) return undefined;
@@ -662,7 +748,8 @@ export class Store {
     if (!task || !task.completedAt) return;
     const prev = structuredClone($state.snapshot(task)) as Task;
     const day = dueKey(task.completedAt);
-    const next: Task = { ...task, completedAt: undefined, archived: false, updatedAt: isoNow() };
+    // remember the paid completion, so completing it again can't pay twice (tasks from before rewardedAt: their completion)
+    const next: Task = { ...task, completedAt: undefined, rewardedAt: task.rewardedAt ?? task.completedAt, archived: false, updatedAt: isoNow() };
     this.tasks = this.tasks.map((t) => (t.id === id ? next : t));
     this.persistTask(next);
     const stats = structuredClone($state.snapshot(this.stats)) as Stats;
@@ -818,6 +905,8 @@ export class Store {
     this.dayNotes = [];
     this.tombstones = [];
     this.ledger = [];
+    this.rejectedLedger = [];
+    void db.putMeta(LEDGER_SEAL_META, 1);
     this.schedule = undefined;
     this.stats = structuredClone(DEFAULT_STATS);
     this.settings = { ...db.loadSettings(), onboarded: true };
@@ -829,7 +918,12 @@ export class Store {
   /** Load a full dataset (import / sync). */
   async loadBundle(data: BundleData): Promise<void> {
     this.tombstones = data.tombstones ?? [];
-    this.ledger = data.ledger ?? [];
+    // a backup, import or synced copy can't bring coins in by editing the file: unsealed entries are set aside
+    const { valid, rejected } = (await loadSeal()).checkLedger(data.ledger ?? []);
+    const validIds = new Set(valid.map((e) => e.id));
+    const incoming = new Set(rejected.map((e) => e.id));
+    this.setRejected([...this.rejectedLedger.filter((e) => !validIds.has(e.id) && !incoming.has(e.id)), ...rejected]);
+    this.ledger = valid;
     this.tasks = data.tasks;
     this.rememberSaved(data.tasks);
     this.courses = data.courses;
@@ -848,7 +942,7 @@ export class Store {
       decks: data.decks ?? [],
       cards: data.cards ?? [],
       tombstones: data.tombstones ?? [],
-      ledger: data.ledger ?? [],
+      ledger: [...valid, ...($state.snapshot(this.rejectedLedger) as LedgerEntry[])],
       schedule: data.schedule,
     });
   }

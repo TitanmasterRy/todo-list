@@ -158,6 +158,11 @@ export async function putLedgerEntries(entries: LedgerEntry[]): Promise<void> {
   const tx = db.transaction('ledger', 'readwrite');
   await Promise.all([...entries.map((e) => tx.store.put(e)), tx.done]);
 }
+export async function deleteLedgerEntries(ids: string[]): Promise<void> {
+  const db = await getDB();
+  const tx = db.transaction('ledger', 'readwrite');
+  await Promise.all([...ids.map((id) => tx.store.delete(id)), tx.done]);
+}
 
 // ---------- Local arcade games (admin panel) ----------
 export async function getLocalGames(): Promise<ArcadeGame[]> {
@@ -212,6 +217,14 @@ export async function getMeta<T>(key: string): Promise<T | undefined> {
 export async function putMeta(key: string, value: unknown): Promise<void> {
   const db = await getDB();
   await db.put('meta', value, key);
+}
+
+/** Every meta entry whose key starts with `prefix` (e.g. the arcade's `gamesave:` saves). */
+export async function getMetaEntries(prefix: string): Promise<[string, unknown][]> {
+  const db = await getDB();
+  const range = IDBKeyRange.bound(prefix, `${prefix}\uffff`);
+  const [keys, values] = await Promise.all([db.getAllKeys('meta', range), db.getAll('meta', range)]);
+  return keys.map((k, i) => [String(k), values[i]]);
 }
 
 // ---------- School timetable ----------
