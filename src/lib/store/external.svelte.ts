@@ -5,7 +5,6 @@ import type { Priority, Stats, Task } from '../types';
 import { uid } from '../id';
 import { isoNow } from '../dates';
 import { evaluateBadges } from '../gamification';
-import type { ExternalAssignment, SyncDiff } from '../schoology';
 import { undo } from '../undo.svelte';
 import { emit } from '../events';
 import type { Store } from '../store.svelte';
@@ -76,66 +75,6 @@ export const externalMethods = {
   },
 
   /** Duplicate a task (same fields, not completed, placed right after the original). */
-  /** Apply a sync diff: create new assignment tasks, update changed ones. Returns counts. `source` marks where they came from (Schoology, a class list). */
-  applySyncDiff(
-    this: Store,
-    diff: SyncDiff,
-    resolveCourse: (a: ExternalAssignment) => string | undefined,
-    describe?: (a: ExternalAssignment) => Partial<Task>,
-    source: Task['source'] = 'schoology',
-  ): { created: number; updated: number } {
-    const now = isoNow();
-    const created: Task[] = [];
-    let order = this.nextOrder();
-    for (const a of diff.create) {
-      const id = uid('t');
-      const extra = describe?.(a) ?? {};
-      const task: Task = {
-        id,
-        title: a.title,
-        notes: a.notes || extra.notes,
-        courseId: resolveCourse(a),
-        tags: extra.tags ?? [],
-        priority: a.type === 'exam' ? 'high' : 'normal',
-        dueAt: a.dueAt,
-        estimateMin: extra.estimateMin,
-        type: a.type,
-        subtasks: (extra.subtasks ?? []).map((s, i) => ({ id: `${id}_s${i}`, title: s.title, done: false })),
-        createdAt: now,
-        updatedAt: now,
-        order: order++,
-        deferredCount: 0,
-        source,
-        externalId: a.externalId,
-        url: a.url,
-        syncedAt: now,
-        autoDescribed: !!extra.notes,
-      };
-      created.push(task);
-    }
-    const byExt = new Map(this.tasks.filter((t) => t.externalId).map((t) => [t.externalId!, t]));
-    const updated: Task[] = [];
-    for (const u of diff.update) {
-      const t = byExt.get(u.externalId);
-      if (!t) continue;
-      updated.push({ ...t, ...u.patch, syncedAt: now, updatedAt: now });
-    }
-    const map = new Map(updated.map((t) => [t.id, t]));
-    this.tasks = [...this.tasks.map((t) => map.get(t.id) ?? t), ...created];
-    const all = [...created, ...updated];
-    if (all.length) this.persistTasks(all);
-    if (created.length || updated.length) {
-      const stats = structuredClone($state.snapshot(this.stats)) as Stats;
-      stats.syncedCount = (stats.syncedCount ?? 0) + created.length;
-      const newBadges = evaluateBadges(stats, { openTasksRemaining: this.openTasks.length, today: this.today });
-      stats.badges = [...stats.badges, ...newBadges];
-      this.stats = stats;
-      this.persistStats();
-      for (const b of newBadges) emit('badge', { id: b });
-    }
-    emit('synced', { created: created.length, updated: updated.length });
-    return { created: created.length, updated: updated.length };
-  },
 
   // ---------- pomodoro ----------
   recordPomodoro(this: Store): void {

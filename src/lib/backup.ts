@@ -256,13 +256,18 @@ export function mergeBundles(local: ExportBundle, remote: ExportBundle, now: Dat
   for (const e of [...(remote.ledger ?? []), ...(local.ledger ?? [])]) ledger.set(e.id, e);
   // timetable: last write wins (the whole schedule is one object)
   const schedule = !local.schedule ? remote.schedule : !remote.schedule ? local.schedule : remote.schedule.updatedAt > local.schedule.updatedAt ? remote.schedule : local.schedule;
+  // two devices that imported the same assignment before syncing each made a copy: keep one, everywhere
+  // an import nobody has touched yet doesn't outrank a deletion made elsewhere (the feed would bring it back)
+  const liveTasks = [...tasks.values()].filter((t) => alive('task', t.id, t.externalId && t.createdAt === t.updatedAt ? undefined : t.updatedAt));
+  const extra = new Set(externalDuplicates(liveTasks));
+  for (const id of extra) tombstones.push({ kind: 'task', id, deletedAt: now.toISOString() });
   const liveDecks = [...decks.values()].filter((d) => alive('deck', d.id, d.updatedAt));
   const deckIds = new Set(liveDecks.map((d) => d.id));
   return {
     merged: {
       version: 1,
       exportedAt: now.toISOString(),
-      tasks: [...tasks.values()].filter((t) => alive('task', t.id, t.updatedAt)),
+      tasks: liveTasks.filter((t) => !extra.has(t.id)),
       courses: [...courses.values()].filter((c) => alive('course', c.id, c.updatedAt)),
       templates: [...templates.values()].filter((t) => alive('template', t.id, undefined)),
       stats,
@@ -275,6 +280,27 @@ export function mergeBundles(local: ExportBundle, remote: ExportBundle, now: Dat
     },
     conflicts,
   };
+}
+
+/**
+ * Ids of extra copies of one imported assignment (same externalId). The copy to keep is the same on every
+ * device: a completed one first, then the oldest. Repeating tasks are left alone (their occurrences share it).
+ */
+export function externalDuplicates(tasks: Task[]): string[] {
+  const groups = new Map<string, Task[]>();
+  for (const t of tasks) {
+    if (!t.externalId || t.recurrence) continue;
+    const g = groups.get(t.externalId);
+    if (g) g.push(t);
+    else groups.set(t.externalId, [t]);
+  }
+  const drop: string[] = [];
+  for (const g of groups.values()) {
+    if (g.length < 2) continue;
+    const [keep] = [...g].sort((a, b) => Number(!!b.completedAt) - Number(!!a.completedAt) || a.createdAt.localeCompare(b.createdAt) || a.id.localeCompare(b.id));
+    for (const t of g) if (t !== keep) drop.push(t.id);
+  }
+  return drop;
 }
 
 /** Union two tombstone lists (latest deletion wins), forgetting ones past TOMBSTONE_DAYS and trash snapshots past TRASH_DAYS. */

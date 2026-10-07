@@ -1,5 +1,12 @@
 # Changelog
 
+## Fix: old and already-finished assignments no longer come back in Focus and the games
+
+- **One copy per assignment.** When two of your devices imported the same Schoology, Canvas or class-list assignment before they had synced, each made its own copy: you finished one, and the other stayed behind as an open, overdue task in Today, Focus and the Play games. Imported assignments now get the same id on every device, and copies you already have are folded into one (the finished one wins) the next time the app opens or syncs.
+- **Deleted stays deleted.** An imported assignment you deleted on one device is no longer brought back by another device's feed.
+- **Old assignments arrive done.** A school feed lists the whole year and can't say what you've turned in, so assignments more than 14 days past due now arrive already done (no XP or coins) instead of filling Today and Focus with old work. Reopen one if you still need to do it.
+- A repeating copy of an imported assignment no longer counts as the assignment itself.
+
 ## Fuller backups and fair coins: your keys and game saves in the backup, a tamper-proof wallet, and a fix for finished tasks coming back
 
 - **🔑 Keys and sign-ins in your backup, encrypted.** With a sync passphrase set (Settings → Privacy & security), **Download backup** also saves your AI keys, GitHub token, Schoology and Canvas links, Spotify sign-in, media-server sign-ins, sync passphrase and the account server you use, encrypted with that passphrase. Importing the file on another device asks for the backup's password once and puts them all back (or **Import without keys**). Without a sync passphrase, keys are never written into a backup.
