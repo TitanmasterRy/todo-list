@@ -1,5 +1,6 @@
 // Canvas assignment sync from the personal calendar feed. Runs on load, every 30 minutes while open, and on demand.
 import { store } from './store.svelte';
+import { applySyncDiff } from './syncImport.svelte';
 import { toasts } from './toast.svelte';
 import { parseICS } from './ics-parse';
 import { diffAssignments, matchCourseName, type ExternalAssignment } from './schoology';
@@ -47,7 +48,7 @@ export function applyCanvasText(text: string): { created: number; updated: numbe
     .filter((t) => t.externalId?.startsWith('canvas:'))
     .map((t) => ({ externalId: t.externalId!, title: t.title, dueAt: t.dueAt, notes: t.notes, completedAt: t.completedAt }));
   const made = new Map<string, string>();
-  const r = store.applySyncDiff(diffAssignments(existing, assignments, store.settings.schoologyIgnored ?? []), (a) => courseFor(a, made), undefined, 'canvas');
+  const r = applySyncDiff(store, diffAssignments(existing, assignments, store.settings.schoologyIgnored ?? []), (a) => courseFor(a, made), undefined, 'canvas');
   const out = { ...r, total: assignments.length };
   canvas.lastResult = out;
   canvas.status = 'ok';

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { bundlesDiffer, mergeBundles, parseBundle } from './backup';
+import { bundlesDiffer, externalDuplicates, mergeBundles, parseBundle } from './backup';
 import { sealEntry } from './ledgerSeal';
 import type { ExportBundle, Task } from './types';
 import { DEFAULT_STATS } from './types';
@@ -180,5 +180,39 @@ describe('mergeBundles and the ledger seal', () => {
     const real = sealEntry({ id: 'l1', at: '2026-10-02T10:00:00.000Z', currency: 'coins', amount: 5, reason: 'task' });
     const { merged } = mergeBundles({ ...bundle([]), ledger: [real] }, { ...bundle([]), ledger: [{ ...real, amount: 5000 }] });
     expect(merged.ledger).toEqual([real]);
+  });
+});
+
+describe('copies of one imported assignment', () => {
+  const ext = (id: string, createdAt: string, extra: Partial<Task> = {}): Task => ({ ...task(id, createdAt), externalId: 'canvas:42', ...extra });
+
+  it('keeps the completed copy, else the oldest; repeating tasks are left alone', () => {
+    expect(externalDuplicates([ext('a', '2026-09-02T00:00:00.000Z'), ext('b', '2026-09-01T00:00:00.000Z')])).toEqual(['a']);
+    expect(externalDuplicates([ext('a', '2026-09-02T00:00:00.000Z', { completedAt: '2026-09-03T00:00:00.000Z' }), ext('b', '2026-09-01T00:00:00.000Z')])).toEqual(['b']);
+    expect(
+      externalDuplicates([ext('a', '2026-09-01T00:00:00.000Z', { recurrence: { kind: 'weekly' } }), ext('b', '2026-09-08T00:00:00.000Z', { recurrence: { kind: 'weekly' } })]),
+    ).toEqual([]);
+    expect(externalDuplicates([task('c', '2026-09-01T00:00:00.000Z'), task('d', '2026-09-01T00:00:00.000Z')])).toEqual([]);
+  });
+
+  it('two devices that each imported it end up with the one that was finished, on both', () => {
+    const done = ext('a', '2026-09-02T00:00:00.000Z', { completedAt: '2026-09-03T00:00:00.000Z', updatedAt: '2026-09-03T00:00:00.000Z' });
+    const open = ext('b', '2026-09-01T00:00:00.000Z');
+    const now = new Date('2026-09-04T00:00:00.000Z');
+    const one = mergeBundles(bundle([done]), bundle([open]), now).merged;
+    const two = mergeBundles(bundle([open]), bundle([done]), now).merged;
+    expect(one.tasks.map((t) => t.id)).toEqual(['a']);
+    expect(two.tasks.map((t) => t.id)).toEqual(['a']);
+    expect(one.tombstones).toContainEqual({ kind: 'task', id: 'b', deletedAt: now.toISOString() });
+  });
+
+  it("a fresh import doesn't bring back an assignment deleted on another device", () => {
+    const now = new Date('2026-09-10T00:00:00.000Z');
+    const reimported = ext('x', '2026-09-09T00:00:00.000Z');
+    const deleted = { ...bundle([]), tombstones: [{ kind: 'task' as const, id: 'x', deletedAt: '2026-09-05T00:00:00.000Z' }] };
+    expect(mergeBundles(bundle([reimported]), deleted, now).merged.tasks).toEqual([]);
+    // but one restored or edited after the deletion stays
+    const edited = { ...reimported, updatedAt: '2026-09-09T12:00:00.000Z' };
+    expect(mergeBundles(bundle([edited]), deleted, now).merged.tasks.map((t) => t.id)).toEqual(['x']);
   });
 });

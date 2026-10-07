@@ -18,7 +18,7 @@ import type {
   Tombstone,
   TombstoneKind,
 } from './types';
-import { buildBundle, mergeTombstones, TRASH_DAYS, type BundleData } from './backup';
+import { buildBundle, externalDuplicates, mergeTombstones, TRASH_DAYS, type BundleData } from './backup';
 import { stampChanges } from './fieldmerge';
 import { recordHistory } from './history';
 import { DEFAULT_STATS } from './types';
@@ -163,8 +163,14 @@ export class Store {
       this.tombstones = mergeTombstones(tombstones, [], this.now);
       if (this.tombstones.length !== tombstones.length) void db.putTombstones($state.snapshot(this.tombstones) as Tombstone[]);
       this.ledger = (await this.checkStoredLedger(ledger)).sort((a, b) => (a.at < b.at ? -1 : a.at > b.at ? 1 : 0));
-      this.tasks = tasks;
-      this.rememberSaved(tasks);
+      // copies of one imported assignment made on two devices before they synced: keep one (see externalDuplicates)
+      const extra = externalDuplicates(tasks);
+      this.tasks = extra.length ? tasks.filter((t) => !extra.includes(t.id)) : tasks;
+      this.rememberSaved(this.tasks);
+      if (extra.length) {
+        void db.deleteTasks(extra);
+        this.bury('task', extra);
+      }
       this.courses = courses;
       this.templates = templates;
       this.decks = decks;

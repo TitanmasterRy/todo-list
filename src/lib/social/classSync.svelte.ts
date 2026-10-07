@@ -1,6 +1,7 @@
 // Class mode on this device: the class lists you subscribe to (fetched on load and on demand, then applied with the
 // same diff and task creation as Schoology, marked source 'class'), and the lists you publish as a teacher.
 import { store } from '../store.svelte';
+import { applySyncDiff } from '../syncImport.svelte';
 import { toasts } from '../toast.svelte';
 import { cspHint } from '../csp';
 import { randomId } from '../b64url';
@@ -143,7 +144,7 @@ function applyList(list: ClassList, url: string): { created: number; updated: nu
   const courseId = courseFor(list, prev);
   const existing = store.tasks.filter((t) => t.externalId).map((t) => ({ externalId: t.externalId!, title: t.title, dueAt: t.dueAt, notes: t.notes, completedAt: t.completedAt }));
   const { diff, removed } = diffClass(existing, list, store.settings.schoologyIgnored); // deleted tasks' external ids land there, whatever the source
-  const r = store.applySyncDiff(diff, () => courseId, undefined, 'class');
+  const r = applySyncDiff(store, diff, () => courseId, undefined, 'class');
   const sub: ClassSub = {
     listId: list.id,
     url: url || prev?.url || '',

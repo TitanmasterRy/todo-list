@@ -1,5 +1,6 @@
 // Schoology assignment sync via the personal iCal feed. Runs on load, every 30 minutes while open, and on demand.
 import { store } from './store.svelte';
+import { applySyncDiff } from './syncImport.svelte';
 import { toasts } from './toast.svelte';
 import { parseICS } from './ics-parse';
 import { diffAssignments, eventsToAssignments, matchCourseName, type ExternalAssignment } from './schoology';
@@ -105,7 +106,7 @@ export function applyAssignments(assignments: ExternalAssignment[]): { created: 
     const d = autoDescribe(a.title, { courseName, type: a.type });
     return { notes: a.notes ? undefined : d.notes, subtasks: d.subtasks.map((s) => ({ id: '', title: s, done: false })), estimateMin: d.estimateMin, tags: d.tags };
   };
-  const result = store.applySyncDiff(diff, courseFor, describe);
+  const result = applySyncDiff(store, diff, courseFor, describe);
   schoology.unmatched = [...unmatched];
   const out = { ...result, total: assignments.length };
   schoology.lastResult = out;
