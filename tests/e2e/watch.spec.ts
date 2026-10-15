@@ -178,7 +178,7 @@ test('Jellyfin: quality, audio and burned-in subtitles reload in place; skip int
     if (url.pathname.endsWith('.vtt')) return route.fulfill({ status: 200, contentType: 'text/vtt', headers: CORS, body: 'WEBVTT\n' });
     return route.fulfill({ status: 404, headers: CORS, body: '' });
   });
-  // a stand-in for hls.js that records the stream it was given
+  // a stand-in for hls.js that records the stream it was given (browsers that play HLS themselves get it as the <video> src)
   await page.route('https://cdn.jsdelivr.net/npm/hls.js@1/dist/hls.min.js', (r) =>
     r.fulfill({
       status: 200,
@@ -188,7 +188,13 @@ test('Jellyfin: quality, audio and burned-in subtitles reload in place; skip int
         loadSource(u) { window.__hlsSrc = u; } attachMedia() {} on() {} destroy() {} };`,
     }),
   );
-  const hlsSrc = async () => new URL((await page.evaluate(() => (window as unknown as { __hlsSrc?: string }).__hlsSrc)) ?? 'about:blank');
+  const hlsSrc = async () =>
+    new URL(
+      await page.evaluate(() => {
+        const native = document.querySelector('.vp video')?.getAttribute('src') ?? '';
+        return native.includes('.m3u8') ? native : ((window as unknown as { __hlsSrc?: string }).__hlsSrc ?? 'about:blank');
+      }),
+    );
 
   const errors = await openApp(page);
   await openWatch(page);
