@@ -35,6 +35,8 @@ export interface WatchData {
   positions: Record<string, SavedPosition>;
   /** playback speed last used */
   speed: number;
+  /** media-server max streaming quality in bits per second, 0 for Auto */
+  quality: number;
 }
 
 export const WATCH_KEY = 'homework-todo:watch';
@@ -49,7 +51,7 @@ export function randomId(bytes = 12): string {
 }
 
 export function emptyWatch(deviceId = randomId(16)): WatchData {
-  return { v: WATCH_VERSION, deviceId, sources: [], positions: {}, speed: 1 };
+  return { v: WATCH_VERSION, deviceId, sources: [], positions: {}, speed: 1, quality: 0 };
 }
 
 const str = (x: unknown, max: number): string => (typeof x === 'string' ? x.trim().slice(0, max) : '');
@@ -118,6 +120,8 @@ export function parseWatch(raw: string | null): WatchData {
   }
   const speed = Number(o.speed);
   if (Number.isFinite(speed) && speed >= 0.25 && speed <= 4) data.speed = speed;
+  const quality = Number(o.quality);
+  if (Number.isInteger(quality) && quality > 0 && quality <= 1_000_000_000) data.quality = quality;
   return data;
 }
 

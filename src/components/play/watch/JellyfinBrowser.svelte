@@ -205,6 +205,20 @@
     playing = { item: current, restart };
   }
 
+  /** Up next: open the next episode's page and keep playing (if the homework rules still allow it). */
+  async function playNext(next: JfItem) {
+    const c = client;
+    if (!c || !canStart()) {
+      playing = null;
+      return;
+    }
+    const full = await guard(() => c.item(next.id));
+    if (!full) return;
+    stack = [...stack.slice(0, -1), { name: 'item', id: full.id }];
+    current = full;
+    playing = { item: full, restart: false };
+  }
+
   // the player or the server's web app counts as watching (for the homework rules)
   let playerOn = $state(false);
   $effect(() => {
@@ -321,8 +335,11 @@
               restart={playing.restart}
               speed={watch.data.speed}
               onspeed={(s) => watch.setSpeed(s)}
+              quality={watch.data.quality}
+              onquality={(q) => watch.setQuality(q)}
               onactive={(on) => (playerOn = on)}
               onended={() => (playing = null)}
+              onnext={playNext}
             />
           {/key}
         {/if}

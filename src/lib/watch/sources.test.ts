@@ -32,12 +32,16 @@ describe('watch sources storage', () => {
         ],
         positions: { ok: { t: 120, at: 5 }, 'bad key!': { t: 1, at: 1 }, neg: { t: -1, at: 1 } },
         speed: 1.5,
+        quality: 4_000_000,
       }),
     );
     expect(d.deviceId).toBe('dev-1234567890');
     expect(d.sources).toEqual([{ id: 'ok', kind: 'jellyfin', name: 'Home', url: 'https://jf.example.com', userId: 'abc123', userName: 'kid', addedAt: new Date(0).toISOString() }]);
     expect(d.positions).toEqual({ ok: { t: 120, at: 5 } });
     expect(d.speed).toBe(1.5);
+    expect(d.quality).toBe(4_000_000);
+    expect(parseWatch(JSON.stringify({ quality: 'max' })).quality).toBe(0);
+    expect(parseWatch(JSON.stringify({ quality: -5 })).quality).toBe(0);
   });
 
   it('normalizes server addresses', () => {

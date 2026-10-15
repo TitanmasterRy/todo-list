@@ -1,5 +1,12 @@
 # Changelog
 
+## Watch: quality, audio and subtitle choices, Skip intro and Up next for Jellyfin
+
+- **🎚️ Quality menu.** Under the video, pick *Auto* (the original file when your browser can play it) or a set quality from 4K · 120 Mbps down to 360p · 720 kbps, like Jellyfin's own app. A lower quality has your server convert the video, which helps on slow Wi-Fi or mobile data. Your choice is remembered.
+- **🔊 Audio tracks and 💬 subtitles.** Switch to another language or commentary track, and pick subtitles from one menu, including image subtitles (PGS, DVD), which the server burns into the picture. Movies with several files get a **Version** menu.
+- **No restart.** Changing quality, audio, subtitles or version picks up where you were, even in full screen.
+- **⏭ Skip intro** when your server has marked the intro (also recaps, previews and ads), and **Up next**: at the end of an episode the next one starts after 10 seconds, or right away with **Play now**.
+
 ## Fix: old and already-finished assignments no longer come back in Focus and the games
 
 - **One copy per assignment.** When two of your devices imported the same Schoology, Canvas or class-list assignment before they had synced, each made its own copy: you finished one, and the other stayed behind as an open, overdue task in Today, Focus and the Play games. Imported assignments now get the same id on every device, and copies you already have are folded into one (the finished one wins) the next time the app opens or syncs.

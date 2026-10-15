@@ -15,12 +15,33 @@ export interface JfSubtitle {
   isDefault: boolean;
 }
 
+export interface JfAudio {
+  index: number;
+  label: string;
+  language: string;
+  isDefault: boolean;
+}
+
 export interface JfMediaSource {
   id: string;
+  /** the version's name when an item has several files (e.g. "1080p", "Director's cut") */
+  name: string;
   container: string;
   videoCodec: string;
   audioCodec: string;
+  /** bits per second, 0 when the server doesn't know */
+  bitrate: number;
+  width: number;
+  height: number;
+  audio: JfAudio[];
   subtitles: JfSubtitle[];
+}
+
+/** A part of an episode the server marked (Jellyfin 10.10+ media segments), in seconds. */
+export interface JfSegment {
+  type: 'Intro' | 'Outro' | 'Recap' | 'Preview' | 'Commercial';
+  start: number;
+  end: number;
 }
 
 export interface JfItem {
@@ -95,11 +116,21 @@ function toSource(x: unknown): JfMediaSource | null {
   const streams = Array.isArray(o.MediaStreams) ? (o.MediaStreams as Record<string, unknown>[]) : [];
   const video = streams.find((s) => s && s.Type === 'Video');
   const audio = streams.find((s) => s && s.Type === 'Audio' && s.IsDefault) ?? streams.find((s) => s && s.Type === 'Audio');
+  const audios: JfAudio[] = [];
   const subtitles: JfSubtitle[] = [];
   for (const s of streams) {
-    if (!s || s.Type !== 'Subtitle') continue;
+    if (!s || (s.Type !== 'Subtitle' && s.Type !== 'Audio')) continue;
     const index = num(s.Index);
     if (index === null || index < 0) continue;
+    if (s.Type === 'Audio') {
+      audios.push({
+        index,
+        label: str(s.DisplayTitle, 80) || str(s.Title, 80) || str(s.Language, 20) || `Audio ${index}`,
+        language: str(s.Language, 20).replace(/[^\w-]/g, ''),
+        isDefault: s === audio,
+      });
+      continue;
+    }
     const codec = str(s.Codec, 20).toLowerCase();
     subtitles.push({
       index,
@@ -109,11 +140,17 @@ function toSource(x: unknown): JfMediaSource | null {
       isDefault: s.IsDefault === true,
     });
   }
+  const whole = (x: unknown) => Math.max(0, Math.round(num(x) ?? 0));
   return {
     id: sid,
+    name: str(o.Name, 80),
     container: str(o.Container, 40).toLowerCase(),
     videoCodec: str(video?.Codec, 20).toLowerCase(),
     audioCodec: str(audio?.Codec, 20).toLowerCase(),
+    bitrate: whole(o.Bitrate),
+    width: whole(video?.Width),
+    height: whole(video?.Height),
+    audio: audios,
     subtitles,
   };
 }
@@ -175,6 +212,64 @@ export function chooseMethod(source: Pick<JfMediaSource, 'container' | 'videoCod
   if ((source.videoCodec && !v) || (source.audioCodec && !a)) return 'hls';
   const codecs = [v, a].filter(Boolean).join(', ');
   return canPlay(codecs ? `${mime}; codecs="${codecs}"` : mime) ? 'direct' : 'hls';
+}
+
+// ---------- quality, audio and subtitle choices ----------
+export interface Quality {
+  /** bits per second */
+  bitrate: number;
+  height: number;
+  label: string;
+}
+
+/** The "Max streaming quality" steps, like Jellyfin's own web app. */
+export const QUALITIES: Quality[] = [
+  { bitrate: 120_000_000, height: 2160, label: '4K · 120 Mbps' },
+  { bitrate: 80_000_000, height: 2160, label: '4K · 80 Mbps' },
+  { bitrate: 40_000_000, height: 1080, label: '1080p · 40 Mbps' },
+  { bitrate: 20_000_000, height: 1080, label: '1080p · 20 Mbps' },
+  { bitrate: 10_000_000, height: 1080, label: '1080p · 10 Mbps' },
+  { bitrate: 8_000_000, height: 720, label: '720p · 8 Mbps' },
+  { bitrate: 4_000_000, height: 720, label: '720p · 4 Mbps' },
+  { bitrate: 3_000_000, height: 480, label: '480p · 3 Mbps' },
+  { bitrate: 1_500_000, height: 480, label: '480p · 1.5 Mbps' },
+  { bitrate: 720_000, height: 360, label: '360p · 720 kbps' },
+];
+
+/** The qualities worth offering for a file: none taller than the file itself (all of them when its size is unknown). */
+export function qualitiesFor(source: Pick<JfMediaSource, 'height'>): Quality[] {
+  // a 1920×800 "1080p" film is 800 tall: compare with some slack so it still gets the 1080p steps
+  const fit = QUALITIES.filter((q) => !source.height || q.height <= source.height * 1.4);
+  return fit.length ? fit : QUALITIES.slice(-1);
+}
+
+export interface PlayChoice {
+  /** max bits per second, 0 for "Auto" (the file as it is when the browser can play it) */
+  maxBitrate: number;
+  /** audio stream index, null for the file's default */
+  audioIndex: number | null;
+  /** image subtitle stream index to burn into the picture, null for none */
+  burnIn: number | null;
+}
+
+export interface PlayPlan {
+  method: 'direct' | 'hls';
+  /** why, for the line under the player */
+  why: string;
+  maxBitrate: number;
+  maxHeight: number;
+}
+
+/** Direct play when the browser handles the file and nothing asks for a change, else the server's conversion. */
+export function planPlayback(source: JfMediaSource, choice: PlayChoice, canPlay: (mime: string) => string): PlayPlan {
+  const q = QUALITIES.find((x) => x.bitrate === choice.maxBitrate);
+  const plan = (why: string): PlayPlan => ({ method: 'hls', why, maxBitrate: q?.bitrate ?? 0, maxHeight: q?.height ?? 0 });
+  const defaultAudio = source.audio.find((a) => a.isDefault)?.index ?? null;
+  if (choice.burnIn !== null) return plan('Converted by the server to show these subtitles');
+  if (choice.audioIndex !== null && choice.audioIndex !== defaultAudio) return plan('Converted by the server for this audio track');
+  if (q && (source.bitrate ? source.bitrate > q.bitrate : source.height > q.height * 1.4)) return plan(`Converted by the server to ${q.label}`);
+  if (chooseMethod(source, canPlay) === 'hls') return plan(q ? `Converted by the server (${q.label})` : "Converted by the server (this browser can't play the file as it is)");
+  return { method: 'direct', why: 'Direct play (original quality)', maxBitrate: 0, maxHeight: 0 };
 }
 
 export const ticks = (seconds: number): number => Math.max(0, Math.round(seconds * TICKS_PER_SECOND));
@@ -329,6 +424,38 @@ export class JellyfinClient {
     ).items;
   }
 
+  /** The episode after this one in its show (null for the last one, or anything that isn't an episode). */
+  async nextEpisode(item: Pick<JfItem, 'id' | 'type' | 'seriesId'>): Promise<JfItem | null> {
+    if (item.type !== 'Episode' || !item.seriesId) return null;
+    this.needUser();
+    const { items } = toItems(
+      await this.request('GET', `/Shows/${encodeURIComponent(item.seriesId)}/Episodes`, { userId: this.userId, startItemId: id(item.id), Limit: 2, Fields: 'Overview' }),
+    );
+    const at = items.findIndex((i) => i.id === item.id);
+    return at >= 0 ? (items[at + 1] ?? null) : null;
+  }
+
+  /** Intro, recap, credits… marked on the server (Jellyfin 10.10+). Empty when the server has none or doesn't know them. */
+  async segments(itemId: string): Promise<JfSegment[]> {
+    let raw: unknown;
+    try {
+      raw = await this.request('GET', `/MediaSegments/${encodeURIComponent(id(itemId))}`);
+    } catch (e) {
+      if (e instanceof JellyfinError && e.kind === 'http') return []; // Emby and older Jellyfin
+      throw e;
+    }
+    const list = raw && typeof raw === 'object' && Array.isArray((raw as Record<string, unknown>).Items) ? ((raw as Record<string, unknown>).Items as unknown[]) : [];
+    const out: JfSegment[] = [];
+    for (const x of list) {
+      const o = (x && typeof x === 'object' ? x : {}) as Record<string, unknown>;
+      const type = o.Type as JfSegment['type'];
+      const start = (num(o.StartTicks) ?? -1) / TICKS_PER_SECOND;
+      const end = (num(o.EndTicks) ?? -1) / TICKS_PER_SECOND;
+      if (['Intro', 'Outro', 'Recap', 'Preview', 'Commercial'].includes(type) && start >= 0 && end > start) out.push({ type, start, end });
+    }
+    return out.sort((a, b) => a.start - b.start).slice(0, 50);
+  }
+
   /** One item with its media sources (files, codecs, subtitle streams). */
   async item(itemId: string): Promise<JfItem> {
     const it = toItem(await this.request('GET', `/Users/${this.needUser()}/Items/${encodeURIComponent(id(itemId))}`));
@@ -357,8 +484,20 @@ export class JellyfinClient {
     });
   }
 
-  /** HLS converted by the server to H.264 + AAC, which every browser (with hls.js) can play. */
-  hlsUrl(itemId: string, mediaSourceId: string, playSessionId: string): string {
+  /**
+   * HLS converted by the server to H.264 + AAC, which every browser (with hls.js) can play. A max bitrate and height
+   * pick the quality (the server copies the video untouched when it already fits), and an audio or image subtitle
+   * stream can be chosen (image subtitles are burned into the picture).
+   */
+  hlsUrl(
+    itemId: string,
+    mediaSourceId: string,
+    playSessionId: string,
+    o: { maxBitrate?: number; maxHeight?: number; audioIndex?: number | null; burnIn?: number | null } = {},
+  ): string {
+    const index = (n: number | null | undefined) => (typeof n === 'number' && Number.isInteger(n) && n >= 0 ? n : undefined);
+    const max = o.maxBitrate && o.maxBitrate > 0 ? Math.round(o.maxBitrate) : 0;
+    const burnIn = index(o.burnIn);
     return this.url(`/Videos/${encodeURIComponent(id(itemId))}/master.m3u8`, {
       ...this.keyQuery(),
       MediaSourceId: id(mediaSourceId),
@@ -368,7 +507,14 @@ export class JellyfinClient {
       PlaySessionId: playSessionId,
       TranscodingMaxAudioChannels: 2,
       SegmentContainer: 'ts',
-      MaxStreamingBitrate: 20_000_000,
+      MaxStreamingBitrate: max || 20_000_000,
+      // leave room for the audio in the chosen bitrate
+      VideoBitrate: max ? Math.max(250_000, max - 192_000) : undefined,
+      AudioBitrate: max ? 192_000 : undefined,
+      MaxHeight: o.maxHeight && o.maxHeight > 0 ? Math.round(o.maxHeight) : undefined,
+      AudioStreamIndex: index(o.audioIndex),
+      SubtitleStreamIndex: burnIn,
+      SubtitleMethod: burnIn === undefined ? undefined : 'Encode',
     });
   }
 
