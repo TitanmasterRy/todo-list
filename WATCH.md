@@ -10,7 +10,16 @@ The Watch tab plays video from **your own media server** and from **links you ad
 | **Video file URL** | `.mp4`, `.webm`, `.m3u8` (HLS) and `.mkv` (when the browser can decode it) in the built-in player, which remembers where you stopped. |
 | **A file on this device** | Plays a video from your computer or phone. Nothing is uploaded or saved. |
 
-The built-in player has playback speed, picture-in-picture, full screen and keyboard shortcuts: **Space** play/pause, **← / →** 10 seconds back/forward, **F** full screen, **M** mute. Subtitles from Jellyfin/Emby (text formats such as SRT, ASS, VTT) show up under the CC button.
+The built-in player has playback speed, picture-in-picture, full screen and keyboard shortcuts: **Space** play/pause, **← / →** 10 seconds back/forward, **F** full screen, **M** mute.
+
+For Jellyfin and Emby, the bar under the video also has:
+
+- **Quality:** *Auto* plays the file as it is when the browser can, or picks from 4K · 120 Mbps down to 360p · 720 kbps (only sizes up to the file's own are listed). A lower quality has the server convert the video. The choice is remembered on this device.
+- **Audio:** any of the file's audio tracks (another language, commentary). A track other than the default is converted by the server.
+- **Subtitles:** text subtitles (SRT, ASS, VTT…) switch instantly. Image subtitles (PGS, DVD) are marked *burned in*: the server draws them into the picture.
+- **Version**, when an item has more than one file (for example 4K and 1080p).
+
+Changing any of them reloads the stream where you were, without leaving full screen. **Skip intro** (also recap, preview and ads) shows up when the server has marked those parts (Jellyfin 10.10 or newer with intro detection, for example the Intro Skipper plugin). At the end of an episode, **Up next** plays the next one after 10 seconds, unless you hide it.
 
 Sources are saved on this device only (`homework-todo:watch` in localStorage). A server sign-in is kept as a token (never your password) with your other keys, so **Settings → Privacy & security → Lock my keys** encrypts it too.
 

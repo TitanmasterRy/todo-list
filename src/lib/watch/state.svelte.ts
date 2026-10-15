@@ -45,6 +45,11 @@ class WatchState {
     this.data.speed = speed;
     this.save();
   }
+
+  setQuality(bitrate: number): void {
+    this.data.quality = bitrate;
+    this.save();
+  }
 }
 
 export const watch = new WatchState();

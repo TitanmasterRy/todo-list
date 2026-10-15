@@ -9,8 +9,9 @@
 
 <script lang="ts">
   // The built-in player for Play → Watch: a plain <video> (the browser's own controls) plus speed, picture-in-picture,
-  // fullscreen and keyboard shortcuts. HLS playlists go through hls.js unless the browser plays them itself.
-  import { onDestroy, onMount } from 'svelte';
+  // fullscreen and keyboard shortcuts. HLS playlists go through hls.js unless the browser plays them itself. A new
+  // `src` (another quality or audio track) loads in place, so full screen and the speed stay.
+  import { onDestroy, onMount, untrack, type Snippet } from 'svelte';
   import { loadHls, nativeHls, type HlsInstance } from '../../../lib/watch/hls';
 
   interface Props {
@@ -27,8 +28,32 @@
     onplaying?: (playing: boolean) => void;
     onended?: () => void;
     onspeed?: (speed: number) => void;
+    /** the subtitle track shown (its src, '' for none); undefined leaves it to the browser */
+    subtitle?: string;
+    /** the viewer picked a subtitle track with the browser's own CC button */
+    onsubtitle?: (src: string) => void;
+    /** more controls for the bar under the video */
+    extra?: Snippet;
+    /** buttons over the picture (shown in full screen too) */
+    overlay?: Snippet;
   }
-  let { src, title, hls = false, startAt = 0, speed = 1, tracks = [], crossOrigin = false, ontime, onplaying, onended, onspeed }: Props = $props();
+  let {
+    src,
+    title,
+    hls = false,
+    startAt = 0,
+    speed = 1,
+    tracks = [],
+    crossOrigin = false,
+    ontime,
+    onplaying,
+    onended,
+    onspeed,
+    subtitle,
+    onsubtitle,
+    extra,
+    overlay,
+  }: Props = $props();
 
   let video = $state<HTMLVideoElement>();
   let wrap = $state<HTMLDivElement>();
@@ -40,40 +65,78 @@
   const SPEEDS = [0.5, 0.75, 1, 1.25, 1.5, 1.75, 2];
   const pipSupported = typeof document !== 'undefined' && 'pictureInPictureEnabled' in document && document.pictureInPictureEnabled;
 
-  async function attach(v: HTMLVideoElement) {
+  let attached = '';
+  let run = 0;
+
+  async function attach(v: HTMLVideoElement, url: string, viaHls: boolean, from: number) {
+    const mine = ++run;
     error = '';
-    if (!hls || nativeHls(v)) {
-      v.src = src;
+    hlsPlayer?.destroy();
+    hlsPlayer = null;
+    if (v.hasAttribute('src')) {
+      v.removeAttribute('src');
+      v.load();
+    }
+    if (!viaHls || nativeHls(v)) {
+      v.src = url;
       return;
     }
     try {
       const Hls = await loadHls();
+      if (mine !== run) return; // another source was picked meanwhile
       if (!Hls.isSupported()) {
         error = "This browser can't play this stream.";
         return;
       }
-      hlsPlayer = new Hls({ maxBufferLength: 30 });
+      hlsPlayer = new Hls({ maxBufferLength: 30, startPosition: from > 1 ? from : -1 });
       hlsPlayer.on(Hls.Events.ERROR, (_e, d) => {
         if (d.fatal) error = `The stream stopped (${d.details ?? d.type ?? 'error'}). Check that the server is online and allowed (see WATCH.md).`;
       });
-      hlsPlayer.loadSource(src);
+      hlsPlayer.loadSource(url);
       hlsPlayer.attachMedia(v);
     } catch (e) {
       error = e instanceof Error ? e.message : String(e);
     }
   }
 
+  $effect(() => {
+    const [v, url, viaHls] = [video, src, hls];
+    if (!v || url === attached) return;
+    attached = url;
+    untrack(() => void attach(v, url, viaHls, startAt));
+  });
+
+  function showSubtitle() {
+    if (subtitle === undefined || !video) return;
+    for (const el of video.querySelectorAll('track')) el.track.mode = subtitle && el.getAttribute('src') === subtitle ? 'showing' : 'disabled';
+  }
+  $effect(() => {
+    void [subtitle, tracks.length];
+    showSubtitle();
+  });
+
   onMount(() => {
     rate = SPEEDS.includes(speed) ? speed : 1;
-    if (video) void attach(video);
     wrap?.addEventListener('keydown', onKey);
     const onFs = () => (fullscreen = !!document.fullscreenElement);
     document.addEventListener('fullscreenchange', onFs);
+    // the browser's own CC menu
+    const onTracks = () => {
+      const on = [...(video?.querySelectorAll('track') ?? [])].find((el) => el.track.mode === 'showing');
+      onsubtitle?.(on?.getAttribute('src') ?? '');
+    };
+    video?.textTracks.addEventListener('change', onTracks);
     return () => {
       document.removeEventListener('fullscreenchange', onFs);
       wrap?.removeEventListener('keydown', onKey);
+      video?.textTracks.removeEventListener('change', onTracks);
     };
   });
+
+  /** Jump to a time (seconds). */
+  export function seek(seconds: number) {
+    if (video && Number.isFinite(seconds)) video.currentTime = Math.max(0, seconds);
+  }
 
   onDestroy(() => {
     hlsPlayer?.destroy();
@@ -88,7 +151,9 @@
   function onMeta() {
     if (!video) return;
     video.playbackRate = rate;
-    if (startAt > 5 && (!Number.isFinite(video.duration) || startAt < video.duration - 5)) video.currentTime = startAt;
+    showSubtitle();
+    // hls.js starts at startPosition itself
+    if (!hlsPlayer && startAt > 1 && (!Number.isFinite(video.duration) || startAt < video.duration - 5)) video.currentTime = startAt;
     video.play().catch(() => {
       /* autoplay refused: the controls are there */
     });
@@ -150,36 +215,39 @@
   role="group"
   aria-label={`Video player: ${title}. Space plays or pauses, arrows skip 10 seconds, F fullscreen, M mute.`}
 >
-  <video
-    bind:this={video}
-    controls
-    playsinline
-    preload="metadata"
-    crossorigin={crossOrigin ? 'anonymous' : undefined}
-    onloadedmetadata={onMeta}
-    ontimeupdate={report}
-    onpause={() => {
-      report();
-      onplaying?.(false);
-    }}
-    onplaying={() => {
-      started = true;
-      onplaying?.(true);
-    }}
-    onended={() => {
-      report();
-      onplaying?.(false);
-      onended?.();
-    }}
-    onerror={() => {
-      if (!hls && video?.error)
-        error = started ? 'Playback stopped.' : "This video couldn't be played here (the format may not be supported by this browser, or the link is wrong).";
-    }}
-  >
-    {#each tracks as t (t.src)}
-      <track kind="subtitles" src={t.src} label={t.label} srclang={t.lang || undefined} default={t.isDefault} />
-    {/each}
-  </video>
+  <div class="screen">
+    <video
+      bind:this={video}
+      controls
+      playsinline
+      preload="metadata"
+      crossorigin={crossOrigin ? 'anonymous' : undefined}
+      onloadedmetadata={onMeta}
+      ontimeupdate={report}
+      onpause={() => {
+        report();
+        onplaying?.(false);
+      }}
+      onplaying={() => {
+        started = true;
+        onplaying?.(true);
+      }}
+      onended={() => {
+        report();
+        onplaying?.(false);
+        onended?.();
+      }}
+      onerror={() => {
+        if (!hls && video?.error)
+          error = started ? 'Playback stopped.' : "This video couldn't be played here (the format may not be supported by this browser, or the link is wrong).";
+      }}
+    >
+      {#each tracks as t (t.src)}
+        <track kind="subtitles" src={t.src} label={t.label} srclang={t.lang || undefined} default={t.isDefault} />
+      {/each}
+    </video>
+    {#if overlay}<div class="over">{@render overlay()}</div>{/if}
+  </div>
   <div class="vp-bar">
     <label class="speed">
       Speed
@@ -188,6 +256,7 @@
       </select>
     </label>
     {#if pipSupported}<button class="btn ghost sm" onclick={pip} title="Picture in picture">⧉ Picture in picture</button>{/if}
+    {@render extra?.()}
     <button class="btn ghost sm" onclick={toggleFullscreen}>{fullscreen ? 'Exit full screen' : '⛶ Full screen'}</button>
     <span class="keys">Space · ← → · F · M</span>
   </div>
@@ -204,7 +273,20 @@
   .vp:focus-visible {
     box-shadow: 0 0 0 2px var(--accent);
   }
+  .screen {
+    position: relative;
+  }
+  .over {
+    position: absolute;
+    right: 12px;
+    bottom: 60px;
+    display: grid;
+    justify-items: end;
+    gap: 8px;
+    max-width: calc(100% - 24px);
+  }
   video {
+    display: block;
     width: 100%;
     max-height: 70vh;
     background: #000;
