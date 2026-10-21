@@ -129,6 +129,121 @@ test('Jellyfin: sign in, browse, play directly and report progress', async ({ pa
   expect(errors).toEqual([]);
 });
 
+test('Jellyfin: quality, audio and burned-in subtitles reload in place; skip intro and up next', async ({ page }) => {
+  const episode = (id: string, n: number) => ({
+    Id: id,
+    Name: n === 1 ? 'Pilot' : 'Second',
+    Type: 'Episode',
+    SeriesId: 's1',
+    SeriesName: 'Bunny Show',
+    IndexNumber: n,
+    ParentIndexNumber: 1,
+    RunTimeTicks: 20_000_000,
+    UserData: { PlaybackPositionTicks: 0, Played: false },
+    MediaSources: [
+      {
+        Id: `ms-${id}`,
+        Container: 'webm',
+        Bitrate: 8_000_000,
+        MediaStreams: [
+          { Type: 'Video', Codec: 'vp8', Index: 0, Width: 1920, Height: 1080 },
+          { Type: 'Audio', Codec: 'opus', Index: 1, IsDefault: true, DisplayTitle: 'English' },
+          { Type: 'Audio', Codec: 'opus', Index: 2, DisplayTitle: 'Japanese' },
+          { Type: 'Subtitle', Codec: 'srt', Index: 3, DisplayTitle: 'English', IsTextSubtitleStream: true },
+          { Type: 'Subtitle', Codec: 'PGSSUB', Index: 4, DisplayTitle: 'Signs' },
+        ],
+      },
+    ],
+  });
+  const reports: string[] = [];
+  await page.route(`${JELLY}/**`, async (route: Route) => {
+    const req = route.request();
+    const url = new URL(req.url());
+    const json = (body: unknown) => route.fulfill({ status: 200, contentType: 'application/json', headers: CORS, body: JSON.stringify(body) });
+    if (req.method() === 'OPTIONS') return route.fulfill({ status: 204, headers: CORS });
+    const key = `${req.method()} ${url.pathname}`;
+    if (key === 'POST /Users/AuthenticateByName') return json({ AccessToken: 'tok_e2e_123456', User: { Id: 'user1', Name: 'Kid' } });
+    if (key === 'GET /Users/user1/Views') return json({ Items: [{ Id: 'lib1', Name: 'Shows', Type: 'CollectionFolder' }] });
+    if (key === 'GET /Users/user1/Items/Resume' || key === 'GET /Shows/NextUp') return json({ Items: [] });
+    if (key === 'GET /Users/user1/Items') return json({ Items: [episode('e1', 1)], TotalRecordCount: 1 });
+    if (key === 'GET /Users/user1/Items/e1') return json(episode('e1', 1));
+    if (key === 'GET /Users/user1/Items/e2') return json(episode('e2', 2));
+    if (key === 'GET /Shows/s1/Episodes') return json({ Items: [episode('e1', 1), episode('e2', 2)] });
+    if (key === 'GET /MediaSegments/e1') return json({ Items: [{ Type: 'Intro', StartTicks: 0, EndTicks: 1_000_000_000 }] });
+    if (key === 'GET /Videos/e1/stream' || key === 'GET /Videos/e2/stream') return route.fulfill({ status: 200, contentType: 'video/webm', headers: CORS, body: CLIP });
+    if (key.startsWith('POST /Sessions/')) {
+      reports.push(`${url.pathname} ${(req.postDataJSON() as { PlaySessionId: string }).PlaySessionId}`);
+      return route.fulfill({ status: 204, headers: CORS });
+    }
+    if (url.pathname.endsWith('.vtt')) return route.fulfill({ status: 200, contentType: 'text/vtt', headers: CORS, body: 'WEBVTT\n' });
+    return route.fulfill({ status: 404, headers: CORS, body: '' });
+  });
+  // a stand-in for hls.js that records the stream it was given (browsers that play HLS themselves get it as the <video> src)
+  await page.route('https://cdn.jsdelivr.net/npm/hls.js@1/dist/hls.min.js', (r) =>
+    r.fulfill({
+      status: 200,
+      contentType: 'application/javascript',
+      headers: { 'Access-Control-Allow-Origin': '*' },
+      body: `window.Hls = class { static isSupported() { return true; } static Events = { ERROR: 'e', MANIFEST_PARSED: 'm' };
+        loadSource(u) { window.__hlsSrc = u; } attachMedia() {} on() {} destroy() {} };`,
+    }),
+  );
+  const hlsSrc = async () =>
+    new URL(
+      await page.evaluate(() => {
+        const native = document.querySelector('.vp video')?.getAttribute('src') ?? '';
+        return native.includes('.m3u8') ? native : ((window as unknown as { __hlsSrc?: string }).__hlsSrc ?? 'about:blank');
+      }),
+    );
+
+  const errors = await openApp(page);
+  await openWatch(page);
+  await addSource(page, 'Jellyfin', JELLY, 'Home server');
+  await page.getByRole('button', { name: 'Add', exact: true }).click();
+  await page.getByLabel('Username').fill('kid');
+  await page.getByLabel('Password').fill('hunter2');
+  await page.getByRole('button', { name: 'Sign in' }).click();
+  await page.locator('.poster', { hasText: 'Shows' }).click();
+  await page.locator('.poster', { hasText: 'Pilot' }).click();
+  await page.getByRole('button', { name: '▶ Play' }).click();
+  const video = page.locator('.vp video');
+  await expect(video).toHaveAttribute('src', /\/Videos\/e1\/stream\?/);
+  await expect(page.getByText('Direct play (original quality)')).toBeVisible();
+  await expect(page.getByLabel('Quality').locator('option').first()).toHaveText('Auto (original: 1080p · VP8 · 8 Mbps)');
+
+  // a lower quality: the server converts it, and the choice is remembered
+  await page.getByLabel('Quality').selectOption({ label: '720p · 4 Mbps' });
+  await expect.poll(async () => (await hlsSrc()).pathname).toBe('/Videos/e1/master.m3u8');
+  expect(Object.fromEntries((await hlsSrc()).searchParams)).toMatchObject({ MaxStreamingBitrate: '4000000', MaxHeight: '720', MediaSourceId: 'ms-e1' });
+  await expect(page.getByText('Converted by the server to 720p · 4 Mbps')).toBeVisible();
+  expect(JSON.parse((await page.evaluate(() => localStorage.getItem('homework-todo:watch'))) ?? '{}').quality).toBe(4_000_000);
+
+  // another audio track, then image subtitles burned into the picture
+  await page.getByLabel('Audio').selectOption({ label: 'Japanese' });
+  await expect.poll(async () => (await hlsSrc()).searchParams.get('AudioStreamIndex')).toBe('2');
+  await page.getByLabel('Subtitles').selectOption({ label: 'Signs (burned in)' });
+  await expect.poll(async () => (await hlsSrc()).searchParams.get('SubtitleMethod')).toBe('Encode');
+  expect((await hlsSrc()).searchParams.get('SubtitleStreamIndex')).toBe('4');
+  expect((await hlsSrc()).searchParams.get('AudioStreamIndex')).toBe('2');
+
+  // text subtitles, the default audio and Auto: back to the file as it is
+  await page.getByLabel('Subtitles').selectOption({ label: 'English' });
+  await page.getByLabel('Audio').selectOption({ label: 'English' });
+  await page.getByLabel('Quality').selectOption('0');
+  await expect(video).toHaveAttribute('src', /\/Videos\/e1\/stream\?/);
+  await expect.poll(() => video.evaluate((v: HTMLVideoElement) => [...v.textTracks].map((t) => t.mode).join())).toBe('showing');
+
+  // the marked intro can be skipped; at the end the next episode is offered
+  await page.getByRole('button', { name: /Skip intro/ }).click();
+  await expect(page.getByText('S1:E2 · Second')).toBeVisible();
+  await page.getByRole('button', { name: '▶ Play now' }).click();
+  await expect(video).toHaveAttribute('src', /\/Videos\/e2\/stream\?/);
+  await expect(page.locator('h3.title')).toHaveText('S1:E2 · Second');
+  // every reload was its own play session on the server
+  await expect.poll(() => new Set(reports.filter((r) => r.startsWith('/Sessions/Playing ')).map((r) => r.split(' ')[1])).size).toBeGreaterThanOrEqual(2);
+  expect(errors).toEqual([]);
+});
+
 test('video links become embeds, direct files use the built-in player', async ({ page }) => {
   await page.route('https://www.youtube-nocookie.com/**', (r) => r.fulfill({ status: 200, contentType: 'text/html', body: '<p>player</p>' }));
   await page.route('https://media.example.com/**', (r) => r.fulfill({ status: 200, contentType: 'video/webm', body: CLIP }));
