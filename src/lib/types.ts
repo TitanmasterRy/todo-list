@@ -321,6 +321,7 @@ export interface Settings {
   watchMinutesByDay: Record<string, number>;
   watchCreditMin: number; // paid watch minutes left (voucher mode)
   watchTokens: string; // media-server sign-ins: JSON { sourceId: accessToken } (a secret, like the other keys)
+  streamToken: string; // Play → Stream gateway refresh token (a secret)
   equippedTitle?: string; // shop cosmetic ids
   equippedFrame?: string;
   equippedConfetti?: string;
@@ -426,6 +427,7 @@ export const DEFAULT_SETTINGS: Settings = {
   watchMinutesByDay: {},
   watchCreditMin: 0,
   watchTokens: '',
+  streamToken: '',
   onboarded: false,
   syncPassphrase: '',
 };

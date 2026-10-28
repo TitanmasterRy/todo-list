@@ -39,6 +39,8 @@ export interface CspOptions {
   extraConnect?: string;
   /** VITE_MEDIA_SERVERS: the owner's Jellyfin / Emby / video servers (Play → Watch), space or comma separated. */
   mediaServers?: string;
+  /** VITE_STREAM_SERVER: the Play → Stream gateway; its https and wss origins are added (TURN isn't governed by CSP). */
+  streamServer?: string;
 }
 
 /** Origins from a space/comma-separated list (paths and trailing slashes dropped; only http(s)/ws(s)). */
@@ -58,6 +60,12 @@ export function originList(list: string | undefined): string[] {
     }
   }
   return out;
+}
+
+/** The https and wss origins of the Play → Stream gateway, or none when it isn't an https URL. */
+export function streamOrigins(url: string | undefined): string[] {
+  const origin = originOf(url);
+  return origin?.startsWith('https://') ? [origin, origin.replace(/^https:/, 'wss:')] : [];
 }
 
 /** scheme://host[:port] of a URL, or null. */
@@ -92,7 +100,11 @@ export function hostAllowed(origin: string, sources: string[]): boolean {
 
 export function connectSources(o: CspOptions = {}): string[] {
   const extra = [o.supabaseUrl, o.arcadeManifest].map(originOf).filter((x): x is string => !!x);
-  const listed = [...(o.extraConnect ?? '').split(/[\s,]+/).filter((s) => /^(https?|wss?):\/\/[^\s;,']+$/.test(s)), ...originList(o.mediaServers)];
+  const listed = [
+    ...(o.extraConnect ?? '').split(/[\s,]+/).filter((s) => /^(https?|wss?):\/\/[^\s;,']+$/.test(s)),
+    ...originList(o.mediaServers),
+    ...streamOrigins(o.streamServer),
+  ];
   const all = [...Object.values(CONNECT_HOSTS).flat(), ...listed];
   for (const e of extra) if (!hostAllowed(e, all)) all.push(e);
   return Array.from(new Set(all));

@@ -22,6 +22,7 @@
     spotifyRefreshToken: () => t('priv.spotify'),
     syncPassphrase: () => t('priv.syncPass'),
     watchTokens: () => t('priv.watchTokens'),
+    streamToken: () => t('priv.streamToken'),
   };
   const label = (slot: SecretSlot) => LABELS[slot]?.() ?? t('priv.aiKey', { name: slot.slice(7).replace(/^./, (c) => c.toUpperCase()) });
 

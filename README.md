@@ -180,6 +180,16 @@ The **Play** view (`9`) turns schoolwork into a currency. Everything here is pla
 - **Setup notes:** because the site is https, the browser blocks `http://192.168.x.x:8096` (mixed content): give the server https (Tailscale Serve/Funnel, Cloudflare Tunnel, or a reverse proxy with a certificate) or run the app yourself on your network over http. The site's security policy only lets the page connect to servers it was built with, so add your server's origin to **`VITE_MEDIA_SERVERS`** (a GitHub Actions variable for Pages); the Watch tab tells you the exact origin, with a copy button.
 - Netflix, Hulu, Disney+ and other DRM streaming services don't allow embedding and won't work.
 
+## Stream: games from your own PC
+
+**Play → 🎮 Stream** plays games from a gaming PC at home in the browser, from anywhere. Full guide: [STREAM.md](STREAM.md).
+
+- The PC runs **Apollo**; **MoonlightWeb** bridges it to WebRTC; a small **gateway** (`server/stream-gateway/`) signs you in, hands out short-lived TURN credentials and relays the setup between the page and MoonlightWeb. The page never talks to MoonlightWeb directly.
+- **Sign-in:** a password plus a 6-digit code from an authenticator app (the first sign-in shows the QR code and ten backup codes). The sign-in is kept with your other keys, so **Lock my keys** covers it.
+- **Picture:** your screen's own resolution and refresh rate by default (Apollo's virtual display matches it), H.264 in the browser's hardware decoder, stereo sound. Keyboard (by key position, Keyboard Lock in full screen), mouse (pointer lock for games), and up to four gamepads.
+- **Strict networks:** a **connection test** checks each step and says in plain words what the network blocks. On networks that only let port 443 out, streams switch to a slower WebSocket mode.
+- The Watch tab's homework rules don't apply to Stream.
+
 ## Themes
 
 Settings → Theme pack: Classic, Sleek, Cute, Arcade, Nature, Space, Paper. Each pack changes colors and corners, the completion sound pack, the particles that burst from the checkbox (hearts and stars, pixels, leaves, starfield…) and the confetti.
@@ -264,6 +274,8 @@ src/components/  task item, checkbox, quick add, editor, sortable list, toasts, 
 src/views/       Today, Upcoming, Courses, Inbox, Focus, Stats, Tools, Schoology, Play, Settings
 src/lib/casino/  casino game rules (slots, blackjack, roulette, poker, baccarat, craps, quick games)
 src/lib/watch/   Play → Watch: link → embed converter, Jellyfin/Emby client, saved sources, watch-time rules (components in src/components/play/watch/)
+src/lib/stream/  Play → Stream: gateway client, WebRTC and WebSocket players, input, connection test (components in src/components/play/stream/)
+server/stream-gateway/  the Stream gateway (Node, its own package; deployed separately, see its API.md)
 public/games/    built-in arcade games + games.json manifest (add your own here)
 public/sounds/   sounds are synthesized with WebAudio; drop files here to swap in samples
 ```

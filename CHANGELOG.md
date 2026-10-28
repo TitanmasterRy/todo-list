@@ -1,5 +1,12 @@
 # Changelog
 
+## Stream: play games from your PC at home, in the browser
+
+- **🎮 A new Play → Stream tab.** Pick a game or the desktop from your gaming PC and play it here, from anywhere, at your screen's own resolution and refresh rate. Keyboard, mouse (lock it for games) and gamepads work; full screen keeps shortcuts like Esc and Alt+Tab for the game where the browser allows it.
+- **🔐 Two-step sign-in.** A password and a code from an authenticator app. The first sign-in shows a QR code and ten backup codes. **Sign out everywhere** ends every sign-in and stops the stream.
+- **🩺 Connection test.** Checks each step a stream needs and says in plain words what the network blocks. On hotel or café networks that only allow normal web traffic, streams switch to a slower mode that still works.
+- **Stats** (resolution, frame rate, bitrate, delay, connection path), **Disconnect** (the game keeps running on the PC) or **Quit the game**, and a choice to resume or quit when another game is already running.
+
 ## Watch: quality, audio and subtitle choices, Skip intro and Up next for Jellyfin
 
 - **🎚️ Quality menu.** Under the video, pick *Auto* (the original file when your browser can play it) or a set quality from 4K · 120 Mbps down to 360p · 720 kbps, like Jellyfin's own app. A lower quality has your server convert the video, which helps on slow Wi-Fi or mobile data. Your choice is remembered.

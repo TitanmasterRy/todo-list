@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { blockedOrigin, buildCsp, connectSources, hostAllowed, originList, originOf } from './csp';
+import { blockedOrigin, buildCsp, connectSources, hostAllowed, originList, originOf, streamOrigins } from './csp';
 import { PROVIDERS } from './ai-providers';
 import { PYODIDE_URL } from './coderunner';
 
@@ -92,6 +92,18 @@ describe('content security policy', () => {
     expect(withMedia).not.toMatch(/[<>"]/);
     expect(originList('https://*.ts.net https://a.example.com/x/y')).toEqual(['https://*.ts.net', 'https://a.example.com']);
     expect(originList('')).toEqual([]);
+  });
+
+  it('adds the VITE_STREAM_SERVER gateway over https and wss only', () => {
+    const connect = directive(buildCsp({ streamServer: 'https://play.levitica.duckdns.org/' }), 'connect-src');
+    expect(connect).toContain('https://play.levitica.duckdns.org');
+    expect(connect).toContain('wss://play.levitica.duckdns.org');
+    expect(blockedOrigin('https://play.levitica.duckdns.org/health', connect, 'https://titanmasterry.github.io')).toBeNull();
+    expect(streamOrigins('https://play.example.com:8443/x')).toEqual(['https://play.example.com:8443', 'wss://play.example.com:8443']);
+    // not a plain-http or odd URL, and nothing without the variable
+    expect(streamOrigins('http://play.example.com')).toEqual([]);
+    expect(streamOrigins('javascript:alert(1)')).toEqual([]);
+    expect(directive(buildCsp(), 'connect-src').some((s) => s.includes('play.'))).toBe(false);
   });
 
   it('tells which origin a page policy blocks', () => {

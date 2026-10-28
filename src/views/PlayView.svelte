@@ -7,7 +7,7 @@
   import { activeSeason, daysLeft } from '../lib/seasons';
   import { site } from '../lib/site.svelte';
 
-  type Tab = 'shop' | 'casino' | 'arcade' | 'study' | 'stars' | 'pet' | 'garden' | 'dungeon' | 'boards' | 'factory' | 'watch' | 'wallet';
+  type Tab = 'shop' | 'casino' | 'arcade' | 'study' | 'stars' | 'pet' | 'garden' | 'dungeon' | 'boards' | 'factory' | 'watch' | 'stream' | 'wallet';
   // the newer tabs load on first open (each is its own chunk)
   const LAZY: Partial<Record<Tab, { load: () => Promise<{ default: import('svelte').Component }>; what: string }>> = {
     casino: { load: () => import('../components/play/CasinoTab.svelte'), what: 'the casino' },
@@ -19,6 +19,7 @@
     boards: { load: () => import('../components/play/LeaderboardsTab.svelte'), what: 'leaderboards' },
     factory: { load: () => import('../components/play/factory/FactoryGame.svelte'), what: 'the factory' },
     watch: { load: () => import('../components/play/watch/WatchTab.svelte'), what: 'Watch' },
+    stream: { load: () => import('../components/play/stream/StreamTab.svelte'), what: 'Stream' },
   };
   // a seasonal event (Halloween, winter, finals, summer) gives the page a themed look
   const event = $derived(activeSeason(store.today));
@@ -42,6 +43,7 @@
         { id: 'stars', label: 'Star map', icon: '🌌' },
         { id: 'factory', label: 'Factory', icon: '🏭' },
         { id: 'watch', label: 'Watch', icon: '📺' },
+        { id: 'stream', label: 'Stream', icon: '🎮' },
         { id: 'pet', label: 'Pet', icon: '🐣' },
         { id: 'garden', label: 'Garden', icon: '🌱' },
         { id: 'dungeon', label: 'Dungeon', icon: '🏰' },

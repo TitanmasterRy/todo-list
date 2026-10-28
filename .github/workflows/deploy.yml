@@ -38,6 +38,8 @@ jobs:
           VITE_CSP_CONNECT: ${{ vars.VITE_CSP_CONNECT }}
           # your own Jellyfin / Emby / video servers for Play → Watch (see WATCH.md); the repository variable adds more
           VITE_MEDIA_SERVERS: https://jellyfin.levitica.duckdns.org ${{ vars.VITE_MEDIA_SERVERS }}
+          # the Play → Stream gateway (see STREAM.md); the repository variable overrides it
+          VITE_STREAM_SERVER: ${{ vars.VITE_STREAM_SERVER || 'https://play.levitica.duckdns.org' }}
           # optional: the hidden admin panel's passphrase hash (make one in the admin panel → Security)
           VITE_ADMIN_HASH: ${{ vars.VITE_ADMIN_HASH }}
       - uses: actions/configure-pages@v6
