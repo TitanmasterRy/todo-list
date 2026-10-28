@@ -217,6 +217,7 @@ Research done on 2026-10-28 against MoonlightWeb (`linckosz/moonlight-web`) at t
 
 ### For the homelab session
 
+- **Apollo's virtual display is not automatic.** Apollo (`src/process.cpp`) creates a SudoVDA display only for Headless Mode, an app with *Always create Virtual Display*, a paired client with *Always create virtual display*, a launch with `virtualDisplay=1` (Artemis only; MoonlightWeb sends the plain GameStream launch), or no active monitor. Turn it on for the MoonlightWeb client: Apollo web UI → PIN → paired clients → MoonlightWeb → *Always create virtual display*. The size and rate then come from MoonlightWeb's `mode=WxHxFPS`, which is what the browser asked for. If Apollo's app list has no *Virtual Display* entry, the SudoVDA driver isn't working.
 - `play.levitica.duckdns.org` → `stream-gateway:8080` in NPM, **with WebSockets support on** (signaling and the WS fallback are WebSockets), and NPM must set `X-Forwarded-For` (it does by default). No access list or Authelia in front.
 - coturn must be able to reach `10.250.50.10:48550/udp` from its relay address (the relayed address the browser gets must be routable to MW, e.g. coturn on the `stream` network or routing from its relay IP), with `allowed-peer-ip=10.250.50.10` despite any `denied-peer-ip` for private ranges. `TURN_SECRET` must equal coturn's `static-auth-secret`.
 - MW's `transport_mode` setting doesn't matter: the gateway names the transport on every launch.

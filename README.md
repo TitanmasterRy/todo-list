@@ -186,7 +186,7 @@ The **Play** view (`9`) turns schoolwork into a currency. Everything here is pla
 
 - The PC runs **Apollo**; **MoonlightWeb** bridges it to WebRTC; a small **gateway** (`server/stream-gateway/`) signs you in, hands out short-lived TURN credentials and relays the setup between the page and MoonlightWeb. The page never talks to MoonlightWeb directly.
 - **Sign-in:** a password plus a 6-digit code from an authenticator app (the first sign-in shows the QR code and ten backup codes). The sign-in is kept with your other keys, so **Lock my keys** covers it.
-- **Picture:** your screen's own resolution and refresh rate by default (Apollo's virtual display matches it), H.264 decoded by the browser (WebCodecs), stereo sound. Keyboard (by key position, Keyboard Lock in full screen), mouse (pointer lock for games), and up to four gamepads.
+- **Picture:** your screen's own resolution and refresh rate by default (Apollo's virtual display matches it once it's turned on for MoonlightWeb, see STREAM.md), H.264 decoded by the browser (WebCodecs), stereo sound. Keyboard (by key position, Keyboard Lock in full screen), mouse (pointer lock for games), and up to four gamepads.
 - **Strict networks:** a **connection test** checks each step and says in plain words what the network blocks. On networks that only let port 443 out, streams switch to a slower WebSocket mode.
 - The Watch tab's homework rules don't apply to Stream.
 

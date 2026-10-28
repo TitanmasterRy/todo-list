@@ -10,7 +10,7 @@ browser (this site)  ──HTTPS / WSS──▶  gateway (play.example.com, serv
         └────────────── WebRTC media through TURN (coturn: UDP 3478, TCP 3478, TLS 5349) ──────────┘
 ```
 
-- **Apollo** (a Sunshine fork) runs on the Windows PC and encodes the screen. Its virtual display matches the size and refresh rate the browser asks for.
+- **Apollo** (a Sunshine fork) runs on the Windows PC and encodes the screen. With its virtual display turned on for MoonlightWeb (step 6 under *Running your own*), each stream gets a screen of its own at exactly the size and refresh rate the browser asks for; otherwise it streams the PC's real monitor.
 - **MoonlightWeb** (`linckosz/moonlight-web`) turns Apollo's GameStream protocol into WebRTC. It only listens on a private Docker network.
 - **The gateway** (`server/stream-gateway/`, contract in its [API.md](server/stream-gateway/API.md)) is the only thing the page talks to. It signs you in, hands out TURN credentials that last ten minutes, and relays the WebRTC setup to MoonlightWeb. It is MoonlightWeb's one paired "browser": it checks MoonlightWeb's signed offer (MW-BIND-v1) and signs your browser's answer, so nothing can slip into the middle of the connection.
 - **coturn** relays the media. The PC's ports aren't open to the internet, so the browser always connects through the relay (`iceTransportPolicy: "relay"`). On networks that block the relay but allow normal web traffic, the stream goes over a WebSocket through the gateway instead (slower, but it works).
@@ -77,6 +77,7 @@ The site side is one build variable. The server side is the gateway next to Moon
    `/health` says `"mw": "up"` once it's linked. If the phone with the authenticator app is lost and the backup codes are gone, `docker exec stream-gateway node dist/cli.js reset-totp` makes the next sign-in show a new QR code.
 4. **Reverse proxy:** forward `https://play.example.com` to `stream-gateway:8080` with WebSockets allowed, and let it set `X-Forwarded-For` (the gateway's sign-in lockout counts by that address, trusting one proxy hop). No login wall in front of it: the page signs in with its own tokens.
 5. **coturn:** `use-auth-secret` with the same secret as `TURN_SECRET`, listening on 3478 (UDP and TCP) and 5349 (TLS), and allowed to relay to MoonlightWeb's address only.
+6. **Apollo's virtual display:** Apollo only creates one when it's told to, and MoonlightWeb's launch request doesn't ask (only Apollo's own Artemis client does). On the PC, open Apollo's web UI (`https://localhost:47990`) → **PIN** → the paired client list → the MoonlightWeb client → turn on **Always create virtual display** → save. That covers every app streamed through MoonlightWeb and leaves other Moonlight devices alone. (Per app, **Applications** → edit → **Always create Virtual Display** does the same for one app; **Configuration → Headless Mode** does it for every client.) It needs the SudoVDA driver: when the driver works, Apollo lists a **Virtual Display** app, which then shows up in the Stream tab too; if it's missing, reinstall Apollo with the driver.
 
 ## Security notes
 
