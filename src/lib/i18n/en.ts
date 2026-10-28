@@ -2379,6 +2379,7 @@ const en = {
   'priv.spotify': 'Spotify sign-in',
   'priv.syncPass': 'Sync passphrase',
   'priv.watchTokens': 'Media server sign-ins',
+  'priv.streamToken': 'Game streaming sign-in',
   'priv.aiKey': '{name} AI key',
   'priv.min': 'Use at least {n} characters.',
   'priv.mismatch': 'The two passphrases don’t match.',

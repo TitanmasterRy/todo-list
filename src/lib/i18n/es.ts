@@ -2394,6 +2394,7 @@ const es: Dict = {
   'priv.spotify': 'Sesión de Spotify',
   'priv.syncPass': 'Frase de contraseña de sincronización',
   'priv.watchTokens': 'Inicios de sesión en servidores multimedia',
+  'priv.streamToken': 'Inicio de sesión de streaming de juegos',
   'priv.aiKey': 'Clave de IA de {name}',
   'priv.min': 'Usa al menos {n} caracteres.',
   'priv.mismatch': 'Las dos frases de contraseña no coinciden.',

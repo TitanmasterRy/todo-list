@@ -13,6 +13,8 @@ interface ImportMetaEnv {
   readonly VITE_SUPABASE_ANON_KEY?: string;
   /** URL of a games.json manifest for the arcade (optional). */
   readonly VITE_ARCADE_MANIFEST?: string;
+  /** The Play → Stream gateway (https origin); defaults to https://play.levitica.duckdns.org. */
+  readonly VITE_STREAM_SERVER?: string;
   /** Hash of the admin panel passphrase (`pbkdf2$…`, made in the admin panel). Optional. */
   readonly VITE_ADMIN_HASH?: string;
 }
