@@ -1,0 +1,29 @@
+# Copy to compose.yml next to a filled-in .env (see .env.example), then: docker compose up -d --build
+services:
+  stream-gateway:
+    build: .
+    image: stream-gateway:latest
+    container_name: stream-gateway
+    restart: unless-stopped
+    env_file: .env
+    volumes:
+      - stream-gateway-data:/data
+    networks:
+      - stream # reaches MoonlightWeb at 10.250.50.10:8443
+      - edge_default # Nginx Proxy Manager reaches this as stream-gateway:8080
+    read_only: true
+    tmpfs:
+      - /tmp
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+
+volumes:
+  stream-gateway-data:
+
+networks:
+  stream:
+    external: true
+  edge_default:
+    external: true

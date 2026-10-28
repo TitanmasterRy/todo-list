@@ -28,6 +28,23 @@ jobs:
       - run: npm run build
       - run: npm run size
 
+  # the Play → Stream gateway (server/stream-gateway): its own package, typecheck and unit tests
+  gateway:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: server/stream-gateway
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: server/stream-gateway/package-lock.json
+      - run: npm ci
+      - run: npm run check
+      - run: npm test
+
   e2e:
     runs-on: ubuntu-latest
     steps:
