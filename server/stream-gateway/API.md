@@ -56,7 +56,7 @@ The app's box art (`image/png`, `image/jpeg` or `image/webp`). Fetch it with the
 Body: `{appId, width, height, fps, bitrate?, transport?: "webrtc" | "ws", quitRunning?: boolean}`.
 
 - `width` 320–4096 and `height` 240–2304 (rounded down to even), `fps` 24–240, `bitrate` in kbps 1000–150000 (default about 20 Mbps for 1080p60, scaled by pixels per second, 5–80 Mbps).
-- `transport` `"webrtc"` (default) launches MoonlightWeb's `webrtc-media-udp` (H.264 + Opus RTP tracks, `input` DataChannel); `"ws"` launches its `wss` transport for networks where only 443 works.
+- `transport` `"webrtc"` (default) launches MoonlightWeb's `webrtc-dc-udp` (H.264 in a `video` DataChannel, Opus as an RTP track, an `input` DataChannel); `"ws"` launches its `wss` transport for networks where only 443 works.
 - `quitRunning: true` stops whatever runs on the host first (the "quit it and start this" answer to `app_running`). To resume a running app instead, start it by its id.
 
 `201`:
@@ -105,7 +105,7 @@ The browser is the answerer. Messages (JSON text):
 
 Anything else is dropped. A failed binding check closes the socket with `1008`. The socket may be closed once the input DataChannel is open; the stream keeps running.
 
-The offer carries a video and an audio track (`recvonly` on our side) and expects a pre-negotiated DataChannel: `createDataChannel("input", {negotiated: true, id: 1})`. Input and MoonlightWeb's notices (`stats`, `session-ended`, `host-ended`, `takeover`, `revoked`, `pong`) travel on it as JSON; the formats are listed in DECISIONS.md.
+The offer carries an Opus audio track (`recvonly` on our side) and expects pre-negotiated DataChannels: `createDataChannel("video", {negotiated: true, id: 0, ordered: true, maxPacketLifeTime: 500})` and `createDataChannel("input", {negotiated: true, id: 2})`. Video messages are `[frame_id:4][chunk_index:2][total_chunks:2][is_keyframe:1][payload_size:4][backend_ts:4]` (big endian) followed by part of an H.264 Annex-B access unit. Input and MoonlightWeb's notices (`stats`, `session-ended`, `host-ended`, `takeover`, `revoked`, `pong`) travel on the input channel as JSON; the formats are listed in DECISIONS.md.
 
 ### `wss://…/sessions/:id/media` (transport `ws`)
 

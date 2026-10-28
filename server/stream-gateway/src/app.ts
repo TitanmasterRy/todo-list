@@ -374,7 +374,7 @@ export function createGateway(deps: GatewayDeps): { server: Server; close: () =>
           stream_fps: fps,
           stream_bitrate: bitrate,
           video_codec: 'h264',
-          transport_mode: transport === 'ws' ? 'wss' : 'webrtc-media-udp',
+          transport_mode: transport === 'ws' ? 'wss' : 'webrtc-dc-udp',
           transport_index: 0,
           client_uniqueid: store.state.clientUniqueId,
         });

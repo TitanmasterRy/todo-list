@@ -43,7 +43,7 @@ class FakeMw implements MwApi {
   calls: string[] = [];
   starts: Record<string, unknown>[] = [];
   upstreams: FakeUpstream[] = [];
-  startResult: Record<string, unknown> | Error = { transport: 'webrtc-media', signalingUrl: 'wss://10.250.50.10:8443/ws', videoCodec: 'h264' };
+  startResult: Record<string, unknown> | Error = { transport: 'webrtc', signalingUrl: 'wss://10.250.50.10:8443/ws', videoCodec: 'h264' };
   async health() {
     return true;
   }
@@ -291,7 +291,7 @@ describe('apps and TURN', () => {
 });
 
 describe('sessions', () => {
-  it('launches WebRTC media at the asked size, one stream at a time', async () => {
+  it('launches the WebRTC DataChannel transport at the asked size, one stream at a time', async () => {
     const { accessToken } = await signIn();
     const r = await api('/sessions', { token: accessToken, body: { appId: 1, width: 2880, height: 1800, fps: 120 } });
     expect(r.status).toBe(201);
@@ -301,7 +301,7 @@ describe('sessions', () => {
       stream_aspect: '2880:1800',
       stream_fps: 120,
       video_codec: 'h264',
-      transport_mode: 'webrtc-media-udp',
+      transport_mode: 'webrtc-dc-udp',
       client_uniqueid: store.state.clientUniqueId,
     });
     expect(r.json).toMatchObject({ transport: 'webrtc', signalingPath: `/sessions/${r.json.id}/signal`, width: 2880, height: 1800 });
