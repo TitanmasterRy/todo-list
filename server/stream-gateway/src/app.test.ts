@@ -175,6 +175,23 @@ describe('health', () => {
     expect((await api('/health')).json).toMatchObject({ mw: 'up', host: 'online' });
   });
 
+  it('prefers the paired host that is online over an old paired entry, and never sticks to a dead one', async () => {
+    const OLD: MwHost = { uuid: 'OLD', name: 'Sunshine', state: 'offline', pairState: 'paired' };
+    const NEW: MwHost = { uuid: 'NEW', name: 'Apollo', state: 'online', pairState: 'paired' };
+    let list = [OLD];
+    mw.hosts = async () => list;
+    expect((await api('/health')).json).toMatchObject({ host: 'offline' });
+    // Apollo paired a minute later: picked up at once, not after the host cache runs out
+    clock += 60_000;
+    list = [OLD, NEW];
+    expect((await api('/health')).json).toMatchObject({ host: 'online' });
+    const { accessToken } = await signIn();
+    let asked = '';
+    mw.apps = (async (h: string) => ((asked = h), [])) as unknown as FakeMw['apps'];
+    await api('/apps', { token: accessToken });
+    expect(asked).toBe('NEW');
+  });
+
   it('keeps state.json private', () => {
     expect(statSync(store.file).mode & 0o777).toBe(0o600);
   });
