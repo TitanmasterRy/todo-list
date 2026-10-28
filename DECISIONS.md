@@ -8,7 +8,7 @@ The spec says to set Vite `base` to the repo name. The repository is `todo-list`
 
 ## Deploy branch
 
-The workflow deploys on push to `main`. This session was required to push to a feature branch (`claude/festive-bardeen-4p9vaq`), so `main` must be created from it (or the branch merged) before the first deploy. The workflow also has `workflow_dispatch` so it can be run by hand.
+The workflow deploys on push to `main`; work happens on feature branches and reaches `main` through pull requests. The workflow also has `workflow_dispatch` so it can be run by hand.
 
 ## Sounds
 
