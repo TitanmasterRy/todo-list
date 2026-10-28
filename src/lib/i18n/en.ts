@@ -2983,6 +2983,7 @@ const en = {
   'stream.enrollBlurb':
     'Streaming needs a code from an authenticator app (Google Authenticator, Microsoft Authenticator, 1Password, Aegis…) as well as the password. This can only be set up once.',
   'stream.enrollStart': 'Show the QR code',
+  'stream.enrollWorking': 'Setting up… (a few seconds)',
   'stream.enrollScan': 'Scan this QR code with your authenticator app.',
   'stream.enrollManual': 'Can’t scan it? Enter this key:',
   'stream.qrAlt': 'QR code to add the stream sign-in to an authenticator app',
@@ -3005,7 +3006,7 @@ const en = {
   'stream.err.auth': 'Your stream sign-in ended. Sign in again.',
   'stream.err.badLogin': 'Wrong password or code.',
   'stream.err.enrolled': 'Two-step sign-in is already set up. Sign in with a code from your app.',
-  'stream.err.noWebCodecs': 'This browser can’t play the WebSocket mode. Try Chrome, Edge or Safari.',
+  'stream.err.noWebCodecs': 'This browser can’t decode the stream (it needs WebCodecs). Try a recent Chrome, Edge, Safari or Firefox.',
   'stream.noApps': 'No apps found on the PC.',
   'stream.start': 'Start {app}',
   'stream.starting': 'Starting the stream…',

@@ -84,11 +84,12 @@ The site side is one build variable. The server side is the gateway next to Moon
 - Access tokens last 15 minutes and stay in the page's memory; the refresh token (12 hours, replaced on every use) is kept with your other keys. A refresh token that is used twice ends that sign-in, because it means someone copied it. Tokens never go in a URL and the gateway never logs them.
 - The gateway refuses requests and WebSockets from any other site (`Origin`), and talks to MoonlightWeb only after checking its certificate fingerprint.
 - MoonlightWeb's session and the gateway's pairing key are in the gateway's `/data` volume (readable by its own user only). Treat a copy of that volume like a password.
-- Media goes from the PC to your browser through the TURN relay, encrypted end to end by WebRTC (DTLS-SRTP); the gateway only sees it in the WebSocket mode.
+- Media goes from the PC to your browser through the TURN relay, encrypted end to end by WebRTC (DTLS); the gateway only sees it in the WebSocket mode.
 
 ## Limits
 
 - One stream at a time.
-- H.264 only (the browser's built-in WebRTC decoder), up to 4096 pixels wide.
-- The WebSocket mode needs WebCodecs (Chrome, Edge, Safari 17+ and recent Firefox) and has more delay than WebRTC.
+- H.264 only, up to 4096 pixels wide.
+- The browser needs WebCodecs (Chrome, Edge, Safari 17+ and recent Firefox).
+- The WebSocket mode has more delay than WebRTC.
 - GeForce NOW isn't part of this; the tab links out to it.

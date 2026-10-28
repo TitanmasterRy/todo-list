@@ -1,5 +1,5 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { WebRtcStream, mungeAnswer, rtcConfig, summarizeStats } from './rtc';
+import { WebRtcStream, connectionStats, mungeAnswer, rtcConfig } from './rtc';
 
 describe('mungeAnswer', () => {
   it('answers receive-only with stereo Opus', () => {
@@ -28,24 +28,21 @@ describe('rtcConfig', () => {
   });
 });
 
-describe('summarizeStats', () => {
-  const report = (bytes: number, timestamp: number, relayProtocol = 'tcp') => [
+describe('connectionStats', () => {
+  const report = (relayProtocol = 'tcp') => [
     { id: 'T', type: 'transport', selectedCandidatePairId: 'P' },
     { id: 'P', type: 'candidate-pair', localCandidateId: 'L', currentRoundTripTime: 0.042 },
     { id: 'L', type: 'local-candidate', candidateType: 'relay', relayProtocol },
-    { id: 'V', type: 'inbound-rtp', kind: 'video', bytesReceived: bytes, timestamp, framesPerSecond: 119, frameWidth: 2880, frameHeight: 1800, packetsLost: 3, jitter: 0.004 },
   ];
 
-  it('reads the path, RTT, frame rate and bitrate', () => {
-    const first = summarizeStats(report(1_000_000, 1000));
-    expect(first.stats).toEqual({ path: 'relay-tcp', rttMs: 42, fps: 119, kbps: null, width: 2880, height: 1800, packetsLost: 3, jitterMs: 4 });
-    expect(summarizeStats(report(3_500_000, 2000), first.mark).stats.kbps).toBe(20_000);
-    expect(summarizeStats(report(0, 0, 'tls')).stats.path).toBe('relay-tls');
-    expect(summarizeStats(report(0, 0, 'udp')).stats.path).toBe('relay-udp');
+  it('reads the relay path and the round trip', () => {
+    expect(connectionStats(report())).toEqual({ path: 'relay-tcp', rttMs: 42 });
+    expect(connectionStats(report('tls')).path).toBe('relay-tls');
+    expect(connectionStats(report('udp')).path).toBe('relay-udp');
   });
 
   it('copes with an empty report', () => {
-    expect(summarizeStats([]).stats).toMatchObject({ path: 'unknown', rttMs: null, fps: null, kbps: null });
+    expect(connectionStats([])).toEqual({ path: 'unknown', rttMs: null });
   });
 });
 
@@ -72,7 +69,7 @@ class FakeDC {
 class FakePC {
   static last: FakePC;
   config: RTCConfiguration;
-  dc!: FakeDC;
+  dcs: FakeDC[] = [];
   remoteDescription: RTCSessionDescriptionInit | null = null;
   localDescription: RTCSessionDescriptionInit | null = null;
   added: RTCIceCandidateInit[] = [];
@@ -85,8 +82,12 @@ class FakePC {
     FakePC.last = this;
   }
   createDataChannel(label: string, init: RTCDataChannelInit) {
-    this.dc = new FakeDC(label, init);
-    return this.dc;
+    const dc = new FakeDC(label, init);
+    this.dcs.push(dc);
+    return dc;
+  }
+  dc(label: string) {
+    return this.dcs.find((d) => d.label === label)!;
   }
   setConfiguration(c: RTCConfiguration) {
     this.config = c;
@@ -153,27 +154,30 @@ afterAll(() => {
 
 function setup() {
   const states: [string, string | undefined][] = [];
-  const video = { srcObject: null } as unknown as HTMLVideoElement;
+  const audio = { srcObject: null, play: async () => {} } as unknown as HTMLAudioElement;
+  // node has no canvas or WebCodecs; chunk reassembly is covered in video.test.ts
+  const canvas = { getContext: () => null, width: 0, height: 0 } as unknown as HTMLCanvasElement;
   const s = new WebRtcStream({
     signalUrl: 'wss://g/sessions/abc/signal',
     ticket: 'T',
     iceServers: [{ urls: 'turn:t:3478?transport=udp', username: 'u', credential: 'c' }],
-    video,
+    canvas,
+    audio,
     onState: (st, why) => states.push([st, why]),
     PeerConnection: FakePC as unknown as typeof RTCPeerConnection,
     WS: FakeWS as unknown as typeof WebSocket,
   });
   s.start();
   FakeWS.last.open();
-  return { s, states, pc: FakePC.last, ws: FakeWS.last, video };
+  return { s, states, pc: FakePC.last, ws: FakeWS.last, audio };
 }
 
 describe('WebRtcStream', () => {
-  it('relays only, with the pre-negotiated input channel', () => {
+  it("relays only, with MoonlightWeb's pre-negotiated video and input channels", () => {
     const { pc, ws } = setup();
     expect(pc.config.iceTransportPolicy).toBe('relay');
-    expect(pc.dc.label).toBe('input');
-    expect(pc.dc.init).toEqual({ negotiated: true, id: 1 });
+    expect(pc.dc('video').init).toEqual({ negotiated: true, id: 0, ordered: true, maxPacketLifeTime: 500 });
+    expect(pc.dc('input').init).toEqual({ negotiated: true, id: 2 });
     expect(ws.sent[0]).toEqual({ type: 'auth', ticket: 'T' });
   });
 
@@ -190,11 +194,19 @@ describe('WebRtcStream', () => {
     expect(ws.sent[1]).toEqual({ type: 'sdp', sdp: 'v=0\r\na=recvonly\r\na=fingerprint:sha-256 AA' });
     pc.onicecandidate?.({ candidate: { candidate: 'candidate:2 1 udp 1 1.2.3.4 9 typ relay', sdpMid: '0' } });
     expect(ws.sent[2]).toEqual({ type: 'ice', candidate: 'candidate:2 1 udp 1 1.2.3.4 9 typ relay', mid: '0' });
-    pc.dc.open();
+    pc.dc('input').open();
     expect(states).toEqual([['connected', undefined]]);
     expect(ws.readyState).toBe(3);
     s.send({ type: 'keydown', keyCode: 65 });
-    expect(pc.dc.sent).toEqual(['{"type":"keydown","keyCode":65}']);
+    expect(pc.dc('input').sent).toEqual(['{"type":"keydown","keyCode":65}']);
+  });
+
+  it('plays the audio track and ignores anything else', () => {
+    const { pc, audio } = setup();
+    pc.ontrack?.({ track: { kind: 'video' } });
+    expect(audio.srcObject).toBeNull();
+    pc.ontrack?.({ track: { kind: 'audio' } });
+    expect((audio.srcObject as unknown as { tracks: unknown[] }).tracks).toEqual([{ kind: 'audio' }]);
   });
 
   it('explains a refused binding and an ending from the PC', () => {
@@ -202,8 +214,8 @@ describe('WebRtcStream', () => {
     a.ws.onclose?.({ code: 1008, reason: 'pairing verification failed' });
     expect(a.states[0]).toEqual(['failed', 'stream.fail.binding']);
     const b = setup();
-    b.pc.dc.open();
-    b.pc.dc.onmessage?.({ data: '{"type":"host-ended"}' });
+    b.pc.dc('input').open();
+    b.pc.dc('input').onmessage?.({ data: '{"type":"host-ended"}' });
     expect(b.states.at(-1)).toEqual(['ended', 'stream.end.hostEnded']);
   });
 });

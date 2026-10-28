@@ -6,6 +6,7 @@
 - **🔐 Two-step sign-in.** A password and a code from an authenticator app. The first sign-in shows a QR code and ten backup codes. **Sign out everywhere** ends every sign-in and stops the stream.
 - **🩺 Connection test.** Checks each step a stream needs and says in plain words what the network blocks. On hotel or café networks that only allow normal web traffic, streams switch to a slower mode that still works.
 - **Stats** (resolution, frame rate, bitrate, delay, connection path), **Disconnect** (the game keeps running on the PC) or **Quit the game**, and a choice to resume or quit when another game is already running.
+- **Sound** comes through on every stream, and the picture recovers by itself after a network hiccup (it used to stay frozen until the next keyframe, or show nothing on computers without a hardware H.264 decoder).
 
 ## Watch: quality, audio and subtitle choices, Skip intro and Up next for Jellyfin
 

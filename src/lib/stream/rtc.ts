@@ -1,10 +1,11 @@
-// The WebRTC side of Play → Stream (MoonlightWeb's `webrtc-media-udp` transport): MoonlightWeb offers H.264 video
-// and Opus audio tracks plus a pre-negotiated "input" DataChannel; we answer receive-only and play the tracks in a
-// plain <video>. Media only ever goes through TURN (iceTransportPolicy "relay"): the PC's ports aren't open to the
-// internet, and the relay is what reaches it.
+// The WebRTC side of Play → Stream (MoonlightWeb's `webrtc-dc-udp` transport): H.264 access units arrive in chunks
+// on a pre-negotiated "video" DataChannel and are decoded with WebCodecs onto a canvas, Opus audio is an ordinary
+// RTP track played by an <audio> element, and input goes back on the "input" channel. Media only ever goes through
+// TURN (iceTransportPolicy "relay"): the PC's ports aren't open to the internet, and the relay is what reaches it.
 import { SignalChannel, type SignalMessage } from './signal';
 import type { MessageKey } from '../i18n/index.svelte';
 import type { InputMessage } from './input';
+import { Reassembler, VideoSink, parseChunk } from './video';
 
 export function rtcConfig(iceServers: RTCIceServer[]): RTCConfiguration {
   return { iceServers, iceTransportPolicy: 'relay', bundlePolicy: 'max-bundle' };
@@ -36,20 +37,15 @@ export interface StreamStats {
   kbps: number | null;
   width: number;
   height: number;
-  packetsLost: number;
-  jitterMs: number | null;
+  /** video frames lost on the way (each one costs a keyframe request) */
+  lost: number;
 }
 
-export interface StatsMark {
-  bytes: number;
-  at: number;
-}
-
-type Stat = Record<string, unknown> & { id: string; type: string; timestamp?: number };
+type Stat = Record<string, unknown> & { id: string; type: string };
 const n = (x: unknown): number | null => (typeof x === 'number' && Number.isFinite(x) ? x : null);
 
-/** The numbers for the stats overlay from an RTCStatsReport's values; `prev` turns byte counts into a bitrate. */
-export function summarizeStats(reports: Iterable<Stat>, prev?: StatsMark): { stats: StreamStats; mark: StatsMark | undefined } {
+/** The connection path and round trip from an RTCStatsReport's values (the video numbers come from the decoder). */
+export function connectionStats(reports: Iterable<Stat>): { path: StreamPath; rttMs: number | null } {
   const all = [...reports];
   const byId = new Map(all.map((r) => [r.id, r]));
   const transport = all.find((r) => r.type === 'transport' && r.selectedCandidatePairId);
@@ -61,26 +57,8 @@ export function summarizeStats(reports: Iterable<Stat>, prev?: StatsMark): { sta
     const proto = String(local.relayProtocol ?? local.protocol ?? '');
     path = proto === 'tls' ? 'relay-tls' : proto === 'tcp' ? 'relay-tcp' : 'relay-udp';
   } else if (local) path = 'direct';
-  const video = all.find((r) => r.type === 'inbound-rtp' && (r.kind === 'video' || r.mediaType === 'video'));
-  const bytes = n(video?.bytesReceived);
-  const at = n(video?.timestamp);
-  const mark = bytes !== null && at !== null ? { bytes, at } : undefined;
-  const kbps = mark && prev && mark.at > prev.at ? Math.round(((mark.bytes - prev.bytes) * 8) / (mark.at - prev.at)) : null;
   const rtt = n(pair?.currentRoundTripTime);
-  const jitter = n(video?.jitter);
-  return {
-    stats: {
-      path,
-      rttMs: rtt === null ? null : Math.round(rtt * 1000),
-      fps: n(video?.framesPerSecond),
-      kbps,
-      width: n(video?.frameWidth) ?? 0,
-      height: n(video?.frameHeight) ?? 0,
-      packetsLost: n(video?.packetsLost) ?? 0,
-      jitterMs: jitter === null ? null : Math.round(jitter * 1000),
-    },
-    mark,
-  };
+  return { path, rttMs: rtt === null ? null : Math.round(rtt * 1000) };
 }
 
 export type StreamState = 'connecting' | 'connected' | 'failed' | 'ended';
@@ -98,7 +76,10 @@ export interface WebRtcOptions {
   signalUrl: string;
   ticket: string;
   iceServers: RTCIceServer[];
-  video: HTMLVideoElement;
+  /** the picture */
+  canvas: HTMLCanvasElement;
+  /** plays the audio track */
+  audio: HTMLAudioElement;
   onState: (s: StreamState, why?: MessageKey) => void;
   PeerConnection?: typeof RTCPeerConnection;
   WS?: typeof WebSocket;
@@ -107,22 +88,32 @@ export interface WebRtcOptions {
 export class WebRtcStream {
   private pc: RTCPeerConnection;
   private dc: RTCDataChannel;
+  private videoDc: RTCDataChannel;
   private signal: SignalChannel | null = null;
   private pending: RTCIceCandidateInit[] = [];
   private media = new MediaStream();
   private state: StreamState = 'connecting';
   private timer: ReturnType<typeof setTimeout> | null = null;
-  private mark: StatsMark | undefined;
+  private video: VideoSink;
+  private chunks = new Reassembler();
+  private lost = 0;
 
   constructor(private o: WebRtcOptions) {
     const PC = o.PeerConnection ?? RTCPeerConnection;
     this.pc = new PC(rtcConfig(o.iceServers));
-    this.dc = this.pc.createDataChannel('input', { negotiated: true, id: 1 });
+    this.video = new VideoSink(o.canvas, () => this.send({ type: 'requestidr' }));
+    // MoonlightWeb's channel layout: 0 video (ordered, 500 ms lifetime), 2 input (reliable); 1 and 3 are unused here
+    this.videoDc = this.pc.createDataChannel('video', { negotiated: true, id: 0, ordered: true, maxPacketLifeTime: 500 });
+    this.videoDc.binaryType = 'arraybuffer';
+    this.videoDc.onmessage = (e) => this.chunk(e.data);
+    this.dc = this.pc.createDataChannel('input', { negotiated: true, id: 2 });
     this.dc.onopen = () => this.set('connected');
     this.dc.onmessage = (e) => this.notice(e.data);
     this.pc.ontrack = (e) => {
+      if (e.track.kind !== 'audio') return;
       this.media.addTrack(e.track);
-      if (this.o.video.srcObject !== this.media) this.o.video.srcObject = this.media;
+      this.o.audio.srcObject = this.media;
+      void this.o.audio.play().catch(() => {});
     };
     this.pc.onicecandidate = (e) => {
       if (e.candidate?.candidate) this.signal?.send({ type: 'ice', candidate: e.candidate.candidate, mid: e.candidate.sdpMid ?? '0' });
@@ -130,6 +121,19 @@ export class WebRtcStream {
     this.pc.onconnectionstatechange = () => {
       if (this.pc.connectionState === 'failed') this.set('failed', 'stream.fail.relay');
     };
+  }
+
+  private chunk(data: unknown): void {
+    if (!(data instanceof ArrayBuffer)) return;
+    const c = parseChunk(data);
+    if (!c) return;
+    this.video.count(data.byteLength);
+    const r = this.chunks.push(c);
+    if (r.lost) {
+      this.lost++;
+      this.video.lost();
+    }
+    if (r.frame) this.video.push(r.frame.data, r.frame.key);
   }
 
   start(): void {
@@ -196,9 +200,7 @@ export class WebRtcStream {
 
   async stats(): Promise<StreamStats> {
     const report = await this.pc.getStats();
-    const r = summarizeStats(report.values() as Iterable<Stat>, this.mark);
-    this.mark = r.mark ?? this.mark;
-    return r.stats;
+    return { ...connectionStats(report.values() as Iterable<Stat>), ...this.video.rates(), lost: this.lost };
   }
 
   close(): void {
@@ -206,8 +208,10 @@ export class WebRtcStream {
     this.state = 'ended';
     this.signal?.close();
     this.dc.close();
+    this.videoDc.close();
     this.pc.close();
+    this.video.close();
     for (const t of this.media.getTracks()) t.stop();
-    this.o.video.srcObject = null;
+    this.o.audio.srcObject = null;
   }
 }
