@@ -21,8 +21,8 @@ export default defineConfig({
     { name: 'phone', use: { ...devices['Pixel 7'] }, grep: /@phone/ },
   ],
   webServer: {
-    // the Watch spec mocks a Jellyfin server at this origin; the test build lets the page connect to it
-    command: `VITE_MEDIA_SERVERS=https://jelly.example.com npx vite build && npx vite preview --port ${port} --strictPort`,
+    // the Watch and Stream specs mock a Jellyfin server and the stream gateway at these origins; the test build lets the page connect to them
+    command: `VITE_MEDIA_SERVERS=https://jelly.example.com VITE_STREAM_SERVER=https://play.example.com npx vite build && npx vite preview --port ${port} --strictPort`,
     url: `http://localhost:${port}/`,
     reuseExistingServer: !process.env.CI,
     timeout: 180_000,

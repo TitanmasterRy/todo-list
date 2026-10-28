@@ -311,6 +311,9 @@ export class InputCapture {
   private key(down: boolean, e: KeyboardEvent): void {
     // Escape without Keyboard Lock leaves full screen / pointer lock in the browser itself; let it
     if (e.code === 'Escape' && !this.locked && !document.fullscreenElement) return;
+    // the stream's own controls keep their keys: typing in the quality menu, Enter or Space on a focused button
+    const el = e.target as HTMLElement | null;
+    if (el?.closest?.('input, select, textarea') || (el?.closest?.('button, a') && ['Enter', 'NumpadEnter', 'Space'].includes(e.code))) return;
     const m = keyMessage(down, e);
     if (!m) return;
     e.preventDefault();

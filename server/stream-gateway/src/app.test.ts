@@ -321,6 +321,8 @@ describe('sessions', () => {
     expect(r.json).toMatchObject({ code: 'app_running', runningAppId: 2 });
     expect(mw.starts[0]).toMatchObject({ stream_height: 240, stream_aspect: '4096:240', stream_fps: 240, stream_bitrate: 1000 });
     expect((await api('/sessions', { token: accessToken, body: { appId: 'x' } })).status).toBe(400);
+    mw.startResult = new MwError('Not authenticated', 401);
+    expect((await api('/sessions', { token: accessToken, body: { appId: 1, width: 1920, height: 1080, fps: 60 } })).json).toMatchObject({ code: 'unlinked' });
   });
 
   it('launches the WebSocket transport for 443-only networks', async () => {

@@ -382,6 +382,7 @@ export function createGateway(deps: GatewayDeps): { server: Server; close: () =>
         if (e instanceof MwError && e.status === 409 && e.data.code === 'app_running') {
           throw new HttpError(409, { code: 'app_running', runningAppId: typeof e.data.runningAppId === 'number' ? e.data.runningAppId : 0, error: 'Another app is running' });
         }
+        if (e instanceof MwError && e.status === 401) throw new HttpError(503, { code: 'unlinked', error: 'The gateway is not signed in to MoonlightWeb' });
         if (e instanceof MwError && e.status === 503) throw new HttpError(503, { code: 'host_busy', error: e.message });
         throw new HttpError(502, { code: 'start_failed', error: e instanceof MwError ? e.message : 'MoonlightWeb could not start the stream' });
       }

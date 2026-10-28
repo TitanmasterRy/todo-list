@@ -2,6 +2,7 @@
 // so "Lock my keys" covers it; the access token never leaves memory) and the stream settings (this device only).
 // Loaded only with the Stream tab.
 import { forgetSecret, hasSecret, isLocked, requestUnlock, secret, setSecrets, useSecret } from '../secrets.svelte';
+import { t } from '../i18n/index.svelte';
 import { GatewayClient } from './api';
 import { PREFS_KEY, parsePrefs, type StreamPrefs } from './display';
 
@@ -16,7 +17,7 @@ async function saveRefreshToken(token: string): Promise<void> {
     forgetSecret('streamToken');
     return;
   }
-  if (isLocked('streamToken') && !(await requestUnlock('Enter your passphrase to save your stream sign-in.'))) {
+  if (isLocked('streamToken') && !(await requestUnlock(t('stream.unlockSave')))) {
     sessionToken = token;
     return;
   }
@@ -26,8 +27,8 @@ async function saveRefreshToken(token: string): Promise<void> {
 
 /** A gateway client with the saved sign-in (asks for the key-lock passphrase when needed). */
 export async function gatewayClient(): Promise<GatewayClient> {
-  const refreshToken = sessionToken || (hasSecret('streamToken') ? await useSecret('streamToken', { reason: 'Enter your passphrase to use your stream sign-in.' }) : '');
-  return new GatewayClient({ server: STREAM_SERVER, refreshToken, onRefreshToken: (t) => void saveRefreshToken(t) });
+  const refreshToken = sessionToken || (hasSecret('streamToken') ? await useSecret('streamToken', { reason: t('stream.unlockUse') }) : '');
+  return new GatewayClient({ server: STREAM_SERVER, refreshToken, onRefreshToken: (token) => void saveRefreshToken(token) });
 }
 
 export const signedInHere = () => !!sessionToken || !!secret('streamToken') || hasSecret('streamToken');

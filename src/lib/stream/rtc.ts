@@ -3,6 +3,7 @@
 // plain <video>. Media only ever goes through TURN (iceTransportPolicy "relay"): the PC's ports aren't open to the
 // internet, and the relay is what reaches it.
 import { SignalChannel, type SignalMessage } from './signal';
+import type { MessageKey } from '../i18n/index.svelte';
 import type { InputMessage } from './input';
 
 export function rtcConfig(iceServers: RTCIceServer[]): RTCConfiguration {
@@ -85,12 +86,12 @@ export function summarizeStats(reports: Iterable<Stat>, prev?: StatsMark): { sta
 export type StreamState = 'connecting' | 'connected' | 'failed' | 'ended';
 
 /** What MoonlightWeb says on the input channel when the stream ends from its side. */
-const ENDINGS: Record<string, string> = {
-  'session-ended': 'The stream ended.',
-  'host-ended': 'The game or desktop session on the PC ended.',
-  'host-lost': 'The gaming PC stopped answering.',
-  takeover: 'Another device took over the stream.',
-  revoked: 'This sign-in was ended on the server.',
+export const ENDINGS: Record<string, MessageKey> = {
+  'session-ended': 'stream.end.ended',
+  'host-ended': 'stream.end.hostEnded',
+  'host-lost': 'stream.end.hostLost',
+  takeover: 'stream.end.takeover',
+  revoked: 'stream.end.revoked',
 };
 
 export interface WebRtcOptions {
@@ -98,7 +99,7 @@ export interface WebRtcOptions {
   ticket: string;
   iceServers: RTCIceServer[];
   video: HTMLVideoElement;
-  onState: (s: StreamState, why?: string) => void;
+  onState: (s: StreamState, why?: MessageKey) => void;
   PeerConnection?: typeof RTCPeerConnection;
   WS?: typeof WebSocket;
 }
@@ -127,7 +128,7 @@ export class WebRtcStream {
       if (e.candidate?.candidate) this.signal?.send({ type: 'ice', candidate: e.candidate.candidate, mid: e.candidate.sdpMid ?? '0' });
     };
     this.pc.onconnectionstatechange = () => {
-      if (this.pc.connectionState === 'failed') this.set('failed', "Couldn't connect through the relay. Try the connection test.");
+      if (this.pc.connectionState === 'failed') this.set('failed', 'stream.fail.relay');
     };
   }
 
@@ -136,10 +137,10 @@ export class WebRtcStream {
       this.o.signalUrl,
       this.o.ticket,
       {
-        onMessage: (m) => void this.onSignal(m).catch(() => this.set('failed', "The stream couldn't be set up.")),
+        onMessage: (m) => void this.onSignal(m).catch(() => this.set('failed', 'stream.fail.setup')),
         onClose: (code) => {
           if (this.state !== 'connecting') return;
-          this.set('failed', code === 1008 ? "The stream server couldn't verify the gaming PC, so it stopped." : 'The stream server closed the connection.');
+          this.set('failed', code === 1008 ? 'stream.fail.binding' : 'stream.fail.closed');
         },
       },
       this.o.WS,
@@ -150,7 +151,7 @@ export class WebRtcStream {
   /** a deadline for the connection, matched to MoonlightWeb's own ICE timeout */
   private arm(ms: number): void {
     if (this.timer) clearTimeout(this.timer);
-    this.timer = setTimeout(() => this.state === 'connecting' && this.set('failed', 'The connection timed out. Try the connection test.'), ms);
+    this.timer = setTimeout(() => this.state === 'connecting' && this.set('failed', 'stream.fail.timeout'), ms);
   }
 
   private async onSignal(m: SignalMessage): Promise<void> {
@@ -180,7 +181,7 @@ export class WebRtcStream {
     }
   }
 
-  private set(s: StreamState, why?: string): void {
+  private set(s: StreamState, why?: MessageKey): void {
     if (this.state === s || this.state === 'ended' || this.state === 'failed') return;
     this.state = s;
     if (s !== 'connecting' && this.timer) clearTimeout(this.timer);

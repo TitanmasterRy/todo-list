@@ -200,10 +200,10 @@ describe('WebRtcStream', () => {
   it('explains a refused binding and an ending from the PC', () => {
     const a = setup();
     a.ws.onclose?.({ code: 1008, reason: 'pairing verification failed' });
-    expect(a.states[0]).toEqual(['failed', "The stream server couldn't verify the gaming PC, so it stopped."]);
+    expect(a.states[0]).toEqual(['failed', 'stream.fail.binding']);
     const b = setup();
     b.pc.dc.open();
     b.pc.dc.onmessage?.({ data: '{"type":"host-ended"}' });
-    expect(b.states.at(-1)).toEqual(['ended', 'The game or desktop session on the PC ended.']);
+    expect(b.states.at(-1)).toEqual(['ended', 'stream.end.hostEnded']);
   });
 });

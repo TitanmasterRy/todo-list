@@ -2,16 +2,18 @@
 // which transport this network can use. The probes are injected so the logic is testable; `browserProbes` has the
 // real ones.
 import { blockedOrigin } from '../csp';
+import type { MessageKey } from '../i18n/index.svelte';
 import type { GatewayClient, Health, StreamTransport, TurnCredentials } from './api';
 
 export type StepId = 'csp' | 'https' | 'signal' | 'turn-udp' | 'turn-tcp' | 'turns' | 'ws443';
 
 export interface StepResult {
   id: StepId;
-  label: string;
   /** null = not tried */
   ok: boolean | null;
-  detail: string;
+  /** what happened, as a message key */
+  detail: MessageKey | '';
+  params?: Record<string, string>;
 }
 
 export interface Probes {
@@ -25,36 +27,42 @@ export interface Probes {
   relay: (url: string, creds: TurnCredentials) => Promise<boolean>;
 }
 
-export const LABELS: Record<StepId, string> = {
-  csp: 'This site may contact the stream server',
-  https: 'Stream server reachable (HTTPS)',
-  signal: 'Secure WebSocket (signaling)',
-  'turn-udp': 'Relay over UDP 3478',
-  'turn-tcp': 'Relay over TCP 3478',
-  turns: 'Relay over TLS 5349',
-  ws443: 'WebSocket stream on port 443',
+export const STEPS: StepId[] = ['csp', 'https', 'signal', 'turn-udp', 'turn-tcp', 'turns', 'ws443'];
+
+export const STEP_LABEL: Record<StepId, MessageKey> = {
+  csp: 'stream.step.csp',
+  https: 'stream.step.https',
+  signal: 'stream.step.signal',
+  'turn-udp': 'stream.step.turnUdp',
+  'turn-tcp': 'stream.step.turnTcp',
+  turns: 'stream.step.turns',
+  ws443: 'stream.step.ws443',
 };
 
 export interface Verdict {
   /** the transport to use, or null when streaming can't work from here */
   transport: StreamTransport | null;
   tone: 'ok' | 'warn' | 'bad';
-  message: string;
+  message: MessageKey;
 }
 
 export async function runConnectionTest(server: string, p: Probes, onStep: (r: StepResult[]) => void = () => {}): Promise<{ steps: StepResult[]; verdict: Verdict }> {
-  const steps: StepResult[] = (Object.keys(LABELS) as StepId[]).map((id) => ({ id, label: LABELS[id], ok: null, detail: '' }));
-  const set = (id: StepId, ok: boolean | null, detail: string) => {
-    const s = steps.find((x) => x.id === id)!;
-    s.ok = ok;
-    s.detail = detail;
+  const steps: StepResult[] = STEPS.map((id) => ({ id, ok: null, detail: '' }));
+  const set = (id: StepId, ok: boolean | null, detail: MessageKey, params?: Record<string, string>) => {
+    Object.assign(
+      steps.find((x) => x.id === id)!,
+      { ok, detail, params },
+    );
     onStep(steps.map((x) => ({ ...x })));
   };
   const done = () => ({ steps, verdict: verdict(steps) });
 
   const blocked = p.blocked(server);
-  set('csp', !blocked, blocked ? `This build's security policy doesn't list ${blocked}. Rebuild with VITE_STREAM_SERVER set (see STREAM.md).` : 'Allowed.');
-  if (blocked) return done();
+  if (blocked) {
+    set('csp', false, 'stream.test.cspBlocked', { origin: blocked });
+    return done();
+  }
+  set('csp', true, 'stream.test.allowed');
 
   let health: Health | null = null;
   try {
@@ -63,67 +71,50 @@ export async function runConnectionTest(server: string, p: Probes, onStep: (r: S
     /* reported below */
   }
   if (!health) {
-    set('https', false, 'No answer. The server may be down, or this network blocks it.');
+    set('https', false, 'stream.test.noAnswer');
     return done();
   }
   set(
     'https',
     true,
-    health.mw === 'up'
-      ? health.host === 'online'
-        ? 'The server, the bridge and the gaming PC are up.'
-        : 'The server is up, but the gaming PC is off or asleep.'
-      : health.mw === 'down'
-        ? 'The server is up, but the bridge at home is not answering.'
-        : 'The server is up but not set up yet.',
+    health.mw === 'up' ? (health.host === 'online' ? 'stream.test.allUp' : 'stream.test.pcOff') : health.mw === 'down' ? 'stream.test.bridgeDown' : 'stream.test.notSetUp',
   );
 
   const wss = server.replace(/^http/, 'ws') + '/ws-probe';
   const ws = await p.echo(wss, false).catch(() => false);
-  set('signal', ws, ws ? 'Works.' : 'Blocked. This network stops WebSockets, which streaming needs.');
+  set('signal', ws, ws ? 'stream.test.works' : 'stream.test.wsBlocked');
 
+  // the three relays are tried at the same time, so a network that blocks them all costs one timeout, not three
   const creds = await p.turn().catch(() => null);
-  const host = new URL(server).hostname;
-  for (const [id, url] of [
+  const relays: [StepId, string | undefined][] = [
     ['turn-udp', creds?.urls.find((u) => /^turn:.*transport=udp/.test(u))],
     ['turn-tcp', creds?.urls.find((u) => /^turn:.*transport=tcp/.test(u))],
     ['turns', creds?.urls.find((u) => u.startsWith('turns:'))],
-  ] as [StepId, string | undefined][]) {
-    if (!creds) {
-      set(id, null, 'Sign in to test the relay.');
-      continue;
-    }
-    if (!url) {
-      set(id, false, 'Not offered by the server.');
-      continue;
-    }
-    const ok = await p.relay(url, creds).catch(() => false);
-    set(id, ok, ok ? 'Works.' : 'Blocked or not answering.');
-  }
+  ];
+  const results = await Promise.all(relays.map(([, url]) => (creds && url ? p.relay(url, creds).catch(() => false) : Promise.resolve(null))));
+  relays.forEach(([id, url], i) => {
+    if (!creds) set(id, null, 'stream.test.signInFirst');
+    else if (!url) set(id, false, 'stream.test.notOffered');
+    else set(id, results[i], results[i] ? 'stream.test.works' : 'stream.test.blocked');
+  });
 
   const big = ws && (await p.echo(wss, true).catch(() => false));
-  set('ws443', big, big ? `Works (through ${host}).` : 'Blocked.');
+  set('ws443', big, big ? 'stream.test.works' : 'stream.test.blocked');
   return done();
 }
 
 export function verdict(steps: StepResult[]): Verdict {
   const ok = (id: StepId) => steps.find((s) => s.id === id)?.ok === true;
   const tried = (id: StepId) => steps.find((s) => s.id === id)?.ok !== null;
-  if (!ok('csp')) return { transport: null, tone: 'bad', message: "This copy of the site isn't allowed to contact the stream server." };
-  if (!ok('https')) return { transport: null, tone: 'bad', message: "Can't reach the stream server from this network. It may be down, or the network blocks it." };
-  if (!ok('signal')) return { transport: null, tone: 'bad', message: 'This network blocks WebSockets, so streaming can’t work here.' };
-  const relays = (['turn-udp', 'turn-tcp', 'turns'] as StepId[]).filter(ok);
-  if (relays.includes('turn-udp')) return { transport: 'webrtc', tone: 'ok', message: 'Everything works. Streams use the fast UDP relay.' };
-  if (relays.length)
-    return { transport: 'webrtc', tone: 'warn', message: `UDP is blocked here, so streams go over ${relays.includes('turn-tcp') ? 'TCP' : 'TLS'}. Expect a little more delay.` };
-  if (!tried('turn-udp')) return { transport: 'webrtc', tone: 'warn', message: 'The server is reachable. Sign in to test the relay.' };
-  if (ok('ws443'))
-    return {
-      transport: 'ws',
-      tone: 'warn',
-      message: 'This network blocks streaming traffic and only lets normal web traffic (port 443) out. Streams will use the slower WebSocket mode.',
-    };
-  return { transport: null, tone: 'bad', message: 'This network blocks streaming. Try another network or mobile data.' };
+  if (!ok('csp')) return { transport: null, tone: 'bad', message: 'stream.verdict.csp' };
+  if (!ok('https')) return { transport: null, tone: 'bad', message: 'stream.verdict.unreachable' };
+  if (!ok('signal')) return { transport: null, tone: 'bad', message: 'stream.verdict.noWs' };
+  if (ok('turn-udp')) return { transport: 'webrtc', tone: 'ok', message: 'stream.verdict.udp' };
+  if (ok('turn-tcp')) return { transport: 'webrtc', tone: 'warn', message: 'stream.verdict.tcp' };
+  if (ok('turns')) return { transport: 'webrtc', tone: 'warn', message: 'stream.verdict.tls' };
+  if (!tried('turn-udp')) return { transport: 'webrtc', tone: 'warn', message: 'stream.verdict.signIn' };
+  if (ok('ws443')) return { transport: 'ws', tone: 'warn', message: 'stream.verdict.wsOnly' };
+  return { transport: null, tone: 'bad', message: 'stream.verdict.blocked' };
 }
 
 /** The real probes, in the browser. */

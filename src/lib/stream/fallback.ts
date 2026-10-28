@@ -3,7 +3,8 @@
 // `[0x02][0x00][Opus packet]`; the browser decodes both with WebCodecs. It's TCP, so it lags more than WebRTC: the
 // decoder drops to the next keyframe rather than fall behind, and audio keeps a small buffer.
 import type { InputMessage } from './input';
-import type { StreamState, StreamStats } from './rtc';
+import type { MessageKey } from '../i18n/index.svelte';
+import { ENDINGS, type StreamState, type StreamStats } from './rtc';
 
 export type WsFrame = { kind: 'video'; key: boolean; data: Uint8Array } | { kind: 'audio'; data: Uint8Array };
 
@@ -43,18 +44,11 @@ export function supportsWsStream(): boolean {
   return typeof VideoDecoder !== 'undefined' && typeof AudioDecoder !== 'undefined' && typeof AudioContext !== 'undefined';
 }
 
-const ENDINGS: Record<string, string> = {
-  'session-ended': 'The stream ended.',
-  'host-ended': 'The game or desktop session on the PC ended.',
-  takeover: 'Another device took over the stream.',
-  revoked: 'This sign-in was ended on the server.',
-};
-
 export interface WsStreamOptions {
   url: string;
   ticket: string;
   canvas: HTMLCanvasElement;
-  onState: (s: StreamState, why?: string) => void;
+  onState: (s: StreamState, why?: MessageKey) => void;
   WS?: typeof WebSocket;
 }
 
@@ -87,14 +81,11 @@ export class WsStream {
     ws.onopen = () => ws.send(JSON.stringify({ type: 'auth', ticket: this.o.ticket }));
     ws.onmessage = (e) => (typeof e.data === 'string' ? this.notice(e.data) : this.frame(e.data as ArrayBuffer));
     ws.onclose = (e) =>
-      this.set(
-        this.state === 'connected' ? 'ended' : 'failed',
-        this.state === 'connected' ? 'The stream ended.' : e.code === 4001 ? 'The stream server refused the connection.' : "Couldn't reach the stream over the WebSocket.",
-      );
+      this.set(this.state === 'connected' ? 'ended' : 'failed', this.state === 'connected' ? 'stream.end.ended' : e.code === 4001 ? 'stream.fail.refused' : 'stream.fail.ws');
     this.ping = setInterval(() => this.send({ type: 'ping', seq: this.frames, ts: performance.now() }), 2_000);
   }
 
-  private set(s: StreamState, why?: string): void {
+  private set(s: StreamState, why?: MessageKey): void {
     if (this.state === s || this.state === 'ended' || this.state === 'failed') return;
     this.state = s;
     this.o.onState(s, why);

@@ -140,6 +140,8 @@ describe('Spanish file', () => {
     'ce.colorN',
     'auto.line',
     'auto.plan',
+    'stream.gfn',
+    'stream.path.ws',
   ]);
 
   it('translates every value (the few identical ones are on an allowlist)', () => {
