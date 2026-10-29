@@ -314,6 +314,8 @@ export class InputCapture {
     // the stream's own controls keep their keys: typing in the quality menu, Enter or Space on a focused button
     const el = e.target as HTMLElement | null;
     if (el?.closest?.('input, select, textarea') || (el?.closest?.('button, a') && ['Enter', 'NumpadEnter', 'Space'].includes(e.code))) return;
+    // the key belongs to the PC: the app's own shortcuts (1–9 switch views, n, /, Ctrl+K…) listen on window, after this
+    e.stopPropagation();
     const m = keyMessage(down, e);
     if (!m) return;
     e.preventDefault();
