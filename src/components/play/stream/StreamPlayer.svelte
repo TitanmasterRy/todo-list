@@ -8,6 +8,7 @@
   import { InputCapture } from '../../../lib/stream/input';
   import { WebRtcStream, type StreamPath, type StreamState, type StreamStats } from '../../../lib/stream/rtc';
   import { streamSettings } from '../../../lib/stream/state.svelte';
+  import { ui } from '../../../lib/ui.svelte';
 
   interface Props {
     api: GatewayClient;
@@ -50,6 +51,8 @@
     phase = s;
     if (s === 'connected') {
       capture?.start();
+      // keys go to the PC, so none of the app's single-key shortcuts act while the stream is up
+      ui.captureKeys = true;
       if (audio?.srcObject) audio.play().catch(() => (needsSound = true));
     } else if (s === 'failed' || s === 'ended') finish(why ?? null, s === 'failed');
   }
@@ -74,6 +77,7 @@
     done = true;
     clearInterval(statsTimer);
     capture?.stop();
+    ui.captureKeys = false;
     player?.close();
     window.removeEventListener('pagehide', onPageHide);
     document.removeEventListener('fullscreenchange', onFullscreen);
@@ -129,6 +133,8 @@
   }
 
   function lockMouse() {
+    // off the button, so Space and Enter go to the PC instead of pressing it again
+    canvas?.focus();
     void Promise.resolve(canvas?.requestPointerLock?.()).catch(() => {});
   }
 
@@ -158,7 +164,7 @@
   const quality = $derived(streamSettings.prefs.size === 'native' ? 'native' : `${streamSettings.prefs.width}x${streamSettings.prefs.height}`);
 </script>
 
-<div class="player" class:fullscreen bind:this={wrap}>
+<div class="player" class:fullscreen class:locked={mouseLocked} bind:this={wrap}>
   <div class="tools" role="toolbar" aria-label={t('stream.controls')}>
     <strong class="title">{appName}</strong>
     <span class="state" class:ok={phase === 'connected'}>{phase === 'connected' ? t('stream.live') : t('stream.connecting')}</span>
@@ -267,6 +273,10 @@
   .fullscreen .tools:hover,
   .fullscreen .tools:focus-within {
     opacity: 1;
+  }
+  /* the mouse is the game's until Esc, so the bar would only cover the picture */
+  .locked .tools {
+    display: none;
   }
   .fullscreen .screen {
     height: 100vh;
