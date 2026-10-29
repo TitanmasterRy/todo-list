@@ -1,5 +1,5 @@
-import { describe, expect, it } from 'vitest';
-import { PAD, PadTracker, WheelAccumulator, absolutePosition, keyMessage, mouseButton, padState, padType, vkFor } from './input';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import { InputCapture, PAD, PadTracker, WheelAccumulator, absolutePosition, keyMessage, mouseButton, padState, padType, vkFor, type InputMessage } from './input';
 
 const key = (code: string, mods: Partial<{ shiftKey: boolean; ctrlKey: boolean; altKey: boolean; metaKey: boolean }> = {}) => ({
   code,
@@ -98,5 +98,35 @@ describe('gamepads', () => {
     ]);
     expect(t.poll([null, pad([], undefined, 1)], 950)).toEqual([{ type: 'gamepaddisconnect', index: 0, mask: 2 }]);
     expect(t.releaseAll()).toEqual([{ type: 'gamepad', index: 1, mask: 0, buttons: 0, lt: 0, rt: 0, lx: 0, ly: 0, rx: 0, ry: 0 }]);
+  });
+});
+
+describe('capture', () => {
+  afterEach(() => vi.unstubAllGlobals());
+
+  it('keeps keys it sends to the PC from reaching the app’s own shortcuts', () => {
+    const doc = Object.assign(new EventTarget(), { visibilityState: 'visible', pointerLockElement: null, fullscreenElement: null });
+    vi.stubGlobal('document', doc);
+    vi.stubGlobal('window', new EventTarget());
+    const sent: InputMessage[] = [];
+    const target = Object.assign(new EventTarget(), { focus() {} }) as unknown as HTMLElement;
+    const capture = new InputCapture({ target, send: (m) => sent.push(m), size: () => ({ width: 1920, height: 1080 }) });
+    const press = (code: string) => {
+      const e = Object.assign(new Event('keydown', { bubbles: true, cancelable: true }), { ...key(code), key: code, repeat: false, getModifierState: () => false });
+      doc.dispatchEvent(e);
+      return e;
+    };
+    capture.start();
+    // 2 would switch the app to Upcoming; it's the PC's
+    const two = press('Digit2');
+    expect(two.cancelBubble).toBe(true);
+    expect(two.defaultPrevented).toBe(true);
+    expect(sent).toContainEqual(expect.objectContaining({ type: 'keydown', keyCode: 0x32, code: 'Digit2' }));
+    // Esc without full screen or a locked mouse stays with the browser and the app
+    const esc = press('Escape');
+    expect(esc.cancelBubble).toBe(false);
+    expect(sent.some((m) => 'code' in m && m.code === 'Escape')).toBe(false);
+    capture.stop();
+    expect(press('Digit3').cancelBubble).toBe(false);
   });
 });
