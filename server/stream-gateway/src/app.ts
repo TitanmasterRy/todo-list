@@ -129,9 +129,13 @@ export function createGateway(deps: GatewayDeps): { server: Server; close: () =>
     if (config.mwHostId) return config.mwHostId;
     if (hostCache && hostCache.link === link() && now() - hostCache.at < 5 * 60_000) return hostCache.id;
     const hosts = await linkedMw().hosts();
-    const h = hosts.find((x) => x.pairState === 'paired') ?? hosts[0];
+    // a paired host that's online first: MoonlightWeb keeps an old entry around (offline, still paired) when the PC's
+    // server is reinstalled or replaced, e.g. Sunshine → Apollo, which has a new identity
+    const paired = hosts.filter((x) => x.pairState === 'paired');
+    const h = paired.find((x) => x.state === 'online') ?? paired[0] ?? hosts[0];
     if (!h) throw new HttpError(503, { error: 'no_host' });
-    hostCache = { id: h.uuid, at: now(), link: link() };
+    // remember only a host that answered, so one coming online is picked up at the next request
+    hostCache = h.state === 'online' ? { id: h.uuid, at: now(), link: link() } : null;
     return h.uuid;
   }
 
@@ -374,7 +378,7 @@ export function createGateway(deps: GatewayDeps): { server: Server; close: () =>
           stream_fps: fps,
           stream_bitrate: bitrate,
           video_codec: 'h264',
-          transport_mode: transport === 'ws' ? 'wss' : 'webrtc-media-udp',
+          transport_mode: transport === 'ws' ? 'wss' : 'webrtc-dc-udp',
           transport_index: 0,
           client_uniqueid: store.state.clientUniqueId,
         });

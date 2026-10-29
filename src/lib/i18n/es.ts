@@ -3003,6 +3003,7 @@ const es: Dict = {
   'stream.enrollBlurb':
     'El streaming necesita un código de una app de autenticación (Google Authenticator, Microsoft Authenticator, 1Password, Aegis…) además de la contraseña. Solo se puede configurar una vez.',
   'stream.enrollStart': 'Mostrar el código QR',
+  'stream.enrollWorking': 'Configurando… (unos segundos)',
   'stream.enrollScan': 'Escanea este código QR con tu app de autenticación.',
   'stream.enrollManual': '¿No puedes escanearlo? Escribe esta clave:',
   'stream.qrAlt': 'Código QR para añadir el inicio de sesión de streaming a una app de autenticación',
@@ -3025,7 +3026,7 @@ const es: Dict = {
   'stream.err.auth': 'Tu sesión de streaming terminó. Vuelve a iniciar sesión.',
   'stream.err.badLogin': 'Contraseña o código incorrectos.',
   'stream.err.enrolled': 'El inicio de sesión en dos pasos ya está configurado. Inicia sesión con un código de tu app.',
-  'stream.err.noWebCodecs': 'Este navegador no puede reproducir el modo WebSocket. Prueba Chrome, Edge o Safari.',
+  'stream.err.noWebCodecs': 'Este navegador no puede decodificar el streaming (necesita WebCodecs). Prueba una versión reciente de Chrome, Edge, Safari o Firefox.',
   'stream.noApps': 'No se encontraron apps en el PC.',
   'stream.start': 'Iniciar {app}',
   'stream.starting': 'Iniciando el streaming…',

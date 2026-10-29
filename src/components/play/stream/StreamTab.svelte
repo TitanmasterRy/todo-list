@@ -8,7 +8,7 @@
   import { StreamError, type GatewayClient, type Health, type StreamApp, type StreamSession, type StreamTransport, type Enrollment } from '../../../lib/stream/api';
   import { STEP_LABEL, browserProbes, runConnectionTest, type StepResult, type Verdict } from '../../../lib/stream/conntest';
   import { MAX_H, MAX_W, measureRefreshRate, nativeSize, streamRequest, suggestBitrate } from '../../../lib/stream/display';
-  import { supportsWsStream } from '../../../lib/stream/fallback';
+  import { supportsWebCodecs } from '../../../lib/stream/video';
   import { STREAM_SERVER, gatewayClient, streamSettings } from '../../../lib/stream/state.svelte';
   import StreamPlayer from './StreamPlayer.svelte';
 
@@ -185,15 +185,14 @@
     try {
       // the connection test runs once per visit, before the first stream
       const v = verdict ?? (await test());
-      let transport: StreamTransport = opts.transport ?? (prefs.transport === 'auto' ? (v?.transport ?? 'webrtc') : prefs.transport);
+      const transport: StreamTransport = opts.transport ?? (prefs.transport === 'auto' ? (v?.transport ?? 'webrtc') : prefs.transport);
       if (prefs.transport === 'auto' && !opts.transport && v && !v.transport) {
         error = t(v.message);
         return;
       }
-      if (transport === 'ws' && !supportsWsStream()) {
+      if (!supportsWebCodecs()) {
         error = t('stream.err.noWebCodecs');
-        if (opts.transport === 'ws') return;
-        transport = 'webrtc';
+        return;
       }
       session = await api.startSession({ appId: app.id, ...request, transport, quitRunning: opts.quitRunning });
       playing = app;
@@ -223,7 +222,7 @@
     session = null;
     playing = null;
     view = 'apps';
-    if (why) notice = { text: t(why), retryWs: failed === 'webrtc' && supportsWsStream() && app ? app : undefined };
+    if (why) notice = { text: t(why), retryWs: failed === 'webrtc' && app ? app : undefined };
   }
 
   function onRestart() {
@@ -309,7 +308,7 @@
         <h3>{t('stream.enrollTitle')}</h3>
         {#if !enrollment}
           <p>{t('stream.enrollBlurb')}</p>
-          <button class="btn" onclick={startEnroll} disabled={busy}>{t('stream.enrollStart')}</button>
+          <button class="btn" onclick={startEnroll} disabled={busy} aria-busy={busy}>{busy ? t('stream.enrollWorking') : t('stream.enrollStart')}</button>
         {:else}
           <ol class="steps">
             <li>

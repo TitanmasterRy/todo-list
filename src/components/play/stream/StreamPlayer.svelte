@@ -1,5 +1,5 @@
 <script lang="ts">
-  // One running stream: the picture (a <video> for WebRTC, a canvas for the WebSocket mode), input capture, full
+  // One running stream: the picture (a canvas fed by WebCodecs; WebRTC sound plays in an <audio>), input capture, full
   // screen with Keyboard Lock, the stats overlay, and the ways out (disconnect, quit the game, sign out everywhere).
   import { onDestroy, onMount } from 'svelte';
   import { t, type MessageKey } from '../../../lib/i18n/index.svelte';
@@ -23,7 +23,7 @@
   let { api, session, appName, onend, onrestart, onsignedout }: Props = $props();
 
   let wrap = $state<HTMLDivElement>();
-  let video = $state<HTMLVideoElement>();
+  let audio = $state<HTMLAudioElement>();
   let canvas = $state<HTMLCanvasElement>();
   let phase = $state<StreamState>('connecting');
   let stats = $state<StreamStats | null>(null);
@@ -53,17 +53,16 @@
       capture?.start();
       // keys go to the PC, so none of the app's single-key shortcuts act while the stream is up
       ui.captureKeys = true;
-      video?.play().catch(() => (needsSound = true));
+      if (audio?.srcObject) audio.play().catch(() => (needsSound = true));
     } else if (s === 'failed' || s === 'ended') finish(why ?? null, s === 'failed');
   }
 
   onMount(() => {
-    const target = (session.transport === 'ws' ? canvas : video) as HTMLElement;
     player =
       session.transport === 'ws'
         ? new WsStream({ url: api.wsUrl(session.mediaPath), ticket: session.ticket, canvas: canvas!, onState })
-        : new WebRtcStream({ signalUrl: api.wsUrl(session.signalingPath), ticket: session.ticket, iceServers: session.iceServers, video: video!, onState });
-    capture = new InputCapture({ target, send: (m) => player?.send(m), size: () => ({ width: stats?.width || session.width, height: stats?.height || session.height }) });
+        : new WebRtcStream({ signalUrl: api.wsUrl(session.signalingPath), ticket: session.ticket, iceServers: session.iceServers, canvas: canvas!, audio: audio!, onState });
+    capture = new InputCapture({ target: canvas!, send: (m) => player?.send(m), size: () => ({ width: stats?.width || session.width, height: stats?.height || session.height }) });
     player.start();
     statsTimer = setInterval(async () => {
       if (streamSettings.prefs.stats && phase === 'connected' && player) stats = await player.stats().catch(() => stats);
@@ -134,10 +133,9 @@
   }
 
   function lockMouse() {
-    const el = (session.transport === 'ws' ? canvas : video) as HTMLElement;
     // off the button, so Space and Enter go to the PC instead of pressing it again
-    el.focus();
-    void Promise.resolve(el.requestPointerLock?.()).catch(() => {});
+    canvas?.focus();
+    void Promise.resolve(canvas?.requestPointerLock?.()).catch(() => {});
   }
 
   function onPointerLock() {
@@ -146,9 +144,9 @@
 
   function unmute() {
     needsSound = false;
-    if (video) {
-      video.muted = false;
-      void video.play().catch(() => {});
+    if (audio) {
+      audio.muted = false;
+      void audio.play().catch(() => {});
     }
   }
 
@@ -191,11 +189,8 @@
   </div>
 
   <div class="screen">
-    {#if session.transport === 'ws'}
-      <canvas bind:this={canvas} tabindex="0" aria-label={t('stream.screenLabel', { app: appName })}></canvas>
-    {:else}
-      <video bind:this={video} autoplay playsinline tabindex="0" aria-label={t('stream.screenLabel', { app: appName })}></video>
-    {/if}
+    <canvas bind:this={canvas} tabindex="0" aria-label={t('stream.screenLabel', { app: appName })}></canvas>
+    <audio bind:this={audio} autoplay></audio>
     {#if phase === 'connecting'}<div class="veil" role="status">{t('stream.connectingLong')}</div>{/if}
     {#if needsSound}<button class="btn sound" onclick={unmute}>{t('stream.sound')}</button>{/if}
     {#if streamSettings.prefs.stats && stats}
@@ -205,7 +200,7 @@
         <span>{stats.kbps === null ? '–' : (stats.kbps / 1000).toFixed(1)} Mbps</span>
         <span>{stats.rttMs ?? '–'} ms</span>
         <span>{t(PATHS[stats.path])}</span>
-        {#if stats.packetsLost}<span>{t('stream.lost', { n: stats.packetsLost })}</span>{/if}
+        {#if stats.lost}<span>{t('stream.lost', { n: stats.lost })}</span>{/if}
       </div>
     {/if}
   </div>
@@ -252,7 +247,6 @@
     overflow: hidden;
     aspect-ratio: 16 / 9;
   }
-  .screen video,
   .screen canvas {
     width: 100%;
     height: 100%;

@@ -43,7 +43,7 @@ class FakeMw implements MwApi {
   calls: string[] = [];
   starts: Record<string, unknown>[] = [];
   upstreams: FakeUpstream[] = [];
-  startResult: Record<string, unknown> | Error = { transport: 'webrtc-media', signalingUrl: 'wss://10.250.50.10:8443/ws', videoCodec: 'h264' };
+  startResult: Record<string, unknown> | Error = { transport: 'webrtc', signalingUrl: 'wss://10.250.50.10:8443/ws', videoCodec: 'h264' };
   async health() {
     return true;
   }
@@ -175,6 +175,23 @@ describe('health', () => {
     expect((await api('/health')).json).toMatchObject({ mw: 'up', host: 'online' });
   });
 
+  it('prefers the paired host that is online over an old paired entry, and never sticks to a dead one', async () => {
+    const OLD: MwHost = { uuid: 'OLD', name: 'Sunshine', state: 'offline', pairState: 'paired' };
+    const NEW: MwHost = { uuid: 'NEW', name: 'Apollo', state: 'online', pairState: 'paired' };
+    let list = [OLD];
+    mw.hosts = async () => list;
+    expect((await api('/health')).json).toMatchObject({ host: 'offline' });
+    // Apollo paired a minute later: picked up at once, not after the host cache runs out
+    clock += 60_000;
+    list = [OLD, NEW];
+    expect((await api('/health')).json).toMatchObject({ host: 'online' });
+    const { accessToken } = await signIn();
+    let asked = '';
+    mw.apps = (async (h: string) => ((asked = h), [])) as unknown as FakeMw['apps'];
+    await api('/apps', { token: accessToken });
+    expect(asked).toBe('NEW');
+  });
+
   it('keeps state.json private', () => {
     expect(statSync(store.file).mode & 0o777).toBe(0o600);
   });
@@ -291,7 +308,7 @@ describe('apps and TURN', () => {
 });
 
 describe('sessions', () => {
-  it('launches WebRTC media at the asked size, one stream at a time', async () => {
+  it('launches the WebRTC DataChannel transport at the asked size, one stream at a time', async () => {
     const { accessToken } = await signIn();
     const r = await api('/sessions', { token: accessToken, body: { appId: 1, width: 2880, height: 1800, fps: 120 } });
     expect(r.status).toBe(201);
@@ -301,7 +318,7 @@ describe('sessions', () => {
       stream_aspect: '2880:1800',
       stream_fps: 120,
       video_codec: 'h264',
-      transport_mode: 'webrtc-media-udp',
+      transport_mode: 'webrtc-dc-udp',
       client_uniqueid: store.state.clientUniqueId,
     });
     expect(r.json).toMatchObject({ transport: 'webrtc', signalingPath: `/sessions/${r.json.id}/signal`, width: 2880, height: 1800 });
