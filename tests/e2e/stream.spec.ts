@@ -16,7 +16,7 @@ interface Gateway {
 }
 
 /** A fake gateway (server/stream-gateway/API.md). TURN points nowhere, so the relay probes fail as on a 443-only network. */
-async function mockGateway(page: Page): Promise<Gateway> {
+async function mockGateway(page: Page, { holdSignal = false } = {}): Promise<Gateway> {
   const gw: Gateway = { calls: [], enrolled: false, startResults: [] };
   let n = 0;
   const tokens = () => ({ accessToken: `access-token-e2e-${++n}`, refreshToken: `refresh-e2e-${n}`, expiresIn: 900 });
@@ -68,7 +68,7 @@ async function mockGateway(page: Page): Promise<Gateway> {
   await page.routeWebSocket(`wss://play.example.com/ws-probe`, (ws) => ws.onMessage((m) => ws.send(m)));
   await page.routeWebSocket(/\/sessions\/[\w-]+\/signal$/, (ws) => {
     ws.onMessage((m) => {
-      if (typeof m === 'string' && JSON.parse(m).type === 'auth') ws.close({ code: 1008, reason: 'pairing verification failed' });
+      if (!holdSignal && typeof m === 'string' && JSON.parse(m).type === 'auth') ws.close({ code: 1008, reason: 'pairing verification failed' });
     });
   });
   return gw;
@@ -191,5 +191,101 @@ test('Stream: resume-or-quit prompt, then a refused binding ends the stream with
   await expect(page.getByRole('status').filter({ hasText: 'couldn’t verify the gaming PC' })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Try the WebSocket mode' })).toBeVisible();
   await expect.poll(() => gw.calls.some((c) => c.method === 'DELETE' && c.path === '/sessions/abcdefghijklmnop')).toBe(true);
+  expect(errors).toEqual([]);
+});
+
+test('Stream: while streaming, keys go to the PC instead of switching tabs, and Lock mouse hides the bar', async ({ page }) => {
+  const gw = await mockGateway(page, { holdSignal: true });
+  // a stand-in for WebRTC: the relay probes find a relay, and the stream's channels open at once (no PC behind them);
+  // pointer lock is faked too, since headless Chromium has no mouse to lock
+  await page.addInitScript(() => {
+    const w = window as unknown as { sent: string[]; locked: Element | null; RTCPeerConnection: unknown };
+    w.sent = [];
+    w.locked = null;
+    class FakeChannel {
+      readyState = 'connecting';
+      binaryType = 'blob';
+      onopen: (() => void) | null = null;
+      onmessage: (() => void) | null = null;
+      constructor(readonly label: string) {
+        setTimeout(() => {
+          this.readyState = 'open';
+          this.onopen?.();
+        }, 50);
+      }
+      send(m: string) {
+        if (this.label === 'input') w.sent.push(m);
+      }
+      close() {
+        this.readyState = 'closed';
+      }
+    }
+    w.RTCPeerConnection = class {
+      connectionState = 'new';
+      onicecandidate: ((e: { candidate: { candidate: string } | null }) => void) | null = null;
+      createDataChannel(label: string) {
+        return new FakeChannel(label);
+      }
+      async createOffer() {
+        return { type: 'offer', sdp: '' };
+      }
+      async setLocalDescription() {
+        this.onicecandidate?.({ candidate: { candidate: 'candidate:1 1 udp 1 192.0.2.1 3478 typ relay raddr 0.0.0.0 rport 0' } });
+      }
+      setConfiguration() {}
+      async getStats() {
+        return new Map();
+      }
+      close() {}
+    };
+    Object.defineProperty(Document.prototype, 'pointerLockElement', { get: () => w.locked });
+    Element.prototype.requestPointerLock = function (this: Element) {
+      w.locked = this;
+      document.dispatchEvent(new Event('pointerlockchange'));
+      return Promise.resolve();
+    } as Element['requestPointerLock'];
+    Document.prototype.exitPointerLock = () => {
+      w.locked = null;
+      document.dispatchEvent(new Event('pointerlockchange'));
+    };
+  });
+  const errors = await openApp(page);
+  await openStream(page);
+  await signIn(page, gw);
+  gw.startResults.push([
+    201,
+    {
+      id: 'keyskeyskeyskeys',
+      transport: 'webrtc',
+      signalingPath: '/sessions/keyskeyskeyskeys/signal',
+      ticket: 'ticket-e2e',
+      iceServers: [{ urls: ['turn:127.0.0.1:9?transport=udp'], username: 'u', credential: 'c' }],
+      videoCodec: 'h264',
+      width: 1920,
+      height: 1080,
+      fps: 60,
+      bitrate: 20000,
+    },
+  ]);
+  await page.getByRole('button', { name: 'Start Desktop' }).click();
+  const bar = page.getByRole('toolbar', { name: 'Stream controls' });
+  await expect(bar.getByText('Live')).toBeVisible({ timeout: 20_000 });
+
+  const sent = () => page.evaluate(() => (window as unknown as { sent: string[] }).sent.map((m) => JSON.parse(m) as { type: string; code?: string }));
+  // 2 would open Upcoming and n would jump to quick add; both go to the PC instead
+  await page.keyboard.press('2');
+  await page.keyboard.press('n');
+  await expect.poll(async () => (await sent()).filter((m) => m.type === 'keydown').map((m) => m.code)).toEqual(['Digit2', 'KeyN']);
+  await expect(bar).toBeVisible();
+  await expect(page.getByRole('tab', { name: /Stream/ })).toHaveAttribute('aria-selected', 'true');
+
+  // Lock mouse hides the bar, and Space reaches the PC instead of pressing the button again
+  await bar.getByRole('button', { name: 'Lock mouse' }).click();
+  await expect(bar).toBeHidden();
+  await page.keyboard.press('Space');
+  await expect.poll(async () => (await sent()).some((m) => m.type === 'keydown' && m.code === 'Space')).toBe(true);
+  // Esc (the browser releases the mouse) brings the bar back
+  await page.evaluate(() => document.exitPointerLock());
+  await expect(bar).toBeVisible();
   expect(errors).toEqual([]);
 });
