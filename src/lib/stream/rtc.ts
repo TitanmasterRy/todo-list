@@ -28,7 +28,7 @@ export function mungeAnswer(sdp: string): string {
   return out;
 }
 
-export type StreamPath = 'relay-udp' | 'relay-tcp' | 'relay-tls' | 'direct' | 'ws' | 'unknown';
+export type StreamPath = 'relay-udp' | 'relay-tcp' | 'relay-tls' | 'direct' | 'ws' | 'http' | 'unknown';
 
 export interface StreamStats {
   path: StreamPath;

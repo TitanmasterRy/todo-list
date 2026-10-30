@@ -28,12 +28,14 @@ export interface GatewayDeps {
 interface StreamSession {
   id: string;
   host: string;
-  transport: 'webrtc' | 'ws';
+  transport: 'webrtc' | 'ws' | 'http';
   mwPath: string;
   createdAt: number;
-  /** one-time WebSocket tickets → expiry (ms) */
+  /** one-time WebSocket (and HTTP /down) tickets → expiry (ms) */
   tickets: Map<string, number>;
   sockets: Map<'signal' | 'media', WebSocket>;
+  /** the HTTP transport's live MoonlightWeb socket and the browser's downstream response */
+  http?: { up: WebSocket | null; down: ServerResponse | null };
 }
 
 class HttpError extends Error {
@@ -216,6 +218,8 @@ export function createGateway(deps: GatewayDeps): { server: Server; close: () =>
     if (!s) return null;
     active = null;
     for (const ws of s.sockets.values()) ws.close(1000, 'stream ended');
+    s.http?.up?.close(1000, 'stream ended');
+    if (s.http?.down && !s.http.down.writableEnded) s.http.down.end();
     if (mw && store.state.mw) {
       void (async () => {
         try {
@@ -393,7 +397,9 @@ export function createGateway(deps: GatewayDeps): { server: Server; close: () =>
       const height = int(body.height, 240, 2304) & ~1;
       const fps = int(body.fps, 24, 240);
       const bitrate = int(body.bitrate, 1_000, 150_000, suggestBitrate(width, height, fps));
-      const transport = body.transport === 'ws' ? 'ws' : 'webrtc';
+      const transport = body.transport === 'ws' ? 'ws' : body.transport === 'http' ? 'http' : 'webrtc';
+      // http rides MoonlightWeb's wss transport too, just reshaped to plain HTTP for the browser
+      const overWss = transport === 'ws' || transport === 'http';
       const h = await host();
       if (body.quitRunning === true) await api.stopSession(h);
       let r: Record<string, unknown>;
@@ -405,7 +411,7 @@ export function createGateway(deps: GatewayDeps): { server: Server; close: () =>
           stream_fps: fps,
           stream_bitrate: bitrate,
           video_codec: 'h264',
-          transport_mode: transport === 'ws' ? 'wss' : 'webrtc-dc-udp',
+          transport_mode: overWss ? 'wss' : 'webrtc-dc-udp',
           transport_index: 0,
           client_uniqueid: store.state.clientUniqueId,
         });
@@ -417,15 +423,21 @@ export function createGateway(deps: GatewayDeps): { server: Server; close: () =>
         if (e instanceof MwError && e.status === 503) throw new HttpError(503, { code: 'host_busy', error: e.message });
         throw new HttpError(502, { code: 'start_failed', error: e instanceof MwError ? e.message : 'MoonlightWeb could not start the stream' });
       }
-      const ws = transport === 'ws';
-      const path2 = mwPath(ws ? r.wsUrl : r.signalingUrl);
-      if (!path2 || (ws && r.transport !== 'wss')) throw new HttpError(502, { code: 'start_failed', error: 'MoonlightWeb started another transport' });
+      const path2 = mwPath(overWss ? r.wsUrl : r.signalingUrl);
+      if (!path2 || (overWss && r.transport !== 'wss')) throw new HttpError(502, { code: 'start_failed', error: 'MoonlightWeb started another transport' });
       const s: StreamSession = { id: randomToken(12), host: h, transport, mwPath: path2, createdAt: now(), tickets: new Map(), sockets: new Map() };
+      if (transport === 'http') s.http = { up: null, down: null };
       active = s;
+      const where =
+        transport === 'webrtc'
+          ? { signalingPath: `/sessions/${s.id}/signal` }
+          : transport === 'ws'
+            ? { mediaPath: `/sessions/${s.id}/media` }
+            : { mediaPath: `/sessions/${s.id}/down`, upPath: `/sessions/${s.id}/up` };
       return send(res, 201, {
         id: s.id,
         transport,
-        ...(ws ? { mediaPath: `/sessions/${s.id}/media` } : { signalingPath: `/sessions/${s.id}/signal` }),
+        ...where,
         ticket: newTicket(s),
         iceServers: freshIce(),
         videoCodec: typeof r.videoCodec === 'string' ? r.videoCodec : 'h264',
@@ -434,6 +446,34 @@ export function createGateway(deps: GatewayDeps): { server: Server; close: () =>
         fps,
         bitrate,
       });
+    }
+
+    // ---- HTTP transport (for networks that block WebSockets and the relay) ----
+    // GET /down: one long chunked response of MoonlightWeb's frames, length-prefixed. A one-time ticket in the
+    // Authorization header opens it (never in the URL), like the WebSocket media socket.
+    const down = /^\/sessions\/([A-Za-z0-9_-]{16})\/down$/.exec(path);
+    if (m === 'GET' && down) {
+      const s = active;
+      if (!s || s.id !== down[1] || s.transport !== 'http' || !s.http) throw new HttpError(404, { error: 'not_found' });
+      const ticket = bearer(req.headers.authorization);
+      const exp = s.tickets.get(ticket);
+      if (!ticket || !exp || exp <= now()) throw new HttpError(401, { error: 'unauthorized' });
+      s.tickets.delete(ticket);
+      return bridgeDown(req, res, s);
+    }
+    // POST /up: a batch of input messages (JSON strings) forwarded to MoonlightWeb. Authenticated by the access
+    // token, so there's no one-time ticket to burn on every batch.
+    const up = /^\/sessions\/([A-Za-z0-9_-]{16})\/up$/.exec(path);
+    if (m === 'POST' && up) {
+      claims(req);
+      const s = active;
+      if (!s || s.id !== up[1] || s.transport !== 'http' || !s.http) throw new HttpError(404, { error: 'not_found' });
+      const msgs = (await readJson(req)).msgs;
+      const sock = s.http.up;
+      if (Array.isArray(msgs) && sock && sock.readyState === sock.OPEN) {
+        for (const line of msgs) if (typeof line === 'string' && line.length <= 4096) sock.send(line);
+      }
+      return send(res, 204);
     }
 
     const sess = /^\/sessions\/([A-Za-z0-9_-]{16})(\/ticket)?$/.exec(path);
@@ -593,6 +633,40 @@ export function createGateway(deps: GatewayDeps): { server: Server; close: () =>
     // input from the browser is JSON text; nothing binary goes up
     ws.on('message', (data, isBinary) => {
       if (!isBinary && upstream.readyState === upstream.OPEN) upstream.send(data.toString());
+    });
+  }
+
+  /** Pipe MoonlightWeb's frames to the browser as one chunked response: `[kind:1][len:4][payload]`, kind 0 binary
+   *  (media), 1 text (JSON notices). Input comes back on separate POSTs (/up), which send into `s.http.up`. */
+  async function bridgeDown(req: IncomingMessage, res: ServerResponse, s: StreamSession): Promise<void> {
+    if (!mw || !s.http) throw new Error('not linked');
+    res.statusCode = 200;
+    res.setHeader('Content-Type', 'application/octet-stream');
+    const upstream = await mw.socket(s.mwPath, (data, isBinary) => {
+      if (res.writableEnded) return;
+      // a browser that can't keep up is dropped rather than buffering minutes of video in the gateway
+      if (res.writableLength > 32 * 1024 * 1024) return void res.end();
+      const head = Buffer.alloc(5);
+      head.writeUInt8(isBinary ? 0 : 1, 0);
+      head.writeUInt32BE(data.length, 1);
+      res.write(Buffer.concat([head, data]));
+    });
+    if (res.writableEnded) return void upstream.close(1000);
+    s.http.up = upstream;
+    s.http.down = res;
+    await new Promise<void>((resolve) => {
+      const done = () => {
+        upstream.close(1000);
+        if (s.http?.up === upstream) s.http.up = null;
+        if (s.http?.down === res) s.http.down = null;
+        resolve();
+      };
+      req.on('close', done);
+      res.on('close', done);
+      upstream.on('close', () => {
+        if (!res.writableEnded) res.end();
+      });
+      upstream.on('error', (e) => log(`MoonlightWeb socket error: ${e.message}`));
     });
   }
 

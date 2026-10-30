@@ -395,10 +395,11 @@
           </label>
           <label
             >{t('stream.transport')}
-            <select class="input" value={prefs.transport} onchange={(e) => streamSettings.update({ transport: e.currentTarget.value as 'auto' | 'webrtc' | 'ws' })}>
+            <select class="input" value={prefs.transport} onchange={(e) => streamSettings.update({ transport: e.currentTarget.value as 'auto' | 'webrtc' | 'ws' | 'http' })}>
               <option value="auto">{t('stream.transportAuto')}</option>
               <option value="webrtc">{t('stream.transportWebrtc')}</option>
               <option value="ws">{t('stream.transportWs')}</option>
+              <option value="http">{t('stream.transportHttp')}</option>
             </select>
           </label>
           <label class="check"

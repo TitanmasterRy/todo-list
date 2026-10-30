@@ -6,6 +6,7 @@
 - **Your keys stay in the game.** While a stream is on, number keys and the app's other shortcuts go to the PC instead of switching tabs, and the bar above the picture gets out of the way while the mouse is locked (Esc gives you the mouse and the bar back).
 - **🔐 Two-step sign-in.** A password and a code from an authenticator app. The first sign-in shows a QR code and ten backup codes. **Sign out everywhere** ends every sign-in and stops the stream.
 - **🩺 Connection test.** Checks each step a stream needs and says in plain words what the network blocks. On hotel or café networks that only allow normal web traffic, streams switch to a slower mode that still works.
+- **HTTP mode for locked-down networks.** On networks that block even WebSockets and let only plain web traffic through, pick **⚙️ Quality → Connection → HTTP stream**: the video rides an ordinary HTTPS download and input goes back on HTTPS requests. It has the most delay of the three modes, but it gets through where the others can't.
 - **Stats** (resolution, frame rate, bitrate, delay, connection path), **Disconnect** (the game keeps running on the PC) or **Quit the game**, and a choice to resume or quit when another game is already running.
 - **Sound** comes through on every stream, and the picture recovers by itself after a network hiccup (it used to stay frozen until the next keyframe, or show nothing on computers without a hardware H.264 decoder).
 

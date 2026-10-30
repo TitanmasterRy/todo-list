@@ -364,11 +364,11 @@ describe('sessions', () => {
 });
 
 describe('WebSockets', () => {
-  async function start(transport: 'webrtc' | 'ws' = 'webrtc') {
+  async function start(transport: 'webrtc' | 'ws' | 'http' = 'webrtc') {
     const { accessToken } = await signIn();
-    if (transport === 'ws') mw.startResult = { transport: 'wss', wsUrl: '/ws/stream' };
+    if (transport === 'ws' || transport === 'http') mw.startResult = { transport: 'wss', wsUrl: '/ws/stream' };
     const r = await api('/sessions', { token: accessToken, body: { appId: 1, width: 1920, height: 1080, fps: 60, transport } });
-    return r.json as { id: string; ticket: string; signalingPath?: string; mediaPath?: string };
+    return { ...(r.json as { id: string; ticket: string; signalingPath?: string; mediaPath?: string; upPath?: string }), accessToken };
   }
 
   it('echoes the connection probe', async () => {
@@ -422,6 +422,43 @@ describe('WebSockets', () => {
     await tick();
     expect(up.sent).toEqual([JSON.stringify({ type: 'keydown', keyCode: 65 })]);
     ws.close();
+    await tick();
+    expect(up.readyState).toBe(3);
+  });
+
+  it('carries the HTTP transport: /down streams framed media, /up forwards input', async () => {
+    const s = await start('http');
+    expect(s.mediaPath).toBe(`/sessions/${s.id}/down`);
+    expect(s.upPath).toBe(`/sessions/${s.id}/up`);
+
+    const ctrl = new AbortController();
+    const downP = fetch(`${base}/sessions/${s.id}/down`, { headers: { Origin: ORIGIN, Authorization: `Bearer ${s.ticket}` }, signal: ctrl.signal });
+    await tick();
+    const up = mw.upstreams[0];
+    expect(up.path).toBe('/ws/stream');
+
+    // a binary media frame from MoonlightWeb arrives length-prefixed: [kind 0][len 7][7 bytes]
+    up.deliver(Buffer.from([1, 1, 0, 0, 0, 1, 0x67]), true);
+    const resp = await downP;
+    expect(resp.status).toBe(200);
+    const first = await resp.body!.getReader().read();
+    const buf = Buffer.from(first.value!);
+    expect(buf[0]).toBe(0);
+    expect(buf.readUInt32BE(1)).toBe(7);
+    expect([...buf.subarray(5, 12)]).toEqual([1, 1, 0, 0, 0, 1, 0x67]);
+
+    // input goes back on a POST authenticated by the access token, forwarded to MoonlightWeb
+    const msg = JSON.stringify({ type: 'keydown', keyCode: 65 });
+    const u = await api(`/sessions/${s.id}/up`, { token: s.accessToken, body: { msgs: [msg] } });
+    expect(u.status).toBe(204);
+    expect(up.sent).toContain(msg);
+
+    // a replayed /down ticket is refused (one-time)
+    const replay = await fetch(`${base}/sessions/${s.id}/down`, { headers: { Origin: ORIGIN, Authorization: `Bearer ${s.ticket}` } });
+    expect(replay.status).toBe(401);
+    await replay.body?.cancel().catch(() => {});
+
+    ctrl.abort();
     await tick();
     expect(up.readyState).toBe(3);
   });

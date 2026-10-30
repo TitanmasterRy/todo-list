@@ -33,7 +33,7 @@ The sign-in lasts up to 12 hours. **Sign out everywhere** ends every sign-in on 
 - **Resolution:** *This screen* is your display in device pixels (for example 2880×1800 on a 1440×900 laptop with a Retina screen), up to 4096×2304; or a custom size.
 - **Frame rate:** *This screen* is your display's refresh rate, measured by the browser; or a fixed rate.
 - **Bitrate:** automatic is about 20 Mbps for 1080p at 60 fps, scaled to the size and rate (5–80 Mbps); or a fixed one. Lower it on slow Wi-Fi.
-- **Connection:** automatic follows the connection test; or force WebRTC or the WebSocket mode.
+- **Connection:** automatic follows the connection test; or force WebRTC, the WebSocket mode, or the HTTP stream. The HTTP stream wraps the video in an ordinary HTTPS download and sends input back on HTTPS requests, for networks that block even WebSockets; it has the most delay but gets through where the others can't.
 - **Show stats while streaming:** resolution, frame rate, bitrate, delay (round trip) and the path (relay over UDP, TCP or TLS, or WebSocket).
 
 ### Keyboard, mouse and gamepads
@@ -85,12 +85,12 @@ The site side is one build variable. The server side is the gateway next to Moon
 - Access tokens last 15 minutes and stay in the page's memory; the refresh token (12 hours, replaced on every use) is kept with your other keys. A refresh token that is used twice ends that sign-in, because it means someone copied it. Tokens never go in a URL and the gateway never logs them.
 - The gateway refuses requests and WebSockets from any other site (`Origin`), and talks to MoonlightWeb only after checking its certificate fingerprint.
 - MoonlightWeb's session and the gateway's pairing key are in the gateway's `/data` volume (readable by its own user only). Treat a copy of that volume like a password.
-- Media goes from the PC to your browser through the TURN relay, encrypted end to end by WebRTC (DTLS); the gateway only sees it in the WebSocket mode.
+- Media goes from the PC to your browser through the TURN relay, encrypted end to end by WebRTC (DTLS); the gateway only sees it in the WebSocket and HTTP modes.
 
 ## Limits
 
 - One stream at a time.
 - H.264 only, up to 4096 pixels wide.
 - The browser needs WebCodecs (Chrome, Edge, Safari 17+ and recent Firefox).
-- The WebSocket mode has more delay than WebRTC.
+- The WebSocket mode has more delay than WebRTC, and the HTTP mode more still (input is one HTTPS round trip).
 - GeForce NOW isn't part of this; the tab links out to it.
