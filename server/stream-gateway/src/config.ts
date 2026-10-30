@@ -15,6 +15,8 @@ export interface Config {
   /** '' = the first paired host */
   mwHostId: string;
   allowedOrigin: string;
+  /** a CORS-open, unauthenticated streaming probe for network testing; off unless DIAG_STREAM is set */
+  diagStream: boolean;
 }
 
 export function normalizeFingerprint(s: string): string {
@@ -63,6 +65,7 @@ export function loadConfig(env: Record<string, string | undefined> = process.env
       mwCertSha256,
       mwHostId: (env.MW_HOST_ID ?? '').trim(),
       allowedOrigin: (env.ALLOWED_ORIGIN || 'https://titanmasterry.github.io').trim().replace(/\/+$/, ''),
+      diagStream: /^(1|true|yes|on)$/i.test((env.DIAG_STREAM ?? '').trim()),
     },
     missing,
   };

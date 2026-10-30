@@ -98,6 +98,7 @@ function config(): Config {
     mwCertSha256: 'A'.repeat(64),
     mwHostId: '',
     allowedOrigin: ORIGIN,
+    diagStream: false,
   };
 }
 
@@ -423,5 +424,27 @@ describe('WebSockets', () => {
     ws.close();
     await tick();
     expect(up.readyState).toBe(3);
+  });
+
+  it('serves the diagnostic stream only when it is turned on', async () => {
+    // off by default: the path isn't special-cased, so it falls through to 404
+    expect((await api('/diag/stream')).status).toBe(404);
+
+    // on: a CORS-open chunked response any origin can read, carrying only filler
+    const dg = createGateway({ config: { ...config(), diagStream: true }, store, mw, now: () => clock, log: () => {} });
+    await new Promise<void>((r) => dg.server.listen(0, '127.0.0.1', r));
+    const port = (dg.server.address() as AddressInfo).port;
+    try {
+      const ctrl = new AbortController();
+      const r = await fetch(`http://127.0.0.1:${port}/diag/stream?seconds=120&kbps=1000`, { headers: { Origin: 'https://evil.example' }, signal: ctrl.signal });
+      expect(r.status).toBe(200);
+      expect(r.headers.get('access-control-allow-origin')).toBe('*');
+      const first = await r.body!.getReader().read();
+      expect(first.done).toBe(false);
+      expect(first.value!.byteLength).toBeGreaterThan(0);
+      ctrl.abort();
+    } finally {
+      await new Promise<void>((r) => dg.server.close(() => r()));
+    }
   });
 });

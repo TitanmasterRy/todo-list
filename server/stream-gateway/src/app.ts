@@ -92,6 +92,33 @@ export function createGateway(deps: GatewayDeps): { server: Server; close: () =>
     return origin === undefined || origin === config.allowedOrigin;
   }
 
+  /**
+   * A network-testing probe (off unless DIAG_STREAM is set): a long chunked response of filler bytes at roughly the
+   * asked bitrate, so a browser on a restrictive network can see whether a single long-lived stream survives, and for
+   * how long, before anything cuts it. It carries no data and needs no sign-in, so it answers any origin.
+   */
+  function diagStream(req: IncomingMessage, res: ServerResponse): void {
+    const q = new URL(req.url ?? '', 'http://x').searchParams;
+    const seconds = Math.min(Math.max(Number(q.get('seconds')) || 30, 1), 120);
+    const kbps = Math.min(Math.max(Number(q.get('kbps')) || 20_000, 1), 50_000);
+    res.statusCode = 200;
+    res.setHeader('Content-Type', 'application/octet-stream');
+    const pad = Buffer.alloc(Math.max(16, Math.round((kbps * 1000) / 8 / 10)), 0x2e); // bytes per 100 ms tick
+    const end = now() + seconds * 1000;
+    let seq = 0;
+    const timer = setInterval(() => {
+      if (!res.writable) return void clearInterval(timer);
+      if (now() >= end) {
+        clearInterval(timer);
+        return void res.end();
+      }
+      res.write(Buffer.concat([Buffer.from(`${seq++} ${now()}\n`), pad]));
+    }, 100);
+    const stop = () => clearInterval(timer);
+    req.on('close', stop);
+    res.on('error', stop);
+  }
+
   async function readJson(req: IncomingMessage): Promise<Record<string, unknown>> {
     const chunks: Buffer[] = [];
     let size = 0;
@@ -431,6 +458,17 @@ export function createGateway(deps: GatewayDeps): { server: Server; close: () =>
     res.setHeader('Referrer-Policy', 'no-referrer');
     res.setHeader('Cache-Control', 'no-store');
     try {
+      // the diagnostic stream (off by default) answers any origin, before the usual same-origin gate
+      if (config.diagStream && path === '/diag/stream') {
+        res.setHeader('Access-Control-Allow-Origin', '*');
+        if (req.method === 'OPTIONS') {
+          res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
+          res.setHeader('Access-Control-Max-Age', '600');
+          return void send(res, 204);
+        }
+        if (req.method !== 'GET') return void send(res, 405, { error: 'method_not_allowed' });
+        return void diagStream(req, res);
+      }
       const origin = req.headers.origin;
       if (!originOk(origin)) throw new HttpError(403, { error: 'origin_not_allowed' });
       if (origin) {
