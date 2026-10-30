@@ -4,6 +4,7 @@
 // it lags more than WebRTC: video skips to the next keyframe rather than fall behind, and audio keeps a small buffer.
 import type { InputMessage } from './input';
 import type { MessageKey } from '../i18n/index.svelte';
+import { OpusPlayer } from './audio';
 import { ENDINGS, type StreamState, type StreamStats } from './rtc';
 import { VideoSink } from './video';
 
@@ -28,17 +29,13 @@ export interface WsStreamOptions {
 export class WsStream {
   private ws: WebSocket | null = null;
   private video: VideoSink;
-  private audio: AudioDecoder | null = null;
-  private ctx: AudioContext;
-  private playAt = 0;
+  private audio = new OpusPlayer();
   private state: StreamState = 'connecting';
   private rtt: number | null = null;
   private seq = 0;
   private ping: ReturnType<typeof setInterval> | null = null;
 
   constructor(private o: WsStreamOptions) {
-    // made while the click that started the stream still counts as a user gesture, so sound is allowed
-    this.ctx = new AudioContext({ sampleRate: 48_000, latencyHint: 'interactive' });
     this.video = new VideoSink(
       o.canvas,
       () => this.send({ type: 'requestidr' }),
@@ -77,40 +74,14 @@ export class WsStream {
   private frame(buf: ArrayBuffer): void {
     const f = parseFrame(buf);
     if (!f) return;
-    if (f.kind === 'audio') return this.decodeAudio(f.data);
+    if (f.kind === 'audio') return this.audio.push(f.data);
     this.video.count(buf.byteLength);
     this.video.push(f.data, f.key);
   }
 
-  private decodeAudio(data: Uint8Array): void {
-    if (!this.audio) {
-      this.audio = new AudioDecoder({ output: (a) => this.play(a), error: () => (this.audio = null) });
-      this.audio.configure({ codec: 'opus', sampleRate: 48_000, numberOfChannels: 2 });
-    }
-    if (this.audio.state === 'configured') this.audio.decode(new EncodedAudioChunk({ type: 'key', timestamp: Math.round(performance.now() * 1000), data }));
-  }
-
-  private play(a: AudioData): void {
-    const buf = this.ctx.createBuffer(a.numberOfChannels, a.numberOfFrames, a.sampleRate);
-    for (let ch = 0; ch < a.numberOfChannels; ch++) {
-      const plane = new Float32Array(a.numberOfFrames);
-      a.copyTo(plane, { planeIndex: ch, format: 'f32-planar' });
-      buf.copyToChannel(plane, ch);
-    }
-    a.close();
-    const now = this.ctx.currentTime;
-    // keep about 60 ms queued; if the queue grew past a quarter second (a stall), start over from now
-    if (this.playAt < now || this.playAt - now > 0.25) this.playAt = now + 0.06;
-    const src = this.ctx.createBufferSource();
-    src.buffer = buf;
-    src.connect(this.ctx.destination);
-    src.start(this.playAt);
-    this.playAt += buf.duration;
-  }
-
   send(m: InputMessage): void {
     if (this.ws?.readyState === 1) this.ws.send(JSON.stringify(m));
-    if (this.ctx.state === 'suspended') void this.ctx.resume();
+    this.audio.resume();
   }
 
   async stats(): Promise<StreamStats> {
@@ -125,11 +96,6 @@ export class WsStream {
       this.ws.close(1000);
     }
     this.video.close();
-    try {
-      this.audio?.close();
-    } catch {
-      /* already closed */
-    }
-    void this.ctx.close();
+    this.audio.close();
   }
 }

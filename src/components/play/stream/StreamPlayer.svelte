@@ -5,6 +5,7 @@
   import { t, type MessageKey } from '../../../lib/i18n/index.svelte';
   import type { GatewayClient, StreamSession, StreamTransport } from '../../../lib/stream/api';
   import { WsStream } from '../../../lib/stream/fallback';
+  import { HttpStream } from '../../../lib/stream/http';
   import { InputCapture } from '../../../lib/stream/input';
   import { WebRtcStream, type StreamPath, type StreamState, type StreamStats } from '../../../lib/stream/rtc';
   import { streamSettings } from '../../../lib/stream/state.svelte';
@@ -31,7 +32,7 @@
   let mouseLocked = $state(false);
   let needsSound = $state(false);
   let ending = $state(false);
-  let player: WebRtcStream | WsStream | null = null;
+  let player: WebRtcStream | WsStream | HttpStream | null = null;
   let capture: InputCapture | null = null;
   let statsTimer: ReturnType<typeof setInterval> | undefined;
   let done = false;
@@ -42,6 +43,7 @@
     'relay-tls': 'stream.path.tls',
     direct: 'stream.path.direct',
     ws: 'stream.path.ws',
+    http: 'stream.path.http',
     unknown: 'stream.path.unknown',
   };
 
@@ -61,7 +63,9 @@
     player =
       session.transport === 'ws'
         ? new WsStream({ url: api.wsUrl(session.mediaPath), ticket: session.ticket, canvas: canvas!, onState })
-        : new WebRtcStream({ signalUrl: api.wsUrl(session.signalingPath), ticket: session.ticket, iceServers: session.iceServers, canvas: canvas!, audio: audio!, onState });
+        : session.transport === 'http'
+          ? new HttpStream({ downUrl: api.server + session.mediaPath, ticket: session.ticket, canvas: canvas!, postInput: (msgs) => api.sendInput(session.id, msgs), onState })
+          : new WebRtcStream({ signalUrl: api.wsUrl(session.signalingPath), ticket: session.ticket, iceServers: session.iceServers, canvas: canvas!, audio: audio!, onState });
     capture = new InputCapture({ target: canvas!, send: (m) => player?.send(m), size: () => ({ width: stats?.width || session.width, height: stats?.height || session.height }) });
     player.start();
     statsTimer = setInterval(async () => {

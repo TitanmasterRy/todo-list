@@ -2,7 +2,7 @@
 // is refreshed when it's about to run out; the refresh token is handed to `onRefreshToken` to be kept with the
 // app's other keys. Everything the gateway returns is checked before use. `fetch` is injectable for tests.
 
-export type StreamTransport = 'webrtc' | 'ws';
+export type StreamTransport = 'webrtc' | 'ws' | 'http';
 
 export interface Health {
   ok: boolean;
@@ -34,7 +34,10 @@ export interface StreamSession {
   id: string;
   transport: StreamTransport;
   signalingPath: string;
+  /** WebSocket media path (ws), or the chunked /down path (http) */
   mediaPath: string;
+  /** input POST path (http only) */
+  upPath: string;
   ticket: string;
   iceServers: IceServer[];
   videoCodec: string;
@@ -104,16 +107,19 @@ function iceList(x: unknown): IceServer[] {
 export function toSession(x: unknown): StreamSession {
   const o = obj(x);
   const id = str(o.id);
-  const transport: StreamTransport = o.transport === 'ws' ? 'ws' : 'webrtc';
+  const transport: StreamTransport = o.transport === 'ws' ? 'ws' : o.transport === 'http' ? 'http' : 'webrtc';
   const signalingPath = str(o.signalingPath);
   const mediaPath = str(o.mediaPath);
-  const path = transport === 'ws' ? mediaPath : signalingPath;
-  if (!/^[A-Za-z0-9_-]{16}$/.test(id) || !PATH.test(path) || !str(o.ticket)) throw new StreamError('The stream server sent an unexpected answer.', 'data');
+  const upPath = str(o.upPath);
+  const path = transport === 'webrtc' ? signalingPath : mediaPath;
+  const paths = [path, ...(transport === 'http' ? [upPath] : [])];
+  if (!/^[A-Za-z0-9_-]{16}$/.test(id) || !paths.every((p) => PATH.test(p)) || !str(o.ticket)) throw new StreamError('The stream server sent an unexpected answer.', 'data');
   return {
     id,
     transport,
     signalingPath: transport === 'webrtc' ? signalingPath : '',
-    mediaPath: transport === 'ws' ? mediaPath : '',
+    mediaPath: transport === 'webrtc' ? '' : mediaPath,
+    upPath: transport === 'http' ? upPath : '',
     ticket: str(o.ticket, 100),
     iceServers: iceList(o.iceServers),
     videoCodec: str(o.videoCodec, 10) || 'h264',
@@ -286,6 +292,11 @@ export class GatewayClient {
 
   async startSession(req: SessionRequest): Promise<StreamSession> {
     return toSession(await (await this.authed('POST', '/sessions', req)).json());
+  }
+
+  /** HTTP transport: forward a batch of input messages (each already JSON) to the PC. */
+  async sendInput(id: string, msgs: string[]): Promise<void> {
+    await this.authed('POST', `/sessions/${encodeURIComponent(id)}/up`, { msgs });
   }
 
   async newTicket(id: string): Promise<{ ticket: string; iceServers: IceServer[] }> {

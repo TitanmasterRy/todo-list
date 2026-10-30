@@ -61,7 +61,7 @@ export interface StreamPrefs {
   fps: number;
   /** kbps, 0 = automatic */
   bitrate: number;
-  transport: 'auto' | 'webrtc' | 'ws';
+  transport: 'auto' | 'webrtc' | 'ws' | 'http';
   stats: boolean;
 }
 
@@ -82,7 +82,7 @@ export function parsePrefs(raw: string | null): StreamPrefs {
     height: num(o.height, 240, MAX_H, 1080) & ~1,
     fps: o.fps === 0 ? 0 : num(o.fps, 24, 240, 0),
     bitrate: o.bitrate === 0 ? 0 : num(o.bitrate, 1_000, 150_000, 0),
-    transport: o.transport === 'webrtc' || o.transport === 'ws' ? o.transport : 'auto',
+    transport: o.transport === 'webrtc' || o.transport === 'ws' || o.transport === 'http' ? o.transport : 'auto',
     stats: o.stats === true,
   };
 }

@@ -53,10 +53,10 @@ The app's box art (`image/png`, `image/jpeg` or `image/webp`). Fetch it with the
 
 ### `POST /sessions` (auth)
 
-Body: `{appId, width, height, fps, bitrate?, transport?: "webrtc" | "ws", quitRunning?: boolean}`.
+Body: `{appId, width, height, fps, bitrate?, transport?: "webrtc" | "ws" | "http", quitRunning?: boolean}`.
 
 - `width` 320–4096 and `height` 240–2304 (rounded down to even), `fps` 24–240, `bitrate` in kbps 1000–150000 (default about 20 Mbps for 1080p60, scaled by pixels per second, 5–80 Mbps).
-- `transport` `"webrtc"` (default) launches MoonlightWeb's `webrtc-dc-udp` (H.264 in a `video` DataChannel, Opus as an RTP track, an `input` DataChannel); `"ws"` launches its `wss` transport for networks where only 443 works.
+- `transport` `"webrtc"` (default) launches MoonlightWeb's `webrtc-dc-udp` (H.264 in a `video` DataChannel, Opus as an RTP track, an `input` DataChannel); `"ws"` launches its `wss` transport for networks where only 443 works; `"http"` also rides `wss` to MoonlightWeb but reshapes it to plain HTTP for the browser (`GET /down` + `POST /up`), for networks that block WebSockets too.
 - `quitRunning: true` stops whatever runs on the host first (the "quit it and start this" answer to `app_running`). To resume a running app instead, start it by its id.
 
 `201`:
@@ -77,7 +77,15 @@ Body: `{appId, width, height, fps, bitrate?, transport?: "webrtc" | "ws", quitRu
 }
 ```
 
-(`signalingPath` for `webrtc`, `mediaPath` for `ws`.) Errors: `409 {code: "stream_active", id}` (one stream at a time; `DELETE` it first), `409 {code: "app_running", runningAppId}`, `503 {code: "host_busy"}`, `502 {code: "start_failed"}`.
+(`signalingPath` for `webrtc`; `mediaPath` for `ws`; `mediaPath` (the `/down` path) plus `upPath` for `http`.) Errors: `409 {code: "stream_active", id}` (one stream at a time; `DELETE` it first), `409 {code: "app_running", runningAppId}`, `503 {code: "host_busy"}`, `502 {code: "start_failed"}`.
+
+### `GET /sessions/:id/down` (transport `http`)
+
+The one-time ticket goes in the `Authorization: Bearer` header (never in the URL). The response is a long `application/octet-stream` chunked body: each MoonlightWeb frame is length-prefixed `[kind:1][len:4 big-endian][payload]`, `kind` 0 for a binary media frame (the same `[0x01]…`/`[0x02]…` bytes as the `ws` transport) and 1 for a JSON text notice. A browser that falls behind by 32 MB is dropped.
+
+### `POST /sessions/:id/up` (auth) `{msgs: string[]}`
+
+Input for the `http` transport: each entry is one JSON input message (as a string, ≤ 4096 chars), forwarded to MoonlightWeb in order. Authenticated by the access token, not a ticket, so a batch can be sent as often as needed. `204`; input is dropped silently if the stream's upstream isn't open yet.
 
 ### `POST /sessions/:id/ticket` (auth)
 
