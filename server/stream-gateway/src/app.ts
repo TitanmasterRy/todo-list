@@ -5,6 +5,7 @@ import { timingSafeEqual } from 'node:crypto';
 import { argon2Verify } from 'hash-wasm';
 import QRCode from 'qrcode';
 import { WebSocketServer, type WebSocket } from 'ws';
+import { InputOrder, VideoGate, backlogBudget } from './backlog.js';
 import type { Config } from './config.js';
 import { MwError, mwPath, type MwApi } from './mw.js';
 import { LoginLimiter, clientIp } from './ratelimit.js';
@@ -31,11 +32,13 @@ interface StreamSession {
   transport: 'webrtc' | 'ws' | 'http';
   mwPath: string;
   createdAt: number;
+  /** kbps the PC encodes at, which sizes how much video may queue for a slow browser */
+  bitrate: number;
   /** one-time WebSocket (and HTTP /down) tickets → expiry (ms) */
   tickets: Map<string, number>;
   sockets: Map<'signal' | 'media', WebSocket>;
-  /** the HTTP transport's live MoonlightWeb socket and the browser's downstream response */
-  http?: { up: WebSocket | null; down: ServerResponse | null };
+  /** the HTTP transport's live MoonlightWeb socket, the browser's downstream response, and its input in order */
+  http?: { up: WebSocket | null; down: ServerResponse | null; order: InputOrder };
 }
 
 class HttpError extends Error {
@@ -219,6 +222,7 @@ export function createGateway(deps: GatewayDeps): { server: Server; close: () =>
     active = null;
     for (const ws of s.sockets.values()) ws.close(1000, 'stream ended');
     s.http?.up?.close(1000, 'stream ended');
+    s.http?.order.close();
     if (s.http?.down && !s.http.down.writableEnded) s.http.down.end();
     if (mw && store.state.mw) {
       void (async () => {
@@ -425,8 +429,15 @@ export function createGateway(deps: GatewayDeps): { server: Server; close: () =>
       }
       const path2 = mwPath(overWss ? r.wsUrl : r.signalingUrl);
       if (!path2 || (overWss && r.transport !== 'wss')) throw new HttpError(502, { code: 'start_failed', error: 'MoonlightWeb started another transport' });
-      const s: StreamSession = { id: randomToken(12), host: h, transport, mwPath: path2, createdAt: now(), tickets: new Map(), sockets: new Map() };
-      if (transport === 'http') s.http = { up: null, down: null };
+      const s: StreamSession = { id: randomToken(12), host: h, transport, mwPath: path2, createdAt: now(), bitrate, tickets: new Map(), sockets: new Map() };
+      if (transport === 'http') {
+        const order = new InputOrder((msgs) => {
+          const sock = s.http?.up;
+          if (!sock || sock.readyState !== sock.OPEN) return;
+          for (const line of msgs) sock.send(line);
+        });
+        s.http = { up: null, down: null, order };
+      }
       active = s;
       const where =
         transport === 'webrtc'
@@ -462,17 +473,17 @@ export function createGateway(deps: GatewayDeps): { server: Server; close: () =>
       return bridgeDown(req, res, s);
     }
     // POST /up: a batch of input messages (JSON strings) forwarded to MoonlightWeb. Authenticated by the access
-    // token, so there's no one-time ticket to burn on every batch.
+    // token, so there's no one-time ticket to burn on every batch. The browser keeps a few in flight at once, so a
+    // `seq` puts them back in order; a batch without one is applied as it comes.
     const up = /^\/sessions\/([A-Za-z0-9_-]{16})\/up$/.exec(path);
     if (m === 'POST' && up) {
       claims(req);
       const s = active;
       if (!s || s.id !== up[1] || s.transport !== 'http' || !s.http) throw new HttpError(404, { error: 'not_found' });
-      const msgs = (await readJson(req)).msgs;
-      const sock = s.http.up;
-      if (Array.isArray(msgs) && sock && sock.readyState === sock.OPEN) {
-        for (const line of msgs) if (typeof line === 'string' && line.length <= 4096) sock.send(line);
-      }
+      const body = await readJson(req);
+      const msgs = (Array.isArray(body.msgs) ? body.msgs : []).filter((l): l is string => typeof l === 'string' && l.length <= 4096);
+      const seq = typeof body.seq === 'number' && Number.isSafeInteger(body.seq) && body.seq > 0 ? body.seq : 0;
+      s.http.order.push(seq, msgs);
       return send(res, 204);
     }
 
@@ -620,14 +631,23 @@ export function createGateway(deps: GatewayDeps): { server: Server; close: () =>
     relay.start();
   }
 
+  /** Asks MoonlightWeb for a keyframe, the same message the browser sends when it has lost one. */
+  function askKey(upstream: WebSocket | null): void {
+    if (upstream && upstream.readyState === upstream.OPEN) upstream.send(JSON.stringify({ type: 'requestidr' }));
+  }
+
   async function media(ws: WebSocket, s: StreamSession): Promise<void> {
     if (!mw) throw new Error('not linked');
+    let up: WebSocket | null = null;
+    const gate = new VideoGate(backlogBudget(s.bitrate), () => askKey(up));
     const upstream = await mw.socket(s.mwPath, (data, isBinary) => {
       if (ws.readyState !== ws.OPEN) return;
       // a browser that can't keep up gets dropped rather than buffering minutes of video here
       if (ws.bufferedAmount > 32 * 1024 * 1024) return void ws.close(1013, 'too slow');
+      if (isBinary && !gate.pass(data, ws.bufferedAmount)) return;
       ws.send(data, { binary: isBinary });
     });
+    up = upstream;
     if (ws.readyState !== ws.OPEN) return void upstream.close(1000);
     pair(ws, upstream);
     // input from the browser is JSON text; nothing binary goes up
@@ -642,10 +662,16 @@ export function createGateway(deps: GatewayDeps): { server: Server; close: () =>
     if (!mw || !s.http) throw new Error('not linked');
     res.statusCode = 200;
     res.setHeader('Content-Type', 'application/octet-stream');
+    // nginx would otherwise read the whole stream into its own buffers, out of reach of the gate below
+    res.setHeader('X-Accel-Buffering', 'no');
+    res.flushHeaders();
+    res.socket?.setNoDelay(true);
+    const gate = new VideoGate(backlogBudget(s.bitrate), () => askKey(s.http?.up ?? null));
     const upstream = await mw.socket(s.mwPath, (data, isBinary) => {
       if (res.writableEnded) return;
       // a browser that can't keep up is dropped rather than buffering minutes of video in the gateway
       if (res.writableLength > 32 * 1024 * 1024) return void res.end();
+      if (isBinary && !gate.pass(data, res.writableLength)) return;
       const head = Buffer.alloc(5);
       head.writeUInt8(isBinary ? 0 : 1, 0);
       head.writeUInt32BE(data.length, 1);

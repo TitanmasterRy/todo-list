@@ -83,9 +83,11 @@ Body: `{appId, width, height, fps, bitrate?, transport?: "webrtc" | "ws" | "http
 
 The one-time ticket goes in the `Authorization: Bearer` header (never in the URL). The response is a long `application/octet-stream` chunked body: each MoonlightWeb frame is length-prefixed `[kind:1][len:4 big-endian][payload]`, `kind` 0 for a binary media frame (the same `[0x01]…`/`[0x02]…` bytes as the `ws` transport) and 1 for a JSON text notice. A browser that falls behind by 32 MB is dropped.
 
-### `POST /sessions/:id/up` (auth) `{msgs: string[]}`
+### `POST /sessions/:id/up` (auth) `{seq?: number, msgs: string[]}`
 
-Input for the `http` transport: each entry is one JSON input message (as a string, ≤ 4096 chars), forwarded to MoonlightWeb in order. Authenticated by the access token, not a ticket, so a batch can be sent as often as needed. `204`; input is dropped silently if the stream's upstream isn't open yet.
+Input for the `http` transport: each entry is one JSON input message (as a string, ≤ 4096 chars), forwarded to MoonlightWeb in order. Authenticated by the access token, not a ticket, so a batch can be sent as often as needed. The browser keeps several POSTs in flight, numbering them from 1 in `seq`; the gateway applies batches in that order, waiting up to 60 ms for a missing one before moving on (a batch that arrives later is still applied). A batch without `seq` is applied as it arrives. `204`; input is dropped silently if the stream's upstream isn't open yet.
+
+On both slow transports (`ws` media and `http` `/down`) the gateway lets only about 250 ms of video (at the session's bitrate, at least 128 KB) queue for a browser that can't keep up. Past that it drops video up to the next keyframe, which it asks MoonlightWeb for (`requestidr`) once the queue has drained, so the picture skips ahead instead of falling behind. `/down` sends `X-Accel-Buffering: no` so nginx passes it straight through; other reverse proxies must not buffer it either.
 
 ### `POST /sessions/:id/ticket` (auth)
 
