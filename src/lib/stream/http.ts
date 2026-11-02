@@ -18,20 +18,50 @@ export interface HttpStreamOptions {
   /** POST a batch of input messages to the session's /up; resolves with the round-trip ms, or rejects */
   postInput: (msgs: string[]) => Promise<void>;
   onState: (s: StreamState, why?: MessageKey) => void;
+  /** scheduling lead for the Opus player, ms (shorter = lower latency) */
+  audioLeadMs?: number;
   fetchImpl?: typeof fetch;
+}
+
+/**
+ * Fold a backlog that built up while a POST was in flight: a run of relative mouse moves becomes one summed move,
+ * repeated absolute moves and held-key heartbeats collapse to the latest. Under lag this sends the current state
+ * rather than replaying a long history, so the pointer tracks instead of catching up in jumps. Order is kept
+ * otherwise, so a click still lands relative to the moves around it.
+ */
+export function coalesce(msgs: InputMessage[]): InputMessage[] {
+  const out: InputMessage[] = [];
+  for (const m of msgs) {
+    const last = out[out.length - 1];
+    if (m.type === 'mousemove' && last?.type === 'mousemove' && 'dx' in m && 'dx' in last) {
+      out[out.length - 1] = { type: 'mousemove', dx: (last.dx as number) + (m.dx as number), dy: (last.dy as number) + (m.dy as number) };
+      continue;
+    }
+    if (m.type === 'mousemove' && last?.type === 'mousemove' && 'x' in m && 'x' in last) {
+      out[out.length - 1] = m; // absolute: only the latest position matters
+      continue;
+    }
+    if (m.type === 'inputstate' && last?.type === 'inputstate') {
+      out[out.length - 1] = m; // a heartbeat is a full snapshot; keep the newest
+      continue;
+    }
+    out.push(m);
+  }
+  return out;
 }
 
 export class HttpStream {
   private video: VideoSink;
-  private audio = new OpusPlayer();
+  private audio: OpusPlayer;
   private state: StreamState = 'connecting';
   private ctrl = new AbortController();
-  private queue: string[] = [];
+  private queue: InputMessage[] = [];
   private inFlight = false;
   private rtt: number | null = null;
   private idle: ReturnType<typeof setInterval> | null = null;
 
   constructor(private o: HttpStreamOptions) {
+    this.audio = new OpusPlayer(o.audioLeadMs);
     this.video = new VideoSink(
       o.canvas,
       () => this.send({ type: 'requestidr' }),
@@ -96,14 +126,18 @@ export class HttpStream {
 
   send(m: InputMessage): void {
     this.audio.resume();
-    this.queue.push(JSON.stringify(m));
+    this.queue.push(m);
     void this.pump();
+  }
+
+  setVolume(volume: number, muted: boolean): void {
+    this.audio.setVolume(volume, muted);
   }
 
   private async pump(): Promise<void> {
     if (this.inFlight) return;
     this.inFlight = true;
-    const batch = this.queue.splice(0);
+    const batch = coalesce(this.queue.splice(0)).map((m) => JSON.stringify(m));
     const t0 = performance.now();
     try {
       await this.o.postInput(batch);

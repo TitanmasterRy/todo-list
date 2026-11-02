@@ -54,4 +54,14 @@ describe('display', () => {
       bitrate: 9000,
     });
   });
+
+  it('caps the bitrate in low-latency mode but leaves an already-lower one alone', () => {
+    const prefs = parsePrefs(null);
+    // automatic 80 Mbps for 2880×1800p120 is capped
+    expect(streamRequest({ ...prefs, lowLatency: true }, { width: 2880, height: 1800 }, 120).bitrate).toBe(8_000);
+    // a fixed 5 Mbps is already under the cap, so it's kept
+    expect(streamRequest({ ...prefs, lowLatency: true, bitrate: 5_000 }, { width: 1280, height: 720 }, 60).bitrate).toBe(5_000);
+    // off, no cap
+    expect(streamRequest({ ...prefs, lowLatency: false }, { width: 2880, height: 1800 }, 120).bitrate).toBe(80_000);
+  });
 });

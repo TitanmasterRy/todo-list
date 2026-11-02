@@ -23,19 +23,22 @@ export interface WsStreamOptions {
   ticket: string;
   canvas: HTMLCanvasElement;
   onState: (s: StreamState, why?: MessageKey) => void;
+  /** scheduling lead for the Opus player, ms (shorter = lower latency) */
+  audioLeadMs?: number;
   WS?: typeof WebSocket;
 }
 
 export class WsStream {
   private ws: WebSocket | null = null;
   private video: VideoSink;
-  private audio = new OpusPlayer();
+  private audio: OpusPlayer;
   private state: StreamState = 'connecting';
   private rtt: number | null = null;
   private seq = 0;
   private ping: ReturnType<typeof setInterval> | null = null;
 
   constructor(private o: WsStreamOptions) {
+    this.audio = new OpusPlayer(o.audioLeadMs);
     this.video = new VideoSink(
       o.canvas,
       () => this.send({ type: 'requestidr' }),
@@ -82,6 +85,10 @@ export class WsStream {
   send(m: InputMessage): void {
     if (this.ws?.readyState === 1) this.ws.send(JSON.stringify(m));
     this.audio.resume();
+  }
+
+  setVolume(volume: number, muted: boolean): void {
+    this.audio.setVolume(volume, muted);
   }
 
   async stats(): Promise<StreamStats> {

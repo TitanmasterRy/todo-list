@@ -63,10 +63,32 @@ export interface StreamPrefs {
   bitrate: number;
   transport: 'auto' | 'webrtc' | 'ws' | 'http';
   stats: boolean;
+  /** cap the bitrate low and keep buffers short, trading smoothness for responsiveness */
+  lowLatency: boolean;
+  /** relative-mouse multiplier while the mouse is locked (1 = unchanged) */
+  mouseSensitivity: number;
+  /** stream audio volume 0–1 */
+  volume: number;
+  muted: boolean;
 }
 
 export const PREFS_KEY = 'homework-todo:stream';
-export const DEFAULT_PREFS: StreamPrefs = { size: 'native', width: 1920, height: 1080, fps: 0, bitrate: 0, transport: 'auto', stats: false };
+export const DEFAULT_PREFS: StreamPrefs = {
+  size: 'native',
+  width: 1920,
+  height: 1080,
+  fps: 0,
+  bitrate: 0,
+  transport: 'auto',
+  stats: false,
+  lowLatency: false,
+  mouseSensitivity: 1,
+  volume: 1,
+  muted: false,
+};
+
+/** bitrate (kbps) a low-latency stream is capped at: enough for 720p, little enough to not bloat the buffer */
+export const LOW_LATENCY_MAX_KBPS = 8_000;
 
 export function parsePrefs(raw: string | null): StreamPrefs {
   let o: Partial<StreamPrefs> = {};
@@ -84,12 +106,19 @@ export function parsePrefs(raw: string | null): StreamPrefs {
     bitrate: o.bitrate === 0 ? 0 : num(o.bitrate, 1_000, 150_000, 0),
     transport: o.transport === 'webrtc' || o.transport === 'ws' || o.transport === 'http' ? o.transport : 'auto',
     stats: o.stats === true,
+    lowLatency: o.lowLatency === true,
+    mouseSensitivity: typeof o.mouseSensitivity === 'number' && o.mouseSensitivity >= 0.25 && o.mouseSensitivity <= 3 ? o.mouseSensitivity : 1,
+    volume: typeof o.volume === 'number' && o.volume >= 0 && o.volume <= 1 ? o.volume : 1,
+    muted: o.muted === true,
   };
 }
 
-/** What to ask the gateway for, from the saved settings and this screen. */
+/** What to ask the gateway for, from the saved settings and this screen. Low-latency mode caps the bitrate so the
+ *  video can't fill the network buffer and push input lag up behind it. */
 export function streamRequest(prefs: StreamPrefs, screen: Size, rate: number): { width: number; height: number; fps: number; bitrate: number } {
   const size = prefs.size === 'custom' ? { width: prefs.width, height: prefs.height } : screen;
   const fps = prefs.fps || rate || 60;
-  return { ...size, fps, bitrate: prefs.bitrate || suggestBitrate(size.width, size.height, fps) };
+  let bitrate = prefs.bitrate || suggestBitrate(size.width, size.height, fps);
+  if (prefs.lowLatency) bitrate = Math.min(bitrate, LOW_LATENCY_MAX_KBPS);
+  return { ...size, fps, bitrate };
 }

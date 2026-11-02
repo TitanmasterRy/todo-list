@@ -59,15 +59,41 @@
     } else if (s === 'failed' || s === 'ended') finish(why ?? null, s === 'failed');
   }
 
+  function applyVolume() {
+    player?.setVolume(streamSettings.prefs.volume, streamSettings.prefs.muted);
+  }
+
+  // the volume slider and mute take effect mid-stream
+  $effect(() => {
+    void streamSettings.prefs.volume;
+    void streamSettings.prefs.muted;
+    applyVolume();
+  });
+
   onMount(() => {
+    // a short audio cushion in low-latency mode (trades jitter tolerance for delay)
+    const audioLeadMs = streamSettings.prefs.lowLatency ? 20 : 60;
     player =
       session.transport === 'ws'
-        ? new WsStream({ url: api.wsUrl(session.mediaPath), ticket: session.ticket, canvas: canvas!, onState })
+        ? new WsStream({ url: api.wsUrl(session.mediaPath), ticket: session.ticket, canvas: canvas!, onState, audioLeadMs })
         : session.transport === 'http'
-          ? new HttpStream({ downUrl: api.server + session.mediaPath, ticket: session.ticket, canvas: canvas!, postInput: (msgs) => api.sendInput(session.id, msgs), onState })
+          ? new HttpStream({
+              downUrl: api.server + session.mediaPath,
+              ticket: session.ticket,
+              canvas: canvas!,
+              postInput: (msgs) => api.sendInput(session.id, msgs),
+              onState,
+              audioLeadMs,
+            })
           : new WebRtcStream({ signalUrl: api.wsUrl(session.signalingPath), ticket: session.ticket, iceServers: session.iceServers, canvas: canvas!, audio: audio!, onState });
-    capture = new InputCapture({ target: canvas!, send: (m) => player?.send(m), size: () => ({ width: stats?.width || session.width, height: stats?.height || session.height }) });
+    capture = new InputCapture({
+      target: canvas!,
+      send: (m) => player?.send(m),
+      size: () => ({ width: stats?.width || session.width, height: stats?.height || session.height }),
+      sensitivity: () => streamSettings.prefs.mouseSensitivity,
+    });
     player.start();
+    applyVolume();
     statsTimer = setInterval(async () => {
       if (streamSettings.prefs.stats && phase === 'connected' && player) stats = await player.stats().catch(() => stats);
     }, 1000);

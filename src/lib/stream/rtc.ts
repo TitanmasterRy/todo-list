@@ -198,6 +198,11 @@ export class WebRtcStream {
     if (this.dc.readyState === 'open') this.dc.send(JSON.stringify(m));
   }
 
+  setVolume(volume: number, muted: boolean): void {
+    this.o.audio.volume = volume;
+    this.o.audio.muted = muted;
+  }
+
   async stats(): Promise<StreamStats> {
     const report = await this.pc.getStats();
     return { ...connectionStats(report.values() as Iterable<Stat>), ...this.video.rates(), lost: this.lost };
