@@ -248,6 +248,8 @@ interface CaptureOptions {
   send: (m: InputMessage) => void;
   /** the stream's size in pixels, for absolute mouse positions */
   size: () => { width: number; height: number };
+  /** relative-mouse multiplier while the mouse is locked (1 = unchanged) */
+  sensitivity?: () => number;
 }
 
 /**
@@ -347,7 +349,10 @@ export class InputCapture {
   private move(e: PointerEvent): void {
     if (e.pointerType !== 'mouse') return;
     if (this.locked) {
-      if (e.movementX || e.movementY) this.o.send({ type: 'mousemove', dx: Math.round(e.movementX), dy: Math.round(e.movementY) });
+      const s = this.o.sensitivity?.() ?? 1;
+      const dx = Math.round(e.movementX * s);
+      const dy = Math.round(e.movementY * s);
+      if (dx || dy) this.o.send({ type: 'mousemove', dx, dy });
       return;
     }
     if (e.target !== this.o.target && !this.buttons) return;

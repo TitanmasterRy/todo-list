@@ -1,5 +1,53 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { HttpStream } from './http';
+import { HttpStream, coalesce } from './http';
+import type { InputMessage } from './input';
+
+describe('coalesce', () => {
+  it('sums a run of relative mouse moves into one', () => {
+    const msgs: InputMessage[] = [
+      { type: 'mousemove', dx: 3, dy: -1 },
+      { type: 'mousemove', dx: 2, dy: 4 },
+      { type: 'mousemove', dx: -1, dy: 0 },
+    ];
+    expect(coalesce(msgs)).toEqual([{ type: 'mousemove', dx: 4, dy: 3 }]);
+  });
+
+  it('keeps clicks in order relative to the moves around them', () => {
+    const msgs: InputMessage[] = [
+      { type: 'mousemove', dx: 1, dy: 1 },
+      { type: 'mousemove', dx: 1, dy: 1 },
+      { type: 'mousedown', button: 1 },
+      { type: 'mousemove', dx: 5, dy: 0 },
+    ];
+    expect(coalesce(msgs)).toEqual([
+      { type: 'mousemove', dx: 2, dy: 2 },
+      { type: 'mousedown', button: 1 },
+      { type: 'mousemove', dx: 5, dy: 0 },
+    ]);
+  });
+
+  it('collapses repeated absolute moves and held-key heartbeats to the latest', () => {
+    const msgs: InputMessage[] = [
+      { type: 'mousemove', x: 10, y: 10, referenceWidth: 1920, referenceHeight: 1080 },
+      { type: 'mousemove', x: 20, y: 30, referenceWidth: 1920, referenceHeight: 1080 },
+      { type: 'inputstate', keys: [], buttons: 0 },
+      { type: 'inputstate', keys: [{ type: 'keydown', keyCode: 65 }], buttons: 0 },
+    ];
+    expect(coalesce(msgs)).toEqual([
+      { type: 'mousemove', x: 20, y: 30, referenceWidth: 1920, referenceHeight: 1080 },
+      { type: 'inputstate', keys: [{ type: 'keydown', keyCode: 65 }], buttons: 0 },
+    ]);
+  });
+
+  it('leaves key presses untouched and in order', () => {
+    const msgs: InputMessage[] = [
+      { type: 'keydown', keyCode: 65 },
+      { type: 'keyup', keyCode: 65 },
+      { type: 'keydown', keyCode: 66 },
+    ];
+    expect(coalesce(msgs)).toEqual(msgs);
+  });
+});
 
 // A stand-in for the browser bits the transport touches: a canvas (just needs getContext), WebCodecs and
 // AudioContext. The test drives the downstream reader and the input POSTs directly.
@@ -49,6 +97,9 @@ describe('HttpStream', () => {
         state = 'running';
         close() {}
         resume() {}
+        createGain() {
+          return { gain: { value: 1 }, connect() {} };
+        }
       },
     );
     vi.stubGlobal('AudioDecoder', class {});

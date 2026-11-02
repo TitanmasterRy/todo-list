@@ -390,7 +390,7 @@
             >{t('stream.bitrate')}
             <select class="input" value={String(prefs.bitrate)} onchange={(e) => streamSettings.update({ bitrate: Number(e.currentTarget.value) })}>
               <option value="0">{t('stream.bitrateAuto', { mbps: Math.round(suggestBitrate(request.width, request.height, request.fps) / 1000) })}</option>
-              {#each [5, 10, 20, 30, 50, 80, 120] as m (m)}<option value={String(m * 1000)}>{m} Mbps</option>{/each}
+              {#each [2, 3, 5, 10, 20, 30, 50, 80, 120] as m (m)}<option value={String(m * 1000)}>{m} Mbps</option>{/each}
             </select>
           </label>
           <label
@@ -402,6 +402,27 @@
               <option value="http">{t('stream.transportHttp')}</option>
             </select>
           </label>
+          <label class="check"
+            ><input type="checkbox" checked={prefs.lowLatency} onchange={(e) => streamSettings.update({ lowLatency: e.currentTarget.checked })} /> {t('stream.lowLatency')}</label
+          >
+          <p class="muted sub">{t('stream.lowLatencyHint')}</p>
+          <label
+            >{t('stream.sensitivity', { x: prefs.mouseSensitivity.toFixed(2) })}
+            <input
+              type="range"
+              min="0.25"
+              max="3"
+              step="0.05"
+              value={prefs.mouseSensitivity}
+              oninput={(e) => streamSettings.update({ mouseSensitivity: Number(e.currentTarget.value) })}
+            />
+          </label>
+          <label
+            >{t('stream.volume', { pct: Math.round(prefs.volume * 100) })}
+            <input type="range" min="0" max="1" step="0.05" value={prefs.volume} oninput={(e) => streamSettings.update({ volume: Number(e.currentTarget.value) })} />
+          </label>
+          <label class="check"><input type="checkbox" checked={prefs.muted} onchange={(e) => streamSettings.update({ muted: e.currentTarget.checked })} /> {t('stream.mute')}</label
+          >
           <label class="check"
             ><input type="checkbox" checked={prefs.stats} onchange={(e) => streamSettings.update({ stats: e.currentTarget.checked })} /> {t('stream.showStats')}</label
           >
