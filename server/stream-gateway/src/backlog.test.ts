@@ -67,6 +67,20 @@ describe('InputOrder', () => {
     order.close();
   });
 
+  it("drops presses from a late batch so a key can't go down again after its own key-up", () => {
+    vi.useFakeTimers();
+    const out: string[] = [];
+    const order = new InputOrder((m) => out.push(...m), 60);
+    const down = JSON.stringify({ type: 'keydown', keyCode: 65 });
+    const up = JSON.stringify({ type: 'keyup', keyCode: 65 });
+    const beat = JSON.stringify({ type: 'inputstate', keys: [] });
+    order.push(2, [up]);
+    vi.advanceTimersByTime(60);
+    order.push(1, [down, beat, JSON.stringify({ type: 'mouseup', button: 1 })]);
+    expect(out).toEqual([up, JSON.stringify({ type: 'mouseup', button: 1 })]);
+    order.close();
+  });
+
   it('moves on without a missing batch after a short wait, and still applies it if it turns up', () => {
     vi.useFakeTimers();
     const out: string[] = [];

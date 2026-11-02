@@ -55,9 +55,22 @@ export class VideoGate {
 /**
  * The HTTP transport keeps several input POSTs in flight, and behind a reverse proxy they can reach the gateway out
  * of order. Each carries the browser's sequence number; batches are applied in that order, waiting a short moment
- * for a missing one before moving on without it. A batch that turns up after that is still applied (a lost key-up
- * would leave the key stuck on the PC).
+ * for a missing one before moving on without it. A batch that turns up after that keeps only what can't be stale: a
+ * lost key-up would leave the key stuck on the PC, but a key-down (or held-key heartbeat) landing after its own
+ * key-up would press the key again, and Apollo repeats a held key, so it typed twice.
  */
+/** input that a later batch may already have undone, so a late copy must not be applied */
+const PRESSES = new Set(['keydown', 'mousedown', 'inputstate']);
+
+function typeOf(line: string): string {
+  try {
+    const t = (JSON.parse(line) as { type?: unknown }).type;
+    return typeof t === 'string' ? t : '';
+  } catch {
+    return '';
+  }
+}
+
 export class InputOrder {
   private next = 1;
   private held = new Map<number, string[]>();
@@ -70,7 +83,11 @@ export class InputOrder {
 
   /** `seq` 0 (a page from before sequence numbers) is applied straight away. */
   push(seq: number, msgs: string[]): void {
-    if (seq < this.next) return void (msgs.length && this.apply(msgs));
+    if (seq === 0) return void (msgs.length && this.apply(msgs));
+    if (seq < this.next) {
+      const late = msgs.filter((line) => !PRESSES.has(typeOf(line)));
+      return void (late.length && this.apply(late));
+    }
     this.held.set(seq, msgs);
     // something is badly out of step: don't hold an unbounded backlog
     if (this.held.size > 32) this.next = Math.min(...this.held.keys());
