@@ -1,8 +1,9 @@
 // The HTTP transport for networks that block WebSockets and the TURN relay but still pass ordinary HTTPS (see the
 // gateway's /down and /up in server/stream-gateway/API.md). Video and audio come down one long chunked response,
 // each MoonlightWeb frame length-prefixed `[kind:1][len:4][payload]` (kind 0 binary media, 1 text notice); input
-// goes back on POSTs. It's the slowest path — a POST is one round trip — so input is pipelined: the next POST
-// leaves the instant the last returns, carrying whatever queued, which pins the lag to about one round trip.
+// goes back on POSTs. It's the slowest path, so input doesn't wait its turn behind one POST at a time: a few are in
+// flight at once, numbered so the gateway applies them in order. Waiting for each reply used to add a whole round
+// trip, and on HTTP/2 that reply queues behind the video coming down the same connection.
 import type { InputMessage } from './input';
 import type { MessageKey } from '../i18n/index.svelte';
 import { OpusPlayer } from './audio';
@@ -15,8 +16,8 @@ export interface HttpStreamOptions {
   downUrl: string;
   ticket: string;
   canvas: HTMLCanvasElement;
-  /** POST a batch of input messages to the session's /up; resolves with the round-trip ms, or rejects */
-  postInput: (msgs: string[]) => Promise<void>;
+  /** POST a batch of input messages, numbered from 1, to the session's /up; resolves when it's answered, or rejects */
+  postInput: (msgs: string[], seq: number) => Promise<void>;
   onState: (s: StreamState, why?: MessageKey) => void;
   /** scheduling lead for the Opus player, ms (shorter = lower latency) */
   audioLeadMs?: number;
@@ -50,13 +51,74 @@ export function coalesce(msgs: InputMessage[]): InputMessage[] {
   return out;
 }
 
+/** POSTs allowed in flight at once; more input waits and is folded into the next batch. */
+export const MAX_IN_FLIGHT = 3;
+/** a length past this means the stream is corrupt (a 4K keyframe is a few MB) */
+const MAX_FRAME = 16 * 1024 * 1024;
+
+/**
+ * Splits the /down byte stream into frames. Chunks are kept as they arrive and each payload is copied out once, so
+ * a big keyframe spread over a hundred reads costs one copy instead of a hundred growing ones, which used to stall
+ * the page enough to slow the download itself.
+ */
+export class FrameSplitter {
+  private chunks: Uint8Array[] = [];
+  /** bytes of chunks[0] already taken */
+  private head = 0;
+  private size = 0;
+
+  push(b: Uint8Array): void {
+    if (!b.length) return;
+    this.chunks.push(b);
+    this.size += b.length;
+  }
+
+  /** The next whole frame, or null until more bytes arrive. Throws on a length that can't be right. */
+  next(): { kind: number; payload: ArrayBuffer } | null {
+    if (this.size < 5) return null;
+    const len = ((this.byteAt(1) << 24) | (this.byteAt(2) << 16) | (this.byteAt(3) << 8) | this.byteAt(4)) >>> 0;
+    if (len > MAX_FRAME) throw new RangeError('bad frame length');
+    if (this.size < 5 + len) return null;
+    const kind = this.byteAt(0);
+    this.take(5);
+    return { kind, payload: this.take(len) };
+  }
+
+  private byteAt(i: number): number {
+    let j = this.head + i;
+    for (const c of this.chunks) {
+      if (j < c.length) return c[j];
+      j -= c.length;
+    }
+    return 0;
+  }
+
+  private take(n: number): ArrayBuffer {
+    const out = new Uint8Array(n);
+    for (let at = 0; at < n;) {
+      const c = this.chunks[0];
+      const k = Math.min(n - at, c.length - this.head);
+      out.set(c.subarray(this.head, this.head + k), at);
+      at += k;
+      this.head += k;
+      if (this.head === c.length) {
+        this.chunks.shift();
+        this.head = 0;
+      }
+    }
+    this.size -= n;
+    return out.buffer;
+  }
+}
+
 export class HttpStream {
   private video: VideoSink;
   private audio: OpusPlayer;
   private state: StreamState = 'connecting';
   private ctrl = new AbortController();
   private queue: InputMessage[] = [];
-  private inFlight = false;
+  private inFlight = 0;
+  private seq = 0;
   private rtt: number | null = null;
   private idle: ReturnType<typeof setInterval> | null = null;
 
@@ -78,32 +140,26 @@ export class HttpStream {
       })
       .catch(() => this.set('failed', 'stream.fail.setup'));
     // a quiet keepalive so RTT stays fresh and a gateway-side end is noticed even when no keys are down
-    this.idle = setInterval(() => this.queue.length === 0 && !this.inFlight && this.pump(), 1000);
+    this.idle = setInterval(() => this.queue.length === 0 && !this.inFlight && void this.post([]), 1000);
   }
 
   private async read(reader: ReadableStreamDefaultReader<Uint8Array<ArrayBufferLike>>): Promise<void> {
-    let buf = new Uint8Array(0);
+    const frames = new FrameSplitter();
     for (;;) {
       const { done, value } = await reader.read();
       if (done) return void this.set('ended', 'stream.end.ended');
-      buf = concat(buf, value);
-      // peel off every complete [kind][len][payload] frame the buffer now holds
-      for (;;) {
-        if (buf.length < 5) break;
-        const len = (buf[1] << 24) | (buf[2] << 16) | (buf[3] << 8) | buf[4];
-        if (len < 0 || len > 16 * 1024 * 1024) return void this.set('failed', 'stream.fail.setup');
-        if (buf.length < 5 + len) break;
-        this.frame(buf[0], buf.subarray(5, 5 + len));
-        buf = buf.subarray(5 + len);
+      frames.push(value);
+      try {
+        for (let f = frames.next(); f; f = frames.next()) this.frame(f.kind, f.payload);
+      } catch {
+        return void this.set('failed', 'stream.fail.setup');
       }
     }
   }
 
-  private frame(kind: number, payload: Uint8Array): void {
+  private frame(kind: number, payload: ArrayBuffer): void {
     if (kind === 0) {
-      const ab = new ArrayBuffer(payload.length);
-      new Uint8Array(ab).set(payload);
-      const f = parseFrame(ab);
+      const f = parseFrame(payload);
       if (!f) return;
       if (f.kind === 'audio') return this.audio.push(f.data);
       this.video.count(payload.byteLength);
@@ -127,26 +183,28 @@ export class HttpStream {
   send(m: InputMessage): void {
     this.audio.resume();
     this.queue.push(m);
-    void this.pump();
+    this.pump();
   }
 
   setVolume(volume: number, muted: boolean): void {
     this.audio.setVolume(volume, muted);
   }
 
-  private async pump(): Promise<void> {
-    if (this.inFlight) return;
-    this.inFlight = true;
-    const batch = coalesce(this.queue.splice(0)).map((m) => JSON.stringify(m));
+  private pump(): void {
+    if (this.queue.length && this.inFlight < MAX_IN_FLIGHT) void this.post(coalesce(this.queue.splice(0)).map((m) => JSON.stringify(m)));
+  }
+
+  private async post(batch: string[]): Promise<void> {
+    this.inFlight++;
     const t0 = performance.now();
     try {
-      await this.o.postInput(batch);
+      await this.o.postInput(batch, ++this.seq);
       this.rtt = Math.round(performance.now() - t0);
     } catch {
       /* a dropped batch is fine; the next one carries fresh input, and the downstream reports a real end */
     } finally {
-      this.inFlight = false;
-      if (this.queue.length) void this.pump();
+      this.inFlight--;
+      this.pump();
     }
   }
 
@@ -165,11 +223,4 @@ export class HttpStream {
     this.video.close();
     this.audio.close();
   }
-}
-
-function concat(a: Uint8Array, b: Uint8Array<ArrayBufferLike>): Uint8Array<ArrayBuffer> {
-  const out = new Uint8Array(a.length + b.length);
-  out.set(a, 0);
-  out.set(b, a.length);
-  return out;
 }

@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { HttpStream, coalesce } from './http';
+import { FrameSplitter, HttpStream, MAX_IN_FLIGHT, coalesce } from './http';
 import type { InputMessage } from './input';
 
 describe('coalesce', () => {
@@ -46,6 +46,34 @@ describe('coalesce', () => {
       { type: 'keydown', keyCode: 66 },
     ];
     expect(coalesce(msgs)).toEqual(msgs);
+  });
+});
+
+describe('FrameSplitter', () => {
+  const bytes = (b: ArrayBuffer) => [...new Uint8Array(b)];
+
+  it('reassembles frames split across many reads, and several frames in one read', () => {
+    const f = new FrameSplitter();
+    const a = frame(0, [1, 2, 3, 4, 5, 6, 7, 8]);
+    for (const b of a) f.push(Uint8Array.of(b)); // one byte per read
+    const one = f.next()!;
+    expect(one.kind).toBe(0);
+    expect(bytes(one.payload)).toEqual([1, 2, 3, 4, 5, 6, 7, 8]);
+    expect(f.next()).toBeNull();
+
+    const both = new Uint8Array([...frame(1, [9]), ...frame(0, [10, 11])]);
+    f.push(both.subarray(0, 3));
+    expect(f.next()).toBeNull();
+    f.push(both.subarray(3));
+    expect(bytes(f.next()!.payload)).toEqual([9]);
+    expect(bytes(f.next()!.payload)).toEqual([10, 11]);
+    expect(f.next()).toBeNull();
+  });
+
+  it('refuses a length no real frame has', () => {
+    const f = new FrameSplitter();
+    f.push(Uint8Array.of(0, 0xff, 0xff, 0xff, 0xff));
+    expect(() => f.next()).toThrow();
   });
 });
 
@@ -141,37 +169,42 @@ describe('HttpStream', () => {
     s.close();
   });
 
-  it('pipelines input: one POST in flight, the next carries everything queued while it was out', async () => {
+  it('keeps a few numbered POSTs in flight and folds the rest into the next one', async () => {
     setup();
-    const batches: string[][] = [];
-    let release!: () => void;
-    const gate = new Promise<void>((r) => (release = r));
+    const posts: { msgs: string[]; seq: number }[] = [];
+    const gates: (() => void)[] = [];
     const net = pipe();
     const s = new HttpStream({
       downUrl: 'https://gw.example/sessions/x/down',
       ticket: 't',
       canvas: fakeCanvas(),
-      postInput: async (msgs) => {
-        batches.push(msgs);
-        if (batches.length === 1) await gate; // hold the first POST open
+      postInput: (msgs, seq) => {
+        posts.push({ msgs, seq });
+        return new Promise<void>((r) => gates.push(r)); // every POST stays open until released
       },
       onState: () => {},
       fetchImpl: (async () => net.response) as unknown as typeof fetch,
     });
     s.start();
 
-    s.send({ type: 'keydown', keyCode: 65 }); // starts the first POST
-    s.send({ type: 'keydown', keyCode: 66 }); // queued while the first is in flight
-    s.send({ type: 'keyup', keyCode: 65 }); // also queued
+    // each of the first MAX_IN_FLIGHT messages leaves at once, without waiting for the one before
+    for (let k = 0; k < MAX_IN_FLIGHT; k++) s.send({ type: 'keydown', keyCode: 65 + k });
+    // more input queues while every slot is taken
+    s.send({ type: 'keyup', keyCode: 65 });
+    s.send({ type: 'keyup', keyCode: 66 });
     await Promise.resolve();
-    expect(batches.length).toBe(1);
-    expect(batches[0]).toHaveLength(1);
+    expect(posts.map((p) => p.seq)).toEqual([1, 2, 3].slice(0, MAX_IN_FLIGHT));
+    expect(posts.every((p) => p.msgs.length === 1)).toBe(true);
 
-    release(); // first POST returns
+    gates[0](); // a slot frees up
     await new Promise((r) => setTimeout(r, 0));
-    expect(batches.length).toBe(2);
-    // the second POST carried both messages that queued during the first
-    expect(batches[1]).toHaveLength(2);
+    expect(posts).toHaveLength(MAX_IN_FLIGHT + 1);
+    // the next POST carried both messages that queued, in order, with the next number
+    expect(posts[MAX_IN_FLIGHT]).toEqual({
+      seq: MAX_IN_FLIGHT + 1,
+      msgs: [JSON.stringify({ type: 'keyup', keyCode: 65 }), JSON.stringify({ type: 'keyup', keyCode: 66 })],
+    });
+    for (const g of gates) g();
     s.close();
   });
 });

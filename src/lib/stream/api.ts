@@ -175,12 +175,19 @@ export class GatewayClient {
     }
   }
 
-  private async send(method: string, path: string, body?: unknown, token = ''): Promise<Response> {
+  private async send(method: string, path: string, body?: unknown, token = '', priority?: RequestPriority): Promise<Response> {
     const headers: Record<string, string> = {};
     if (body !== undefined) headers['Content-Type'] = 'application/json';
     if (token) headers.Authorization = `Bearer ${token}`;
     try {
-      return await this.fetcher(this.server + path, { method, headers, body: body === undefined ? undefined : JSON.stringify(body), credentials: 'omit', cache: 'no-store' });
+      return await this.fetcher(this.server + path, {
+        method,
+        headers,
+        body: body === undefined ? undefined : JSON.stringify(body),
+        credentials: 'omit',
+        cache: 'no-store',
+        ...(priority ? { priority } : {}),
+      });
     } catch {
       throw new StreamError("Can't reach the stream server.", 'network');
     }
@@ -202,11 +209,11 @@ export class GatewayClient {
   }
 
   /** An authenticated call; one retry after a refresh when the access token was refused. */
-  private async authed(method: string, path: string, body?: unknown): Promise<Response> {
-    let r = await this.send(method, path, body, await this.token());
+  private async authed(method: string, path: string, body?: unknown, priority?: RequestPriority): Promise<Response> {
+    let r = await this.send(method, path, body, await this.token(), priority);
     if (r.status === 401) {
       this.access = '';
-      r = await this.send(method, path, body, await this.token());
+      r = await this.send(method, path, body, await this.token(), priority);
     }
     if (!r.ok) await this.fail(r);
     return r;
@@ -294,9 +301,10 @@ export class GatewayClient {
     return toSession(await (await this.authed('POST', '/sessions', req)).json());
   }
 
-  /** HTTP transport: forward a batch of input messages (each already JSON) to the PC. */
-  async sendInput(id: string, msgs: string[]): Promise<void> {
-    await this.authed('POST', `/sessions/${encodeURIComponent(id)}/up`, { msgs });
+  /** HTTP transport: forward a batch of input messages (each already JSON) to the PC. `seq` counts batches from 1 so
+   *  the gateway can apply overlapping POSTs in order; high priority asks the browser to send it ahead of video. */
+  async sendInput(id: string, msgs: string[], seq: number): Promise<void> {
+    await this.authed('POST', `/sessions/${encodeURIComponent(id)}/up`, { seq, msgs }, 'high');
   }
 
   async newTicket(id: string): Promise<{ ticket: string; iceServers: IceServer[] }> {

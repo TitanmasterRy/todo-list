@@ -3029,6 +3029,7 @@ const en = {
   'stream.transportWebrtc': 'WebRTC through the relay (fastest)',
   'stream.transportWs': 'WebSocket on port 443 (strict networks)',
   'stream.transportHttp': 'HTTP stream (locked-down networks; slowest)',
+  'stream.bitrateAsked': 'Received / asked of the PC. Far below what was asked means the network can’t carry more: lower the bitrate.',
   'stream.showStats': 'Show stats while streaming',
   'stream.lowLatency': 'Low-latency mode',
   'stream.lowLatencyHint': 'Caps the bitrate and shortens the buffer so controls respond faster. The picture is softer; best on slow or locked-down networks.',

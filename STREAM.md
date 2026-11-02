@@ -34,7 +34,7 @@ The sign-in lasts up to 12 hours. **Sign out everywhere** ends every sign-in on 
 - **Frame rate:** *This screen* is your display's refresh rate, measured by the browser; or a fixed rate.
 - **Bitrate:** automatic is about 20 Mbps for 1080p at 60 fps, scaled to the size and rate (5–80 Mbps); or a fixed one. Lower it on slow Wi-Fi.
 - **Connection:** automatic follows the connection test; or force WebRTC, the WebSocket mode, or the HTTP stream. The HTTP stream wraps the video in an ordinary HTTPS download and sends input back on HTTPS requests, for networks that block even WebSockets; it has the most delay but gets through where the others can't.
-- **Show stats while streaming:** resolution, frame rate, bitrate, delay (round trip) and the path (relay over UDP, TCP or TLS, or WebSocket).
+- **Show stats while streaming:** resolution, frame rate, bitrate (received / asked of the PC), delay (round trip) and the path (relay over UDP, TCP or TLS, WebSocket or HTTP). A received bitrate far below the asked one means the network can't carry more; lower the bitrate so the PC stops sending frames that get dropped on the way.
 
 ### Keyboard, mouse and gamepads
 
@@ -75,7 +75,7 @@ The site side is one build variable. The server side is the gateway next to Moon
    ```
 
    `/health` says `"mw": "up"` once it's linked. If the phone with the authenticator app is lost and the backup codes are gone, `docker exec stream-gateway node dist/cli.js reset-totp` makes the next sign-in show a new QR code.
-4. **Reverse proxy:** forward `https://play.example.com` to `stream-gateway:8080` with WebSockets allowed, and let it set `X-Forwarded-For` (the gateway's sign-in lockout counts by that address, trusting one proxy hop). No login wall in front of it: the page signs in with its own tokens.
+4. **Reverse proxy:** forward `https://play.example.com` to `stream-gateway:8080` with WebSockets allowed, and let it set `X-Forwarded-For` (the gateway's sign-in lockout counts by that address, trusting one proxy hop). No login wall in front of it: the page signs in with its own tokens. Don't let it buffer responses: the HTTP stream is one endless download, and a proxy that collects it before passing it on adds seconds of delay. nginx honours the gateway's `X-Accel-Buffering: no`; elsewhere turn response buffering off for this host (in Caddy, `flush_interval -1`).
 5. **coturn:** `use-auth-secret` with the same secret as `TURN_SECRET`, listening on 3478 (UDP and TCP) and 5349 (TLS), and allowed to relay to MoonlightWeb's address only.
 6. **Apollo's virtual display:** Apollo only creates one when it's told to, and MoonlightWeb's launch request doesn't ask (only Apollo's own Artemis client does). On the PC, open Apollo's web UI (`https://localhost:47990`) → **PIN** → the paired client list → the MoonlightWeb client → turn on **Always create virtual display** → save. That covers every app streamed through MoonlightWeb and leaves other Moonlight devices alone. (Per app, **Applications** → edit → **Always create Virtual Display** does the same for one app; **Configuration → Headless Mode** does it for every client.) It needs the SudoVDA driver: when the driver works, Apollo offers clients an extra **Virtual Display** app, which shows up as a card in the Stream tab (not on Apollo's own **Applications** page, which only lists `apps.json`). If the card is missing, run `drivers\sudovda\install.bat` from Apollo's folder as administrator and restart Apollo. When a stream starts on a virtual display, Apollo's log says `Virtual Display created at …`.
 
@@ -92,5 +92,5 @@ The site side is one build variable. The server side is the gateway next to Moon
 - One stream at a time.
 - H.264 only, up to 4096 pixels wide.
 - The browser needs WebCodecs (Chrome, Edge, Safari 17+ and recent Firefox).
-- The WebSocket mode has more delay than WebRTC, and the HTTP mode more still (input is one HTTPS round trip).
+- The WebSocket mode has more delay than WebRTC, and the HTTP mode more still (input travels on HTTPS requests). On both, when the network can't keep up, the gateway skips video ahead to stay live rather than queueing it, so the picture may jump, but your input stays in step with it.
 - GeForce NOW isn't part of this; the tab links out to it.

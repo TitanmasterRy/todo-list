@@ -81,7 +81,7 @@
               downUrl: api.server + session.mediaPath,
               ticket: session.ticket,
               canvas: canvas!,
-              postInput: (msgs) => api.sendInput(session.id, msgs),
+              postInput: (msgs, seq) => api.sendInput(session.id, msgs, seq),
               onState,
               audioLeadMs,
             })
@@ -227,7 +227,7 @@
       <div class="stats" aria-live="off">
         <span>{stats.width}×{stats.height}</span>
         <span>{stats.fps ?? '–'} fps</span>
-        <span>{stats.kbps === null ? '–' : (stats.kbps / 1000).toFixed(1)} Mbps</span>
+        <span title={t('stream.bitrateAsked')}>{stats.kbps === null ? '–' : (stats.kbps / 1000).toFixed(1)} / {Math.round(session.bitrate / 1000)} Mbps</span>
         <span>{stats.rttMs ?? '–'} ms</span>
         <span>{t(PATHS[stats.path])}</span>
         {#if stats.lost}<span>{t('stream.lost', { n: stats.lost })}</span>{/if}

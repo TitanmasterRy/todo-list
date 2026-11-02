@@ -453,6 +453,14 @@ describe('WebSockets', () => {
     expect(u.status).toBe(204);
     expect(up.sent).toContain(msg);
 
+    // overlapping POSTs carry a sequence number; one that overtakes an earlier one waits for it
+    const k2 = JSON.stringify({ type: 'keydown', keyCode: 66 });
+    const k3 = JSON.stringify({ type: 'keyup', keyCode: 66 });
+    expect((await api(`/sessions/${s.id}/up`, { token: s.accessToken, body: { seq: 2, msgs: [k3] } })).status).toBe(204);
+    expect(up.sent).not.toContain(k3);
+    await api(`/sessions/${s.id}/up`, { token: s.accessToken, body: { seq: 1, msgs: [k2] } });
+    expect(up.sent.slice(-2)).toEqual([k2, k3]);
+
     // a replayed /down ticket is refused (one-time)
     const replay = await fetch(`${base}/sessions/${s.id}/down`, { headers: { Origin: ORIGIN, Authorization: `Bearer ${s.ticket}` } });
     expect(replay.status).toBe(401);

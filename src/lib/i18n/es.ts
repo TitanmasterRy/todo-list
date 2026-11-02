@@ -3049,6 +3049,7 @@ const es: Dict = {
   'stream.transportWebrtc': 'WebRTC por el relé (la más rápida)',
   'stream.transportWs': 'WebSocket por el puerto 443 (redes estrictas)',
   'stream.transportHttp': 'Flujo HTTP (redes muy restringidas; la más lenta)',
+  'stream.bitrateAsked': 'Recibido / pedido al PC. Si queda muy por debajo de lo pedido, la red no da para más: baja la tasa de bits.',
   'stream.showStats': 'Mostrar estadísticas durante el streaming',
   'stream.lowLatency': 'Modo de baja latencia',
   'stream.lowLatencyHint': 'Limita la tasa de bits y acorta el búfer para que los controles respondan antes. La imagen es menos nítida; ideal en redes lentas o muy restringidas.',
