@@ -1,6 +1,9 @@
 // Opus audio for the TCP-based transports (the WebSocket fallback and the HTTP transport): decode each packet with
 // WebCodecs and schedule it a little ahead, so network jitter doesn't crackle. The AudioContext is made during the
 // click that starts the stream, so the browser allows sound.
+/** how much sound may queue past the lead (s) before packets are dropped to catch up */
+export const MAX_EXTRA_S = 0.08;
+
 export class OpusPlayer {
   private ctx: AudioContext;
   private gain: GainNode;
@@ -31,6 +34,11 @@ export class OpusPlayer {
   }
 
   private play(a: AudioData): void {
+    const now = this.ctx.currentTime;
+    const lead = this.leadMs / 1000;
+    // a burst after a stall: drop packets until the queue is back near `lead`, rather than let the sound run behind
+    // the picture (it used to stretch to a quarter second, then restart on top of what was still playing)
+    if (this.playAt - now > lead + MAX_EXTRA_S) return void a.close();
     const buf = this.ctx.createBuffer(a.numberOfChannels, a.numberOfFrames, a.sampleRate);
     for (let ch = 0; ch < a.numberOfChannels; ch++) {
       const plane = new Float32Array(a.numberOfFrames);
@@ -38,10 +46,7 @@ export class OpusPlayer {
       buf.copyToChannel(plane, ch);
     }
     a.close();
-    const now = this.ctx.currentTime;
-    const lead = this.leadMs / 1000;
-    // keep ~lead queued; if the queue grew past a quarter second (a stall), start over from now
-    if (this.playAt < now || this.playAt - now > 0.25) this.playAt = now + lead;
+    if (this.playAt <= now) this.playAt = now + lead;
     const src = this.ctx.createBufferSource();
     src.buffer = buf;
     src.connect(this.gain);

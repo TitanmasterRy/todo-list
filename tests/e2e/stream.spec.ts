@@ -42,6 +42,8 @@ async function mockGateway(page: Page): Promise<Gateway> {
       return json(200, { otpauthUri: 'otpauth://totp/Homework%20To-Do%3AStream?secret=JBSWY3DPEHPK3PXP&issuer=Homework%20To-Do', qrSvg: SVG, backupCodes: CODES });
     }
     if (key === 'POST /auth/refresh') return json(200, tokens());
+    // the HTTP transport's /down (opened with its one-time ticket) stays open; nothing comes down here
+    if (key.startsWith('GET /sessions/') && path.endsWith('/down')) return;
     if (!authed) return json(401, { error: 'unauthorized' });
     if (key === 'GET /apps')
       return json(200, [
@@ -61,6 +63,8 @@ async function mockGateway(page: Page): Promise<Gateway> {
       return json(status, data);
     }
     if (req.method() === 'DELETE' && path.startsWith('/sessions/')) return json(204);
+    // the HTTP transport's input arrives on /up, since the fake has no /input
+    if (key.startsWith('POST /sessions/') && path.endsWith('/up')) return json(204);
     if (key === 'POST /auth/logout' || key === 'POST /auth/revoke-all') return json(key.endsWith('logout') ? 204 : 200, { ok: true });
     return json(404, { error: 'not_found' });
   });
@@ -191,5 +195,50 @@ test('Stream: resume-or-quit prompt, then a refused binding ends the stream with
   await expect(page.getByRole('status').filter({ hasText: 'couldn’t verify the gaming PC' })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Try the WebSocket mode' })).toBeVisible();
   await expect.poll(() => gw.calls.some((c) => c.method === 'DELETE' && c.path === '/sessions/abcdefghijklmnop')).toBe(true);
+  expect(errors).toEqual([]);
+});
+
+test('Stream: the HTTP mode keeps input flowing without streamed input, and the bitrate menu restarts the stream', async ({ page }) => {
+  test.setTimeout(60_000);
+  const gw = await mockGateway(page);
+  await page.addInitScript(() => localStorage.setItem('homework-todo:stream', JSON.stringify({ transport: 'http' })));
+  const errors = await openApp(page);
+  await openStream(page);
+  await signIn(page, gw);
+
+  const session = (id: string, bitrate: number) =>
+    [
+      201,
+      {
+        id,
+        transport: 'http',
+        mediaPath: `/sessions/${id}/down`,
+        upPath: `/sessions/${id}/up`,
+        ticket: 'ticket-e2e',
+        iceServers: [],
+        videoCodec: 'h264',
+        width: 1920,
+        height: 1080,
+        fps: 60,
+        bitrate,
+      },
+    ] as [number, unknown];
+  gw.startResults.push(session('httpsession00001', 20000));
+  await page.getByRole('button', { name: 'Start Desktop' }).click();
+  const bar = page.getByRole('toolbar', { name: 'Stream controls' });
+  await expect(bar).toBeVisible({ timeout: 30_000 });
+  await expect(page.getByText('Ctrl+Alt+Shift+S stats')).toBeVisible();
+
+  // the gateway here can't take a streamed request, so the once-a-second ping goes on /up instead
+  await expect
+    .poll(() => gw.calls.some((c) => c.path === '/sessions/httpsession00001/up' && (c.body.msgs as string[]).some((m) => JSON.parse(m).type === 'ping')), { timeout: 10_000 })
+    .toBe(true);
+
+  // a lower bitrate from the bar ends this stream and starts the app again at it
+  gw.startResults.push(session('httpsession00002', 5000));
+  await bar.getByLabel('Bitrate').selectOption('5000');
+  await expect.poll(() => gw.calls.some((c) => c.method === 'DELETE' && c.path === '/sessions/httpsession00001')).toBe(true);
+  await expect.poll(() => gw.calls.filter((c) => c.path === '/sessions').at(-1)?.body.bitrate).toBe(5000);
+  expect(gw.calls.filter((c) => c.path === '/sessions').at(-1)!.body).toMatchObject({ appId: 1, transport: 'http' });
   expect(errors).toEqual([]);
 });

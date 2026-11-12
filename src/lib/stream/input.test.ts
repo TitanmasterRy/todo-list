@@ -1,5 +1,19 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { InputCapture, PAD, PadTracker, WheelAccumulator, absolutePosition, keyMessage, mouseButton, padState, padType, vkFor, type InputMessage } from './input';
+import {
+  InputCapture,
+  PAD,
+  PadTracker,
+  WheelAccumulator,
+  absolutePosition,
+  hotkeyFor,
+  keyMessage,
+  mouseButton,
+  padState,
+  padType,
+  vkFor,
+  type Hotkey,
+  type InputMessage,
+} from './input';
 
 const key = (code: string, mods: Partial<{ shiftKey: boolean; ctrlKey: boolean; altKey: boolean; metaKey: boolean }> = {}) => ({
   code,
@@ -128,5 +142,48 @@ describe('capture', () => {
     expect(sent.some((m) => 'code' in m && m.code === 'Escape')).toBe(false);
     capture.stop();
     expect(press('Digit3').cancelBubble).toBe(false);
+  });
+
+  it('keeps the stream’s own Ctrl+Alt+Shift shortcuts in the browser and lets go of the modifiers on the PC', () => {
+    const doc = Object.assign(new EventTarget(), { visibilityState: 'visible', pointerLockElement: null, fullscreenElement: null });
+    vi.stubGlobal('document', doc);
+    vi.stubGlobal('window', new EventTarget());
+    const sent: InputMessage[] = [];
+    const hot: Hotkey[] = [];
+    const target = Object.assign(new EventTarget(), { focus() {} }) as unknown as HTMLElement;
+    const capture = new InputCapture({ target, send: (m) => sent.push(m), size: () => ({ width: 1920, height: 1080 }), onHotkey: (h) => hot.push(h) });
+    const press = (code: string, mods = {}) => {
+      const e = Object.assign(new Event('keydown', { bubbles: true, cancelable: true }), { ...key(code, mods), key: code, repeat: false, getModifierState: () => false });
+      doc.dispatchEvent(e);
+      return e;
+    };
+    capture.start();
+    const all = { ctrlKey: true, altKey: true, shiftKey: true };
+    press('ControlLeft', { ctrlKey: true });
+    press('AltLeft', { ctrlKey: true, altKey: true });
+    press('ShiftLeft', all);
+    const s = press('KeyS', all);
+    expect(s.defaultPrevented).toBe(true);
+    expect(hot).toEqual(['stats']);
+    // S never reached the PC, and the three modifiers were released there
+    expect(sent.some((m) => m.code === 'KeyS')).toBe(false);
+    expect(sent.filter((m) => m.type === 'keyup').map((m) => m.code)).toEqual(['ControlLeft', 'AltLeft', 'ShiftLeft']);
+    // without all three modifiers it's an ordinary key for the game
+    press('KeyS', { ctrlKey: true, altKey: true });
+    expect(hot).toEqual(['stats']);
+    expect(sent.some((m) => m.code === 'KeyS')).toBe(true);
+    capture.stop();
+  });
+});
+
+describe('hotkeyFor', () => {
+  it('knows Moonlight’s shortcuts and nothing else', () => {
+    const all = { ctrlKey: true, altKey: true, shiftKey: true };
+    expect(hotkeyFor(key('KeyS', all))).toBe('stats');
+    expect(hotkeyFor(key('KeyZ', all))).toBe('mouse');
+    expect(hotkeyFor(key('KeyX', all))).toBe('fullscreen');
+    expect(hotkeyFor(key('KeyQ', all))).toBeNull();
+    expect(hotkeyFor(key('KeyS', { ...all, metaKey: true }))).toBeNull();
+    expect(hotkeyFor(key('KeyS', { ctrlKey: true, shiftKey: true }))).toBeNull();
   });
 });

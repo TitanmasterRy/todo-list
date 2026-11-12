@@ -471,6 +471,82 @@ describe('WebSockets', () => {
     expect(up.readyState).toBe(3);
   });
 
+  it('streams input on one long /input request, says so on /down, and never forwards gw- messages', async () => {
+    const s = await start('http');
+    const ctrl = new AbortController();
+    const downP = fetch(`${base}/sessions/${s.id}/down`, { headers: { Origin: ORIGIN, Authorization: `Bearer ${s.ticket}` }, signal: ctrl.signal });
+    await tick();
+    const up = mw.upstreams[0];
+    up.deliver(Buffer.from([2, 0, 9]), true); // something on /down so its headers are sent
+    const reader = (await downP).body!.getReader();
+    const notices: string[] = [];
+    const media: number[][] = [];
+    const pump = (async () => {
+      let rest = Buffer.alloc(0);
+      for (;;) {
+        const r = await reader.read().catch(() => ({ done: true, value: undefined }));
+        if (r.done) return;
+        rest = Buffer.concat([rest, Buffer.from(r.value!)]);
+        while (rest.length >= 5 && rest.length >= 5 + rest.readUInt32BE(1)) {
+          const len = rest.readUInt32BE(1);
+          if (rest[0] === 1) notices.push(rest.subarray(5, 5 + len).toString());
+          else media.push([...rest.subarray(5, 5 + len)]);
+          rest = rest.subarray(5 + len);
+        }
+      }
+    })();
+
+    // the page's input stream: a hello, then lines as they happen, all on one request body
+    let feed!: ReadableStreamDefaultController<Uint8Array>;
+    const body = new ReadableStream<Uint8Array>({ start: (c) => (feed = c) });
+    const inputP = fetch(`${base}/sessions/${s.id}/input`, {
+      method: 'POST',
+      headers: { Origin: ORIGIN, Authorization: `Bearer ${s.accessToken}`, 'Content-Type': 'application/x-ndjson' },
+      body,
+      duplex: 'half',
+    } as RequestInit);
+    const line = (m: unknown) => feed.enqueue(new TextEncoder().encode(JSON.stringify(m) + '\n'));
+    line({ type: 'gw-hello' });
+    await tick();
+    await expect.poll(() => notices.some((n) => JSON.parse(n).type === 'gw-input-ok')).toBe(true);
+
+    const k = { type: 'keydown', keyCode: 65 };
+    line(k);
+    // a line split across two writes is put back together
+    const half = JSON.stringify({ type: 'keyup', keyCode: 65 }) + '\n';
+    feed.enqueue(new TextEncoder().encode(half.slice(0, 9)));
+    await tick();
+    feed.enqueue(new TextEncoder().encode(half.slice(9)));
+    line({ type: 'gw-lag', ms: 300 });
+    await expect.poll(() => up.sent.length).toBe(2);
+    expect(up.sent).toEqual([JSON.stringify(k), JSON.stringify({ type: 'keyup', keyCode: 65 })]);
+    // the lag report paused video at the gateway: a keyframe from MoonlightWeb doesn't reach the page
+    up.deliver(Buffer.from([1, 1, 0, 0, 0, 1, 0x65]), true);
+    up.deliver(Buffer.from([2, 0, 7]), true); // sound still passes
+    await expect.poll(() => media.some((f) => f[0] === 2 && f[2] === 7)).toBe(true);
+    expect(media.some((f) => f[0] === 1)).toBe(false);
+
+    // the gateway mixes its clock into /down so the page can measure how far behind it is
+    clock += 1000;
+    await expect.poll(() => notices.some((n) => JSON.parse(n).type === 'gw-clock'), { timeout: 2000 }).toBe(true);
+
+    // a gw- message on /up is kept from MoonlightWeb as well
+    await api(`/sessions/${s.id}/up`, { token: s.accessToken, body: { msgs: [JSON.stringify({ type: 'gw-lag', ms: 100 })] } });
+    expect(up.sent).toHaveLength(2);
+
+    // a body that never ends isn't cut by Node's 5-minute request limit
+    expect(gw.server.requestTimeout).toBe(0);
+
+    // /input needs the access token, not the one-time ticket
+    const refused = await fetch(`${base}/sessions/${s.id}/input`, { method: 'POST', headers: { Origin: ORIGIN, Authorization: `Bearer ${s.ticket}` }, body: '' });
+    expect(refused.status).toBe(401);
+
+    feed.close();
+    expect((await inputP).status).toBe(204);
+    ctrl.abort();
+    await pump;
+  });
+
   it('serves the diagnostic stream only when it is turned on', async () => {
     // off by default: the path isn't special-cased, so it falls through to 404
     expect((await api('/diag/stream')).status).toBe(404);
