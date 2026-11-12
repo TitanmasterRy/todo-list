@@ -2,9 +2,11 @@
 // gateway). Frames are `[0x01][flags][H.264 Annex-B access unit]` (flags bit 0 = keyframe) and
 // `[0x02][0x00][Opus packet]`; video goes to the shared VideoSink and audio is decoded with WebCodecs. It's TCP, so
 // it lags more than WebRTC: video skips to the next keyframe rather than fall behind, and audio keeps a small buffer.
+// The gateway's clock notices show how far behind the picture is; a lasting backlog is reported so it skips ahead.
 import type { InputMessage } from './input';
 import type { MessageKey } from '../i18n/index.svelte';
 import { OpusPlayer } from './audio';
+import { LagMeter } from './lag';
 import { ENDINGS, type StreamState, type StreamStats } from './rtc';
 import { VideoSink } from './video';
 
@@ -25,6 +27,8 @@ export interface WsStreamOptions {
   onState: (s: StreamState, why?: MessageKey) => void;
   /** scheduling lead for the Opus player, ms (shorter = lower latency) */
   audioLeadMs?: number;
+  /** backlog (ms) at which the gateway is asked to skip ahead */
+  lagThresholdMs?: number;
   WS?: typeof WebSocket;
 }
 
@@ -32,6 +36,7 @@ export class WsStream {
   private ws: WebSocket | null = null;
   private video: VideoSink;
   private audio: OpusPlayer;
+  private lag: LagMeter;
   private state: StreamState = 'connecting';
   private rtt: number | null = null;
   private seq = 0;
@@ -39,6 +44,7 @@ export class WsStream {
 
   constructor(private o: WsStreamOptions) {
     this.audio = new OpusPlayer(o.audioLeadMs);
+    this.lag = new LagMeter((ms) => this.send({ type: 'gw-lag', ms }, false), o.lagThresholdMs);
     this.video = new VideoSink(
       o.canvas,
       () => this.send({ type: 'requestidr' }),
@@ -55,7 +61,7 @@ export class WsStream {
     ws.onmessage = (e) => (typeof e.data === 'string' ? this.notice(e.data) : this.frame(e.data as ArrayBuffer));
     ws.onclose = (e) =>
       this.set(this.state === 'connected' ? 'ended' : 'failed', this.state === 'connected' ? 'stream.end.ended' : e.code === 4001 ? 'stream.fail.refused' : 'stream.fail.ws');
-    this.ping = setInterval(() => this.send({ type: 'ping', seq: ++this.seq, ts: performance.now() }), 2_000);
+    this.ping = setInterval(() => this.send({ type: 'ping', seq: ++this.seq, ts: performance.now() }, false), 2_000);
   }
 
   private set(s: StreamState, why?: MessageKey): void {
@@ -66,8 +72,9 @@ export class WsStream {
 
   private notice(text: string): void {
     try {
-      const m = JSON.parse(text) as { type?: string; ts?: number };
-      if (m.type === 'pong' && typeof m.ts === 'number') this.rtt = Math.round(performance.now() - m.ts);
+      const m = JSON.parse(text) as { type?: string; ts?: number; t?: number };
+      if (m.type === 'gw-clock' && typeof m.t === 'number') this.lag.sample(m.t);
+      else if (m.type === 'pong' && typeof m.ts === 'number') this.rtt = Math.round(performance.now() - m.ts);
       else if (m.type && m.type in ENDINGS) this.set('ended', ENDINGS[m.type]);
     } catch {
       /* not for us */
@@ -82,9 +89,15 @@ export class WsStream {
     this.video.push(f.data, f.key);
   }
 
-  send(m: InputMessage): void {
+  /** `user` is false for the transport's own messages, which aren't a gesture that may start the sound. */
+  send(m: InputMessage, user = true): void {
     if (this.ws?.readyState === 1) this.ws.send(JSON.stringify(m));
-    this.audio.resume();
+    if (user) this.audio.resume();
+  }
+
+  /** The stream keeps falling behind however often it skips ahead: a lower bitrate would play better. */
+  congested(): boolean {
+    return this.lag.congested();
   }
 
   setVolume(volume: number, muted: boolean): void {
@@ -92,7 +105,7 @@ export class WsStream {
   }
 
   async stats(): Promise<StreamStats> {
-    return { path: 'ws', rttMs: this.rtt, lost: 0, ...this.video.rates() };
+    return { path: 'ws', rttMs: this.rtt, lost: 0, behindMs: this.lag.behind, ...this.video.rates() };
   }
 
   close(): void {

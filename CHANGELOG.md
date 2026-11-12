@@ -1,5 +1,14 @@
 # Changelog
 
+## Stream: much less delay on the HTTP mode, a bitrate menu and Moonlight's shortcuts
+
+- **Snappier controls on the HTTP mode.** In Chrome and Edge, key presses and mouse movement now go to the PC over one connection that stays open, instead of a new web request for each one. If the network or the server in between can't carry that, the stream notices within a few seconds and quietly goes back to the old way.
+- **No more creeping delay.** On the WebSocket and HTTP modes, video could pile up in parts of the network the stream server couldn't see, so the picture (and the effect of every key press) slowly fell seconds behind. The page now measures how far behind live it really is and has the server skip ahead when it builds up.
+- **Lower the bitrate in one click.** When the network keeps falling behind, a note over the picture offers to lower the bitrate. There's also a **Bitrate** menu in the bar above the picture now, next to Quality.
+- **Shortcuts, as in Moonlight:** Ctrl+Alt+Shift+S shows or hides stats, Ctrl+Alt+Shift+Z locks or frees the mouse, Ctrl+Alt+Shift+X goes full screen.
+- **Better stats.** The delay shown on the HTTP mode is now the real round trip through the PC. Stats also show how far the picture is behind live, and whether input is streamed or sent per request.
+- **Sound stays in step.** After a network hiccup, sound used to run up to a quarter second behind the picture. It now catches up right away. With the mouse locked in Chrome and Edge, mouse movement is also sent the moment it happens instead of once per screen refresh.
+
 ## Stream: play games from your PC at home, in the browser
 
 - **🎮 A new Play → Stream tab.** Pick a game or the desktop from your gaming PC and play it here, from anywhere, at your screen's own resolution and refresh rate. Keyboard, mouse (lock it for games) and gamepads work; full screen keeps shortcuts like Esc and Alt+Tab for the game where the browser allows it.

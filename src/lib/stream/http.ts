@@ -1,13 +1,14 @@
 // The HTTP transport for networks that block WebSockets and the TURN relay but still pass ordinary HTTPS (see the
-// gateway's /down and /up in server/stream-gateway/API.md). Video and audio come down one long chunked response,
-// each MoonlightWeb frame length-prefixed `[kind:1][len:4][payload]` (kind 0 binary media, 1 text notice); input
-// goes back on POSTs. It's the slowest path, so input doesn't wait its turn behind one POST at a time: a few are in
-// flight at once, numbered so the gateway applies them in order. Waiting for each reply used to add a whole round
-// trip, and on HTTP/2 that reply queues behind the video coming down the same connection.
+// gateway's /down, /input and /up in server/stream-gateway/API.md). Video and audio come down one long chunked
+// response, each MoonlightWeb frame length-prefixed `[kind:1][len:4][payload]` (kind 0 binary media, 1 text notice).
+// Input goes back on one long streamed request (/input) where the browser and the network allow it: a key press is
+// then a few bytes on a connection that's already open. Otherwise it goes on POSTs (/up), a few in flight at once and
+// numbered so the gateway applies them in order, since waiting for each reply would add a whole round trip.
 import type { InputMessage } from './input';
 import type { MessageKey } from '../i18n/index.svelte';
 import { OpusPlayer } from './audio';
 import { parseFrame } from './fallback';
+import { LagMeter } from './lag';
 import { ENDINGS, type StreamState, type StreamStats } from './rtc';
 import { VideoSink } from './video';
 
@@ -18,10 +19,35 @@ export interface HttpStreamOptions {
   canvas: HTMLCanvasElement;
   /** POST a batch of input messages, numbered from 1, to the session's /up; resolves when it's answered, or rejects */
   postInput: (msgs: string[], seq: number) => Promise<void>;
+  /** open the session's streamed /input request with this body; settles only when the request ends */
+  openInput?: (body: ReadableStream<Uint8Array>, signal: AbortSignal) => Promise<Response>;
   onState: (s: StreamState, why?: MessageKey) => void;
   /** scheduling lead for the Opus player, ms (shorter = lower latency) */
   audioLeadMs?: number;
+  /** backlog (ms) at which the gateway is asked to skip ahead */
+  lagThresholdMs?: number;
   fetchImpl?: typeof fetch;
+}
+
+/**
+ * Whether fetch can stream a request body (Chromium 105+; Firefox and Safari can't yet). A browser that can't would
+ * turn the stream into the text "[object ReadableStream]" and give it a Content-Type, and never asks for `duplex`.
+ */
+export function supportsRequestStreams(): boolean {
+  try {
+    let duplex = false;
+    const init = {
+      method: 'POST',
+      body: new ReadableStream(),
+      get duplex() {
+        duplex = true;
+        return 'half';
+      },
+    };
+    return !new Request('https://example.invalid/', init as RequestInit).headers.has('Content-Type') && duplex;
+  } catch {
+    return false;
+  }
 }
 
 /**
@@ -53,6 +79,16 @@ export function coalesce(msgs: InputMessage[]): InputMessage[] {
 
 /** POSTs allowed in flight at once; more input waits and is folded into the next batch. */
 export const MAX_IN_FLIGHT = 3;
+/** how long the gateway has to confirm the streamed input got through before it's given up on */
+export const INPUT_PROBE_MS = 3_000;
+/** no pong for this long while streaming input: something on the way is holding it, so go back to POSTs */
+export const INPUT_STALL_MS = 3_000;
+/** a streamed input that worked at least this long (ms) and was then cut is opened again; one that never got going isn't */
+export const INPUT_RETRY_AFTER_MS = 10_000;
+/** writes to the input stream are at least this far apart (ms); a 1000 Hz mouse is folded into fewer, larger writes */
+const WRITE_GAP_MS = 4;
+const encoder = new TextEncoder();
+const decoder = new TextDecoder();
 /** a length past this means the stream is corrupt (a 4K keyframe is a few MB) */
 const MAX_FRAME = 16 * 1024 * 1024;
 
@@ -114,16 +150,32 @@ export class FrameSplitter {
 export class HttpStream {
   private video: VideoSink;
   private audio: OpusPlayer;
+  private lag: LagMeter;
   private state: StreamState = 'connecting';
   private ctrl = new AbortController();
   private queue: InputMessage[] = [];
   private inFlight = 0;
   private seq = 0;
-  private rtt: number | null = null;
+  /** round trip of the last POST, ms (the fallback figure when no pong has come back) */
+  private postRtt: number | null = null;
+  /** round trip of the last ping through the PC and back down /down, ms: the delay a key press really sees */
+  private pingRtt: number | null = null;
+  private pingSeq = 0;
+  private lastPong = 0;
   private idle: ReturnType<typeof setInterval> | null = null;
+  /** 'post': input on /up; 'probing': /input is open but unconfirmed, input still on /up; 'stream': input on /input */
+  private input: 'post' | 'probing' | 'stream' = 'post';
+  private inputCtrl: AbortController | null = null;
+  private writer: WritableStreamDefaultWriter<Uint8Array> | null = null;
+  private streamingSince = 0;
+  private lastWrite = -Infinity;
+  private flushTimer: ReturnType<typeof setTimeout> | null = null;
+  private probeTimer: ReturnType<typeof setTimeout> | null = null;
+  private retryTimer: ReturnType<typeof setTimeout> | null = null;
 
   constructor(private o: HttpStreamOptions) {
     this.audio = new OpusPlayer(o.audioLeadMs);
+    this.lag = new LagMeter((ms) => this.send({ type: 'gw-lag', ms }), o.lagThresholdMs);
     this.video = new VideoSink(
       o.canvas,
       () => this.send({ type: 'requestidr' }),
@@ -136,11 +188,52 @@ export class HttpStream {
     f(this.o.downUrl, { headers: { Authorization: `Bearer ${this.o.ticket}` }, cache: 'no-store', credentials: 'omit', signal: this.ctrl.signal })
       .then((r) => {
         if (!r.ok || !r.body) return this.set('failed', r.status === 401 ? 'stream.fail.refused' : 'stream.fail.setup');
+        // the gateway confirms streamed input on /down, so it's tried once /down is open
+        this.openInput();
         return this.read(r.body.getReader());
       })
       .catch(() => this.set('failed', 'stream.fail.setup'));
-    // a quiet keepalive so RTT stays fresh and a gateway-side end is noticed even when no keys are down
-    this.idle = setInterval(() => this.queue.length === 0 && !this.inFlight && void this.post([]), 1000);
+    // a ping a second measures the real delay and keeps the input path warm, so a gateway-side end is noticed too
+    this.idle = setInterval(() => this.tick(), 1000);
+  }
+
+  private tick(): void {
+    const now = performance.now();
+    if (this.input === 'stream' && now - Math.max(this.lastPong, this.streamingSince) > INPUT_STALL_MS) this.inputFailed();
+    this.send({ type: 'ping', seq: ++this.pingSeq, ts: now }, false);
+  }
+
+  private openInput(): void {
+    if (!this.o.openInput || !supportsRequestStreams() || this.state === 'ended' || this.state === 'failed') return;
+    const pipe = new TransformStream<Uint8Array, Uint8Array>();
+    this.inputCtrl = new AbortController();
+    this.writer = pipe.writable.getWriter();
+    this.input = 'probing';
+    this.o.openInput(pipe.readable, this.inputCtrl.signal).then(
+      () => this.inputFailed(), // the gateway ended it (a newer one replaced it, or the stream is over)
+      () => this.inputFailed(), // HTTP/1.1 to the gateway, a refusal, or a network that won't carry it
+    );
+    this.writer.write(encoder.encode('{"type":"gw-hello"}\n')).catch(() => this.inputFailed());
+    this.probeTimer = setTimeout(() => this.input === 'probing' && this.inputFailed(), INPUT_PROBE_MS);
+  }
+
+  /**
+   * The streamed input stopped, or never got through: input goes on POSTs. One that worked for a while and was then
+   * cut (a proxy's cap on body size, a network change) is opened again; one that never got going isn't.
+   */
+  private inputFailed(): void {
+    if (this.input === 'post') return;
+    const lasted = this.input === 'stream' ? performance.now() - this.streamingSince : 0;
+    this.input = 'post';
+    this.writer = null;
+    this.inputCtrl?.abort();
+    this.inputCtrl = null;
+    if (this.flushTimer) clearTimeout(this.flushTimer);
+    if (this.probeTimer) clearTimeout(this.probeTimer);
+    this.flushTimer = this.probeTimer = null;
+    // held keys and buttons were in what may have been lost; the heartbeat repeats them on the new path
+    this.pump();
+    if (lasted >= INPUT_RETRY_AFTER_MS && this.state !== 'ended' && this.state !== 'failed') this.retryTimer = setTimeout(() => this.openInput(), 1000);
   }
 
   private async read(reader: ReadableStreamDefaultReader<Uint8Array<ArrayBufferLike>>): Promise<void> {
@@ -167,8 +260,19 @@ export class HttpStream {
       return;
     }
     try {
-      const t = (JSON.parse(new TextDecoder().decode(payload)) as { type?: string }).type ?? '';
-      if (t in ENDINGS) this.set('ended', ENDINGS[t]);
+      const m = JSON.parse(decoder.decode(payload)) as { type?: string; t?: number; ts?: number };
+      const t = m.type ?? '';
+      if (t === 'gw-clock' && typeof m.t === 'number') this.lag.sample(m.t);
+      else if (t === 'pong' && typeof m.ts === 'number') {
+        this.lastPong = performance.now();
+        this.pingRtt = Math.round(this.lastPong - m.ts);
+      } else if (t === 'gw-input-ok' && this.input === 'probing') {
+        this.input = 'stream';
+        this.streamingSince = performance.now();
+        if (this.probeTimer) clearTimeout(this.probeTimer);
+        this.probeTimer = null;
+        this.flush();
+      } else if (t in ENDINGS) this.set('ended', ENDINGS[t]);
     } catch {
       /* not for us */
     }
@@ -180,14 +284,38 @@ export class HttpStream {
     this.o.onState(s, why);
   }
 
-  send(m: InputMessage): void {
-    this.audio.resume();
+  /** `user` is false for the transport's own messages, which aren't a gesture that may start the sound. */
+  send(m: InputMessage, user = true): void {
+    if (user) this.audio.resume();
     this.queue.push(m);
-    this.pump();
+    if (this.input === 'stream') this.flush();
+    else this.pump();
   }
 
   setVolume(volume: number, muted: boolean): void {
     this.audio.setVolume(volume, muted);
+  }
+
+  /** Write what's queued to /input, unless the last write was a moment ago or the network is still taking it. */
+  private flush(): void {
+    const w = this.writer;
+    if (!w || this.flushTimer || !this.queue.length) return;
+    const wait = this.lastWrite + WRITE_GAP_MS - performance.now();
+    if (wait > 0 || (w.desiredSize !== null && w.desiredSize <= 0)) {
+      this.flushTimer = setTimeout(
+        () => {
+          this.flushTimer = null;
+          this.flush();
+        },
+        Math.max(wait, WRITE_GAP_MS),
+      );
+      return;
+    }
+    this.lastWrite = performance.now();
+    const text = coalesce(this.queue.splice(0))
+      .map((m) => JSON.stringify(m) + '\n')
+      .join('');
+    w.write(encoder.encode(text)).catch(() => this.inputFailed());
   }
 
   private pump(): void {
@@ -199,22 +327,31 @@ export class HttpStream {
     const t0 = performance.now();
     try {
       await this.o.postInput(batch, ++this.seq);
-      this.rtt = Math.round(performance.now() - t0);
+      this.postRtt = Math.round(performance.now() - t0);
     } catch {
       /* a dropped batch is fine; the next one carries fresh input, and the downstream reports a real end */
     } finally {
       this.inFlight--;
-      this.pump();
+      if (this.input === 'stream') this.flush();
+      else this.pump();
     }
   }
 
+  /** The stream keeps falling behind however often it skips ahead: a lower bitrate would play better. */
+  congested(): boolean {
+    return this.lag.congested();
+  }
+
   async stats(): Promise<StreamStats> {
-    return { path: 'http', rttMs: this.rtt, lost: 0, ...this.video.rates() };
+    return { path: 'http', rttMs: this.pingRtt ?? this.postRtt, lost: 0, behindMs: this.lag.behind, input: this.input === 'stream' ? 'stream' : 'post', ...this.video.rates() };
   }
 
   close(): void {
     this.state = 'ended';
     if (this.idle) clearInterval(this.idle);
+    if (this.retryTimer) clearTimeout(this.retryTimer);
+    this.queue = [];
+    this.inputFailed();
     try {
       this.ctrl.abort();
     } catch {

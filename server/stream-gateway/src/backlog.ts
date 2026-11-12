@@ -3,6 +3,10 @@
 // and with it the effect of every key press, fell seconds behind. Now, once the queue passes about a quarter second
 // of video, frames are dropped up to the next keyframe, which is asked for only after the queue has drained: the
 // picture skips ahead instead of lagging. Audio and text notices always pass; they're tiny.
+//
+// The gateway only sees its own queue, though. The kernel's socket buffers and a reverse proxy in front can hold
+// megabytes more, seconds of video on a slow link, so the browser measures the real delay too (from the gateway's
+// clock notices, see `clockNotice`) and reports it with `gw-lag`; `drain` then stops video for about that long.
 
 /** One MoonlightWeb `wss` binary frame: `[0x01][flags][H.264 AU]` (flags bit 0 = keyframe) or `[0x02][0x00][Opus]`. */
 const VIDEO = 1;
@@ -17,6 +21,8 @@ export class VideoGate {
   private lastAsk = -Infinity;
   /** a keyframe is many times a normal frame; the queue may hold the last one on top of the budget */
   private keySize = 0;
+  /** no video at all until then (ms), while a backlog the gateway can't see drains */
+  private drainUntil = -Infinity;
 
   constructor(
     private budget: number,
@@ -29,6 +35,7 @@ export class VideoGate {
   pass(frame: Uint8Array, queued: number): boolean {
     if (frame[0] !== VIDEO || frame.length < 2) return true;
     const key = (frame[1] & 1) === 1;
+    if (this.now() < this.drainUntil) return false;
     if (!this.dropping) {
       if (queued <= this.budget + this.keySize) {
         if (key) this.keySize = frame.length;
@@ -50,6 +57,44 @@ export class VideoGate {
     }
     return false;
   }
+
+  /**
+   * The browser says video reaches it `ms` late. Nothing new joins the queue for that long, which is about how long a
+   * queue that deep takes to empty at the link's own speed, then video resumes at a fresh keyframe. A report while one
+   * drain is still running is ignored: it measured the same backlog.
+   */
+  drain(ms: number): void {
+    const t = this.now();
+    if (!Number.isFinite(ms) || ms <= 0 || t < this.drainUntil) return;
+    this.drainUntil = t + Math.min(ms, MAX_DRAIN_MS);
+    this.dropping = true;
+    this.lastAsk = -Infinity;
+  }
+}
+
+/** the longest one lag report may pause video for; a deeper backlog takes a second report */
+export const MAX_DRAIN_MS = 3_000;
+
+/** A text notice the gateway mixes into the media stream every CLOCK_MS, stamped as it's queued. It waits in the same
+ *  buffers as the video, so the browser can tell from its arrival how far behind the stream is. */
+export const CLOCK_MS = 100;
+export function clockNotice(now: number): string {
+  return JSON.stringify({ type: 'gw-clock', t: now });
+}
+
+/**
+ * A message from the browser meant for the gateway itself (`gw-…`), which is never forwarded to MoonlightWeb.
+ * Returns true when the line was one, after acting on it.
+ */
+export function gatewayMessage(line: string, gate: VideoGate | null): boolean {
+  if (!line.startsWith('{"type":"gw-')) return false;
+  try {
+    const m = JSON.parse(line) as { type?: unknown; ms?: unknown };
+    if (m.type === 'gw-lag' && typeof m.ms === 'number') gate?.drain(m.ms);
+  } catch {
+    /* malformed: dropped all the same */
+  }
+  return true;
 }
 
 /**

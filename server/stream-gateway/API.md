@@ -4,6 +4,7 @@ The contract between the site (Play → 🎮 Stream, `src/lib/stream/`) and the 
 
 ## General rules
 
+- **Preflight.** `OPTIONS` answers allow `Authorization` and `Content-Type` with `Access-Control-Max-Age: 7200`, so a browser checks once per two hours rather than before input requests.
 - **Origin.** A request or WebSocket upgrade with an `Origin` other than `ALLOWED_ORIGIN` gets `403`. Requests without `Origin` (curl, the Docker healthcheck) are allowed; everything except `/health`, `/auth/login`, `/auth/refresh` and `/auth/totp/enroll` still needs a token.
 - **Auth.** `Authorization: Bearer <accessToken>`. Tokens never go in a URL, and the gateway never logs headers or bodies.
 - **Bodies** are JSON (`Content-Type: application/json`), at most 16 kB.
@@ -83,11 +84,26 @@ Body: `{appId, width, height, fps, bitrate?, transport?: "webrtc" | "ws" | "http
 
 The one-time ticket goes in the `Authorization: Bearer` header (never in the URL). The response is a long `application/octet-stream` chunked body: each MoonlightWeb frame is length-prefixed `[kind:1][len:4 big-endian][payload]`, `kind` 0 for a binary media frame (the same `[0x01]…`/`[0x02]…` bytes as the `ws` transport) and 1 for a JSON text notice. A browser that falls behind by 32 MB is dropped.
 
+Besides MoonlightWeb's notices, the gateway adds its own (a page that doesn't know them ignores them):
+
+- `{type: "gw-clock", t}` every 100 ms, `t` the gateway's clock in ms when it was queued. It waits in the same buffers as the video, so the page can tell how far behind live the stream is (see *Lag reports* below).
+- `{type: "gw-input-ok"}` once the first line of a streamed `/input` request has arrived.
+
 ### `POST /sessions/:id/up` (auth) `{seq?: number, msgs: string[]}`
 
 Input for the `http` transport: each entry is one JSON input message (as a string, ≤ 4096 chars), forwarded to MoonlightWeb in order. Authenticated by the access token, not a ticket, so a batch can be sent as often as needed. The browser keeps several POSTs in flight, numbering them from 1 in `seq`; the gateway applies batches in that order, waiting up to 60 ms for a missing one before moving on (a batch that arrives later still has its releases applied, `keyup` and `mouseup` among them, but its `keydown`, `mousedown` and `inputstate` are dropped, since a later batch may already have released those keys). A batch without `seq` is applied as it arrives. `204`; input is dropped silently if the stream's upstream isn't open yet.
 
 On both slow transports (`ws` media and `http` `/down`) the gateway lets only about 250 ms of video (at the session's bitrate, at least 128 KB) queue for a browser that can't keep up. Past that it drops video up to the next keyframe, which it asks MoonlightWeb for (`requestidr`) once the queue has drained, so the picture skips ahead instead of falling behind. `/down` sends `X-Accel-Buffering: no` so nginx passes it straight through; other reverse proxies must not buffer it either.
+
+### `POST /sessions/:id/input` (auth, transport `http`)
+
+The same input as `/up`, on one long request instead of one per batch: the body is streamed (`Content-Type: application/x-ndjson`, one JSON input message per line, each ≤ 4096 chars) and every line is forwarded to MoonlightWeb the moment it arrives. Authenticated by the access token when it opens; it lasts until the page closes it or the stream ends (`204`). A newer `/input` replaces an older one.
+
+Browsers only stream a request body over HTTP/2 (Chromium 105+; not Firefox or Safari yet), and a proxy that buffers request bodies would hold it forever. So the page sends `{"type":"gw-hello"}` first and keeps using `/up` until `gw-input-ok` comes down `/down`; without it within 3 seconds, or when pings sent on `/input` stop coming back, it stays on (or goes back to) `/up`.
+
+### Lag reports (`ws` and `http`)
+
+A message `{"type": "gw-lag", "ms": n}` in the input (on the `media` socket, `/up` or `/input`) says the page measured video arriving `n` ms late from the `gw-clock` notices. The gateway then sends no video for that long (at most 3 seconds), long enough for buffers it can't see (the kernel's, a reverse proxy's) to empty, and resumes at a keyframe it asks MoonlightWeb for. Every input message whose `type` starts with `gw-` is for the gateway and never reaches MoonlightWeb.
 
 ### `POST /sessions/:id/ticket` (auth)
 
@@ -119,7 +135,7 @@ The offer carries an Opus audio track (`recvonly` on our side) and expects pre-n
 
 ### `wss://…/sessions/:id/media` (transport `ws`)
 
-After the auth message the socket carries MoonlightWeb's `wss` stream unchanged: binary `[0x01][flags][H.264 Annex-B access unit]` (flags bit 0 = keyframe) and `[0x02][0x00][Opus packet]`, plus JSON text notices. The browser sends input as JSON text (same messages as the DataChannel); binary from the browser is ignored.
+After the auth message the socket carries MoonlightWeb's `wss` stream unchanged: binary `[0x01][flags][H.264 Annex-B access unit]` (flags bit 0 = keyframe) and `[0x02][0x00][Opus packet]`, plus JSON text notices, and the gateway's `gw-clock` notice every 100 ms. The browser sends input as JSON text (same messages as the DataChannel, plus `gw-lag`); binary from the browser is ignored.
 
 ### `wss://…/ws-probe`
 

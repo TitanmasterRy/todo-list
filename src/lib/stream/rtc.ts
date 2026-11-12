@@ -39,6 +39,10 @@ export interface StreamStats {
   height: number;
   /** video frames lost on the way (each one costs a keyframe request) */
   lost: number;
+  /** WebSocket and HTTP: how far the picture is behind live, from the gateway's clock (null before it's known) */
+  behindMs?: number | null;
+  /** HTTP: whether input rides the one streamed request or separate POSTs */
+  input?: 'stream' | 'post';
 }
 
 type Stat = Record<string, unknown> & { id: string; type: string };

@@ -5,7 +5,7 @@ import { timingSafeEqual } from 'node:crypto';
 import { argon2Verify } from 'hash-wasm';
 import QRCode from 'qrcode';
 import { WebSocketServer, type WebSocket } from 'ws';
-import { InputOrder, VideoGate, backlogBudget } from './backlog.js';
+import { CLOCK_MS, InputOrder, VideoGate, backlogBudget, clockNotice, gatewayMessage } from './backlog.js';
 import type { Config } from './config.js';
 import { MwError, mwPath, type MwApi } from './mw.js';
 import { LoginLimiter, clientIp } from './ratelimit.js';
@@ -37,8 +37,13 @@ interface StreamSession {
   /** one-time WebSocket (and HTTP /down) tickets → expiry (ms) */
   tickets: Map<string, number>;
   sockets: Map<'signal' | 'media', WebSocket>;
-  /** the HTTP transport's live MoonlightWeb socket, the browser's downstream response, and its input in order */
-  http?: { up: WebSocket | null; down: ServerResponse | null; order: InputOrder };
+  /** the video gate of the media socket or /down that's open, which the browser's lag reports steer */
+  gate: VideoGate | null;
+  /**
+   * The HTTP transport's live MoonlightWeb socket, the browser's downstream response, its input in order, and its
+   * streamed input request (/input) when the network lets one through; `ackInput` is owed once /down opens.
+   */
+  http?: { up: WebSocket | null; down: ServerResponse | null; order: InputOrder; input: IncomingMessage | null; ackInput: boolean };
 }
 
 class HttpError extends Error {
@@ -53,6 +58,10 @@ class HttpError extends Error {
 const TICKET_MS = 60_000;
 const STREAM_MAX_MS = 12 * 60 * 60_000;
 const MAX_BODY = 16 * 1024;
+/** a JSON body must arrive within this long (ms); /input is the one request whose body never ends */
+const BODY_MS = 10_000;
+/** one input message, as the browser encodes it */
+const MAX_LINE = 4096;
 const ID = /^[A-Za-z0-9_-]{16}$/;
 
 const int = (x: unknown, lo: number, hi: number, fallback?: number): number => {
@@ -127,10 +136,16 @@ export function createGateway(deps: GatewayDeps): { server: Server; close: () =>
   async function readJson(req: IncomingMessage): Promise<Record<string, unknown>> {
     const chunks: Buffer[] = [];
     let size = 0;
-    for await (const c of req) {
-      size += (c as Buffer).length;
-      if (size > MAX_BODY) throw new HttpError(413, { error: 'too_large' });
-      chunks.push(c as Buffer);
+    // Node's own whole-request limit is off (see `server.requestTimeout`), so a slow sender is cut off here
+    const timer = setTimeout(() => req.destroy(), BODY_MS);
+    try {
+      for await (const c of req) {
+        size += (c as Buffer).length;
+        if (size > MAX_BODY) throw new HttpError(413, { error: 'too_large' });
+        chunks.push(c as Buffer);
+      }
+    } finally {
+      clearTimeout(timer);
     }
     if (!size) return {};
     if (!/^application\/json\b/i.test(req.headers['content-type'] ?? '')) throw new HttpError(415, { error: 'json_only' });
@@ -223,6 +238,7 @@ export function createGateway(deps: GatewayDeps): { server: Server; close: () =>
     for (const ws of s.sockets.values()) ws.close(1000, 'stream ended');
     s.http?.up?.close(1000, 'stream ended');
     s.http?.order.close();
+    s.http?.input?.destroy();
     if (s.http?.down && !s.http.down.writableEnded) s.http.down.end();
     if (mw && store.state.mw) {
       void (async () => {
@@ -429,14 +445,12 @@ export function createGateway(deps: GatewayDeps): { server: Server; close: () =>
       }
       const path2 = mwPath(overWss ? r.wsUrl : r.signalingUrl);
       if (!path2 || (overWss && r.transport !== 'wss')) throw new HttpError(502, { code: 'start_failed', error: 'MoonlightWeb started another transport' });
-      const s: StreamSession = { id: randomToken(12), host: h, transport, mwPath: path2, createdAt: now(), bitrate, tickets: new Map(), sockets: new Map() };
+      const s: StreamSession = { id: randomToken(12), host: h, transport, mwPath: path2, createdAt: now(), bitrate, tickets: new Map(), sockets: new Map(), gate: null };
       if (transport === 'http') {
         const order = new InputOrder((msgs) => {
-          const sock = s.http?.up;
-          if (!sock || sock.readyState !== sock.OPEN) return;
-          for (const line of msgs) sock.send(line);
+          for (const line of msgs) toMw(s, line);
         });
-        s.http = { up: null, down: null, order };
+        s.http = { up: null, down: null, order, input: null, ackInput: false };
       }
       active = s;
       const where =
@@ -486,6 +500,17 @@ export function createGateway(deps: GatewayDeps): { server: Server; close: () =>
       s.http.order.push(seq, msgs);
       return send(res, 204);
     }
+    // POST /input: the same input as /up, but as one long streamed request body of JSON lines, so a key press costs
+    // a few bytes on a connection that's already open instead of a request of its own. Browsers only stream a request
+    // body over HTTP/2, and a proxy that buffers bodies would hold it forever, so the page keeps using /up until the
+    // `gw-input-ok` notice on /down shows its first line got here.
+    const input = /^\/sessions\/([A-Za-z0-9_-]{16})\/input$/.exec(path);
+    if (m === 'POST' && input) {
+      claims(req);
+      const s = active;
+      if (!s || s.id !== input[1] || s.transport !== 'http' || !s.http) throw new HttpError(404, { error: 'not_found' });
+      return streamInput(req, res, s);
+    }
 
     const sess = /^\/sessions\/([A-Za-z0-9_-]{16})(\/ticket)?$/.exec(path);
     if (sess && ((m === 'DELETE' && !sess[2]) || (m === 'POST' && sess[2]))) {
@@ -529,7 +554,8 @@ export function createGateway(deps: GatewayDeps): { server: Server; close: () =>
       if (req.method === 'OPTIONS') {
         res.setHeader('Access-Control-Allow-Methods', 'GET, POST, DELETE, OPTIONS');
         res.setHeader('Access-Control-Allow-Headers', 'Authorization, Content-Type');
-        res.setHeader('Access-Control-Max-Age', '600');
+        // as long as browsers keep a preflight (Chrome: 2 hours), so input requests don't wait on a fresh one
+        res.setHeader('Access-Control-Max-Age', '7200');
         send(res, 204);
       } else await route(req, res, path);
     } catch (e) {
@@ -545,6 +571,10 @@ export function createGateway(deps: GatewayDeps): { server: Server; close: () =>
       }
     }
   });
+
+  // Node ends any request whose body is still arriving after 5 minutes, which would cut /input; JSON bodies have their
+  // own deadline in readJson, and headers keep Node's (headersTimeout)
+  server.requestTimeout = 0;
 
   // ---------- WebSockets ----------
   function refuse(socket: Duplex, status: number, text: string): void {
@@ -649,15 +679,75 @@ export function createGateway(deps: GatewayDeps): { server: Server; close: () =>
     });
     up = upstream;
     if (ws.readyState !== ws.OPEN) return void upstream.close(1000);
+    s.gate = gate;
     pair(ws, upstream);
+    const clock = setInterval(() => ws.readyState === ws.OPEN && ws.send(clockNotice(now())), CLOCK_MS);
+    ws.on('close', () => {
+      clearInterval(clock);
+      if (s.gate === gate) s.gate = null;
+    });
     // input from the browser is JSON text; nothing binary goes up
     ws.on('message', (data, isBinary) => {
-      if (!isBinary && upstream.readyState === upstream.OPEN) upstream.send(data.toString());
+      if (isBinary) return;
+      const line = data.toString();
+      if (!gatewayMessage(line, gate) && upstream.readyState === upstream.OPEN) upstream.send(line);
     });
   }
 
+  /** One input line for the HTTP transport's MoonlightWeb socket, unless it's for the gateway itself. */
+  function toMw(s: StreamSession, line: string): void {
+    if (gatewayMessage(line, s.gate)) return;
+    const sock = s.http?.up;
+    if (sock && sock.readyState === sock.OPEN) sock.send(line);
+  }
+
+  /** A kind 1 (text) frame on the browser's /down. */
+  function notice(res: ServerResponse, text: string): void {
+    const body = Buffer.from(text);
+    const head = Buffer.alloc(5);
+    head.writeUInt32BE(body.length, 1);
+    head.writeUInt8(1, 0);
+    res.write(Buffer.concat([head, body]));
+  }
+
+  /** Reads /input's JSON lines as they arrive and applies each straight away; a newer /input replaces this one. */
+  async function streamInput(req: IncomingMessage, res: ServerResponse, s: StreamSession): Promise<void> {
+    const http = s.http!;
+    http.input?.destroy();
+    http.input = req;
+    req.socket.setNoDelay(true);
+    req.setEncoding('utf8');
+    let rest = '';
+    let first = true;
+    try {
+      for await (const chunk of req as AsyncIterable<string>) {
+        if (active !== s || http.input !== req) break;
+        rest += chunk;
+        for (let i = rest.indexOf('\n'); i >= 0; i = rest.indexOf('\n')) {
+          const line = rest.slice(0, i);
+          rest = rest.slice(i + 1);
+          if (line && line.length <= MAX_LINE) toMw(s, line);
+        }
+        if (rest.length > MAX_LINE) throw new HttpError(413, { error: 'too_large' });
+        if (first) {
+          first = false;
+          // the first bytes got through promptly: tell the page it can move its input here
+          if (http.down && !http.down.writableEnded) notice(http.down, JSON.stringify({ type: 'gw-input-ok' }));
+          else http.ackInput = true;
+        }
+      }
+    } catch (e) {
+      if (e instanceof HttpError) throw e;
+      return; // the page closed it (it fell back to /up, or the stream ended)
+    } finally {
+      if (http.input === req) http.input = null;
+    }
+    if (!res.headersSent && !res.destroyed) send(res, 204);
+  }
+
   /** Pipe MoonlightWeb's frames to the browser as one chunked response: `[kind:1][len:4][payload]`, kind 0 binary
-   *  (media), 1 text (JSON notices). Input comes back on separate POSTs (/up), which send into `s.http.up`. */
+   *  (media), 1 text (JSON notices, the gateway's clock among them). Input comes back on /input or /up, which send
+   *  into `s.http.up`. */
   async function bridgeDown(req: IncomingMessage, res: ServerResponse, s: StreamSession): Promise<void> {
     if (!mw || !s.http) throw new Error('not linked');
     res.statusCode = 200;
@@ -680,11 +770,19 @@ export function createGateway(deps: GatewayDeps): { server: Server; close: () =>
     if (res.writableEnded) return void upstream.close(1000);
     s.http.up = upstream;
     s.http.down = res;
+    s.gate = gate;
+    if (s.http.ackInput) {
+      s.http.ackInput = false;
+      notice(res, JSON.stringify({ type: 'gw-input-ok' }));
+    }
+    const clock = setInterval(() => !res.writableEnded && notice(res, clockNotice(now())), CLOCK_MS);
     await new Promise<void>((resolve) => {
       const done = () => {
+        clearInterval(clock);
         upstream.close(1000);
         if (s.http?.up === upstream) s.http.up = null;
         if (s.http?.down === res) s.http.down = null;
+        if (s.gate === gate) s.gate = null;
         resolve();
       };
       req.on('close', done);

@@ -307,6 +307,24 @@ export class GatewayClient {
     await this.authed('POST', `/sessions/${encodeURIComponent(id)}/up`, { seq, msgs }, 'high');
   }
 
+  /** HTTP transport: open the session's streamed input request (JSON lines in `body`). It settles when the request
+   *  ends; until then everything written to `body` goes straight to the gateway. */
+  async openInput(id: string, body: ReadableStream<Uint8Array>, signal: AbortSignal): Promise<Response> {
+    const r = await this.fetcher(`${this.server}/sessions/${encodeURIComponent(id)}/input`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-ndjson', Authorization: `Bearer ${await this.token()}` },
+      body,
+      // a streamed request body needs this (and HTTP/2); browsers without it fail the request, and input stays on /up
+      duplex: 'half',
+      credentials: 'omit',
+      cache: 'no-store',
+      priority: 'high',
+      signal,
+    } as RequestInit);
+    if (!r.ok) await this.fail(r);
+    return r;
+  }
+
   async newTicket(id: string): Promise<{ ticket: string; iceServers: IceServer[] }> {
     const o = obj(await (await this.authed('POST', `/sessions/${encodeURIComponent(id)}/ticket`, {})).json());
     return { ticket: str(o.ticket, 100), iceServers: iceList(o.iceServers) };

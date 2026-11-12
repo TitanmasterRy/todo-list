@@ -1,12 +1,13 @@
 <script lang="ts">
   // One running stream: the picture (a canvas fed by WebCodecs; WebRTC sound plays in an <audio>), input capture, full
-  // screen with Keyboard Lock, the stats overlay, and the ways out (disconnect, quit the game, sign out everywhere).
+  // screen with Keyboard Lock, the stats overlay, quality and bitrate, a nudge when the network can't carry the
+  // bitrate, and the ways out (disconnect, quit the game, sign out everywhere).
   import { onDestroy, onMount } from 'svelte';
   import { t, type MessageKey } from '../../../lib/i18n/index.svelte';
   import type { GatewayClient, StreamSession, StreamTransport } from '../../../lib/stream/api';
   import { WsStream } from '../../../lib/stream/fallback';
   import { HttpStream } from '../../../lib/stream/http';
-  import { InputCapture } from '../../../lib/stream/input';
+  import { InputCapture, type Hotkey } from '../../../lib/stream/input';
   import { WebRtcStream, type StreamPath, type StreamState, type StreamStats } from '../../../lib/stream/rtc';
   import { streamSettings } from '../../../lib/stream/state.svelte';
   import { ui } from '../../../lib/ui.svelte';
@@ -32,9 +33,13 @@
   let mouseLocked = $state(false);
   let needsSound = $state(false);
   let ending = $state(false);
+  /** the network keeps falling behind at this bitrate (WebSocket and HTTP only) */
+  let slow = $state(false);
+  let slowDismissed = false;
   let player: WebRtcStream | WsStream | HttpStream | null = null;
   let capture: InputCapture | null = null;
   let statsTimer: ReturnType<typeof setInterval> | undefined;
+  let slowTimer: ReturnType<typeof setInterval> | undefined;
   let done = false;
 
   const PATHS: Record<StreamPath, MessageKey> = {
@@ -71,19 +76,23 @@
   });
 
   onMount(() => {
-    // a short audio cushion in low-latency mode (trades jitter tolerance for delay)
-    const audioLeadMs = streamSettings.prefs.lowLatency ? 20 : 60;
+    // a short audio cushion in low-latency mode (trades jitter tolerance for delay), and less backlog allowed
+    const low = streamSettings.prefs.lowLatency;
+    const audioLeadMs = low ? 20 : 60;
+    const lagThresholdMs = low ? 120 : 200;
     player =
       session.transport === 'ws'
-        ? new WsStream({ url: api.wsUrl(session.mediaPath), ticket: session.ticket, canvas: canvas!, onState, audioLeadMs })
+        ? new WsStream({ url: api.wsUrl(session.mediaPath), ticket: session.ticket, canvas: canvas!, onState, audioLeadMs, lagThresholdMs })
         : session.transport === 'http'
           ? new HttpStream({
               downUrl: api.server + session.mediaPath,
               ticket: session.ticket,
               canvas: canvas!,
               postInput: (msgs, seq) => api.sendInput(session.id, msgs, seq),
+              openInput: (body, signal) => api.openInput(session.id, body, signal),
               onState,
               audioLeadMs,
+              lagThresholdMs,
             })
           : new WebRtcStream({ signalUrl: api.wsUrl(session.signalingPath), ticket: session.ticket, iceServers: session.iceServers, canvas: canvas!, audio: audio!, onState });
     capture = new InputCapture({
@@ -91,12 +100,16 @@
       send: (m) => player?.send(m),
       size: () => ({ width: stats?.width || session.width, height: stats?.height || session.height }),
       sensitivity: () => streamSettings.prefs.mouseSensitivity,
+      onHotkey,
     });
     player.start();
     applyVolume();
     statsTimer = setInterval(async () => {
       if (streamSettings.prefs.stats && phase === 'connected' && player) stats = await player.stats().catch(() => stats);
     }, 1000);
+    slowTimer = setInterval(() => {
+      if (!slowDismissed && player && 'congested' in player && player.congested()) slow = true;
+    }, 2000);
     window.addEventListener('pagehide', onPageHide);
     document.addEventListener('fullscreenchange', onFullscreen);
     document.addEventListener('pointerlockchange', onPointerLock);
@@ -106,6 +119,7 @@
     if (done) return;
     done = true;
     clearInterval(statsTimer);
+    clearInterval(slowTimer);
     capture?.stop();
     ui.captureKeys = false;
     player?.close();
@@ -168,6 +182,13 @@
     void Promise.resolve(canvas?.requestPointerLock?.()).catch(() => {});
   }
 
+  function onHotkey(h: Hotkey) {
+    if (h === 'stats') streamSettings.update({ stats: !streamSettings.prefs.stats });
+    else if (h === 'fullscreen') void toggleFullscreen();
+    else if (document.pointerLockElement) document.exitPointerLock();
+    else lockMouse();
+  }
+
   function onPointerLock() {
     mouseLocked = !!document.pointerLockElement;
   }
@@ -187,10 +208,34 @@
       const [w, h] = v.split('x').map(Number);
       streamSettings.update({ size: 'custom', width: w, height: h, bitrate: 0 });
     }
+    restart();
+  }
+
+  /** Start the same app again with the new settings (the game keeps running on the PC in between). */
+  function restart() {
     cleanup();
     void api.endSession(session.id, false).then(onrestart);
   }
 
+  function setBitrate(e: Event) {
+    streamSettings.update({ bitrate: Number((e.currentTarget as HTMLSelectElement).value) });
+    restart();
+  }
+
+  /** a bit over half: enough to get back under what the network carries, in one step */
+  const lowerKbps = $derived(Math.max(2_000, Math.round((session.bitrate * 0.6) / 1000) * 1000));
+
+  function lowerBitrate() {
+    streamSettings.update({ bitrate: lowerKbps });
+    restart();
+  }
+
+  function dismissSlow() {
+    slow = false;
+    slowDismissed = true;
+  }
+
+  const BITRATES = [0, 2_000, 3_000, 5_000, 10_000, 20_000, 30_000, 50_000];
   const quality = $derived(streamSettings.prefs.size === 'native' ? 'native' : `${streamSettings.prefs.width}x${streamSettings.prefs.height}`);
 </script>
 
@@ -211,6 +256,13 @@
         {#if !['native', '2560x1440', '1920x1080', '1280x720'].includes(quality)}<option value={quality}>{quality.replace('x', '×')}</option>{/if}
       </select>
     </label>
+    <label class="q">
+      <span class="sr-only">{t('stream.bitrate')}</span>
+      <select class="input sm" value={String(streamSettings.prefs.bitrate)} onchange={setBitrate} aria-label={t('stream.bitrate')}>
+        {#each BITRATES as k (k)}<option value={String(k)}>{k ? `${k / 1000} Mbps` : t('stream.bitrateAutoShort')}</option>{/each}
+        {#if !BITRATES.includes(streamSettings.prefs.bitrate)}<option value={String(streamSettings.prefs.bitrate)}>{streamSettings.prefs.bitrate / 1000} Mbps</option>{/if}
+      </select>
+    </label>
     <button class="btn ghost sm" aria-pressed={streamSettings.prefs.stats} onclick={() => streamSettings.update({ stats: !streamSettings.prefs.stats })}>{t('stream.stats')}</button
     >
     <button class="btn sm" onclick={() => end(false)} disabled={ending} title={t('stream.disconnectHint')}>{t('stream.disconnect')}</button>
@@ -223,18 +275,27 @@
     <audio bind:this={audio} autoplay></audio>
     {#if phase === 'connecting'}<div class="veil" role="status">{t('stream.connectingLong')}</div>{/if}
     {#if needsSound}<button class="btn sound" onclick={unmute}>{t('stream.sound')}</button>{/if}
+    {#if slow}
+      <div class="slow" role="status">
+        <span>{t('stream.slow', { mbps: Math.round(session.bitrate / 1000) })}</span>
+        {#if lowerKbps < session.bitrate}<button class="btn sm" onclick={lowerBitrate}>{t('stream.lowerBitrate', { mbps: lowerKbps / 1000 })}</button>{/if}
+        <button class="btn ghost sm" onclick={dismissSlow}>{t('stream.dismiss')}</button>
+      </div>
+    {/if}
     {#if streamSettings.prefs.stats && stats}
       <div class="stats" aria-live="off">
         <span>{stats.width}×{stats.height}</span>
         <span>{stats.fps ?? '–'} fps</span>
         <span title={t('stream.bitrateAsked')}>{stats.kbps === null ? '–' : (stats.kbps / 1000).toFixed(1)} / {Math.round(session.bitrate / 1000)} Mbps</span>
         <span>{stats.rttMs ?? '–'} ms</span>
+        {#if typeof stats.behindMs === 'number'}<span title={t('stream.behindHint')}>{t('stream.behind', { ms: stats.behindMs })}</span>{/if}
         <span>{t(PATHS[stats.path])}</span>
+        {#if stats.input}<span title={t('stream.inputHint')}>{t(stats.input === 'stream' ? 'stream.inputStreamed' : 'stream.inputPosted')}</span>{/if}
         {#if stats.lost}<span>{t('stream.lost', { n: stats.lost })}</span>{/if}
       </div>
     {/if}
   </div>
-  {#if mouseLocked}<p class="hint">{t('stream.escHint')}</p>{/if}
+  {#if mouseLocked}<p class="hint">{t('stream.escHint')}</p>{:else}<p class="hint">{t('stream.hotkeys')}</p>{/if}
 </div>
 
 <style>
@@ -326,6 +387,22 @@
     position: absolute;
     inset: auto 50% 16px auto;
     transform: translateX(50%);
+  }
+  .slow {
+    position: absolute;
+    inset: auto 8px 8px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px 10px;
+    align-items: center;
+    padding: 8px 10px;
+    border-radius: 8px;
+    background: rgb(0 0 0 / 0.75);
+    color: #fff;
+    font-size: 13px;
+  }
+  .slow span {
+    flex: 1 1 200px;
   }
   .stats {
     position: absolute;

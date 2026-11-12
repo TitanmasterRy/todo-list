@@ -242,6 +242,15 @@ export function absolutePosition(
   return { x: Math.round(x), y: Math.round(y) };
 }
 
+/** The stream's own shortcuts, as in Moonlight: Ctrl+Alt+Shift and a letter. They stay in the browser. */
+export const HOTKEYS = { KeyS: 'stats', KeyZ: 'mouse', KeyX: 'fullscreen' } as const;
+export type Hotkey = (typeof HOTKEYS)[keyof typeof HOTKEYS];
+
+export function hotkeyFor(e: KeyLike): Hotkey | null {
+  if (!e.ctrlKey || !e.altKey || !e.shiftKey || e.metaKey) return null;
+  return HOTKEYS[e.code as keyof typeof HOTKEYS] ?? null;
+}
+
 interface CaptureOptions {
   /** the element showing the picture (video or canvas) */
   target: HTMLElement;
@@ -250,6 +259,8 @@ interface CaptureOptions {
   size: () => { width: number; height: number };
   /** relative-mouse multiplier while the mouse is locked (1 = unchanged) */
   sensitivity?: () => number;
+  /** one of the stream's own shortcuts was pressed */
+  onHotkey?: (h: Hotkey) => void;
 }
 
 /**
@@ -283,7 +294,11 @@ export class InputCapture {
     on(t, 'pointerdown', (e) => this.button(true, e as PointerEvent));
     on(document, 'pointerup', (e) => this.button(false, e as PointerEvent));
     on(t, 'contextmenu', (e) => e.preventDefault());
-    on(document, 'pointermove', (e) => this.move(e as PointerEvent));
+    // with the mouse locked, pointerrawupdate (Chromium) comes as soon as the mouse moves instead of once per
+    // display frame, up to a frame sooner; the pointer on the desktop doesn't need it
+    const raw = typeof window !== 'undefined' && 'onpointerrawupdate' in window;
+    on(document, 'pointermove', (e) => (!raw || !this.locked) && this.move(e as PointerEvent));
+    if (raw) on(document, 'pointerrawupdate', (e) => this.locked && this.move(e as PointerEvent));
     on(t, 'wheel', (e) => this.scroll(e as WheelEvent), { passive: false });
     on(window, 'blur', () => this.releaseAll());
     on(document, 'visibilitychange', () => document.visibilityState === 'hidden' && this.releaseAll());
@@ -318,6 +333,13 @@ export class InputCapture {
     if (el?.closest?.('input, select, textarea') || (el?.closest?.('button, a') && ['Enter', 'NumpadEnter', 'Space'].includes(e.code))) return;
     // the key belongs to the PC: the app's own shortcuts (1–9 switch views, n, /, Ctrl+K…) listen on window, after this
     e.stopPropagation();
+    const hot = down && this.o.onHotkey ? hotkeyFor(e) : null;
+    if (hot) {
+      e.preventDefault();
+      // Ctrl, Alt and Shift already went down on the PC; let them go so none sticks
+      this.releaseAll();
+      return this.o.onHotkey!(hot);
+    }
     const m = keyMessage(down, e);
     if (!m) return;
     e.preventDefault();

@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { InputOrder, VideoGate, backlogBudget } from './backlog.js';
+import { InputOrder, MAX_DRAIN_MS, VideoGate, backlogBudget, clockNotice, gatewayMessage } from './backlog.js';
 
 const video = (key: boolean, size = 10) => Uint8Array.from({ length: size }, (_, i) => (i === 0 ? 1 : i === 1 ? (key ? 1 : 0) : 0));
 const audio = Uint8Array.of(2, 0, 9, 9);
@@ -50,6 +50,70 @@ describe('VideoGate', () => {
     // the keyframe is still draining: 3000 queued is over the budget, but within budget + keyframe
     expect(gate.pass(video(false), 3000)).toBe(true);
     expect(gate.pass(video(false), 4100)).toBe(false);
+  });
+});
+
+describe('VideoGate.drain', () => {
+  it('stops video for as long as the browser says it is behind, then resumes at a fresh keyframe', () => {
+    let t = 0;
+    const asks: number[] = [];
+    const gate = new VideoGate(
+      1000,
+      () => asks.push(t),
+      () => t,
+    );
+    // the gateway's own queue is empty, but the browser measured 400 ms of delay in buffers the gateway can't see
+    gate.drain(400);
+    expect(gate.pass(video(true), 0)).toBe(false);
+    expect(gate.pass(audio, 0)).toBe(true);
+    t = 399;
+    expect(gate.pass(video(false), 0)).toBe(false);
+    expect(asks).toEqual([]);
+    // a second report of the same backlog while it drains changes nothing
+    gate.drain(2000);
+    t = 400;
+    // drained: a keyframe is asked for, deltas wait for it
+    expect(gate.pass(video(false), 0)).toBe(false);
+    expect(asks).toEqual([400]);
+    expect(gate.pass(video(true), 0)).toBe(true);
+    expect(gate.pass(video(false), 0)).toBe(true);
+  });
+
+  it('caps one pause and ignores nonsense', () => {
+    let t = 0;
+    const gate = new VideoGate(
+      1000,
+      () => {},
+      () => t,
+    );
+    gate.drain(-5);
+    gate.drain(Number.NaN);
+    expect(gate.pass(video(false), 0)).toBe(true);
+    gate.drain(60_000);
+    t = MAX_DRAIN_MS;
+    expect(gate.pass(video(true), 0)).toBe(true);
+  });
+});
+
+describe('gatewayMessage', () => {
+  it('acts on gw- messages and keeps them from MoonlightWeb', () => {
+    let t = 0;
+    const gate = new VideoGate(
+      1000,
+      () => {},
+      () => t,
+    );
+    expect(gatewayMessage(JSON.stringify({ type: 'gw-lag', ms: 500 }), gate)).toBe(true);
+    expect(gate.pass(video(true), 0)).toBe(false);
+    t = 500;
+    expect(gate.pass(video(true), 0)).toBe(true);
+    expect(gatewayMessage('{"type":"gw-hello"}', null)).toBe(true);
+    expect(gatewayMessage('{"type":"gw-broken', gate)).toBe(true);
+    expect(gatewayMessage(JSON.stringify({ type: 'keydown', keyCode: 65 }), gate)).toBe(false);
+  });
+
+  it('stamps clock notices with the time they are queued', () => {
+    expect(JSON.parse(clockNotice(1234))).toEqual({ type: 'gw-clock', t: 1234 });
   });
 });
 
