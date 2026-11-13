@@ -141,6 +141,15 @@ After the auth message the socket carries MoonlightWeb's `wss` stream unchanged:
 
 For the connection test: echoes the first message (text or binary, up to 64 kB) and closes. No auth.
 
+## Network-test probes (only with `DIAG_STREAM=1`)
+
+Off by default (every path below is a `404`, or a refused upgrade). With `DIAG_STREAM=1` they answer **any origin**, need no sign-in and carry no data of the stream's, so a test page opened from a file on a restrictive network can measure what the stream would meet. Turn it off again after testing.
+
+- `GET /diag/stream?seconds=1–120&kbps=1–50000`: a chunked download of `"<seq> <ms>\n"` plus filler every 100 ms, to see whether a long response arrives steadily or gets held back and released in bursts.
+- `POST /diag/echo`: reads the body (≤ 16 kB) and answers `204`: what one separate request costs, the way each `/up` batch does.
+- `POST /diag/upload`: reads a streamed body for up to 30 s (≤ 64 kB) and answers `{lines: number[]}`, the ms after the request started at which each line arrived. Lines written 50 ms apart that arrive 50 ms apart mean request bodies pass through as written, which `/input` needs.
+- `wss://…/diag/ws`: echoes every message for up to two minutes, for WebSocket round trips to this server.
+
 ## Operations
 
 ```bash

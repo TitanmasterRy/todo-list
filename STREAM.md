@@ -82,6 +82,57 @@ The site side is one build variable. The server side is the gateway next to Moon
 5. **coturn:** `use-auth-secret` with the same secret as `TURN_SECRET`, listening on 3478 (UDP and TCP) and 5349 (TLS), and allowed to relay to MoonlightWeb's address only.
 6. **Apollo's virtual display:** Apollo only creates one when it's told to, and MoonlightWeb's launch request doesn't ask (only Apollo's own Artemis client does). On the PC, open Apollo's web UI (`https://localhost:47990`) → **PIN** → the paired client list → the MoonlightWeb client → turn on **Always create virtual display** → save. That covers every app streamed through MoonlightWeb and leaves other Moonlight devices alone. (Per app, **Applications** → edit → **Always create Virtual Display** does the same for one app; **Configuration → Headless Mode** does it for every client.) It needs the SudoVDA driver: when the driver works, Apollo offers clients an extra **Virtual Display** app, which shows up as a card in the Stream tab (not on Apollo's own **Applications** page, which only lists `apps.json`). If the card is missing, run `drivers\sudovda\install.bat` from Apollo's folder as administrator and restart Apollo. When a stream starts on a virtual display, Apollo's log says `Virtual Display created at …`.
 
+## Streaming through a WireGuard VPN
+
+Some networks block the relay but still let a VPN through. With one from the laptop or Chromebook to the home server, all of its traffic travels in a single encrypted tunnel to your home, so the network can't block or slow the parts the stream needs, and the fast WebRTC mode works. This is for your own devices on networks where a VPN is allowed.
+
+It needs the home server running Ubuntu or Debian, a port forward on the router, and a client with WireGuard (ChromeOS has it built in).
+
+1. **Server.** Install WireGuard, then run the setup script from this repository:
+
+   ```bash
+   sudo apt update && sudo apt install -y wireguard
+   ```
+
+   ```bash
+   sudo bash server/stream-gateway/wireguard-setup.sh
+   ```
+
+   It makes the keys (kept in `/etc/wireguard`, readable by root only), listens on **UDP 443** (strict networks most often let UDP through on that port; it doesn't clash with the reverse proxy, which uses TCP 443), starts the VPN at boot and prints the server's LAN address. Running it again keeps the keys.
+
+2. **Router.** Forward **UDP** port 443 to that LAN address, port 443. Leave the existing TCP 443 rule alone.
+
+3. **Keys for the client.** Print them on the server:
+
+   ```bash
+   sudo bash -c 'cd /etc/wireguard && echo "Private key:       $(cat chromebook.key)" && echo "Server public key: $(cat server.pub)" && echo "Preshared key:     $(cat chromebook.psk)"'
+   ```
+
+   They work like passwords: anyone with them can join your home network. Move them to the client privately.
+
+4. **Chromebook.** Settings → Network → Add network connection → **Add built-in VPN**, provider type **WireGuard**:
+
+   | Field | Value |
+   | --- | --- |
+   | Client IP address | `10.66.66.2/32` (or `10.66.66.2`) |
+   | Private key | your own key: **Private key** |
+   | Name servers | `1.1.1.1` |
+   | Public key | **Server public key** |
+   | Preshared key | **Preshared key** |
+   | Endpoint | `play.example.com:443` (your gateway's name, or your home IP and `:443`) |
+   | Allowed IPs | `0.0.0.0/0` |
+   | Persistent keepalive | `25` |
+
+5. **Check it works.** ChromeOS says "Connected" even when nothing gets through, so check on the server: `sudo wg show` should list a `latest handshake` a few seconds old, and `transfer` should grow while the client browses. On the client, `https://www.cloudflare.com/cdn-cgi/trace` should show the same `ip=` as the same page shows on the server (`curl -s https://www.cloudflare.com/cdn-cgi/trace | grep ip=`). Try it on a phone hotspot first, then on the strict network. If it works on the hotspot but not there, that network blocks UDP to your home.
+
+6. **Stream** with ⚙️ Quality → Connection → **WebRTC**; the stats show *relay · UDP*.
+
+Good to know:
+
+- Every page the client opens goes through your home while the VPN is on, so browsing is limited by your home upload speed. Turn it off when you're not streaming.
+- The router has to reach its own public address from inside (NAT loopback, also called hairpin NAT), because the client still uses the gateway's public name. Most routers do; if the site won't load with the VPN on, yours doesn't.
+- To remove it: `sudo systemctl disable --now wg-quick@wg0` on the server, and delete the router rule. If a key may have leaked, delete the `*.key` and `*.psk` files in `/etc/wireguard`, run the script again and enter the new keys on the client.
+
 ## Security notes
 
 - The password is checked against an argon2id hash; a code from the authenticator app (or a backup code) is needed too, and a code can't be used twice. Five wrong tries from one address lock it out for 15 minutes, and 20 from anywhere lock everyone out for 15 minutes.

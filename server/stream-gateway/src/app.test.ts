@@ -547,9 +547,11 @@ describe('WebSockets', () => {
     await pump;
   });
 
-  it('serves the diagnostic stream only when it is turned on', async () => {
+  it('serves the diagnostic probes (stream, request echo, upload timer, WebSocket echo) only when turned on', async () => {
     // off by default: the path isn't special-cased, so it falls through to 404
     expect((await api('/diag/stream')).status).toBe(404);
+    expect((await api('/diag/echo', { body: {} })).status).toBe(404);
+    await expect(wsOpen('/diag/ws', 'https://evil.example')).rejects.toThrow('403');
 
     // on: a CORS-open chunked response any origin can read, carrying only filler
     const dg = createGateway({ config: { ...config(), diagStream: true }, store, mw, now: () => clock, log: () => {} });
@@ -564,6 +566,38 @@ describe('WebSockets', () => {
       expect(first.done).toBe(false);
       expect(first.value!.byteLength).toBeGreaterThan(0);
       ctrl.abort();
+
+      const base2 = `http://127.0.0.1:${port}`;
+      // the request echo: an empty answer to any origin, preflight included
+      const pre = await fetch(`${base2}/diag/echo`, { method: 'OPTIONS', headers: { Origin: 'https://evil.example' } });
+      expect(pre.status).toBe(204);
+      expect(pre.headers.get('access-control-allow-methods')).toContain('POST');
+      const echo = await fetch(`${base2}/diag/echo`, { method: 'POST', headers: { Origin: 'https://evil.example', 'Content-Type': 'application/json' }, body: '{"msgs":[]}' });
+      expect(echo.status).toBe(204);
+      expect(echo.headers.get('access-control-allow-origin')).toBe('*');
+      expect(echo.headers.get('timing-allow-origin')).toBe('*');
+
+      // the upload timer: when each line of a streamed body arrived
+      let feed!: ReadableStreamDefaultController<Uint8Array>;
+      const body = new ReadableStream<Uint8Array>({ start: (c) => (feed = c) });
+      const upP = fetch(`${base2}/diag/upload`, { method: 'POST', headers: { Origin: 'https://evil.example' }, body, duplex: 'half' } as RequestInit);
+      for (let i = 0; i < 3; i++) {
+        feed.enqueue(new TextEncoder().encode(`line ${i}\n`));
+        await new Promise((r) => setTimeout(r, 60));
+      }
+      feed.close();
+      const times = ((await (await upP).json()) as { lines: number[] }).lines;
+      expect(times).toHaveLength(3);
+      // streamed, not collected: the lines arrived about as far apart as they were written
+      expect(times[2] - times[0]).toBeGreaterThan(80);
+
+      // the WebSocket echo answers any origin and echoes
+      const ws = new WebSocket(`ws://127.0.0.1:${port}/diag/ws`, { origin: 'https://evil.example' });
+      await new Promise((r) => ws.once('open', r));
+      const got = nextMessage(ws);
+      ws.send('ping 1');
+      expect((await got).data.toString()).toBe('ping 1');
+      ws.close();
     } finally {
       await new Promise<void>((r) => dg.server.close(() => r()));
     }
