@@ -133,6 +133,39 @@ export function createGateway(deps: GatewayDeps): { server: Server; close: () =>
     res.on('error', stop);
   }
 
+  /** A diagnostic request round trip: the body (at most 16 kB) is read and dropped, the answer is empty. Timing one
+   *  shows what a separate request costs on the browser's network, the way each /up input batch does. */
+  async function diagEcho(req: IncomingMessage, res: ServerResponse): Promise<void> {
+    let size = 0;
+    for await (const c of req) if ((size += (c as Buffer).length) > MAX_BODY) return send(res, 413, { error: 'too_large' });
+    send(res, 204);
+  }
+
+  /**
+   * A diagnostic streamed upload: notes when each line of the body arrives (ms after the request started) and answers
+   * with those times once it ends. Lines that left the browser 50 ms apart and arrive 50 ms apart mean the network
+   * and proxy pass a request body through as it's written, which streamed input (/input) needs; all at once means
+   * something holds the body back.
+   */
+  async function diagUpload(req: IncomingMessage, res: ServerResponse): Promise<void> {
+    const t0 = performance.now();
+    const at: number[] = [];
+    let size = 0;
+    const timer = setTimeout(() => req.destroy(), 30_000);
+    try {
+      for await (const c of req) {
+        const buf = c as Buffer;
+        if ((size += buf.length) > 64 * 1024) break;
+        for (const b of buf) if (b === 10 && at.length < 500) at.push(Math.round(performance.now() - t0));
+      }
+    } catch {
+      return;
+    } finally {
+      clearTimeout(timer);
+    }
+    send(res, 200, { lines: at });
+  }
+
   async function readJson(req: IncomingMessage): Promise<Record<string, unknown>> {
     const chunks: Buffer[] = [];
     let size = 0;
@@ -534,16 +567,21 @@ export function createGateway(deps: GatewayDeps): { server: Server; close: () =>
     res.setHeader('Referrer-Policy', 'no-referrer');
     res.setHeader('Cache-Control', 'no-store');
     try {
-      // the diagnostic stream (off by default) answers any origin, before the usual same-origin gate
-      if (config.diagStream && path === '/diag/stream') {
+      // the diagnostic probes (off by default) answer any origin, before the usual same-origin gate
+      if (config.diagStream && path.startsWith('/diag/')) {
         res.setHeader('Access-Control-Allow-Origin', '*');
+        // lets the test page read timings and the protocol used (HTTP/1.1 or HTTP/2), which tell it what a proxy does
+        res.setHeader('Timing-Allow-Origin', '*');
         if (req.method === 'OPTIONS') {
-          res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
+          res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+          res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
           res.setHeader('Access-Control-Max-Age', '600');
           return void send(res, 204);
         }
-        if (req.method !== 'GET') return void send(res, 405, { error: 'method_not_allowed' });
-        return void diagStream(req, res);
+        if (path === '/diag/stream' && req.method === 'GET') return void diagStream(req, res);
+        if (path === '/diag/echo' && req.method === 'POST') return void (await diagEcho(req, res));
+        if (path === '/diag/upload' && req.method === 'POST') return void (await diagUpload(req, res));
+        return void send(res, 404, { error: 'not_found' });
       }
       const origin = req.headers.origin;
       if (!originOk(origin)) throw new HttpError(403, { error: 'origin_not_allowed' });
@@ -583,6 +621,8 @@ export function createGateway(deps: GatewayDeps): { server: Server; close: () =>
 
   server.on('upgrade', (req: IncomingMessage, socket: Duplex, head: Buffer) => {
     const path = (req.url ?? '').split('?')[0];
+    // the diagnostic WebSocket echo (off by default), like the other probes, answers any origin
+    if (config.diagStream && path === '/diag/ws') return wss.handleUpgrade(req, socket, head, diagWs);
     if (req.headers.origin !== config.allowedOrigin) return refuse(socket, 403, 'Forbidden');
     if (path === '/ws-probe') return wss.handleUpgrade(req, socket, head, probe);
     const m = /^\/sessions\/([A-Za-z0-9_-]{16})\/(signal|media)$/.exec(path);
@@ -617,6 +657,13 @@ export function createGateway(deps: GatewayDeps): { server: Server; close: () =>
       });
     });
   });
+
+  /** Echoes every message for up to two minutes, so a network test can time round trips to this server. */
+  function diagWs(ws: WebSocket): void {
+    const timer = setTimeout(() => ws.close(1000, 'time is up'), 120_000);
+    ws.on('message', (data, isBinary) => ws.readyState === ws.OPEN && ws.send(data, { binary: isBinary }));
+    ws.on('close', () => clearTimeout(timer));
+  }
 
   function probe(ws: WebSocket): void {
     const timer = setTimeout(() => ws.close(1000), 5_000);
