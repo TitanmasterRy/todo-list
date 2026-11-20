@@ -3035,6 +3035,23 @@ const es: Dict = {
   'stream.revokeConfirm': '¿Cerrar sesión en todos los dispositivos y detener cualquier streaming en curso?',
   'stream.signedOutEverywhere': 'Sesión cerrada en todos los dispositivos.',
   'stream.gfn': 'GeForce NOW',
+  'stream.ps.title': 'PlayStation',
+  'stream.ps.ready': 'Juega en tu PS5 o PS4 a través del PC gaming, con tu mando.',
+  'stream.ps.notSetUp': 'Juega en tu PS5 o PS4 a través del PC gaming. Antes hay que configurarlo una vez en el PC.',
+  'stream.ps.connect': 'Conectar a PlayStation',
+  'stream.ps.howTo': 'Cómo configurarlo',
+  'stream.ps.howToTitle': 'Configurar Juego remoto de PlayStation',
+  'stream.ps.howToBlurb':
+    'Un navegador no puede hablar directamente con una PlayStation, así que el PC gaming lo hace por ti con chiaki-ng, una app gratuita de Juego remoto. Solo hay que hacerlo una vez.',
+  'stream.ps.step1':
+    'En la PlayStation: Ajustes → Sistema → Juego remoto → activa Habilitar Juego remoto. En Ahorro de energía, activa Permanecer conectado a Internet y Habilitar el encendido desde la red, para que pueda despertarse del modo de reposo.',
+  'stream.ps.step2':
+    'En el PC gaming: instala chiaki-ng, ábrelo y elige tu consola. En la PlayStation, Ajustes → Sistema → Juego remoto → Vincular dispositivo muestra el código que pide chiaki-ng.',
+  'stream.ps.step3': 'En el PC gaming, abre la página web de Apollo → Applications → Add New. Llámala PlayStation, pon como comando el archivo del programa chiaki-ng y guarda.',
+  'stream.ps.step4': 'Vuelve aquí y pulsa Comprobar de nuevo. Después, Conectar a PlayStation abre chiaki-ng; elige tu consola con el mando.',
+  'stream.ps.more': 'La guía completa, con un acceso directo de un clic y consejos:',
+  'stream.ps.recheck': 'Comprobar de nuevo',
+  'stream.ps.close': 'Cerrar',
   'stream.resolution': 'Resolución',
   'stream.thisScreen': 'Esta pantalla ({w}×{h})',
   'stream.custom': 'Personalizada',
