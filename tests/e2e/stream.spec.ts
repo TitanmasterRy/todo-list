@@ -13,11 +13,20 @@ interface Gateway {
   calls: { method: string; path: string; body: Record<string, unknown> }[];
   enrolled: boolean;
   startResults: [number, unknown][];
+  apps: { id: number; name: string; art: string | null }[];
 }
 
 /** A fake gateway (server/stream-gateway/API.md). TURN points nowhere, so the relay probes fail as on a 443-only network. */
 async function mockGateway(page: Page): Promise<Gateway> {
-  const gw: Gateway = { calls: [], enrolled: false, startResults: [] };
+  const gw: Gateway = {
+    calls: [],
+    enrolled: false,
+    startResults: [],
+    apps: [
+      { id: 1, name: 'Desktop', art: '/apps/1/art' },
+      { id: 2, name: 'Steam Big Picture', art: null },
+    ],
+  };
   let n = 0;
   const tokens = () => ({ accessToken: `access-token-e2e-${++n}`, refreshToken: `refresh-e2e-${n}`, expiresIn: 900 });
   await page.route(`${GW}/**`, async (route: Route) => {
@@ -45,11 +54,7 @@ async function mockGateway(page: Page): Promise<Gateway> {
     // the HTTP transport's /down (opened with its one-time ticket) stays open; nothing comes down here
     if (key.startsWith('GET /sessions/') && path.endsWith('/down')) return;
     if (!authed) return json(401, { error: 'unauthorized' });
-    if (key === 'GET /apps')
-      return json(200, [
-        { id: 1, name: 'Desktop', art: '/apps/1/art' },
-        { id: 2, name: 'Steam Big Picture', art: null },
-      ]);
+    if (key === 'GET /apps') return json(200, gw.apps);
     if (key === 'GET /apps/1/art') return route.fulfill({ status: 200, headers: { ...CORS, 'Content-Type': 'image/png' }, body: PNG });
     if (key === 'GET /turn-credentials')
       return json(200, {
@@ -186,6 +191,8 @@ test('Stream: resume-or-quit prompt, then a refused binding ends the stream with
     },
   ]);
   await prompt.getByRole('button', { name: 'Quit it and start Desktop' }).click();
+  // the click doesn't wait for the request, so wait for the second start to reach the fake gateway
+  await expect.poll(() => gw.calls.filter((c) => c.path === '/sessions').length).toBe(2);
   const start = gw.calls.filter((c) => c.path === '/sessions').at(-1)!;
   expect(start.body).toMatchObject({ appId: 1, quitRunning: true, transport: 'webrtc' });
   expect(Number(start.body.width) % 2).toBe(0);
@@ -240,5 +247,37 @@ test('Stream: the HTTP mode keeps input flowing without streamed input, and the 
   await expect.poll(() => gw.calls.some((c) => c.method === 'DELETE' && c.path === '/sessions/httpsession00001')).toBe(true);
   await expect.poll(() => gw.calls.filter((c) => c.path === '/sessions').at(-1)?.body.bitrate).toBe(5000);
   expect(gw.calls.filter((c) => c.path === '/sessions').at(-1)!.body).toMatchObject({ appId: 1, transport: 'http' });
+  expect(errors).toEqual([]);
+});
+
+test('Stream: Connect to PlayStation shows the setup until the PC has the app, then starts it', async ({ page }) => {
+  test.setTimeout(60_000);
+  const gw = await mockGateway(page);
+  await page.addInitScript(() => localStorage.setItem('homework-todo:stream', JSON.stringify({ transport: 'webrtc' })));
+  const errors = await openApp(page);
+  await openStream(page);
+  await signIn(page, gw);
+
+  // no PlayStation app on the PC yet: the button explains the one-time setup
+  const card = page.locator('[data-playstation]');
+  await expect(card).toContainText('one-time setup');
+  await card.getByRole('button', { name: 'Connect to PlayStation' }).click();
+  const help = page.locator('[data-ps-help]');
+  await expect(help.getByRole('heading', { name: 'Set up PlayStation Remote Play' })).toBeVisible();
+  await expect(help.locator('li')).toHaveCount(4);
+  expect(gw.calls.some((c) => c.path === '/sessions')).toBe(false);
+
+  // the app is added in Apollo; Check again finds it and gives it the card instead of a grid tile
+  gw.apps = [...gw.apps, { id: 7, name: 'PlayStation', art: null }];
+  await help.getByRole('button', { name: 'Check again' }).click();
+  await expect(card).toContainText('with your controller');
+  await expect(page.getByRole('button', { name: 'Start PlayStation' })).toHaveCount(0);
+  await help.getByRole('button', { name: 'Close' }).click();
+  await expect(help).toHaveCount(0);
+
+  gw.startResults.push([503, { error: 'not configured' }]);
+  await card.getByRole('button', { name: 'Connect to PlayStation' }).click();
+  // the first launch runs the connection test, whose relay probes time out here
+  await expect.poll(() => gw.calls.find((c) => c.path === '/sessions')?.body.appId, { timeout: 30_000 }).toBe(7);
   expect(errors).toEqual([]);
 });

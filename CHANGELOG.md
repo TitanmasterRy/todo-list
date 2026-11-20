@@ -1,5 +1,10 @@
 # Changelog
 
+## Stream: connect to your PlayStation
+
+- **🎮 Connect to PlayStation.** The Stream tab has a new PlayStation card: play your PS5 or PS4 in the browser with your controller, through the gaming PC at home.
+- **Step-by-step setup.** Until the PC is set up for it, the button shows the steps: turn on Remote Play on the console, install the free chiaki-ng app on the PC, and add it to Apollo. Then press **Check again**.
+
 ## Stream: much less delay on the HTTP mode, a bitrate menu and Moonlight's shortcuts
 
 - **Snappier controls on the HTTP mode.** In Chrome and Edge, key presses and mouse movement now go to the PC over one connection that stays open, instead of a new web request for each one. If the network or the server in between can't carry that, the stream notices within a few seconds and quietly goes back to the old way.

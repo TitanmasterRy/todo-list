@@ -19,7 +19,7 @@ browser (this site)  ──HTTPS / WSS──▶  gateway (play.example.com, serv
 
 1. **Play → 🎮 Stream.** The header shows whether the gaming PC is online.
 2. **Sign in** with the stream password. The very first time, leave the code empty: the tab shows a **QR code** to scan with an authenticator app (Google Authenticator, Microsoft Authenticator, 1Password, Aegis…) and **ten backup codes**. Save the codes (each works once, for when your phone isn't around), tick *I saved my backup codes*, type the code your app shows and **Finish**. After that, every sign-in is the password plus the current code.
-3. Pick an app: **Desktop**, **Steam Big Picture**, or any other app set up in Apollo.
+3. Pick an app: **Desktop**, **Steam Big Picture**, or any other app set up in Apollo. To play a PS5 or PS4, use **Connect to PlayStation** (see [PlayStation Remote Play](#playstation-remote-play)).
 4. While streaming, the bar above the picture has **Full screen**, **Lock mouse** (for games that turn the camera with the mouse; Esc gives it back), **Quality**, **Bitrate**, **Stats**, **Disconnect** (stops streaming; the game keeps running on the PC so you can come back to it) and **Quit the game**. Changing quality or bitrate restarts the stream in a few seconds; the game keeps running.
 5. Shortcuts, as in Moonlight: **Ctrl+Alt+Shift+S** stats, **Ctrl+Alt+Shift+Z** lock or free the mouse, **Ctrl+Alt+Shift+X** full screen. They stay in the browser; every other key goes to the PC.
 
@@ -81,6 +81,34 @@ The site side is one build variable. The server side is the gateway next to Moon
 4. **Reverse proxy:** forward `https://play.example.com` to `stream-gateway:8080` with WebSockets allowed, and let it set `X-Forwarded-For` (the gateway's sign-in lockout counts by that address, trusting one proxy hop). No login wall in front of it: the page signs in with its own tokens. Don't let it buffer responses: the HTTP stream is one endless download, and a proxy that collects it before passing it on adds seconds of delay. nginx honours the gateway's `X-Accel-Buffering: no`; elsewhere turn response buffering off for this host (in Caddy, `flush_interval -1`). For the quicker input on the HTTP mode, the proxy must also pass request bodies through as they arrive and speak HTTP/2 to browsers: in nginx (Nginx Proxy Manager: the host's **Advanced** tab) add `proxy_request_buffering off;`, `proxy_http_version 1.1;` and `client_max_body_size 0;` (the input request never ends, so nginx's 1 MB body limit would cut it every few minutes), and turn on HTTP/2; Caddy does both by default. Without them the HTTP mode still works, with input on separate requests.
 5. **coturn:** `use-auth-secret` with the same secret as `TURN_SECRET`, listening on 3478 (UDP and TCP) and 5349 (TLS), and allowed to relay to MoonlightWeb's address only.
 6. **Apollo's virtual display:** Apollo only creates one when it's told to, and MoonlightWeb's launch request doesn't ask (only Apollo's own Artemis client does). On the PC, open Apollo's web UI (`https://localhost:47990`) → **PIN** → the paired client list → the MoonlightWeb client → turn on **Always create virtual display** → save. That covers every app streamed through MoonlightWeb and leaves other Moonlight devices alone. (Per app, **Applications** → edit → **Always create Virtual Display** does the same for one app; **Configuration → Headless Mode** does it for every client.) It needs the SudoVDA driver: when the driver works, Apollo offers clients an extra **Virtual Display** app, which shows up as a card in the Stream tab (not on Apollo's own **Applications** page, which only lists `apps.json`). If the card is missing, run `drivers\sudovda\install.bat` from Apollo's folder as administrator and restart Apollo. When a stream starts on a virtual display, Apollo's log says `Virtual Display created at …`.
+
+## PlayStation Remote Play
+
+The **PlayStation** card at the top of the app list plays a PS5 or PS4 in the browser. A browser can't speak Sony's Remote Play protocol, so the gaming PC does: it runs **chiaki-ng** (a free, open-source Remote Play app), and Apollo streams that window like any other game. Your controller's buttons go from the browser to the PC to the console.
+
+```
+browser  ──▶  gateway  ──▶  MoonlightWeb  ──▶  Apollo on the PC  ──▶  chiaki-ng  ──▶  PlayStation (same home network)
+```
+
+Once it's set up, **Connect to PlayStation** starts it. Until then the button opens the setup steps. The card finds the app by its name in Apollo: anything with *PlayStation*, *PS5*, *PS4*, *Chiaki* or *Remote Play* in it.
+
+### Setting it up (once)
+
+1. **On the console**, turn on Remote Play: PS5 **Settings → System → Remote Play → Enable Remote Play** (PS4: **Settings → Remote Play Connection Settings**). So it can be woken from rest mode, PS5 **Settings → System → Power Saving → Features Available in Rest Mode** → turn on **Stay Connected to the Internet** and **Enable Turning On PS5 from Network** (PS4: **Settings → Power Save Settings → Set Features Available in Rest Mode**).
+2. **On the gaming PC**, install chiaki-ng from its official releases page and open it. It finds consoles on the home network. Pick yours and register it: chiaki-ng asks for your PSN account ID (it can look it up when you sign in to PSN from it) and a code that the console shows under **Settings → System → Remote Play → Link Device** (PS4: **Remote Play Connection Settings → Add Device**). Start a stream once there to check it works.
+3. **In Apollo** (`https://localhost:47990` on the PC) → **Applications → Add New**:
+   - **Application Name:** `PlayStation`
+   - **Command:** the full path to chiaki-ng's program file, in quotes.
+   - Save. It shows up in the Stream tab's list straight away (press **Check again** in the setup steps if the tab was already open).
+4. **Optional, one click to the console:** chiaki-ng can skip its menu and connect straight to a registered console with its `stream` command. Put the console's nickname (as chiaki-ng shows it) and its address on the home network after the program path, for example `"C:\Program Files\chiaki-ng\chiaki.exe" --fullscreen stream "PS5-123" 192.168.1.50`. Run the program with `--help` to see what your version takes. Give the console a fixed address in the router so this keeps working.
+5. **Optional, PlayStation buttons:** by default Apollo gives the PC a virtual Xbox controller, which chiaki-ng understands fine. To have the PC see a PlayStation controller instead, set Apollo's **Configuration → Input → Emulated Gamepad Type** to DS4.
+
+### Good to know
+
+- The picture is encoded twice (console to PC, then PC to you), so there's a little more delay than streaming a PC game. A wired network cable on the PC and the console helps most.
+- The console and the PC need to be on the same home network for the quickest connection. chiaki-ng can also reach a console elsewhere through PSN; see its own documentation.
+- **Disconnect** leaves chiaki-ng (and the console) running on the PC; **Quit the game** closes chiaki-ng. The console then goes back to rest mode on its own power settings.
+- Only use it with your own console and PSN account.
 
 ## Streaming through a WireGuard VPN
 

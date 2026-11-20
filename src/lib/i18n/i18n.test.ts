@@ -142,6 +142,7 @@ describe('Spanish file', () => {
     'auto.plan',
     'stream.gfn',
     'stream.path.ws',
+    'stream.ps.title',
   ]);
 
   it('translates every value (the few identical ones are on an allowlist)', () => {

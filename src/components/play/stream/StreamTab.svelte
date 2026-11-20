@@ -8,6 +8,7 @@
   import { StreamError, type GatewayClient, type Health, type StreamApp, type StreamSession, type StreamTransport, type Enrollment } from '../../../lib/stream/api';
   import { STEP_LABEL, browserProbes, runConnectionTest, type StepResult, type Verdict } from '../../../lib/stream/conntest';
   import { MAX_H, MAX_W, measureRefreshRate, nativeSize, streamRequest, suggestBitrate } from '../../../lib/stream/display';
+  import { findPlayStationApp } from '../../../lib/stream/playstation';
   import { supportsWebCodecs } from '../../../lib/stream/video';
   import { STREAM_SERVER, gatewayClient, streamSettings } from '../../../lib/stream/state.svelte';
   import StreamPlayer from './StreamPlayer.svelte';
@@ -39,6 +40,7 @@
   let testing = $state(false);
   let showTest = $state(false);
   let showSettings = $state(false);
+  let showPsHelp = $state(false);
 
   const screenSize = nativeSize(screen.width, screen.height, devicePixelRatio);
   let rate = $state(60);
@@ -247,6 +249,15 @@
     return health.host === 'online' ? { text: t('stream.host.online'), tone: 'ok' } : { text: t('stream.host.offline'), tone: 'bad' };
   });
 
+  // the PlayStation gets its own card, so it's left out of the app grid
+  const psApp = $derived(findPlayStationApp(apps));
+  const gridApps = $derived(apps.filter((a) => a !== psApp));
+
+  function connectPlayStation() {
+    if (psApp) void launch(psApp);
+    else showPsHelp = true;
+  }
+
   const icon = (ok: boolean | null) => (ok === null ? '–' : ok ? '✅' : '❌');
 </script>
 
@@ -448,8 +459,40 @@
       {/if}
 
       {#if apps.length}
+        <section class="card ps" aria-label={t('stream.ps.title')} data-playstation>
+          <span class="ps-logo" aria-hidden="true">🎮</span>
+          <div class="ps-text">
+            <strong>{t('stream.ps.title')}</strong>
+            <p class="muted">{psApp ? t('stream.ps.ready') : t('stream.ps.notSetUp')}</p>
+          </div>
+          <div class="row">
+            <button class="btn" onclick={connectPlayStation} disabled={busy}>{t('stream.ps.connect')}</button>
+            <button class="btn ghost sm" onclick={() => (showPsHelp = !showPsHelp)} aria-expanded={showPsHelp}>{t('stream.ps.howTo')}</button>
+          </div>
+        </section>
+        {#if showPsHelp}
+          <section class="card ps-help" aria-label={t('stream.ps.howToTitle')} data-ps-help>
+            <h3>{t('stream.ps.howToTitle')}</h3>
+            <p class="muted">{t('stream.ps.howToBlurb')}</p>
+            <ol class="steps">
+              <li>{t('stream.ps.step1')}</li>
+              <li>{t('stream.ps.step2')}</li>
+              <li>{t('stream.ps.step3')}</li>
+              <li>{t('stream.ps.step4')}</li>
+            </ol>
+            <p class="muted">
+              {t('stream.ps.more')}
+              <a href="https://github.com/TitanmasterRy/todo-list/blob/main/STREAM.md#playstation-remote-play" target="_blank" rel="noopener noreferrer">STREAM.md</a>
+            </p>
+            <div class="row">
+              <button class="btn sm" onclick={loadApps} disabled={busy}>{t('stream.ps.recheck')}</button>
+              <button class="btn ghost sm" onclick={() => (showPsHelp = false)}>{t('stream.ps.close')}</button>
+            </div>
+          </section>
+        {/if}
+
         <ul class="apps">
-          {#each apps as a (a.id)}
+          {#each gridApps as a (a.id)}
             <li class="card app">
               <button class="open" onclick={() => launch(a)} disabled={busy} aria-label={t('stream.start', { app: a.name })}>
                 {#if art[a.id]}<img src={art[a.id]} alt="" />{:else}<span class="ph" aria-hidden="true">🎮</span>{/if}
@@ -636,5 +679,30 @@
   }
   .foot {
     margin-top: 4px;
+  }
+  .ps {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 12px;
+  }
+  .ps-logo {
+    display: grid;
+    place-items: center;
+    width: 44px;
+    height: 44px;
+    border-radius: 10px;
+    font-size: 24px;
+    background: var(--bg-elev);
+  }
+  .ps-text {
+    flex: 1;
+    min-width: 180px;
+    display: grid;
+    gap: 2px;
+  }
+  .ps-help {
+    display: grid;
+    gap: 10px;
   }
 </style>
